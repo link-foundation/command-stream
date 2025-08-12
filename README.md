@@ -189,4 +189,4 @@ bun run test:debug
 
 ## License
 
-MIT
+The Unlicense (Public Domain)
