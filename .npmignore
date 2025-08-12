@@ -1,6 +1,7 @@
 # Development files
 *.test.mjs
 *.test.js
+*.features.test.mjs
 tests/
 test/
 coverage/
