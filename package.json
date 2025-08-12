@@ -1,0 +1,37 @@
+{
+  "name": "command-stream",
+  "version": "0.0.1",
+  "description": "Enhanced $ shell utilities with streaming, async iteration, and EventEmitter support",
+  "type": "module",
+  "main": "$.mjs",
+  "exports": {
+    ".": "./$.mjs"
+  },
+  "scripts": {
+    "test": "bun tests/test-all-patterns.mjs",
+    "test:debug": "bun tests/debug-$.mjs"
+  },
+  "keywords": [
+    "shell",
+    "command",
+    "streaming",
+    "async",
+    "iteration",
+    "eventemitter",
+    "bun",
+    "node",
+    "cross-runtime"
+  ],
+  "author": "link-foundation",
+  "license": "UNLICENSED",
+  "engines": {
+    "bun": ">=1.0.0",
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "$.mjs",
+    "test-all-patterns.mjs",
+    "debug-$.mjs",
+    "README.md"
+  ]
+}
