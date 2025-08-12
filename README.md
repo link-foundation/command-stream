@@ -29,6 +29,8 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 | **Memory Efficiency** | ✅ Streaming prevents buildup | 🟡 Buffers in memory | 🟡 Buffers in memory | 🟡 Buffers in memory |
 | **Error Handling** | ✅ Configurable (`set -e`/`set +e`, non-zero OK by default) | ✅ Throws on error | ✅ Throws on error | ✅ Throws on error |
 | **Shell Settings** | ✅ `set -e`/`set +e` equivalent | ❌ No | ❌ No | ❌ No |
+| **Stdout Support** | ✅ Real-time streaming + events | ✅ Shell redirection + buffered | ✅ Node.js streams + interleaved | ✅ Readable streams + `.pipe.stdout` |
+| **Stderr Support** | ✅ Real-time streaming + events | ✅ Redirection + `.quiet()` access | ✅ Streams + interleaved output | ✅ Readable streams + `.pipe.stderr` |
 | **Stdin Support** | ✅ string/Buffer/inherit/ignore | ✅ Pipe operations | ✅ Input/output streams | ✅ Basic stdin |
 | **Built-in Commands** | ❌ Uses system | ✅ echo, cd, etc. | ❌ Uses system | ❌ Uses system |
 | **Bundle Size** | 📦 ~15KB | 🎯 0KB (built-in) | 📦 ~25KB | 📦 ~50KB |
