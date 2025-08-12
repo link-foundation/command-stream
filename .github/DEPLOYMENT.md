@@ -27,7 +27,7 @@ This is automatically provided by GitHub Actions, no setup required.
 ### CI Workflow (`.github/workflows/ci.yml`)
 - Runs on every pull request and push to main
 - Tests the code with Bun
-- Checks Node.js compatibility (versions 18, 20, 22)
+- Checks Node.js compatibility (versions 20, 22, 24, 26)
 - Validates package.json and required files
 - Runs coverage tests
 

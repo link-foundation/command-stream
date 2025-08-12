@@ -185,7 +185,7 @@ bun test --coverage
 ## Requirements
 
 - **Bun**: >= 1.0.0 (primary runtime)
-- **Node.js**: >= 18.0.0 (compatibility support)
+- **Node.js**: >= 20.0.0 (compatibility support)
 
 ## License
 
