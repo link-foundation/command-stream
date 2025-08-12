@@ -1,2 +1,2 @@
-# command-stream
+# command-$tream
 $treamable commands executor
