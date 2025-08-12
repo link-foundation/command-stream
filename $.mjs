@@ -7,6 +7,15 @@
 
 const isBun = typeof globalThis.Bun !== 'undefined';
 
+// Global shell settings (like bash set -e / set +e)
+let globalShellSettings = {
+  errexit: false,    // set -e equivalent: exit on error
+  verbose: false,    // set -v equivalent: print commands
+  xtrace: false,     // set -x equivalent: trace execution
+  pipefail: false,   // set -o pipefail equivalent: pipe failure detection
+  nounset: false     // set -u equivalent: error on undefined variables
+};
+
 // EventEmitter-like implementation
 class StreamEmitter {
   constructor() {
@@ -124,6 +133,19 @@ class ProcessRunner extends StreamEmitter {
     };
 
     const argv = this.spec.mode === 'shell' ? ['sh', '-lc', this.spec.command] : [this.spec.file, ...this.spec.args];
+    
+    // Shell tracing (set -x equivalent)
+    if (globalShellSettings.xtrace) {
+      const traceCmd = this.spec.mode === 'shell' ? this.spec.command : argv.join(' ');
+      console.log(`+ ${traceCmd}`);
+    }
+    
+    // Verbose mode (set -v equivalent)
+    if (globalShellSettings.verbose) {
+      const verboseCmd = this.spec.mode === 'shell' ? this.spec.command : argv.join(' ');
+      console.log(verboseCmd);
+    }
+    
     const needsExplicitPipe = stdin !== 'inherit' && stdin !== 'ignore';
     const preferNodeForInput = isBun && needsExplicitPipe;
     this.child = preferNodeForInput ? await spawnNode(argv) : (isBun ? spawnBun(argv) : await spawnNode(argv));
@@ -184,6 +206,16 @@ class ProcessRunner extends StreamEmitter {
     this.finished = true;
     this.emit('end', this.result);
     this.emit('exit', this.result.code);
+    
+    // Handle shell settings (set -e equivalent)
+    if (globalShellSettings.errexit && this.result.code !== 0) {
+      const error = new Error(`Command failed with exit code ${this.result.code}`);
+      error.code = this.result.code;
+      error.stdout = this.result.stdout;
+      error.stderr = this.result.stderr;
+      error.result = this.result;
+      throw error;
+    }
     
     return this.result;
   }
@@ -334,5 +366,66 @@ function raw(value) {
   return { raw: String(value) }; 
 }
 
-export { $tagged as $, sh, exec, run, quote, create, raw, ProcessRunner };
+// Shell setting control functions (like bash set/unset)
+function set(option) {
+  const mapping = {
+    'e': 'errexit',     // set -e: exit on error
+    'errexit': 'errexit',
+    'v': 'verbose',     // set -v: verbose
+    'verbose': 'verbose', 
+    'x': 'xtrace',      // set -x: trace execution
+    'xtrace': 'xtrace',
+    'u': 'nounset',     // set -u: error on unset vars
+    'nounset': 'nounset',
+    'o pipefail': 'pipefail',  // set -o pipefail
+    'pipefail': 'pipefail'
+  };
+  
+  if (mapping[option]) {
+    globalShellSettings[mapping[option]] = true;
+    if (globalShellSettings.verbose) {
+      console.log(`+ set -${option}`);
+    }
+  }
+  return globalShellSettings;
+}
+
+function unset(option) {
+  const mapping = {
+    'e': 'errexit',
+    'errexit': 'errexit',
+    'v': 'verbose', 
+    'verbose': 'verbose',
+    'x': 'xtrace',
+    'xtrace': 'xtrace',
+    'u': 'nounset',
+    'nounset': 'nounset',
+    'o pipefail': 'pipefail',
+    'pipefail': 'pipefail'
+  };
+  
+  if (mapping[option]) {
+    globalShellSettings[mapping[option]] = false;
+    if (globalShellSettings.verbose) {
+      console.log(`+ set +${option}`);
+    }
+  }
+  return globalShellSettings;
+}
+
+// Convenience functions for common patterns
+const shell = {
+  set,
+  unset,
+  settings: () => ({ ...globalShellSettings }),
+  
+  // Bash-like shortcuts
+  errexit: (enable = true) => enable ? set('e') : unset('e'),
+  verbose: (enable = true) => enable ? set('v') : unset('v'), 
+  xtrace: (enable = true) => enable ? set('x') : unset('x'),
+  pipefail: (enable = true) => enable ? set('o pipefail') : unset('o pipefail'),
+  nounset: (enable = true) => enable ? set('u') : unset('u'),
+};
+
+export { $tagged as $, sh, exec, run, quote, create, raw, ProcessRunner, shell, set, unset };
 export default $tagged;

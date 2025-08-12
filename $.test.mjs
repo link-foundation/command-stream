@@ -1,5 +1,14 @@
 import { test, expect, describe, beforeEach } from 'bun:test';
-import { $, sh, exec, run, quote, create, raw, ProcessRunner } from './$.mjs';
+import { $, sh, exec, run, quote, create, raw, ProcessRunner, shell } from './$.mjs';
+
+// Reset shell settings before each test to prevent interference
+beforeEach(() => {
+  shell.errexit(false);
+  shell.verbose(false);
+  shell.xtrace(false);
+  shell.pipefail(false);
+  shell.nounset(false);
+});
 
 // Extract StreamEmitter class for testing
 class StreamEmitter {

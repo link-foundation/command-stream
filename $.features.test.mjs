@@ -1,5 +1,14 @@
-import { test, expect, describe } from 'bun:test';
-import { $ } from './$.mjs';
+import { test, expect, describe, beforeEach } from 'bun:test';
+import { $, shell } from './$.mjs';
+
+// Reset shell settings before each test to prevent interference
+beforeEach(() => {
+  shell.errexit(false);
+  shell.verbose(false);
+  shell.xtrace(false);
+  shell.pipefail(false);
+  shell.nounset(false);
+});
 
 describe('command-stream Feature Validation', () => {
   describe('Runtime Support', () => {

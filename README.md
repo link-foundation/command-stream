@@ -27,7 +27,8 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 | **Cross-platform** | ✅ macOS/Linux/Windows | ✅ Yes | ✅ Yes | ✅ Yes |
 | **Performance** | ⚡ Fast (Bun optimized) | ⚡ Very fast | 🐌 Moderate | 🐌 Slow |
 | **Memory Efficiency** | ✅ Streaming prevents buildup | 🟡 Buffers in memory | 🟡 Buffers in memory | 🟡 Buffers in memory |
-| **Error Handling** | ✅ Non-zero exit OK | ✅ Throws on error | ✅ Throws on error | ✅ Throws on error |
+| **Error Handling** | ✅ Configurable (`set -e`/`set +e`, non-zero OK by default) | ✅ Throws on error | ✅ Throws on error | ✅ Throws on error |
+| **Shell Settings** | ✅ `set -e`/`set +e` equivalent | ❌ No | ❌ No | ❌ No |
 | **Stdin Support** | ✅ string/Buffer/inherit/ignore | ✅ Pipe operations | ✅ Input/output streams | ✅ Basic stdin |
 | **Built-in Commands** | ❌ Uses system | ✅ echo, cd, etc. | ❌ Uses system | ❌ Uses system |
 | **Bundle Size** | 📦 ~15KB | 🎯 0KB (built-in) | 📦 ~25KB | 📦 ~50KB |
@@ -37,6 +38,7 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 
 - **🚀 Real-time Processing**: Only library with true streaming and async iteration
 - **🔄 Flexible Patterns**: Multiple usage patterns (await, events, iteration, mixed)
+- **🐚 Shell Replacement**: Dynamic error handling with `set -e`/`set +e` equivalents for .sh file replacement
 - **⚡ Bun Optimized**: Designed for Bun with Node.js fallback compatibility  
 - **💾 Memory Efficient**: Streaming prevents large buffer accumulation
 - **🛡️ Production Ready**: 90%+ test coverage with comprehensive error handling
@@ -106,6 +108,38 @@ process.on('data', chunk => {
 // Still get the final result
 const result = await process;
 console.log('Final output:', result.stdout);
+```
+
+### 5. Shell Replacement (.sh → .mjs)
+
+Replace bash scripts with JavaScript while keeping shell semantics:
+
+```javascript
+import { $, shell, set, unset } from 'command-stream';
+
+// set -e equivalent: exit on any error
+shell.errexit(true);
+
+await $`mkdir -p build`;
+await $`npm run build`;
+
+// set +e equivalent: allow errors (like bash)
+shell.errexit(false);
+const cleanup = await $`rm -rf temp`; // Won't throw if fails
+
+// set -e again for critical operations  
+shell.errexit(true);
+await $`cp -r build/* deploy/`;
+
+// Other bash-like settings
+shell.verbose(true);  // set -v: print commands
+shell.xtrace(true);   // set -x: trace execution
+
+// Or use the bash-style API
+set('e');    // set -e
+unset('e');  // set +e
+set('x');    // set -x
+set('verbose'); // Long form also supported
 ```
 
 ## Real-world Examples
@@ -187,6 +221,27 @@ The enhanced `$` function returns a `ProcessRunner` instance that extends `Event
 - `stdout`: Direct access to child process stdout stream
 - `stderr`: Direct access to child process stderr stream  
 - `stdin`: Direct access to child process stdin stream
+
+### Shell Settings API
+
+Control shell behavior like bash `set`/`unset` commands:
+
+#### Functions
+
+- `shell.errexit(boolean)`: Enable/disable exit-on-error (like `set ±e`)
+- `shell.verbose(boolean)`: Enable/disable command printing (like `set ±v`)
+- `shell.xtrace(boolean)`: Enable/disable execution tracing (like `set ±x`)
+- `set(option)`: Enable shell option (`'e'`, `'v'`, `'x'`, or long names)
+- `unset(option)`: Disable shell option
+- `shell.settings()`: Get current settings object
+
+#### Supported Options
+
+- `'e'` / `'errexit'`: Exit on command failure
+- `'v'` / `'verbose'`: Print commands before execution
+- `'x'` / `'xtrace'`: Trace command execution with `+` prefix
+- `'u'` / `'nounset'`: Error on undefined variables (planned)
+- `'pipefail'`: Pipe failure detection (planned)
 
 ### Result Object
 
