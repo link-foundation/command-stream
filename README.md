@@ -15,10 +15,10 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 
 ## Comparison with Other Libraries
 
-| Feature | command-stream | Bun.$ | execa | zx |
+| Feature | [command-stream](https://github.com/link-foundation/command-stream) | [Bun.$](https://bun.sh/docs/runtime/shell) | [execa](https://github.com/sindresorhus/execa) | [zx](https://github.com/google/zx) |
 |---------|----------------|-------|-------|-----|
 | **Runtime Support** | ✅ Bun + Node.js | 🟡 Bun only | ✅ Node.js | ✅ Node.js |
-| **Template Literals** | ✅ `$\`cmd\`` | ✅ `$\`cmd\`` | ✅ `$\`cmd\`` | ✅ `$\`cmd\`` |
+| **Template Literals** | ✅ `` $`cmd` `` | ✅ `` $`cmd` `` | ✅ `` $`cmd` `` | ✅ `` $`cmd` `` |
 | **Real-time Streaming** | ✅ Live output | ❌ Buffer only | 🟡 Limited | ❌ Buffer only |
 | **Async Iteration** | ✅ `for await (chunk of $.stream())` | ❌ No | ❌ No | ❌ No |
 | **EventEmitter Pattern** | ✅ `.on('data', ...)` | ❌ No | 🟡 Limited events | ❌ No |
