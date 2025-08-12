@@ -27,7 +27,7 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 | **Cross-platform** | ✅ macOS/Linux/Windows | ✅ Yes | ✅ Yes | ✅ Yes |
 | **Performance** | ⚡ Fast (Bun optimized) | ⚡ Very fast | 🐌 Moderate | 🐌 Slow |
 | **Memory Efficiency** | ✅ Streaming prevents buildup | 🟡 Buffers in memory | 🟡 Buffers in memory | 🟡 Buffers in memory |
-| **Error Handling** | ✅ Non-zero exit OK | ✅ Exception on error | ✅ Promise rejection | ✅ Exception on error |
+| **Error Handling** | ✅ Non-zero exit OK | ✅ Throws on error | ✅ Throws on error | ✅ Throws on error |
 | **Stdin Support** | ✅ string/Buffer/inherit/ignore | ✅ Pipe operations | ✅ Input/output streams | ✅ Basic stdin |
 | **Built-in Commands** | ❌ Uses system | ✅ echo, cd, etc. | ❌ Uses system | ❌ Uses system |
 | **Bundle Size** | 📦 ~15KB | 🎯 0KB (built-in) | 📦 ~25KB | 📦 ~50KB |
