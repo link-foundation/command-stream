@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive test suite with 90.42% line coverage and 95.45% function coverage
 - Support for stdin/stdout/stderr handling
 - Cross-platform compatibility (macOS, Linux, Windows)
-- Node.js 20+ compatibility (20, 22, 24, 26)
+- Node.js 20+ compatibility (20, 22, 24)
 - EventEmitter-like interface for real-time command monitoring
 - Built-in security with automatic shell escaping
 - Promise interface with then/catch/finally support
