@@ -4,7 +4,7 @@ $treamable commands executor
 
 A modern $ shell utility library with streaming, async iteration, and EventEmitter support, optimized for Bun runtime.
 
-## Featureså
+## Features
 
 - 🚀 **Multiple Usage Patterns**: Classic await, async iteration, EventEmitter, and mixed patterns
 - 📡 **Real-time Streaming**: Process command output as it arrives, not after completion
