@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        bun-version: [latest]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: ${{ matrix.bun-version }}
+      
+      - name: Install dependencies
+        run: bun install
+      
+      - name: Run tests
+        run: bun test
+      
+      - name: Run tests with coverage
+        run: bun test --coverage
+      
+      - name: Lint package.json
+        run: |
+          # Check if package.json is valid
+          node -e "JSON.parse(require('fs').readFileSync('package.json', 'utf8'))"
+          echo "✅ package.json is valid JSON"
+      
+      - name: Check files exist
+        run: |
+          test -f $.mjs || (echo "❌ Main file $.mjs not found" && exit 1)
+          test -f README.md || (echo "❌ README.md not found" && exit 1)
+          test -f LICENSE || (echo "❌ LICENSE file not found" && exit 1)
+          echo "✅ All required files exist"
+      
+      - name: Check package.json completeness
+        run: |
+          node -e "
+          const pkg = require('./package.json');
+          const required = ['name', 'version', 'description', 'main', 'license', 'author'];
+          const missing = required.filter(field => !pkg[field]);
+          if (missing.length > 0) {
+            console.error('❌ Missing required fields:', missing.join(', '));
+            process.exit(1);
+          }
+          console.log('✅ All required package.json fields present');
+          "
+  
+  node-compatibility:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20, 22]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      
+      - name: Test Node.js compatibility
+        run: |
+          node -e "
+          try {
+            const { $ } = require('./$.mjs');
+            console.log('✅ Module loads successfully in Node.js ${{ matrix.node-version }}');
+          } catch (error) {
+            console.error('❌ Module failed to load:', error.message);
+            process.exit(1);
+          }
+          "

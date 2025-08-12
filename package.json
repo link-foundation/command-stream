@@ -7,6 +7,14 @@
   "exports": {
     ".": "./$.mjs"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/link-foundation/command-stream.git"
+  },
+  "homepage": "https://github.com/link-foundation/command-stream#readme",
+  "bugs": {
+    "url": "https://github.com/link-foundation/command-stream/issues"
+  },
   "scripts": {
     "test": "bun test",
     "test:coverage": "bun test --coverage"
@@ -30,6 +38,7 @@
   },
   "files": [
     "$.mjs",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ]
 }

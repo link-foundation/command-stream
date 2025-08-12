@@ -1,0 +1,38 @@
+# Development files
+*.test.mjs
+*.test.js
+tests/
+test/
+coverage/
+
+# Build and development tools
+.github/
+.vscode/
+.idea/
+
+# Logs and temporary files
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# Environment and config files
+.env
+.env.local
+.env.production
+.env.test
+
+# Editor files
+*.swp
+*.swo
+*~
+
+# Development dependencies tracking
+node_modules/
+.npm/
+.yarn/
+yarn-error.log
+yarn.lock
+package-lock.json
+
+# Only include what's specified in package.json "files"
