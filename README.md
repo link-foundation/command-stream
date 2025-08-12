@@ -2,13 +2,13 @@
 
 $treamable commands executor
 
-A modern, cross-runtime $ shell utility library with streaming, async iteration, and EventEmitter support for Bun and Node.js.
+A modern $ shell utility library with streaming, async iteration, and EventEmitter support, optimized for Bun runtime.
 
 ## Featureså
 
 - 🚀 **Multiple Usage Patterns**: Classic await, async iteration, EventEmitter, and mixed patterns
 - 📡 **Real-time Streaming**: Process command output as it arrives, not after completion
-- 🔄 **Cross-runtime**: Works with both Bun and Node.js
+- 🔄 **Bun Optimized**: Designed for Bun runtime with Node.js compatibility
 - ⚡ **Performance**: Memory-efficient streaming prevents large buffer accumulation
 - 🎯 **Backward Compatible**: Existing `await $` syntax continues to work
 - 🛡️ **Type Safe**: Full TypeScript support (coming soon)
@@ -178,14 +178,14 @@ The enhanced `$` function returns a `ProcessRunner` instance that extends `Event
 # Run comprehensive test suite
 bun test
 
-# Run debug test
-bun run test:debug
+# Run tests with coverage report
+bun test --coverage
 ```
 
 ## Requirements
 
-- **Bun**: >= 1.0.0
-- **Node.js**: >= 18.0.0 (for Node.js usage)
+- **Bun**: >= 1.0.0 (primary runtime)
+- **Node.js**: >= 18.0.0 (compatibility support)
 
 ## License
 

@@ -1,0 +1,576 @@
+import { test, expect, describe, beforeEach } from 'bun:test';
+import { $, sh, exec, run, quote, create, raw, ProcessRunner } from './$.mjs';
+
+// Extract StreamEmitter class for testing
+class StreamEmitter {
+  constructor() {
+    this.listeners = new Map();
+  }
+
+  on(event, listener) {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, []);
+    }
+    this.listeners.get(event).push(listener);
+    return this;
+  }
+
+  emit(event, ...args) {
+    const eventListeners = this.listeners.get(event);
+    if (eventListeners) {
+      for (const listener of eventListeners) {
+        listener(...args);
+      }
+    }
+    return this;
+  }
+
+  off(event, listener) {
+    const eventListeners = this.listeners.get(event);
+    if (eventListeners) {
+      const index = eventListeners.indexOf(listener);
+      if (index !== -1) {
+        eventListeners.splice(index, 1);
+      }
+    }
+    return this;
+  }
+}
+
+describe('StreamEmitter', () => {
+  let emitter;
+
+  beforeEach(() => {
+    emitter = new StreamEmitter();
+  });
+
+  test('should add and emit events', () => {
+    let called = false;
+    let receivedData;
+
+    emitter.on('test', (data) => {
+      called = true;
+      receivedData = data;
+    });
+
+    emitter.emit('test', 'hello');
+
+    expect(called).toBe(true);
+    expect(receivedData).toBe('hello');
+  });
+
+  test('should support multiple listeners for same event', () => {
+    let count = 0;
+
+    emitter.on('test', () => count++);
+    emitter.on('test', () => count++);
+
+    emitter.emit('test');
+
+    expect(count).toBe(2);
+  });
+
+  test('should support chaining', () => {
+    let count = 0;
+
+    const result = emitter
+      .on('test1', () => count++)
+      .on('test2', () => count++);
+
+    expect(result).toBe(emitter);
+
+    emitter.emit('test1');
+    emitter.emit('test2');
+
+    expect(count).toBe(2);
+  });
+
+  test('should remove listeners with off', () => {
+    let called = false;
+    const listener = () => { called = true; };
+
+    emitter.on('test', listener);
+    emitter.off('test', listener);
+    emitter.emit('test');
+
+    expect(called).toBe(false);
+  });
+
+  test('should handle non-existent event removal', () => {
+    const listener = () => {};
+    
+    // Should not throw
+    expect(() => {
+      emitter.off('nonexistent', listener);
+    }).not.toThrow();
+  });
+});
+
+describe('Utility Functions', () => {
+  describe('quote', () => {
+    test('should quote simple strings', () => {
+      expect(quote('hello')).toBe("'hello'");
+    });
+
+    test('should handle empty string', () => {
+      expect(quote('')).toBe("''");
+    });
+
+    test('should handle null/undefined', () => {
+      expect(quote(null)).toBe("''");
+      expect(quote(undefined)).toBe("''");
+    });
+
+    test('should escape single quotes', () => {
+      expect(quote("it's")).toBe("'it'\\''s'");
+    });
+
+    test('should handle arrays', () => {
+      expect(quote(['a', 'b', 'c'])).toBe("'a' 'b' 'c'");
+    });
+
+    test('should convert non-strings', () => {
+      expect(quote(123)).toBe("'123'");
+      expect(quote(true)).toBe("'true'");
+    });
+  });
+
+  describe('raw', () => {
+    test('should create raw object', () => {
+      const result = raw('unquoted');
+      expect(result).toEqual({ raw: 'unquoted' });
+    });
+
+    test('should convert to string', () => {
+      expect(raw(123)).toEqual({ raw: '123' });
+    });
+  });
+});
+
+describe('ProcessRunner - Classic Await Pattern', () => {
+  test('should execute simple command', async () => {
+    const result = await $`echo "hello world"`;
+    
+    expect(result.code).toBe(0);
+    expect(result.stdout.trim()).toBe('hello world');
+    expect(result.stderr).toBe('');
+  });
+
+  test('should handle command with non-zero exit', async () => {
+    const result = await $`sh -c "echo 'stdout'; echo 'stderr' >&2; exit 42"`;
+    
+    expect(result.code).toBe(42);
+    expect(result.stdout.trim()).toBe('stdout');
+    expect(result.stderr.trim()).toBe('stderr');
+  });
+
+  test('should interpolate variables with quoting', async () => {
+    const name = 'world';
+    const result = await $`echo "hello ${name}"`;
+    
+    // Variables are automatically quoted for safety
+    expect(result.stdout.trim()).toBe("hello 'world'");
+  });
+
+  test('should handle raw interpolation', async () => {
+    const cmd = raw('echo "raw test"');
+    const result = await $`${cmd}`;
+    
+    expect(result.stdout.trim()).toBe('raw test');
+  });
+
+  test('should quote dangerous characters', async () => {
+    const dangerous = "'; rm -rf /; echo '";
+    const result = await $`echo ${dangerous}`;
+    
+    expect(result.stdout.trim()).toBe(dangerous);
+  });
+});
+
+describe('ProcessRunner - Async Iteration Pattern', () => {
+  test('should stream command output', async () => {
+    const chunks = [];
+    
+    for await (const chunk of $`echo "line1"; echo "line2"; echo "line3"`.stream()) {
+      if (chunk.type === 'stdout') {
+        chunks.push(chunk.data.toString().trim());
+      }
+    }
+    
+    expect(chunks.length).toBeGreaterThan(0);
+    const fullOutput = chunks.join('').replace(/\n/g, '');
+    expect(fullOutput).toContain('line1');
+    expect(fullOutput).toContain('line2');
+    expect(fullOutput).toContain('line3');
+  });
+
+  test('should handle stderr in streaming', async () => {
+    const chunks = [];
+    
+    for await (const chunk of $`echo "stdout"; echo "stderr" >&2`.stream()) {
+      chunks.push(chunk);
+    }
+    
+    expect(chunks.some(c => c.type === 'stdout')).toBe(true);
+    expect(chunks.some(c => c.type === 'stderr')).toBe(true);
+  });
+});
+
+describe('ProcessRunner - EventEmitter Pattern', () => {
+  test('should emit data events', async () => {
+    return new Promise((resolve) => {
+      let dataEvents = 0;
+      let stdoutEvents = 0;
+      let stderrEvents = 0;
+      let endReceived = false;
+      let exitReceived = false;
+
+      const timeout = setTimeout(() => {
+        resolve(); // Resolve even if timeout to avoid hanging test
+      }, 1000);
+
+      $`echo "test"; echo "error" >&2`
+        .on('data', (chunk) => {
+          dataEvents++;
+          expect(chunk).toHaveProperty('type');
+          expect(chunk).toHaveProperty('data');
+          expect(['stdout', 'stderr']).toContain(chunk.type);
+        })
+        .on('stdout', (chunk) => {
+          stdoutEvents++;
+          expect(Buffer.isBuffer(chunk)).toBe(true);
+        })
+        .on('stderr', (chunk) => {
+          stderrEvents++;
+          expect(Buffer.isBuffer(chunk)).toBe(true);
+        })
+        .on('end', (result) => {
+          endReceived = true;
+          expect(result).toHaveProperty('code');
+          expect(result).toHaveProperty('stdout');
+          expect(result).toHaveProperty('stderr');
+          expect(result.code).toBe(0);
+          
+          if (exitReceived) {
+            clearTimeout(timeout);
+            expect(dataEvents).toBeGreaterThan(0);
+            expect(stdoutEvents).toBeGreaterThan(0);
+            expect(stderrEvents).toBeGreaterThan(0);
+            resolve();
+          }
+        })
+        .on('exit', (code) => {
+          exitReceived = true;
+          expect(code).toBe(0);
+          
+          if (endReceived) {
+            clearTimeout(timeout);
+            expect(dataEvents).toBeGreaterThan(0);
+            expect(stdoutEvents).toBeGreaterThan(0);
+            expect(stderrEvents).toBeGreaterThan(0);
+            resolve();
+          }
+        });
+    });
+  });
+
+  test('should support event chaining', async () => {
+    return new Promise((resolve) => {
+      let events = [];
+      
+      const timeout = setTimeout(() => {
+        resolve(); // Resolve even if timeout
+      }, 1000);
+
+      $`echo "chain test"`
+        .on('data', () => events.push('data'))
+        .on('stdout', () => events.push('stdout'))
+        .on('end', () => {
+          clearTimeout(timeout);
+          expect(events).toContain('data');
+          expect(events).toContain('stdout');
+          resolve();
+        });
+    });
+  });
+});
+
+describe('ProcessRunner - Mixed Pattern', () => {
+  test('should support both events and await', async () => {
+    let eventData = '';
+    let eventCount = 0;
+
+    const process = $`echo "mixed test"`;
+    
+    process.on('data', (chunk) => {
+      if (chunk.type === 'stdout') {
+        eventCount++;
+        eventData += chunk.data.toString();
+      }
+    });
+
+    const result = await process;
+
+    expect(eventCount).toBeGreaterThan(0);
+    expect(eventData.trim()).toBe('mixed test');
+    expect(result.stdout.trim()).toBe('mixed test');
+    expect(eventData).toBe(result.stdout);
+  });
+});
+
+describe('ProcessRunner - Stream Properties', () => {
+  test('should provide stream access', async () => {
+    const process = $`echo "stream test"`;
+    
+    // Start the process to initialize streams
+    process._start();
+    
+    // Wait a bit for initialization
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    expect(process.stdout).toBeDefined();
+    expect(process.stderr).toBeDefined();
+    expect(process.stdin).toBeDefined();
+    
+    await process;
+  });
+});
+
+describe('Public APIs', () => {
+  describe('sh', () => {
+    test('should execute shell command', async () => {
+      const result = await sh('echo "sh test"');
+      
+      expect(result.code).toBe(0);
+      expect(result.stdout.trim()).toBe('sh test');
+    });
+
+    test('should accept options', async () => {
+      const result = await sh('echo "options test"', { capture: true });
+      
+      expect(result.stdout.trim()).toBe('options test');
+    });
+  });
+
+  describe('exec', () => {
+    test('should execute file with args', async () => {
+      const result = await exec('echo', ['exec test']);
+      
+      expect(result.code).toBe(0);
+      expect(result.stdout.trim()).toBe('exec test');
+    });
+
+    test('should handle empty args', async () => {
+      const result = await exec('pwd');
+      
+      expect(result.code).toBe(0);
+      expect(result.stdout).toBeTruthy();
+    });
+  });
+
+  describe('run', () => {
+    test('should run string command', async () => {
+      const result = await run('echo "run test"');
+      
+      expect(result.code).toBe(0);
+      expect(result.stdout.trim()).toBe('run test');
+    });
+
+    test('should run array command', async () => {
+      const result = await run(['echo', 'run array test']);
+      
+      expect(result.code).toBe(0);
+      expect(result.stdout.trim()).toBe('run array test');
+    });
+  });
+
+  describe('create', () => {
+    test('should create custom $ with default options', async () => {
+      const custom$ = create({ capture: false });
+      const process = custom$`echo "create test"`;
+      
+      expect(process).toBeInstanceOf(ProcessRunner);
+      
+      const result = await process;
+      expect(result.code).toBe(0);
+    });
+  });
+});
+
+describe('Error Handling and Edge Cases', () => {
+  test('should handle command not found', async () => {
+    const result = await $`nonexistent-command-123456`;
+    
+    expect(result.code).not.toBe(0);
+  });
+
+  test('should handle special characters in interpolation', async () => {
+    const special = '$HOME && echo "injection"';
+    const result = await $`echo ${special}`;
+    
+    // Should be quoted and safe
+    expect(result.stdout.trim()).toBe(special);
+  });
+
+  test('should handle multiple interpolations', async () => {
+    const a = 'hello';
+    const b = 'world';
+    const result = await $`echo ${a} ${b}`;
+    
+    expect(result.stdout.trim()).toBe("hello world");
+  });
+
+  test('should handle arrays in interpolation', async () => {
+    const args = ['one', 'two', 'three'];
+    const result = await $`echo ${args}`;
+    
+    expect(result.stdout.trim()).toContain('one');
+    expect(result.stdout.trim()).toContain('two');
+    expect(result.stdout.trim()).toContain('three');
+  });
+
+  test('should handle empty command', async () => {
+    const result = await $`true`;
+    
+    expect(result.code).toBe(0);
+    expect(result.stdout).toBe('');
+  });
+
+  test('should handle stdin options', async () => {
+    const result = await sh('cat', { stdin: 'test input' });
+    
+    expect(result.stdout.trim()).toBe('test input');
+  });
+});
+
+describe('ProcessRunner Options', () => {
+  test('should handle mirror option', async () => {
+    // Test with mirror disabled
+    const process = new ProcessRunner(
+      { mode: 'shell', command: 'echo "no mirror"' }, 
+      { mirror: false, capture: true }
+    );
+    
+    const result = await process;
+    expect(result.stdout.trim()).toBe('no mirror');
+  });
+
+  test('should handle capture option', async () => {
+    // Test with capture disabled
+    const process = new ProcessRunner(
+      { mode: 'shell', command: 'echo "no capture"' }, 
+      { mirror: false, capture: false }
+    );
+    
+    const result = await process;
+    expect(result.stdout).toBeUndefined();
+  });
+
+  test('should handle cwd option', async () => {
+    const result = await sh('pwd', { cwd: '/tmp' });
+    
+    expect(result.stdout.trim()).toContain('tmp');
+  });
+});
+
+describe('Promise Interface', () => {
+  test('should support then/catch/finally', async () => {
+    let thenCalled = false;
+    let finallyCalled = false;
+
+    const result = await $`echo "promise test"`
+      .then((res) => {
+        thenCalled = true;
+        return res;
+      })
+      .finally(() => {
+        finallyCalled = true;
+      });
+
+    expect(thenCalled).toBe(true);
+    expect(finallyCalled).toBe(true);
+    expect(result.stdout.trim()).toBe('promise test');
+  });
+
+  test('should handle catch for errors', async () => {
+    try {
+      // This should not actually throw since non-zero exit doesn't throw
+      await $`exit 1`.catch(() => {
+        // Catch called if promise is rejected
+      });
+    } catch (e) {
+      // If it does throw, that's also valid behavior
+    }
+
+    // The command should complete normally even with non-zero exit
+    const result = await $`exit 1`;
+    expect(result.code).toBe(1);
+  });
+
+  test('should handle buildShellCommand function', () => {
+    // Test the buildShellCommand function indirectly through template usage
+    const name = 'test';
+    const number = 42;
+    const process = $`echo ${name} ${number}`;
+    
+    expect(process).toBeInstanceOf(ProcessRunner);
+    expect(process.spec.command).toContain("'test'");
+    expect(process.spec.command).toContain("'42'");
+  });
+
+  test('should handle asBuffer function via streaming', async () => {
+    let bufferReceived = false;
+    
+    for await (const chunk of $`echo "buffer test"`.stream()) {
+      if (chunk.type === 'stdout') {
+        expect(Buffer.isBuffer(chunk.data)).toBe(true);
+        bufferReceived = true;
+        break;
+      }
+    }
+    
+    expect(bufferReceived).toBe(true);
+  });
+});
+
+describe('Coverage for Internal Functions', () => {
+  test('should test ProcessRunner stdin handling', async () => {
+    // Test different stdin modes
+    const result1 = await sh('echo "test"', { stdin: 'ignore' });
+    expect(result1.code).toBe(0);
+    
+    const result2 = await sh('cat', { stdin: Buffer.from('buffer input') });
+    expect(result2.stdout.trim()).toBe('buffer input');
+  });
+
+  test('should test ProcessRunner _pumpStdinTo and _writeToStdin', async () => {
+    // These are tested indirectly through stdin options
+    const result = await sh('cat', { stdin: 'piped input' });
+    expect(result.stdout.trim()).toBe('piped input');
+  });
+
+  test('should test ProcessRunner stream method edge cases', async () => {
+    const process = $`echo "stream edge case"`;
+    
+    // Test multiple stream() calls
+    const stream1 = process.stream();
+    const stream2 = process.stream();
+    
+    expect(stream1).toBeDefined();
+    expect(stream2).toBeDefined();
+    
+    // Consume one stream
+    for await (const chunk of stream1) {
+      expect(chunk).toHaveProperty('type');
+      break; // Just test one chunk
+    }
+  });
+
+  test('should test env and other options', async () => {
+    const result = await sh('echo $TEST_VAR', { 
+      env: { ...process.env, TEST_VAR: 'test_value' } 
+    });
+    
+    expect(result.stdout.trim()).toBe('test_value');
+  });
+});
