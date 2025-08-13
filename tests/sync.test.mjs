@@ -216,12 +216,13 @@ describe('Synchronous Execution (.sync())', () => {
     });
 
     test('should handle large output', () => {
-      // Generate large output
-      const result = $`for i in {1..1000}; do echo "Line $i"; done`.sync();
+      // Use seq which is more portable than {1..1000} bash expansion
+      const result = $`seq 1 1000`.sync();
       
       const lines = result.stdout.trim().split('\n');
-      expect(lines.length).toBeGreaterThan(900); // Some shells might not support {1..1000}
-      expect(lines[0]).toContain('Line');
+      expect(lines.length).toBeGreaterThan(900); // Should be 1000 lines
+      expect(lines[0]).toBe('1');
+      expect(lines[999]).toBe('1000');
     });
 
     test('should handle commands with quotes and special characters', () => {
