@@ -1,4 +1,4 @@
-# command-$tream
+# [command-$tream](https://github.com/link-foundation/command-stream)
 
 $treamable commands executor
 
