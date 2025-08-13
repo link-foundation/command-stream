@@ -94,6 +94,7 @@ await $`basename /path/to/file.txt .txt`; // → "file"
 | **Stdin Support** | ✅ string/Buffer/inherit/ignore | ✅ Pipe operations | ✅ Input/output streams | ✅ Basic stdin |
 | **Built-in Commands** | ✅ **18 commands**: cat, ls, mkdir, rm, mv, cp, touch, basename, dirname, seq, yes + all Bun.$ commands | ✅ echo, cd, etc. | ❌ Uses system | ❌ Uses system |
 | **Virtual Commands Engine** | ✅ **Revolutionary**: Register JavaScript functions as shell commands with full pipeline support | ❌ No extensibility | ❌ No custom commands | ❌ No custom commands |
+| **Pipeline/Piping Support** | ✅ **Advanced**: System commands + Built-ins + Virtual commands + Mixed pipelines | ✅ Standard shell piping | ✅ Programmatic `.pipe()` + multi-destination | ✅ Shell piping + `.pipe()` method |
 | **Bundle Size** | 📦 ~15KB | 🎯 0KB (built-in) | 📦 ~25KB | 📦 ~50KB |
 | **TypeScript** | 🔄 Coming soon | ✅ Built-in | ✅ Full support | ✅ Full support |
 | **License** | ✅ **Unlicense (Public Domain)** | 🟡 MIT (+ LGPL dependencies) | 🟡 MIT | 🟡 Apache 2.0 |
@@ -102,6 +103,7 @@ await $`basename /path/to/file.txt .txt`; // → "file"
 
 - **🆓 Truly Free**: **Unlicense (Public Domain)** - No restrictions, no attribution required, use however you want
 - **🚀 Revolutionary Virtual Commands**: **World's first** fully customizable virtual commands engine - register JavaScript functions as shell commands!
+- **🔗 Advanced Pipeline System**: **Only library** where virtual commands work seamlessly in pipelines with built-ins and system commands
 - **🔧 Built-in Commands**: **18 essential commands** work identically across all platforms - no system dependencies!
 - **📡 Real-time Processing**: Only library with true streaming and async iteration
 - **🔄 Flexible Patterns**: Multiple usage patterns (await, events, iteration, mixed)
@@ -335,6 +337,59 @@ await $`deploy staging | tee log.txt`; // Works in pipelines!
 - **Streaming**: Async generators for real-time output
 - **Dynamic Registration**: Add/remove commands at runtime
 - **Option Awareness**: Virtual commands respect `cwd`, `env`, etc.
+
+### 🔗 **Advanced Pipeline Support**
+
+**command-stream offers the most advanced piping system in the JavaScript ecosystem:**
+
+```javascript
+import { $, register } from 'command-stream';
+
+// ✅ Standard shell piping (like all libraries)
+await $`echo "hello world" | wc -w`;  // → "2"
+
+// ✅ Built-in to built-in piping  
+await $`seq 1 5 | cat > numbers.txt`;
+
+// ✅ System to built-in piping
+await $`git log --oneline | head -n 5`;
+
+// 🚀 UNIQUE: Virtual command piping
+register('uppercase', async (args, stdin) => {
+  return { stdout: stdin.toUpperCase(), code: 0 };
+});
+
+register('reverse', async (args, stdin) => {
+  return { stdout: stdin.split('').reverse().join(''), code: 0 };
+});
+
+// ✅ Built-in to virtual piping
+await $`echo "hello" | uppercase`;  // → "HELLO"
+
+// ✅ Virtual to virtual piping  
+await $`echo "hello" | uppercase | reverse`;  // → "OLLEH"
+
+// ✅ Mixed pipelines (system + built-in + virtual)
+await $`git log --oneline | head -n 3 | uppercase | cat > LOG.txt`;
+
+// ✅ Complex multi-stage pipelines
+await $`find . -name "*.js" | head -n 10 | basename | sort | uniq`;
+```
+
+#### **🆚 How We Compare**
+
+| Library | Pipeline Types | Custom Commands in Pipes | Real-time Streaming |
+|---------|----------------|---------------------------|---------------------|
+| **command-stream** | ✅ System + Built-ins + Virtual + Mixed | ✅ **Full support** | ✅ **Yes** |
+| **Bun.$** | ✅ System + Built-ins | ❌ No custom commands | ❌ No |
+| **execa** | ✅ Programmatic `.pipe()` | ❌ No shell integration | 🟡 Limited |
+| **zx** | ✅ Shell piping + `.pipe()` | ❌ No custom commands | ❌ No |
+
+**🎯 Unique Advantages:**
+- **Virtual commands work seamlessly in pipelines** - no other library can do this
+- **Mixed pipeline types** - combine system, built-in, and virtual commands freely
+- **Real-time streaming** through virtual command pipelines  
+- **Full stdin/stdout passing** between all command types
 
 ## Default Behavior: Shell-like with Programmatic Control
 
