@@ -4,6 +4,8 @@ $treamable commands executor
 
 A modern $ shell utility library with streaming, async iteration, and EventEmitter support, optimized for Bun runtime.
 
+<img width="2624" height="1320" alt="carbon" src="https://github.com/user-attachments/assets/41cccd6a-f029-4206-b3bc-a85c5dbcf2cf" />
+
 ## Features
 
 - 🐚 **Shell-like by Default**: Commands behave exactly like running in terminal (stdout→stdout, stderr→stderr, stdin→stdin)
@@ -15,6 +17,46 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 - 🎯 **Backward Compatible**: Existing `await $` syntax continues to work
 - 🛡️ **Type Safe**: Full TypeScript support (coming soon)
 - 🔧 **Built-in Commands**: 18 essential commands work identically across platforms
+
+## Comparison with Other Libraries
+
+| Feature | [command-stream](https://github.com/link-foundation/command-stream) | [Bun.$](https://bun.sh/docs/runtime/shell) | [execa](https://github.com/sindresorhus/execa) | [zx](https://github.com/google/zx) |
+|---------|----------------|-------|-------|-----|
+| **Runtime Support** | ✅ Bun + Node.js | 🟡 Bun only | ✅ Node.js | ✅ Node.js |
+| **Template Literals** | ✅ `` $`cmd` `` | ✅ `` $`cmd` `` | ✅ `` $`cmd` `` | ✅ `` $`cmd` `` |
+| **Real-time Streaming** | ✅ Live output | ❌ Buffer only | 🟡 Limited | ❌ Buffer only |
+| **Synchronous Execution** | ✅ `.sync()` with events | ❌ No | ✅ `execaSync` | ❌ No |
+| **Async Iteration** | ✅ `for await (chunk of $.stream())` | ❌ No | ❌ No | ❌ No |
+| **EventEmitter Pattern** | ✅ `.on('data', ...)` | ❌ No | 🟡 Limited events | ❌ No |
+| **Mixed Patterns** | ✅ Events + await/sync | ❌ No | ❌ No | ❌ No |
+| **Shell Injection Protection** | ✅ Auto-quoting | ✅ Built-in | ✅ Safe by default | ✅ Safe by default |
+| **Cross-platform** | ✅ macOS/Linux/Windows | ✅ Yes | ✅ Yes | ✅ Yes |
+| **Performance** | ⚡ Fast (Bun optimized) | ⚡ Very fast | 🐌 Moderate | 🐌 Slow |
+| **Memory Efficiency** | ✅ Streaming prevents buildup | 🟡 Buffers in memory | 🟡 Buffers in memory | 🟡 Buffers in memory |
+| **Error Handling** | ✅ Configurable (`set -e`/`set +e`, non-zero OK by default) | ✅ Throws on error | ✅ Throws on error | ✅ Throws on error |
+| **Shell Settings** | ✅ `set -e`/`set +e` equivalent | ❌ No | ❌ No | ❌ No |
+| **Stdout Support** | ✅ Real-time streaming + events | ✅ Shell redirection + buffered | ✅ Node.js streams + interleaved | ✅ Readable streams + `.pipe.stdout` |
+| **Stderr Support** | ✅ Real-time streaming + events | ✅ Redirection + `.quiet()` access | ✅ Streams + interleaved output | ✅ Readable streams + `.pipe.stderr` |
+| **Stdin Support** | ✅ string/Buffer/inherit/ignore | ✅ Pipe operations | ✅ Input/output streams | ✅ Basic stdin |
+| **Built-in Commands** | ✅ **18 commands**: cat, ls, mkdir, rm, mv, cp, touch, basename, dirname, seq, yes + all Bun.$ commands | ✅ echo, cd, etc. | ❌ Uses system | ❌ Uses system |
+| **Virtual Commands Engine** | ✅ **Revolutionary**: Register JavaScript functions as shell commands with full pipeline support | ❌ No extensibility | ❌ No custom commands | ❌ No custom commands |
+| **Pipeline/Piping Support** | ✅ **Advanced**: System + Built-ins + Virtual + Mixed + `.pipe()` method | ✅ Standard shell piping | ✅ Programmatic `.pipe()` + multi-destination | ✅ Shell piping + `.pipe()` method |
+| **Bundle Size** | 📦 ~15KB | 🎯 0KB (built-in) | 📦 ~25KB | 📦 ~50KB |
+| **TypeScript** | 🔄 Coming soon | ✅ Built-in | ✅ Full support | ✅ Full support |
+| **License** | ✅ **Unlicense (Public Domain)** | 🟡 MIT (+ LGPL dependencies) | 🟡 MIT | 🟡 Apache 2.0 |
+
+### Why Choose command-stream?
+
+- **🆓 Truly Free**: **Unlicense (Public Domain)** - No restrictions, no attribution required, use however you want
+- **🚀 Revolutionary Virtual Commands**: **World's first** fully customizable virtual commands engine - register JavaScript functions as shell commands!
+- **🔗 Advanced Pipeline System**: **Only library** where virtual commands work seamlessly in pipelines with built-ins and system commands
+- **🔧 Built-in Commands**: **18 essential commands** work identically across all platforms - no system dependencies!
+- **📡 Real-time Processing**: Only library with true streaming and async iteration
+- **🔄 Flexible Patterns**: Multiple usage patterns (await, events, iteration, mixed)
+- **🐚 Shell Replacement**: Dynamic error handling with `set -e`/`set +e` equivalents for .sh file replacement
+- **⚡ Bun Optimized**: Designed for Bun with Node.js fallback compatibility  
+- **💾 Memory Efficient**: Streaming prevents large buffer accumulation
+- **🛡️ Production Ready**: 266+ tests with comprehensive coverage
 
 ## Built-in Commands (🚀 NEW!)
 
@@ -71,46 +113,6 @@ await $`rm -r project-backup`;
 await $`seq 1 5 | cat > numbers.txt`;
 await $`basename /path/to/file.txt .txt`; // → "file"
 ```
-
-## Comparison with Other Libraries
-
-| Feature | [command-stream](https://github.com/link-foundation/command-stream) | [Bun.$](https://bun.sh/docs/runtime/shell) | [execa](https://github.com/sindresorhus/execa) | [zx](https://github.com/google/zx) |
-|---------|----------------|-------|-------|-----|
-| **Runtime Support** | ✅ Bun + Node.js | 🟡 Bun only | ✅ Node.js | ✅ Node.js |
-| **Template Literals** | ✅ `` $`cmd` `` | ✅ `` $`cmd` `` | ✅ `` $`cmd` `` | ✅ `` $`cmd` `` |
-| **Real-time Streaming** | ✅ Live output | ❌ Buffer only | 🟡 Limited | ❌ Buffer only |
-| **Synchronous Execution** | ✅ `.sync()` with events | ❌ No | ✅ `execaSync` | ❌ No |
-| **Async Iteration** | ✅ `for await (chunk of $.stream())` | ❌ No | ❌ No | ❌ No |
-| **EventEmitter Pattern** | ✅ `.on('data', ...)` | ❌ No | 🟡 Limited events | ❌ No |
-| **Mixed Patterns** | ✅ Events + await/sync | ❌ No | ❌ No | ❌ No |
-| **Shell Injection Protection** | ✅ Auto-quoting | ✅ Built-in | ✅ Safe by default | ✅ Safe by default |
-| **Cross-platform** | ✅ macOS/Linux/Windows | ✅ Yes | ✅ Yes | ✅ Yes |
-| **Performance** | ⚡ Fast (Bun optimized) | ⚡ Very fast | 🐌 Moderate | 🐌 Slow |
-| **Memory Efficiency** | ✅ Streaming prevents buildup | 🟡 Buffers in memory | 🟡 Buffers in memory | 🟡 Buffers in memory |
-| **Error Handling** | ✅ Configurable (`set -e`/`set +e`, non-zero OK by default) | ✅ Throws on error | ✅ Throws on error | ✅ Throws on error |
-| **Shell Settings** | ✅ `set -e`/`set +e` equivalent | ❌ No | ❌ No | ❌ No |
-| **Stdout Support** | ✅ Real-time streaming + events | ✅ Shell redirection + buffered | ✅ Node.js streams + interleaved | ✅ Readable streams + `.pipe.stdout` |
-| **Stderr Support** | ✅ Real-time streaming + events | ✅ Redirection + `.quiet()` access | ✅ Streams + interleaved output | ✅ Readable streams + `.pipe.stderr` |
-| **Stdin Support** | ✅ string/Buffer/inherit/ignore | ✅ Pipe operations | ✅ Input/output streams | ✅ Basic stdin |
-| **Built-in Commands** | ✅ **18 commands**: cat, ls, mkdir, rm, mv, cp, touch, basename, dirname, seq, yes + all Bun.$ commands | ✅ echo, cd, etc. | ❌ Uses system | ❌ Uses system |
-| **Virtual Commands Engine** | ✅ **Revolutionary**: Register JavaScript functions as shell commands with full pipeline support | ❌ No extensibility | ❌ No custom commands | ❌ No custom commands |
-| **Pipeline/Piping Support** | ✅ **Advanced**: System + Built-ins + Virtual + Mixed + `.pipe()` method | ✅ Standard shell piping | ✅ Programmatic `.pipe()` + multi-destination | ✅ Shell piping + `.pipe()` method |
-| **Bundle Size** | 📦 ~15KB | 🎯 0KB (built-in) | 📦 ~25KB | 📦 ~50KB |
-| **TypeScript** | 🔄 Coming soon | ✅ Built-in | ✅ Full support | ✅ Full support |
-| **License** | ✅ **Unlicense (Public Domain)** | 🟡 MIT (+ LGPL dependencies) | 🟡 MIT | 🟡 Apache 2.0 |
-
-### Why Choose command-stream?
-
-- **🆓 Truly Free**: **Unlicense (Public Domain)** - No restrictions, no attribution required, use however you want
-- **🚀 Revolutionary Virtual Commands**: **World's first** fully customizable virtual commands engine - register JavaScript functions as shell commands!
-- **🔗 Advanced Pipeline System**: **Only library** where virtual commands work seamlessly in pipelines with built-ins and system commands
-- **🔧 Built-in Commands**: **18 essential commands** work identically across all platforms - no system dependencies!
-- **📡 Real-time Processing**: Only library with true streaming and async iteration
-- **🔄 Flexible Patterns**: Multiple usage patterns (await, events, iteration, mixed)
-- **🐚 Shell Replacement**: Dynamic error handling with `set -e`/`set +e` equivalents for .sh file replacement
-- **⚡ Bun Optimized**: Designed for Bun with Node.js fallback compatibility  
-- **💾 Memory Efficient**: Streaming prevents large buffer accumulation
-- **🛡️ Production Ready**: 266+ tests with comprehensive coverage
 
 ## Installation
 
