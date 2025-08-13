@@ -8,7 +8,7 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 
 - 🐚 **Shell-like by Default**: Commands behave exactly like running in terminal (stdout→stdout, stderr→stderr, stdin→stdin)
 - 🎛️ **Fully Controllable**: Override default behavior with options (`mirror`, `capture`, `stdin`)
-- 🚀 **Multiple Usage Patterns**: Classic await, async iteration, EventEmitter, and mixed patterns
+- 🚀 **Multiple Usage Patterns**: Classic await, async iteration, EventEmitter, .pipe() method, and mixed patterns
 - 📡 **Real-time Streaming**: Process command output as it arrives, not after completion
 - 🔄 **Bun Optimized**: Designed for Bun runtime with Node.js compatibility
 - ⚡ **Performance**: Memory-efficient streaming prevents large buffer accumulation
@@ -110,7 +110,7 @@ await $`basename /path/to/file.txt .txt`; // → "file"
 - **🐚 Shell Replacement**: Dynamic error handling with `set -e`/`set +e` equivalents for .sh file replacement
 - **⚡ Bun Optimized**: Designed for Bun with Node.js fallback compatibility  
 - **💾 Memory Efficient**: Streaming prevents large buffer accumulation
-- **🛡️ Production Ready**: 250+ tests with comprehensive coverage
+- **🛡️ Production Ready**: 266+ tests with comprehensive coverage
 
 ## Installation
 
@@ -271,7 +271,7 @@ await $`rm -r project numbers.txt`;
 Create custom commands that work seamlessly alongside built-ins:
 
 ```javascript
-import { $, register, unregister } from 'command-stream';
+import { $, register, unregister, listCommands } from 'command-stream';
 
 // Register a custom command
 register('greet', async (args, stdin) => {
@@ -700,17 +700,60 @@ All built-in commands support:
 ## Testing
 
 ```bash
-# Run comprehensive test suite
+# Run comprehensive test suite (266 tests)
 bun test
 
 # Run tests with coverage report
 bun test --coverage
+
+# Run specific test categories
+npm run test:features    # Feature comparison tests
+npm run test:builtin     # Built-in commands tests
+npm run test:pipe        # .pipe() method tests
+npm run test:sync        # Synchronous execution tests
 ```
 
 ## Requirements
 
 - **Bun**: >= 1.0.0 (primary runtime)
 - **Node.js**: >= 20.0.0 (compatibility support)
+
+## Roadmap
+
+### 🔄 **Coming Soon**
+- **TypeScript Support**: Full .d.ts definitions and type safety
+- **Enhanced Shell Options**: `set -u` (nounset) and `set -o pipefail` support
+- **More Built-in Commands**: Additional cross-platform utilities
+
+### 💡 **Planned Features**
+- **Performance Optimizations**: Further Bun runtime optimizations
+- **Advanced Error Handling**: Enhanced error context and debugging
+- **Plugin System**: Extensible architecture for custom integrations
+
+## Contributing
+
+We welcome contributions! Since command-stream is **public domain software**, your contributions will also be released into the public domain.
+
+### 🚀 **Getting Started**
+```bash
+git clone https://github.com/link-foundation/command-stream.git
+cd command-stream
+bun install
+bun test  # Run the full test suite
+```
+
+### 📋 **Development Guidelines**
+- All features must have comprehensive tests
+- Built-in commands should match bash/sh behavior exactly
+- Maintain cross-platform compatibility (Windows, macOS, Linux)
+- Follow the existing code style and patterns
+
+### 🧪 **Running Tests**
+```bash
+bun test                    # All 266 tests
+bun test tests/pipe.test.mjs # Specific test file
+npm run test:builtin        # Built-in commands only
+```
 
 ## License - Our Biggest Advantage
 
