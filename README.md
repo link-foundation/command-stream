@@ -93,6 +93,7 @@ await $`basename /path/to/file.txt .txt`; // → "file"
 | **Stderr Support** | ✅ Real-time streaming + events | ✅ Redirection + `.quiet()` access | ✅ Streams + interleaved output | ✅ Readable streams + `.pipe.stderr` |
 | **Stdin Support** | ✅ string/Buffer/inherit/ignore | ✅ Pipe operations | ✅ Input/output streams | ✅ Basic stdin |
 | **Built-in Commands** | ✅ **18 commands**: cat, ls, mkdir, rm, mv, cp, touch, basename, dirname, seq, yes + all Bun.$ commands | ✅ echo, cd, etc. | ❌ Uses system | ❌ Uses system |
+| **Virtual Commands Engine** | ✅ **Revolutionary**: Register JavaScript functions as shell commands with full pipeline support | ❌ No extensibility | ❌ No custom commands | ❌ No custom commands |
 | **Bundle Size** | 📦 ~15KB | 🎯 0KB (built-in) | 📦 ~25KB | 📦 ~50KB |
 | **TypeScript** | 🔄 Coming soon | ✅ Built-in | ✅ Full support | ✅ Full support |
 | **License** | ✅ **Unlicense (Public Domain)** | 🟡 MIT (+ LGPL dependencies) | 🟡 MIT | 🟡 Apache 2.0 |
@@ -100,8 +101,9 @@ await $`basename /path/to/file.txt .txt`; // → "file"
 ### Why Choose command-stream?
 
 - **🆓 Truly Free**: **Unlicense (Public Domain)** - No restrictions, no attribution required, use however you want
+- **🚀 Revolutionary Virtual Commands**: **World's first** fully customizable virtual commands engine - register JavaScript functions as shell commands!
 - **🔧 Built-in Commands**: **18 essential commands** work identically across all platforms - no system dependencies!
-- **🚀 Real-time Processing**: Only library with true streaming and async iteration
+- **📡 Real-time Processing**: Only library with true streaming and async iteration
 - **🔄 Flexible Patterns**: Multiple usage patterns (await, events, iteration, mixed)
 - **🐚 Shell Replacement**: Dynamic error handling with `set -e`/`set +e` equivalents for .sh file replacement
 - **⚡ Bun Optimized**: Designed for Bun with Node.js fallback compatibility  
@@ -300,6 +302,39 @@ for await (const chunk of $`countdown 3`.stream()) {
 console.log(listCommands());  // List all registered commands
 unregister('greet');          // Remove custom commands
 ```
+
+#### 🔥 **Why Virtual Commands Are Revolutionary**
+
+**No other shell library offers this level of extensibility:**
+
+- **🚫 Bun.$**: Fixed set of built-in commands, no extensibility API
+- **🚫 execa**: Transform/pipeline system, but no custom commands  
+- **🚫 zx**: JavaScript functions only, no shell command integration
+
+**command-stream breaks the barrier** between JavaScript functions and shell commands:
+
+```javascript
+// ❌ Other libraries: Choose JavaScript OR shell
+await execa('node', ['script.js']);  // execa: separate processes
+await $`node script.js`;             // zx: shell commands only
+
+// ✅ command-stream: JavaScript functions AS shell commands  
+register('deploy', async (args) => {
+  const env = args[0] || 'staging';
+  await deployToEnvironment(env);
+  return { stdout: `Deployed to ${env}!\n`, code: 0 };
+});
+
+await $`deploy production`;           // JavaScript function as shell command!
+await $`deploy staging | tee log.txt`; // Works in pipelines!
+```
+
+**Unique capabilities:**
+- **Seamless Integration**: Virtual commands work exactly like built-ins
+- **Pipeline Support**: Full stdin/stdout passing between virtual and system commands
+- **Streaming**: Async generators for real-time output
+- **Dynamic Registration**: Add/remove commands at runtime
+- **Option Awareness**: Virtual commands respect `cwd`, `env`, etc.
 
 ## Default Behavior: Shell-like with Programmatic Control
 
