@@ -1077,6 +1077,371 @@ function registerBuiltins() {
     return { stderr: 'env: command execution not yet supported', code: 1 };
   });
 
+  // cat - read and display file contents
+  register('cat', async (args, stdin, options) => {
+    if (args.length === 0) {
+      // Read from stdin if no files specified
+      return { stdout: stdin || '', code: 0 };
+    }
+    
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+      let output = '';
+      
+      for (const filename of args) {
+        // Handle special flags
+        if (filename === '-n') continue; // Line numbering (basic support)
+        
+        try {
+          // Resolve path relative to cwd if provided
+          const basePath = options?.cwd || process.cwd();
+          const fullPath = path.isAbsolute(filename) ? filename : path.join(basePath, filename);
+          
+          const content = fs.readFileSync(fullPath, 'utf8');
+          output += content;
+        } catch (error) {
+          return { 
+            stderr: `cat: ${filename}: ${error.message}`, 
+            stdout: output,
+            code: 1 
+          };
+        }
+      }
+      
+      return { stdout: output, code: 0 };
+    } catch (error) {
+      return { stderr: `cat: ${error.message}`, code: 1 };
+    }
+  });
+
+  // ls - list directory contents
+  register('ls', async (args, stdin, options) => {
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+      
+      // Parse flags and paths
+      const flags = args.filter(arg => arg.startsWith('-'));
+      const paths = args.filter(arg => !arg.startsWith('-'));
+      const isLongFormat = flags.includes('-l');
+      const showAll = flags.includes('-a');
+      const showAlmostAll = flags.includes('-A');
+      
+      // Default to current directory if no paths specified
+      const targetPaths = paths.length > 0 ? paths : ['.'];
+      
+      let output = '';
+      
+      for (const targetPath of targetPaths) {
+        // Resolve path relative to cwd if provided
+        const basePath = options?.cwd || process.cwd();
+        const fullPath = path.isAbsolute(targetPath) ? targetPath : path.join(basePath, targetPath);
+        
+        try {
+          const stat = fs.statSync(fullPath);
+          
+          if (stat.isFile()) {
+            // Just show the file name if it's a file
+            output += path.basename(targetPath) + '\n';
+          } else if (stat.isDirectory()) {
+            const entries = fs.readdirSync(fullPath);
+            
+            // Filter hidden files unless -a or -A is specified
+            let filteredEntries = entries;
+            if (!showAll && !showAlmostAll) {
+              filteredEntries = entries.filter(entry => !entry.startsWith('.'));
+            } else if (showAlmostAll) {
+              filteredEntries = entries.filter(entry => entry !== '.' && entry !== '..');
+            }
+            
+            if (isLongFormat) {
+              // Long format: permissions, links, owner, group, size, date, name
+              for (const entry of filteredEntries) {
+                const entryPath = path.join(fullPath, entry);
+                try {
+                  const entryStat = fs.statSync(entryPath);
+                  const isDir = entryStat.isDirectory();
+                  const permissions = isDir ? 'drwxr-xr-x' : '-rw-r--r--';
+                  const size = entryStat.size.toString().padStart(8);
+                  const date = entryStat.mtime.toISOString().slice(0, 16).replace('T', ' ');
+                  output += `${permissions} 1 user group ${size} ${date} ${entry}\n`;
+                } catch {
+                  output += `?????????? 1 user group        ? ??? ?? ??:?? ${entry}\n`;
+                }
+              }
+            } else {
+              // Simple format: just names
+              output += filteredEntries.join('\n') + (filteredEntries.length > 0 ? '\n' : '');
+            }
+          }
+        } catch (error) {
+          return { 
+            stderr: `ls: cannot access '${targetPath}': ${error.message}`, 
+            code: 2 
+          };
+        }
+      }
+      
+      return { stdout: output, code: 0 };
+    } catch (error) {
+      return { stderr: `ls: ${error.message}`, code: 1 };
+    }
+  });
+
+  // mkdir - create directories
+  register('mkdir', async (args, stdin, options) => {
+    if (args.length === 0) {
+      return { stderr: 'mkdir: missing operand', code: 1 };
+    }
+    
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+      
+      const flags = args.filter(arg => arg.startsWith('-'));
+      const dirs = args.filter(arg => !arg.startsWith('-'));
+      const recursive = flags.includes('-p');
+      
+      for (const dir of dirs) {
+        try {
+          const basePath = options?.cwd || process.cwd();
+          const fullPath = path.isAbsolute(dir) ? dir : path.join(basePath, dir);
+          
+          if (recursive) {
+            fs.mkdirSync(fullPath, { recursive: true });
+          } else {
+            fs.mkdirSync(fullPath);
+          }
+        } catch (error) {
+          return { 
+            stderr: `mkdir: cannot create directory '${dir}': ${error.message}`, 
+            code: 1 
+          };
+        }
+      }
+      
+      return { stdout: '', code: 0 };
+    } catch (error) {
+      return { stderr: `mkdir: ${error.message}`, code: 1 };
+    }
+  });
+
+  // rm - remove files and directories
+  register('rm', async (args, stdin, options) => {
+    if (args.length === 0) {
+      return { stderr: 'rm: missing operand', code: 1 };
+    }
+    
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+      
+      const flags = args.filter(arg => arg.startsWith('-'));
+      const targets = args.filter(arg => !arg.startsWith('-'));
+      const recursive = flags.includes('-r') || flags.includes('-R');
+      const force = flags.includes('-f');
+      
+      for (const target of targets) {
+        try {
+          const basePath = options?.cwd || process.cwd();
+          const fullPath = path.isAbsolute(target) ? target : path.join(basePath, target);
+          
+          const stat = fs.statSync(fullPath);
+          
+          if (stat.isDirectory()) {
+            if (!recursive) {
+              return { 
+                stderr: `rm: cannot remove '${target}': Is a directory`, 
+                code: 1 
+              };
+            }
+            fs.rmSync(fullPath, { recursive: true, force });
+          } else {
+            fs.unlinkSync(fullPath);
+          }
+        } catch (error) {
+          if (!force) {
+            return { 
+              stderr: `rm: cannot remove '${target}': ${error.message}`, 
+              code: 1 
+            };
+          }
+        }
+      }
+      
+      return { stdout: '', code: 0 };
+    } catch (error) {
+      return { stderr: `rm: ${error.message}`, code: 1 };
+    }
+  });
+
+  // mv - move/rename files and directories
+  register('mv', async (args, stdin, options) => {
+    if (args.length < 2) {
+      return { stderr: 'mv: missing destination file operand', code: 1 };
+    }
+    
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+      
+      const basePath = options?.cwd || process.cwd();
+      
+      if (args.length === 2) {
+        // Simple rename/move
+        const [source, dest] = args;
+        const sourcePath = path.isAbsolute(source) ? source : path.join(basePath, source);
+        const destPath = path.isAbsolute(dest) ? dest : path.join(basePath, dest);
+        
+        try {
+          fs.renameSync(sourcePath, destPath);
+        } catch (error) {
+          return { 
+            stderr: `mv: cannot move '${source}' to '${dest}': ${error.message}`, 
+            code: 1 
+          };
+        }
+      } else {
+        // Multiple sources to directory
+        const sources = args.slice(0, -1);
+        const dest = args[args.length - 1];
+        const destPath = path.isAbsolute(dest) ? dest : path.join(basePath, dest);
+        
+        // Check if destination is a directory
+        try {
+          const destStat = fs.statSync(destPath);
+          if (!destStat.isDirectory()) {
+            return { 
+              stderr: `mv: target '${dest}' is not a directory`, 
+              code: 1 
+            };
+          }
+        } catch {
+          return { 
+            stderr: `mv: cannot access '${dest}': No such file or directory`, 
+            code: 1 
+          };
+        }
+        
+        for (const source of sources) {
+          try {
+            const sourcePath = path.isAbsolute(source) ? source : path.join(basePath, source);
+            const fileName = path.basename(source);
+            const newDestPath = path.join(destPath, fileName);
+            fs.renameSync(sourcePath, newDestPath);
+          } catch (error) {
+            return { 
+              stderr: `mv: cannot move '${source}' to '${dest}': ${error.message}`, 
+              code: 1 
+            };
+          }
+        }
+      }
+      
+      return { stdout: '', code: 0 };
+    } catch (error) {
+      return { stderr: `mv: ${error.message}`, code: 1 };
+    }
+  });
+
+  // cp - copy files and directories
+  register('cp', async (args, stdin, options) => {
+    if (args.length < 2) {
+      return { stderr: 'cp: missing destination file operand', code: 1 };
+    }
+    
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+      
+      const flags = args.filter(arg => arg.startsWith('-'));
+      const paths = args.filter(arg => !arg.startsWith('-'));
+      const recursive = flags.includes('-r') || flags.includes('-R');
+      
+      const basePath = options?.cwd || process.cwd();
+      
+      if (paths.length === 2) {
+        // Simple copy
+        const [source, dest] = paths;
+        const sourcePath = path.isAbsolute(source) ? source : path.join(basePath, source);
+        const destPath = path.isAbsolute(dest) ? dest : path.join(basePath, dest);
+        
+        try {
+          const sourceStat = fs.statSync(sourcePath);
+          
+          if (sourceStat.isDirectory()) {
+            if (!recursive) {
+              return { 
+                stderr: `cp: -r not specified; omitting directory '${source}'`, 
+                code: 1 
+              };
+            }
+            fs.cpSync(sourcePath, destPath, { recursive: true });
+          } else {
+            fs.copyFileSync(sourcePath, destPath);
+          }
+        } catch (error) {
+          return { 
+            stderr: `cp: cannot copy '${source}' to '${dest}': ${error.message}`, 
+            code: 1 
+          };
+        }
+      } else {
+        // Multiple sources to directory
+        const sources = paths.slice(0, -1);
+        const dest = paths[paths.length - 1];
+        const destPath = path.isAbsolute(dest) ? dest : path.join(basePath, dest);
+        
+        // Check if destination is a directory
+        try {
+          const destStat = fs.statSync(destPath);
+          if (!destStat.isDirectory()) {
+            return { 
+              stderr: `cp: target '${dest}' is not a directory`, 
+              code: 1 
+            };
+          }
+        } catch {
+          return { 
+            stderr: `cp: cannot access '${dest}': No such file or directory`, 
+            code: 1 
+          };
+        }
+        
+        for (const source of sources) {
+          try {
+            const sourcePath = path.isAbsolute(source) ? source : path.join(basePath, source);
+            const fileName = path.basename(source);
+            const newDestPath = path.join(destPath, fileName);
+            
+            const sourceStat = fs.statSync(sourcePath);
+            if (sourceStat.isDirectory()) {
+              if (!recursive) {
+                return { 
+                  stderr: `cp: -r not specified; omitting directory '${source}'`, 
+                  code: 1 
+                };
+              }
+              fs.cpSync(sourcePath, newDestPath, { recursive: true });
+            } else {
+              fs.copyFileSync(sourcePath, newDestPath);
+            }
+          } catch (error) {
+            return { 
+              stderr: `cp: cannot copy '${source}' to '${dest}': ${error.message}`, 
+              code: 1 
+            };
+          }
+        }
+      }
+      
+      return { stdout: '', code: 0 };
+    } catch (error) {
+      return { stderr: `cp: ${error.message}`, code: 1 };
+    }
+  });
+
   // test - test file conditions (basic implementation)
   register('test', async (args) => {
     if (args.length === 0) {
