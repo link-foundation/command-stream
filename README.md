@@ -25,7 +25,7 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 | **Synchronous Execution** | ✅ `.sync()` with events | ❌ No | ✅ `execaSync` | ❌ No |
 | **Async Iteration** | ✅ `for await (chunk of $.stream())` | ❌ No | ❌ No | ❌ No |
 | **EventEmitter Pattern** | ✅ `.on('data', ...)` | ❌ No | 🟡 Limited events | ❌ No |
-| **Mixed Patterns** | ✅ Events + await | ❌ No | ❌ No | ❌ No |
+| **Mixed Patterns** | ✅ Events + await/sync | ❌ No | ❌ No | ❌ No |
 | **Shell Injection Protection** | ✅ Auto-quoting | ✅ Built-in | ✅ Safe by default | ✅ Safe by default |
 | **Cross-platform** | ✅ macOS/Linux/Windows | ✅ Yes | ✅ Yes | ✅ Yes |
 | **Performance** | ⚡ Fast (Bun optimized) | ⚡ Very fast | 🐌 Moderate | 🐌 Slow |
@@ -38,15 +38,17 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 | **Built-in Commands** | ❌ Uses system | ✅ echo, cd, etc. | ❌ Uses system | ❌ Uses system |
 | **Bundle Size** | 📦 ~15KB | 🎯 0KB (built-in) | 📦 ~25KB | 📦 ~50KB |
 | **TypeScript** | 🔄 Coming soon | ✅ Built-in | ✅ Full support | ✅ Full support |
+| **License** | ✅ **Unlicense (Public Domain)** | 🟡 MIT (+ LGPL dependencies) | 🟡 MIT | 🟡 Apache 2.0 |
 
 ### Why Choose command-stream?
 
+- **🆓 Truly Free**: **Unlicense (Public Domain)** - No restrictions, no attribution required, use however you want
 - **🚀 Real-time Processing**: Only library with true streaming and async iteration
 - **🔄 Flexible Patterns**: Multiple usage patterns (await, events, iteration, mixed)
 - **🐚 Shell Replacement**: Dynamic error handling with `set -e`/`set +e` equivalents for .sh file replacement
 - **⚡ Bun Optimized**: Designed for Bun with Node.js fallback compatibility  
 - **💾 Memory Efficient**: Streaming prevents large buffer accumulation
-- **🛡️ Production Ready**: 90%+ test coverage with comprehensive error handling
+- **🛡️ Production Ready**: 200+ tests with comprehensive coverage
 
 ## Installation
 
@@ -118,16 +120,20 @@ $`command`
 ```javascript
 import { $ } from 'command-stream';
 
+// Async mode - events fire in real-time
 const process = $`streaming-command`;
-
-// Handle real-time events
 process.on('data', chunk => {
   processRealTimeData(chunk);
 });
-
-// Still get the final result
 const result = await process;
 console.log('Final output:', result.stdout);
+
+// Sync mode - events fire after completion (batched)
+const syncCmd = $`another-command`;
+syncCmd.on('end', result => {
+  console.log('Completed with:', result.stdout);
+});
+const syncResult = syncCmd.sync();
 ```
 
 ### Shell Replacement (.sh → .mjs)
@@ -357,6 +363,22 @@ bun test --coverage
 - **Bun**: >= 1.0.0 (primary runtime)
 - **Node.js**: >= 20.0.0 (compatibility support)
 
-## License
+## License - Our Biggest Advantage
 
-The Unlicense (Public Domain)
+**The Unlicense (Public Domain)**
+
+Unlike other shell utilities that require attribution (MIT, Apache 2.0), command-stream is released into the **public domain**. This means:
+
+- ✅ **No attribution required** - Use it without crediting anyone
+- ✅ **No license files to include** - Simplify your distribution
+- ✅ **No restrictions** - Modify, sell, embed, whatever you want
+- ✅ **No legal concerns** - It's as free as code can be
+- ✅ **Corporate friendly** - No license compliance overhead
+
+This makes command-stream ideal for:
+- **Commercial products** where license attribution is inconvenient
+- **Embedded systems** where every byte counts
+- **Educational materials** that can be freely shared
+- **Internal tools** without legal review requirements
+
+> "This is free and unencumbered software released into the public domain."
