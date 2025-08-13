@@ -16,6 +16,20 @@ let globalShellSettings = {
   nounset: false     // set -u equivalent: error on undefined variables
 };
 
+// Helper function to create result objects with Bun.$ compatibility
+function createResult({ code, stdout = '', stderr = '', stdin = '' }) {
+  return {
+    code,
+    stdout,
+    stderr,
+    stdin,
+    // Bun.$ compatibility method
+    async text() {
+      return stdout;
+    }
+  };
+}
+
 // Virtual command registry - unified system for all commands
 const virtualCommands = new Map();
 
@@ -219,12 +233,20 @@ class ProcessRunner extends StreamEmitter {
     const code = await exited;
     await Promise.all([outPump, errPump, stdinPumpPromise]);
 
-    this.result = {
+    const resultData = {
       code,
       stdout: this.options.capture ? Buffer.concat(this.outChunks).toString('utf8') : undefined,
       stderr: this.options.capture ? Buffer.concat(this.errChunks).toString('utf8') : undefined,
       stdin: this.options.capture && this.inChunks ? Buffer.concat(this.inChunks).toString('utf8') : undefined,
       child: this.child
+    };
+    
+    this.result = {
+      ...resultData,
+      // Bun.$ compatibility method
+      async text() {
+        return resultData.stdout || '';
+      }
     };
 
     this.finished = true;
@@ -481,7 +503,7 @@ class ProcessRunner extends StreamEmitter {
 
   async _runPipeline(commands) {
     if (commands.length === 0) {
-      return { code: 1, stdout: '', stderr: 'No commands in pipeline', stdin: '' };
+      return createResult({ code: 1, stdout: '', stderr: 'No commands in pipeline', stdin: '' });
     }
 
     let currentOutput = '';
@@ -565,14 +587,14 @@ class ProcessRunner extends StreamEmitter {
               this.emit('data', { type: 'stderr', data: buf });
             }
             
-            // Store final result
-            const finalResult = {
+            // Store final result using createResult helper for .text() method compatibility
+            const finalResult = createResult({
               code: result.code,
               stdout: currentOutput,
               stderr: result.stderr,
               stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin : 
                      this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
-            };
+            });
             
             this.result = finalResult;
             this.finished = true;
@@ -605,13 +627,13 @@ class ProcessRunner extends StreamEmitter {
           }
         } catch (error) {
           // Handle errors from virtual commands in pipeline
-          const result = {
+          const result = createResult({
             code: error.code ?? 1,
             stdout: currentOutput,
             stderr: error.stderr ?? error.message,
             stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin : 
                    this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
-          };
+          });
           
           this.result = result;
           this.finished = true;
@@ -637,13 +659,13 @@ class ProcessRunner extends StreamEmitter {
       } else {
         // For system commands in pipeline, we would need to spawn processes
         // For now, return an error indicating this isn't supported
-        const result = {
+        const result = createResult({
           code: 1,
           stdout: currentOutput,
           stderr: `Pipeline with system command '${cmd}' not yet supported`,
           stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin : 
                  this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
-        };
+        });
         
         this.result = result;
         this.finished = true;
@@ -684,21 +706,21 @@ class ProcessRunner extends StreamEmitter {
       const destResult = await destination;
       
       // Return the final result with combined information
-      return {
+      return createResult({
         code: destResult.code,
         stdout: destResult.stdout,
         stderr: sourceResult.stderr + destResult.stderr,
         stdin: sourceResult.stdin
-      };
+      });
       
     } catch (error) {
-      const result = {
+      const result = createResult({
         code: error.code ?? 1,
         stdout: '',
         stderr: error.message || 'Pipeline execution failed',
         stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin : 
                this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
-      };
+      });
       
       this.result = result;
       this.finished = true;
@@ -846,14 +868,14 @@ class ProcessRunner extends StreamEmitter {
         stderr: 'pipe'
       });
       
-      result = {
+      result = createResult({
         code: proc.exitCode || 0,
         stdout: proc.stdout?.toString('utf8') || '',
         stderr: proc.stderr?.toString('utf8') || '',
         stdin: typeof stdin === 'string' ? stdin : 
-               Buffer.isBuffer(stdin) ? stdin.toString('utf8') : '',
-        child: proc
-      };
+               Buffer.isBuffer(stdin) ? stdin.toString('utf8') : ''
+      });
+      result.child = proc;
     } else {
       // Use Node's synchronous spawn
       const cp = require('child_process');
@@ -866,14 +888,14 @@ class ProcessRunner extends StreamEmitter {
         stdio: ['pipe', 'pipe', 'pipe']
       });
       
-      result = {
+      result = createResult({
         code: proc.status || 0,
         stdout: proc.stdout || '',
         stderr: proc.stderr || '',
         stdin: typeof stdin === 'string' ? stdin : 
-               Buffer.isBuffer(stdin) ? stdin.toString('utf8') : '',
-        child: proc
-      };
+               Buffer.isBuffer(stdin) ? stdin.toString('utf8') : ''
+      });
+      result.child = proc;
     }
     
     // Mirror output if requested (but always capture for result)

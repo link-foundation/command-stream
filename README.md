@@ -14,7 +14,7 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 - 📡 **Real-time Streaming**: Process command output as it arrives, not after completion
 - 🔄 **Bun Optimized**: Designed for Bun runtime with Node.js compatibility
 - ⚡ **Performance**: Memory-efficient streaming prevents large buffer accumulation
-- 🎯 **Backward Compatible**: Existing `await $` syntax continues to work
+- 🎯 **Backward Compatible**: Existing `await $` syntax continues to work + Bun.$ `.text()` method
 - 🛡️ **Type Safe**: Full TypeScript support (coming soon)
 - 🔧 **Built-in Commands**: 18 essential commands work identically across platforms
 
@@ -29,6 +29,7 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 | **Async Iteration** | ✅ `for await (chunk of $.stream())` | ❌ No | ❌ No | ❌ No |
 | **EventEmitter Pattern** | ✅ `.on('data', ...)` | ❌ No | 🟡 Limited events | ❌ No |
 | **Mixed Patterns** | ✅ Events + await/sync | ❌ No | ❌ No | ❌ No |
+| **Bun.$ Compatibility** | ✅ `.text()` method support | ✅ Native API | ❌ No | ❌ No |
 | **Shell Injection Protection** | ✅ Auto-quoting | ✅ Built-in | ✅ Safe by default | ✅ Safe by default |
 | **Cross-platform** | ✅ macOS/Linux/Windows | ✅ Yes | ✅ Yes | ✅ Yes |
 | **Performance** | ⚡ Fast (Bun optimized) | ⚡ Very fast | 🐌 Moderate | 🐌 Slow |
@@ -695,8 +696,35 @@ All built-in commands support:
   stdout: string,      // Complete stdout output
   stderr: string,      // Complete stderr output
   stdin: string,       // Input sent to process
-  child: ChildProcess  // Original child process object
+  child: ChildProcess, // Original child process object
+  async text()         // Bun.$ compatibility method - returns stdout as string
 }
+```
+
+#### `.text()` Method (Bun.$ Compatibility)
+
+For compatibility with Bun.$, all result objects include an async `.text()` method:
+
+```javascript
+import { $ } from 'command-stream';
+
+// Both sync and async execution support .text()
+const result1 = await $`echo "hello world"`;
+const text1 = await result1.text(); // "hello world\n"
+
+const result2 = $`echo "sync example"`.sync();  
+const text2 = await result2.text(); // "sync example\n"
+
+// .text() is equivalent to accessing .stdout
+expect(await result.text()).toBe(result.stdout);
+
+// Works with built-in commands
+const result3 = await $`seq 1 3`;
+const text3 = await result3.text(); // "1\n2\n3\n"
+
+// Works with .pipe() method
+const result4 = await $`echo "pipe test"`.pipe($`cat`);
+const text4 = await result4.text(); // "pipe test\n"
 ```
 
 ## Testing
