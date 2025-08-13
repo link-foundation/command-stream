@@ -1,5 +1,5 @@
 import { test, expect, describe, beforeEach } from 'bun:test';
-import { $, sh, exec, run, quote, create, raw, ProcessRunner, shell } from './$.mjs';
+import { $, sh, exec, run, quote, create, raw, ProcessRunner, shell, disableVirtualCommands, enableVirtualCommands } from './$.mjs';
 
 // Reset shell settings before each test to prevent interference
 beforeEach(() => {
@@ -8,6 +8,8 @@ beforeEach(() => {
   shell.xtrace(false);
   shell.pipefail(false);
   shell.nounset(false);
+  // Disable virtual commands for these tests to ensure system command behavior
+  disableVirtualCommands();
 });
 
 // Extract StreamEmitter class for testing

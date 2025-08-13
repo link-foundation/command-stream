@@ -16,6 +16,12 @@ let globalShellSettings = {
   nounset: false     // set -u equivalent: error on undefined variables
 };
 
+// Virtual command registry - unified system for all commands
+const virtualCommands = new Map();
+
+// Global flag to enable/disable virtual commands (for backward compatibility)
+let virtualCommandsEnabled = true;
+
 // EventEmitter-like implementation
 class StreamEmitter {
   constructor() {
@@ -123,6 +129,19 @@ class ProcessRunner extends StreamEmitter {
     this.started = true;
 
     const { cwd, env, stdin } = this.options;
+    
+    // Check if this is a virtual command first
+    if (this.spec.mode === 'shell') {
+      // Parse the command to check for virtual commands or pipelines
+      const parsed = this._parseCommand(this.spec.command);
+      if (parsed) {
+        if (parsed.type === 'pipeline') {
+          return await this._runPipeline(parsed.commands);
+        } else if (parsed.type === 'simple' && virtualCommandsEnabled && virtualCommands.has(parsed.cmd)) {
+          return await this._runVirtual(parsed.cmd, parsed.args);
+        }
+      }
+    }
     
     const spawnBun = (argv) => {
       return Bun.spawn(argv, { cwd, env, stdin: 'pipe', stdout: 'pipe', stderr: 'pipe' });
@@ -244,6 +263,398 @@ class ProcessRunner extends StreamEmitter {
       this.child.stdin.end(buf);
     } else if (isBun && typeof Bun.write === 'function') {
       await Bun.write(this.child.stdin, buf);
+    }
+  }
+
+  _parseCommand(command) {
+    const trimmed = command.trim();
+    if (!trimmed) return null;
+    
+    // Check for pipes
+    if (trimmed.includes('|')) {
+      return this._parsePipeline(trimmed);
+    }
+    
+    // Simple command parsing
+    const parts = trimmed.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) || [];
+    if (parts.length === 0) return null;
+    
+    const cmd = parts[0];
+    const args = parts.slice(1).map(arg => {
+      // Remove quotes if present
+      if ((arg.startsWith('"') && arg.endsWith('"')) || 
+          (arg.startsWith("'") && arg.endsWith("'"))) {
+        return arg.slice(1, -1);
+      }
+      return arg;
+    });
+    
+    return { cmd, args, type: 'simple' };
+  }
+
+  _parsePipeline(command) {
+    // Split by pipe, respecting quotes
+    const segments = [];
+    let current = '';
+    let inQuotes = false;
+    let quoteChar = '';
+    
+    for (let i = 0; i < command.length; i++) {
+      const char = command[i];
+      
+      if (!inQuotes && (char === '"' || char === "'")) {
+        inQuotes = true;
+        quoteChar = char;
+        current += char;
+      } else if (inQuotes && char === quoteChar) {
+        inQuotes = false;
+        quoteChar = '';
+        current += char;
+      } else if (!inQuotes && char === '|') {
+        segments.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    
+    if (current.trim()) {
+      segments.push(current.trim());
+    }
+    
+    // Parse each segment as a simple command
+    const commands = segments.map(segment => {
+      const parts = segment.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) || [];
+      if (parts.length === 0) return null;
+      
+      const cmd = parts[0];
+      const args = parts.slice(1).map(arg => {
+        if ((arg.startsWith('"') && arg.endsWith('"')) || 
+            (arg.startsWith("'") && arg.endsWith("'"))) {
+          return arg.slice(1, -1);
+        }
+        return arg;
+      });
+      
+      return { cmd, args };
+    }).filter(Boolean);
+    
+    return { type: 'pipeline', commands };
+  }
+
+  async _runVirtual(cmd, args) {
+    const handler = virtualCommands.get(cmd);
+    if (!handler) {
+      throw new Error(`Virtual command not found: ${cmd}`);
+    }
+
+    try {
+      // Prepare stdin
+      let stdinData = '';
+      if (this.options.stdin && typeof this.options.stdin === 'string') {
+        stdinData = this.options.stdin;
+      } else if (this.options.stdin && Buffer.isBuffer(this.options.stdin)) {
+        stdinData = this.options.stdin.toString('utf8');
+      }
+
+      // Shell tracing for virtual commands
+      if (globalShellSettings.xtrace) {
+        console.log(`+ ${cmd} ${args.join(' ')}`);
+      }
+      if (globalShellSettings.verbose) {
+        console.log(`${cmd} ${args.join(' ')}`);
+      }
+
+      // Execute the virtual command
+      let result;
+      
+      // Check if handler is async generator (streaming)
+      if (handler.constructor.name === 'AsyncGeneratorFunction') {
+        // Handle streaming virtual command
+        const chunks = [];
+        for await (const chunk of handler(args, stdinData, this.options)) {
+          const buf = Buffer.from(chunk);
+          chunks.push(buf);
+          
+          if (this.options.mirror) {
+            process.stdout.write(buf);
+          }
+          
+          this.emit('stdout', buf);
+          this.emit('data', { type: 'stdout', data: buf });
+        }
+        
+        result = {
+          code: 0,
+          stdout: this.options.capture ? Buffer.concat(chunks).toString('utf8') : undefined,
+          stderr: this.options.capture ? '' : undefined,
+          stdin: this.options.capture ? stdinData : undefined
+        };
+      } else {
+        // Regular async function
+        result = await handler(args, stdinData, this.options);
+        
+        // Ensure result has required fields, respecting capture option
+        result = {
+          code: result.code ?? 0,
+          stdout: this.options.capture ? (result.stdout ?? '') : undefined,
+          stderr: this.options.capture ? (result.stderr ?? '') : undefined,
+          stdin: this.options.capture ? stdinData : undefined,
+          ...result
+        };
+        
+        // Mirror and emit output
+        if (result.stdout) {
+          const buf = Buffer.from(result.stdout);
+          if (this.options.mirror) {
+            process.stdout.write(buf);
+          }
+          this.emit('stdout', buf);
+          this.emit('data', { type: 'stdout', data: buf });
+        }
+        
+        if (result.stderr) {
+          const buf = Buffer.from(result.stderr);
+          if (this.options.mirror) {
+            process.stderr.write(buf);
+          }
+          this.emit('stderr', buf);
+          this.emit('data', { type: 'stderr', data: buf });
+        }
+      }
+
+      // Store result
+      this.result = result;
+      this.finished = true;
+      
+      // Emit completion events
+      this.emit('end', result);
+      this.emit('exit', result.code);
+      
+      // Handle shell settings
+      if (globalShellSettings.errexit && result.code !== 0) {
+        const error = new Error(`Command failed with exit code ${result.code}`);
+        error.code = result.code;
+        error.stdout = result.stdout;
+        error.stderr = result.stderr;
+        error.result = result;
+        throw error;
+      }
+      
+      return result;
+    } catch (error) {
+      // Handle errors from virtual commands
+      const result = {
+        code: error.code ?? 1,
+        stdout: error.stdout ?? '',
+        stderr: error.stderr ?? error.message,
+        stdin: ''
+      };
+      
+      this.result = result;
+      this.finished = true;
+      
+      if (result.stderr) {
+        const buf = Buffer.from(result.stderr);
+        if (this.options.mirror) {
+          process.stderr.write(buf);
+        }
+        this.emit('stderr', buf);
+        this.emit('data', { type: 'stderr', data: buf });
+      }
+      
+      this.emit('end', result);
+      this.emit('exit', result.code);
+      
+      if (globalShellSettings.errexit) {
+        throw error;
+      }
+      
+      return result;
+    }
+  }
+
+  async _runPipeline(commands) {
+    if (commands.length === 0) {
+      return { code: 1, stdout: '', stderr: 'No commands in pipeline', stdin: '' };
+    }
+
+    let currentOutput = '';
+    let currentInput = '';
+    
+    // Get initial stdin from options
+    if (this.options.stdin && typeof this.options.stdin === 'string') {
+      currentInput = this.options.stdin;
+    } else if (this.options.stdin && Buffer.isBuffer(this.options.stdin)) {
+      currentInput = this.options.stdin.toString('utf8');
+    }
+
+    // Execute each command in the pipeline
+    for (let i = 0; i < commands.length; i++) {
+      const command = commands[i];
+      const { cmd, args } = command;
+      
+      // Check if this is a virtual command
+      if (virtualCommandsEnabled && virtualCommands.has(cmd)) {
+        // Run virtual command with current input
+        const handler = virtualCommands.get(cmd);
+        
+        try {
+          // Shell tracing for virtual commands
+          if (globalShellSettings.xtrace) {
+            console.log(`+ ${cmd} ${args.join(' ')}`);
+          }
+          if (globalShellSettings.verbose) {
+            console.log(`${cmd} ${args.join(' ')}`);
+          }
+
+          let result;
+          
+          // Check if handler is async generator (streaming)
+          if (handler.constructor.name === 'AsyncGeneratorFunction') {
+            const chunks = [];
+            for await (const chunk of handler(args, currentInput, this.options)) {
+              chunks.push(Buffer.from(chunk));
+            }
+            result = {
+              code: 0,
+              stdout: this.options.capture ? Buffer.concat(chunks).toString('utf8') : undefined,
+              stderr: this.options.capture ? '' : undefined,
+              stdin: this.options.capture ? currentInput : undefined
+            };
+          } else {
+            // Regular async function
+            result = await handler(args, currentInput, this.options);
+            result = {
+              code: result.code ?? 0,
+              stdout: this.options.capture ? (result.stdout ?? '') : undefined,
+              stderr: this.options.capture ? (result.stderr ?? '') : undefined,
+              stdin: this.options.capture ? currentInput : undefined,
+              ...result
+            };
+          }
+          
+          // If this isn't the last command, pass stdout as stdin to next command
+          if (i < commands.length - 1) {
+            currentInput = result.stdout;
+          } else {
+            // This is the last command - emit output and store final result
+            currentOutput = result.stdout;
+            
+            // Mirror and emit output for final command
+            if (result.stdout) {
+              const buf = Buffer.from(result.stdout);
+              if (this.options.mirror) {
+                process.stdout.write(buf);
+              }
+              this.emit('stdout', buf);
+              this.emit('data', { type: 'stdout', data: buf });
+            }
+            
+            if (result.stderr) {
+              const buf = Buffer.from(result.stderr);
+              if (this.options.mirror) {
+                process.stderr.write(buf);
+              }
+              this.emit('stderr', buf);
+              this.emit('data', { type: 'stderr', data: buf });
+            }
+            
+            // Store final result
+            const finalResult = {
+              code: result.code,
+              stdout: currentOutput,
+              stderr: result.stderr,
+              stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin : 
+                     this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
+            };
+            
+            this.result = finalResult;
+            this.finished = true;
+            
+            // Emit completion events
+            this.emit('end', finalResult);
+            this.emit('exit', finalResult.code);
+            
+            // Handle shell settings
+            if (globalShellSettings.errexit && finalResult.code !== 0) {
+              const error = new Error(`Pipeline failed with exit code ${finalResult.code}`);
+              error.code = finalResult.code;
+              error.stdout = finalResult.stdout;
+              error.stderr = finalResult.stderr;
+              error.result = finalResult;
+              throw error;
+            }
+            
+            return finalResult;
+          }
+          
+          // Handle errors from intermediate commands
+          if (globalShellSettings.errexit && result.code !== 0) {
+            const error = new Error(`Pipeline command failed with exit code ${result.code}`);
+            error.code = result.code;
+            error.stdout = result.stdout;
+            error.stderr = result.stderr;
+            error.result = result;
+            throw error;
+          }
+        } catch (error) {
+          // Handle errors from virtual commands in pipeline
+          const result = {
+            code: error.code ?? 1,
+            stdout: currentOutput,
+            stderr: error.stderr ?? error.message,
+            stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin : 
+                   this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
+          };
+          
+          this.result = result;
+          this.finished = true;
+          
+          if (result.stderr) {
+            const buf = Buffer.from(result.stderr);
+            if (this.options.mirror) {
+              process.stderr.write(buf);
+            }
+            this.emit('stderr', buf);
+            this.emit('data', { type: 'stderr', data: buf });
+          }
+          
+          this.emit('end', result);
+          this.emit('exit', result.code);
+          
+          if (globalShellSettings.errexit) {
+            throw error;
+          }
+          
+          return result;
+        }
+      } else {
+        // For system commands in pipeline, we would need to spawn processes
+        // For now, return an error indicating this isn't supported
+        const result = {
+          code: 1,
+          stdout: currentOutput,
+          stderr: `Pipeline with system command '${cmd}' not yet supported`,
+          stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin : 
+                 this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
+        };
+        
+        this.result = result;
+        this.finished = true;
+        
+        const buf = Buffer.from(result.stderr);
+        if (this.options.mirror) {
+          process.stderr.write(buf);
+        }
+        this.emit('stderr', buf);
+        this.emit('data', { type: 'stderr', data: buf });
+        
+        this.emit('end', result);
+        this.emit('exit', result.code);
+        
+        return result;
+      }
     }
   }
 
@@ -534,5 +945,171 @@ const shell = {
   nounset: (enable = true) => enable ? set('u') : unset('u'),
 };
 
-export { $tagged as $, sh, exec, run, quote, create, raw, ProcessRunner, shell, set, unset };
+// Virtual command registration API
+function register(name, handler) {
+  virtualCommands.set(name, handler);
+  return virtualCommands;
+}
+
+function unregister(name) {
+  return virtualCommands.delete(name);
+}
+
+function listCommands() {
+  return Array.from(virtualCommands.keys());
+}
+
+function enableVirtualCommands() {
+  virtualCommandsEnabled = true;
+  return virtualCommandsEnabled;
+}
+
+function disableVirtualCommands() {
+  virtualCommandsEnabled = false;
+  return virtualCommandsEnabled;
+}
+
+// Built-in commands that match Bun.$ functionality
+function registerBuiltins() {
+  // cd - change directory
+  register('cd', async (args) => {
+    const target = args[0] || process.env.HOME || process.env.USERPROFILE || '/';
+    try {
+      process.chdir(target);
+      return { stdout: process.cwd(), code: 0 };
+    } catch (error) {
+      return { stderr: `cd: ${error.message}`, code: 1 };
+    }
+  });
+
+  // pwd - print working directory
+  register('pwd', async (args, stdin, options) => {
+    // If cwd option is provided, return that instead of process.cwd()
+    const dir = options?.cwd || process.cwd();
+    return { stdout: dir, code: 0 };
+  });
+
+  // echo - print arguments
+  register('echo', async (args) => {
+    let output = args.join(' ');
+    if (args.includes('-n')) {
+      // Don't add newline
+      output = args.filter(arg => arg !== '-n').join(' ');
+    } else {
+      output += '\n';
+    }
+    return { stdout: output, code: 0 };
+  });
+
+  // sleep - wait for specified time
+  register('sleep', async (args) => {
+    const seconds = parseFloat(args[0] || 0);
+    if (isNaN(seconds) || seconds < 0) {
+      return { stderr: 'sleep: invalid time interval', code: 1 };
+    }
+    await new Promise(resolve => setTimeout(resolve, seconds * 1000));
+    return { stdout: '', code: 0 };
+  });
+
+  // true - always succeed
+  register('true', async () => {
+    return { stdout: '', code: 0 };
+  });
+
+  // false - always fail
+  register('false', async () => {
+    return { stdout: '', code: 1 };
+  });
+
+  // which - locate command
+  register('which', async (args) => {
+    if (args.length === 0) {
+      return { stderr: 'which: missing operand', code: 1 };
+    }
+    
+    const cmd = args[0];
+    
+    // Check virtual commands first
+    if (virtualCommands.has(cmd)) {
+      return { stdout: `${cmd}: shell builtin\n`, code: 0 };
+    }
+    
+    // Check PATH for system commands
+    const paths = (process.env.PATH || '').split(process.platform === 'win32' ? ';' : ':');
+    const extensions = process.platform === 'win32' ? ['', '.exe', '.cmd', '.bat'] : [''];
+    
+    for (const path of paths) {
+      for (const ext of extensions) {
+        const fullPath = require('path').join(path, cmd + ext);
+        try {
+          if (require('fs').statSync(fullPath).isFile()) {
+            return { stdout: fullPath, code: 0 };
+          }
+        } catch {}
+      }
+    }
+    
+    return { stderr: `which: no ${cmd} in PATH`, code: 1 };
+  });
+
+  // exit - exit with code
+  register('exit', async (args) => {
+    const code = parseInt(args[0] || 0);
+    if (globalShellSettings.errexit || code !== 0) {
+      // For virtual commands, we simulate exit by returning the code
+      return { stdout: '', code };
+    }
+    return { stdout: '', code: 0 };
+  });
+
+  // env - print environment variables
+  register('env', async (args, stdin, options) => {
+    if (args.length === 0) {
+      // Use custom env if provided, otherwise use process.env
+      const env = options?.env || process.env;
+      const output = Object.entries(env)
+        .map(([key, value]) => `${key}=${value}`)
+        .join('\n') + '\n';
+      return { stdout: output, code: 0 };
+    }
+    
+    // TODO: Support env VAR=value command syntax
+    return { stderr: 'env: command execution not yet supported', code: 1 };
+  });
+
+  // test - test file conditions (basic implementation)
+  register('test', async (args) => {
+    if (args.length === 0) {
+      return { stdout: '', code: 1 };
+    }
+    
+    // Very basic test implementation
+    const arg = args[0];
+    
+    try {
+      if (arg === '-d' && args[1]) {
+        // Test if directory
+        const stat = require('fs').statSync(args[1]);
+        return { stdout: '', code: stat.isDirectory() ? 0 : 1 };
+      } else if (arg === '-f' && args[1]) {
+        // Test if file
+        const stat = require('fs').statSync(args[1]);
+        return { stdout: '', code: stat.isFile() ? 0 : 1 };
+      } else if (arg === '-e' && args[1]) {
+        // Test if exists
+        require('fs').statSync(args[1]);
+        return { stdout: '', code: 0 };
+      }
+    } catch {
+      return { stdout: '', code: 1 };
+    }
+    
+    return { stdout: '', code: 1 };
+  });
+}
+
+// Initialize built-in commands
+registerBuiltins();
+
+export { $tagged as $, sh, exec, run, quote, create, raw, ProcessRunner, shell, set, unset, register, unregister, listCommands, enableVirtualCommands, disableVirtualCommands };
 export default $tagged;

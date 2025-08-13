@@ -1,5 +1,5 @@
 import { test, expect, describe, beforeEach } from 'bun:test';
-import { $, sh, create, shell, set, unset } from './$.mjs';
+import { $, sh, create, shell, set, unset, disableVirtualCommands } from './$.mjs';
 
 // Reset shell settings before each test
 beforeEach(() => {
@@ -8,6 +8,8 @@ beforeEach(() => {
   shell.xtrace(false);
   shell.pipefail(false);
   shell.nounset(false);
+  // Disable virtual commands for these tests to ensure system command behavior
+  disableVirtualCommands();
 });
 
 describe('README Examples and Use Cases', () => {

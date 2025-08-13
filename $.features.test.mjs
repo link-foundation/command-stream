@@ -1,5 +1,5 @@
 import { test, expect, describe, beforeEach } from 'bun:test';
-import { $, shell } from './$.mjs';
+import { $, shell, disableVirtualCommands } from './$.mjs';
 
 // Reset shell settings before each test to prevent interference
 beforeEach(() => {
@@ -8,6 +8,8 @@ beforeEach(() => {
   shell.xtrace(false);
   shell.pipefail(false);
   shell.nounset(false);
+  // Disable virtual commands for these tests to ensure system command behavior
+  disableVirtualCommands();
 });
 
 describe('command-stream Feature Validation', () => {

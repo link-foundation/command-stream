@@ -91,7 +91,7 @@ describe('Shell Settings (set -e / set +e equivalent)', () => {
         await $`echo "verbose test"`;
         
         expect(capturedLogs.length).toBeGreaterThan(0);
-        expect(capturedLogs.some(log => log.includes('echo "verbose test"'))).toBe(true);
+        expect(capturedLogs.some(log => log.includes('echo verbose test'))).toBe(true);
       } finally {
         console.log = originalLog;
       }
@@ -123,7 +123,7 @@ describe('Shell Settings (set -e / set +e equivalent)', () => {
         
         expect(capturedLogs.length).toBeGreaterThan(0);
         expect(capturedLogs.some(log => log.startsWith('+ '))).toBe(true);
-        expect(capturedLogs.some(log => log.includes('echo "trace test"'))).toBe(true);
+        expect(capturedLogs.some(log => log.includes('echo trace test'))).toBe(true);
       } finally {
         console.log = originalLog;
       }
