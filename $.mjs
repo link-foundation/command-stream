@@ -1101,8 +1101,10 @@ function registerBuiltins() {
           const content = fs.readFileSync(fullPath, 'utf8');
           output += content;
         } catch (error) {
+          // Format error message to match bash/sh style
+          const errorMsg = error.code === 'ENOENT' ? 'No such file or directory' : error.message;
           return { 
-            stderr: `cat: ${filename}: ${error.message}`, 
+            stderr: `cat: ${filename}: ${errorMsg}`, 
             stdout: output,
             code: 1 
           };
@@ -1292,9 +1294,21 @@ function registerBuiltins() {
         // Simple rename/move
         const [source, dest] = args;
         const sourcePath = path.isAbsolute(source) ? source : path.join(basePath, source);
-        const destPath = path.isAbsolute(dest) ? dest : path.join(basePath, dest);
+        let destPath = path.isAbsolute(dest) ? dest : path.join(basePath, dest);
         
         try {
+          // Check if destination is an existing directory
+          try {
+            const destStat = fs.statSync(destPath);
+            if (destStat.isDirectory()) {
+              // Move file into the directory
+              const fileName = path.basename(source);
+              destPath = path.join(destPath, fileName);
+            }
+          } catch {
+            // Destination doesn't exist, proceed with direct rename
+          }
+          
           fs.renameSync(sourcePath, destPath);
         } catch (error) {
           return { 

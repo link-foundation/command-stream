@@ -14,6 +14,63 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 - ⚡ **Performance**: Memory-efficient streaming prevents large buffer accumulation
 - 🎯 **Backward Compatible**: Existing `await $` syntax continues to work
 - 🛡️ **Type Safe**: Full TypeScript support (coming soon)
+- 🔧 **Built-in Commands**: 18 essential commands work identically across platforms
+
+## Built-in Commands (🚀 NEW!)
+
+command-stream now includes **18 built-in commands** that work identically to their bash/sh counterparts, providing true cross-platform shell scripting without system dependencies:
+
+### 📁 **File System Commands**
+- `cat` - Read and display file contents
+- `ls` - List directory contents (supports `-l`, `-a`, `-A`)
+- `mkdir` - Create directories (supports `-p` recursive)
+- `rm` - Remove files/directories (supports `-r`, `-f`) 
+- `mv` - Move/rename files and directories
+- `cp` - Copy files/directories (supports `-r` recursive)
+- `touch` - Create files or update timestamps
+
+### 🔧 **Utility Commands**  
+- `basename` - Extract filename from path
+- `dirname` - Extract directory from path
+- `seq` - Generate number sequences
+- `yes` - Output string repeatedly (streaming)
+
+### ⚡ **System Commands**
+- `cd` - Change directory
+- `pwd` - Print working directory
+- `echo` - Print arguments (supports `-n`)
+- `sleep` - Wait for specified time
+- `true`/`false` - Success/failure commands
+- `which` - Locate commands
+- `exit` - Exit with code
+- `env` - Print environment variables
+- `test` - File condition testing
+
+### ✨ **Key Advantages**
+
+- **🌍 Cross-Platform**: Works identically on Windows, macOS, and Linux
+- **🚀 Performance**: No system calls - pure JavaScript execution
+- **🔄 Pipeline Support**: All commands work in pipelines and virtual command chains
+- **⚙️ Option Aware**: Commands respect `cwd`, `env`, and other options
+- **🛡️ Safe by Default**: Proper error handling and safety checks (e.g., `rm` requires `-r` for directories)
+- **📝 Bash Compatible**: Error messages and behavior match bash/sh exactly
+
+```javascript
+import { $ } from 'command-stream';
+
+// All these work without any system dependencies!
+await $`mkdir -p project/src`;
+await $`touch project/src/index.js`;
+await $`echo "console.log('Hello!');" > project/src/index.js`;
+await $`ls -la project/src`;
+await $`cat project/src/index.js`;
+await $`cp -r project project-backup`;
+await $`rm -r project-backup`;
+
+// Mix built-ins with pipelines and virtual commands
+await $`seq 1 5 | cat > numbers.txt`;
+await $`basename /path/to/file.txt .txt`; // → "file"
+```
 
 ## Comparison with Other Libraries
 
@@ -35,7 +92,7 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 | **Stdout Support** | ✅ Real-time streaming + events | ✅ Shell redirection + buffered | ✅ Node.js streams + interleaved | ✅ Readable streams + `.pipe.stdout` |
 | **Stderr Support** | ✅ Real-time streaming + events | ✅ Redirection + `.quiet()` access | ✅ Streams + interleaved output | ✅ Readable streams + `.pipe.stderr` |
 | **Stdin Support** | ✅ string/Buffer/inherit/ignore | ✅ Pipe operations | ✅ Input/output streams | ✅ Basic stdin |
-| **Built-in Commands** | ❌ Uses system | ✅ echo, cd, etc. | ❌ Uses system | ❌ Uses system |
+| **Built-in Commands** | ✅ **18 commands**: cat, ls, mkdir, rm, mv, cp, touch, basename, dirname, seq, yes + all Bun.$ commands | ✅ echo, cd, etc. | ❌ Uses system | ❌ Uses system |
 | **Bundle Size** | 📦 ~15KB | 🎯 0KB (built-in) | 📦 ~25KB | 📦 ~50KB |
 | **TypeScript** | 🔄 Coming soon | ✅ Built-in | ✅ Full support | ✅ Full support |
 | **License** | ✅ **Unlicense (Public Domain)** | 🟡 MIT (+ LGPL dependencies) | 🟡 MIT | 🟡 Apache 2.0 |
@@ -43,12 +100,13 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 ### Why Choose command-stream?
 
 - **🆓 Truly Free**: **Unlicense (Public Domain)** - No restrictions, no attribution required, use however you want
+- **🔧 Built-in Commands**: **18 essential commands** work identically across all platforms - no system dependencies!
 - **🚀 Real-time Processing**: Only library with true streaming and async iteration
 - **🔄 Flexible Patterns**: Multiple usage patterns (await, events, iteration, mixed)
 - **🐚 Shell Replacement**: Dynamic error handling with `set -e`/`set +e` equivalents for .sh file replacement
 - **⚡ Bun Optimized**: Designed for Bun with Node.js fallback compatibility  
 - **💾 Memory Efficient**: Streaming prevents large buffer accumulation
-- **🛡️ Production Ready**: 200+ tests with comprehensive coverage
+- **🛡️ Production Ready**: 250+ tests with comprehensive coverage
 
 ## Installation
 
@@ -166,6 +224,81 @@ set('e');    // set -e
 unset('e');  // set +e
 set('x');    // set -x
 set('verbose'); // Long form also supported
+```
+
+### Cross-Platform File Operations (Built-in Commands)
+
+Replace system-dependent operations with built-in commands that work identically everywhere:
+
+```javascript
+import { $ } from 'command-stream';
+
+// File system operations work on Windows, macOS, and Linux identically
+await $`mkdir -p project/src project/tests`;
+await $`touch project/src/index.js project/tests/test.js`;
+
+// List files with details
+const files = await $`ls -la project/src`;
+console.log(files.stdout);
+
+// Copy and move operations
+await $`cp project/src/index.js project/src/backup.js`;
+await $`mv project/src/backup.js project/backup.js`;
+
+// File content operations
+await $`echo "export default 'Hello World';" > project/src/index.js`;
+const content = await $`cat project/src/index.js`;
+console.log(content.stdout);
+
+// Path operations
+const filename = await $`basename project/src/index.js .js`; // → "index"
+const directory = await $`dirname project/src/index.js`;     // → "project/src"
+
+// Generate sequences and process them
+await $`seq 1 10 | cat > numbers.txt`;
+const numbers = await $`cat numbers.txt`;
+
+// Cleanup
+await $`rm -r project numbers.txt`;
+```
+
+### Virtual Commands (Extensible Shell)
+
+Create custom commands that work seamlessly alongside built-ins:
+
+```javascript
+import { $, register, unregister } from 'command-stream';
+
+// Register a custom command
+register('greet', async (args, stdin) => {
+  const name = args[0] || 'World';
+  return { stdout: `Hello, ${name}!\n`, code: 0 };
+});
+
+// Use it like any other command
+await $`greet Alice`;                    // → "Hello, Alice!"
+await $`echo "Bob" | greet`;             // → "Hello, Bob!"
+
+// Streaming virtual commands with async generators
+register('countdown', async function* (args) {
+  const start = parseInt(args[0] || 5);
+  for (let i = start; i >= 0; i--) {
+    yield `${i}\n`;
+    await new Promise(r => setTimeout(r, 1000));
+  }
+});
+
+// Use in pipelines with built-ins
+await $`countdown 3 | cat > countdown.txt`;
+
+// Virtual commands work in all patterns
+for await (const chunk of $`countdown 3`.stream()) {
+  console.log('Countdown:', chunk.data.toString().trim());
+}
+
+// Management functions
+console.log(listCommands());  // List all registered commands
+unregister('greet');          // Remove custom commands
 ```
 
 ## Default Behavior: Shell-like with Programmatic Control
@@ -327,6 +460,54 @@ Control shell behavior like bash `set`/`unset` commands:
 - `set(option)`: Enable shell option (`'e'`, `'v'`, `'x'`, or long names)
 - `unset(option)`: Disable shell option
 - `shell.settings()`: Get current settings object
+
+### Virtual Commands API
+
+Control and extend the command system with custom JavaScript functions:
+
+#### Functions
+
+- `register(name, handler)`: Register a virtual command
+  - `name`: Command name (string)
+  - `handler`: Function or async generator `(args, stdin, options) => result`
+- `unregister(name)`: Remove a virtual command
+- `listCommands()`: Get array of all registered command names  
+- `enableVirtualCommands()`: Enable virtual command processing
+- `disableVirtualCommands()`: Disable virtual commands (use system commands only)
+
+#### Handler Function Signature
+
+```javascript
+// Regular async function
+async function handler(args, stdin, options) {
+  return {
+    code: 0,           // Exit code (number)
+    stdout: "output",  // Standard output (string)
+    stderr: "",        // Standard error (string)
+  };
+}
+
+// Async generator for streaming
+async function* streamingHandler(args, stdin, options) {
+  yield "chunk1\n";
+  yield "chunk2\n";
+  // Each yield sends a chunk in real-time
+}
+```
+
+### Built-in Commands
+
+18 cross-platform commands that work identically everywhere:
+
+**File System**: `cat`, `ls`, `mkdir`, `rm`, `mv`, `cp`, `touch`  
+**Utilities**: `basename`, `dirname`, `seq`, `yes`  
+**System**: `cd`, `pwd`, `echo`, `sleep`, `true`, `false`, `which`, `exit`, `env`, `test`
+
+All built-in commands support:
+- Standard flags (e.g., `ls -la`, `mkdir -p`, `rm -rf`)
+- Pipeline operations
+- Option awareness (`cwd`, `env`, etc.)
+- Bash-compatible error messages and exit codes
 
 #### Supported Options
 
