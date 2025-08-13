@@ -1442,6 +1442,147 @@ function registerBuiltins() {
     }
   });
 
+  // touch - create or update file timestamps
+  register('touch', async (args, stdin, options) => {
+    if (args.length === 0) {
+      return { stderr: 'touch: missing file operand', code: 1 };
+    }
+    
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+      
+      const basePath = options?.cwd || process.cwd();
+      
+      for (const file of args) {
+        try {
+          const fullPath = path.isAbsolute(file) ? file : path.join(basePath, file);
+          
+          // Try to update timestamps if file exists
+          try {
+            const now = new Date();
+            fs.utimesSync(fullPath, now, now);
+          } catch {
+            // File doesn't exist, create it
+            fs.writeFileSync(fullPath, '', { flag: 'w' });
+          }
+        } catch (error) {
+          return { 
+            stderr: `touch: cannot touch '${file}': ${error.message}`, 
+            code: 1 
+          };
+        }
+      }
+      
+      return { stdout: '', code: 0 };
+    } catch (error) {
+      return { stderr: `touch: ${error.message}`, code: 1 };
+    }
+  });
+
+  // basename - extract filename from path
+  register('basename', async (args) => {
+    if (args.length === 0) {
+      return { stderr: 'basename: missing operand', code: 1 };
+    }
+    
+    try {
+      const path = await import('path');
+      
+      const pathname = args[0];
+      const suffix = args[1];
+      
+      let result = path.basename(pathname);
+      
+      // Remove suffix if provided
+      if (suffix && result.endsWith(suffix)) {
+        result = result.slice(0, -suffix.length);
+      }
+      
+      return { stdout: result + '\n', code: 0 };
+    } catch (error) {
+      return { stderr: `basename: ${error.message}`, code: 1 };
+    }
+  });
+
+  // dirname - extract directory from path
+  register('dirname', async (args) => {
+    if (args.length === 0) {
+      return { stderr: 'dirname: missing operand', code: 1 };
+    }
+    
+    try {
+      const path = await import('path');
+      
+      const pathname = args[0];
+      const result = path.dirname(pathname);
+      
+      return { stdout: result + '\n', code: 0 };
+    } catch (error) {
+      return { stderr: `dirname: ${error.message}`, code: 1 };
+    }
+  });
+
+  // yes - output a string repeatedly
+  register('yes', async function* (args) {
+    const output = args.length > 0 ? args.join(' ') : 'y';
+    
+    // Generate infinite stream of the output
+    while (true) {
+      yield output + '\n';
+      // Small delay to prevent overwhelming the system
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+  });
+
+  // seq - generate sequence of numbers
+  register('seq', async (args) => {
+    if (args.length === 0) {
+      return { stderr: 'seq: missing operand', code: 1 };
+    }
+    
+    try {
+      let start, step, end;
+      
+      if (args.length === 1) {
+        start = 1;
+        step = 1;
+        end = parseInt(args[0]);
+      } else if (args.length === 2) {
+        start = parseInt(args[0]);
+        step = 1;
+        end = parseInt(args[1]);
+      } else if (args.length === 3) {
+        start = parseInt(args[0]);
+        step = parseInt(args[1]);
+        end = parseInt(args[2]);
+      } else {
+        return { stderr: 'seq: too many operands', code: 1 };
+      }
+      
+      if (isNaN(start) || isNaN(step) || isNaN(end)) {
+        return { stderr: 'seq: invalid number', code: 1 };
+      }
+      
+      let output = '';
+      if (step > 0) {
+        for (let i = start; i <= end; i += step) {
+          output += i + '\n';
+        }
+      } else if (step < 0) {
+        for (let i = start; i >= end; i += step) {
+          output += i + '\n';
+        }
+      } else {
+        return { stderr: 'seq: invalid increment', code: 1 };
+      }
+      
+      return { stdout: output, code: 0 };
+    } catch (error) {
+      return { stderr: `seq: ${error.message}`, code: 1 };
+    }
+  });
+
   // test - test file conditions (basic implementation)
   register('test', async (args) => {
     if (args.length === 0) {
