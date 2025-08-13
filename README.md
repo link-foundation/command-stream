@@ -94,7 +94,7 @@ await $`basename /path/to/file.txt .txt`; // → "file"
 | **Stdin Support** | ✅ string/Buffer/inherit/ignore | ✅ Pipe operations | ✅ Input/output streams | ✅ Basic stdin |
 | **Built-in Commands** | ✅ **18 commands**: cat, ls, mkdir, rm, mv, cp, touch, basename, dirname, seq, yes + all Bun.$ commands | ✅ echo, cd, etc. | ❌ Uses system | ❌ Uses system |
 | **Virtual Commands Engine** | ✅ **Revolutionary**: Register JavaScript functions as shell commands with full pipeline support | ❌ No extensibility | ❌ No custom commands | ❌ No custom commands |
-| **Pipeline/Piping Support** | ✅ **Advanced**: System commands + Built-ins + Virtual commands + Mixed pipelines | ✅ Standard shell piping | ✅ Programmatic `.pipe()` + multi-destination | ✅ Shell piping + `.pipe()` method |
+| **Pipeline/Piping Support** | ✅ **Advanced**: System + Built-ins + Virtual + Mixed + `.pipe()` method | ✅ Standard shell piping | ✅ Programmatic `.pipe()` + multi-destination | ✅ Shell piping + `.pipe()` method |
 | **Bundle Size** | 📦 ~15KB | 🎯 0KB (built-in) | 📦 ~25KB | 📦 ~50KB |
 | **TypeScript** | 🔄 Coming soon | ✅ Built-in | ✅ Full support | ✅ Full support |
 | **License** | ✅ **Unlicense (Public Domain)** | 🟡 MIT (+ LGPL dependencies) | 🟡 MIT | 🟡 Apache 2.0 |
@@ -342,6 +342,8 @@ await $`deploy staging | tee log.txt`; // Works in pipelines!
 
 **command-stream offers the most advanced piping system in the JavaScript ecosystem:**
 
+#### **Shell-Style Piping (Traditional)**
+
 ```javascript
 import { $, register } from 'command-stream';
 
@@ -376,20 +378,95 @@ await $`git log --oneline | head -n 3 | uppercase | cat > LOG.txt`;
 await $`find . -name "*.js" | head -n 10 | basename | sort | uniq`;
 ```
 
+#### **🚀 Programmatic .pipe() Method (NEW!)**
+
+**World's first shell library with full `.pipe()` method support for virtual commands:**
+
+```javascript
+import { $, register } from 'command-stream';
+
+// ✅ Basic programmatic piping
+const result = await $`echo "hello"`.pipe($`echo "World: $(cat)"`);
+
+// 🌟 Virtual command chaining
+register('add-prefix', async (args, stdin) => {
+  const prefix = args[0] || 'PREFIX:';
+  return { stdout: `${prefix} ${stdin.trim()}\n`, code: 0 };
+});
+
+register('add-suffix', async (args, stdin) => {
+  const suffix = args[0] || 'SUFFIX';
+  return { stdout: `${stdin.trim()} ${suffix}\n`, code: 0 };
+});
+
+// ✅ Chain virtual commands with .pipe()
+const result = await $`echo "Hello"`
+  .pipe($`add-prefix "[PROCESSED]"`)
+  .pipe($`add-suffix "!!!"`);
+// → "[PROCESSED] Hello !!!"
+
+// ✅ Mix with built-in commands
+const fileData = await $`cat large-file.txt`
+  .pipe($`head -n 100`)
+  .pipe($`add-prefix "Line:"`);
+
+// ✅ Error handling in pipelines
+try {
+  const result = await $`cat nonexistent.txt`.pipe($`add-prefix "Data:"`);
+} catch (error) {
+  // Source error propagates - destination never executes
+  console.log('File not found, pipeline stopped');
+}
+
+// ✅ Complex data processing
+register('json-parse', async (args, stdin) => {
+  try {
+    const data = JSON.parse(stdin);
+    return { stdout: JSON.stringify(data, null, 2), code: 0 };
+  } catch (error) {
+    return { stdout: '', stderr: `JSON Error: ${error.message}`, code: 1 };
+  }
+});
+
+register('extract-field', async (args, stdin) => {
+  const field = args[0];
+  try {
+    const data = JSON.parse(stdin);
+    const value = data[field] || 'null';
+    return { stdout: `${value}\n`, code: 0 };
+  } catch (error) {
+    return { stdout: '', stderr: `Extract Error: ${error.message}`, code: 1 };
+  }
+});
+
+// Real-world API processing pipeline
+const userName = await $`curl -s https://api.github.com/users/octocat`
+  .pipe($`json-parse`)
+  .pipe($`extract-field name`);
+// → "The Octocat"
+
+// Cleanup
+unregister('add-prefix');
+unregister('add-suffix');
+unregister('json-parse');
+unregister('extract-field');
+```
+
 #### **🆚 How We Compare**
 
-| Library | Pipeline Types | Custom Commands in Pipes | Real-time Streaming |
-|---------|----------------|---------------------------|---------------------|
-| **command-stream** | ✅ System + Built-ins + Virtual + Mixed | ✅ **Full support** | ✅ **Yes** |
-| **Bun.$** | ✅ System + Built-ins | ❌ No custom commands | ❌ No |
-| **execa** | ✅ Programmatic `.pipe()` | ❌ No shell integration | 🟡 Limited |
-| **zx** | ✅ Shell piping + `.pipe()` | ❌ No custom commands | ❌ No |
+| Library | Pipeline Types | Custom Commands in Pipes | `.pipe()` Method | Real-time Streaming |
+|---------|----------------|---------------------------|------------------|---------------------|
+| **command-stream** | ✅ System + Built-ins + Virtual + Mixed | ✅ **Full support** | ✅ **Full virtual command support** | ✅ **Yes** |
+| **Bun.$** | ✅ System + Built-ins | ❌ No custom commands | ❌ No `.pipe()` method | ❌ No |
+| **execa** | ✅ Programmatic `.pipe()` | ❌ No shell integration | ✅ Basic process piping | 🟡 Limited |
+| **zx** | ✅ Shell piping + `.pipe()` | ❌ No custom commands | ✅ Stream piping only | ❌ No |
 
 **🎯 Unique Advantages:**
-- **Virtual commands work seamlessly in pipelines** - no other library can do this
-- **Mixed pipeline types** - combine system, built-in, and virtual commands freely
+- **Virtual commands work seamlessly in both shell pipes AND `.pipe()` method** - no other library can do this
+- **Mixed pipeline types** - combine system, built-in, and virtual commands freely in both syntaxes
 - **Real-time streaming** through virtual command pipelines  
 - **Full stdin/stdout passing** between all command types
+- **Dual piping syntax** - use shell `|` OR programmatic `.pipe()` interchangeably
 
 ## Default Behavior: Shell-like with Programmatic Control
 
@@ -507,6 +584,7 @@ The enhanced `$` function returns a `ProcessRunner` instance that extends `Event
 
 - `stream()`: Returns an async iterator for real-time chunk processing
 - `sync()`: Execute command synchronously (blocks until completion, events batched)
+- `pipe(destination)`: Programmatically pipe output to another command (returns new ProcessRunner)
 - `then()`, `catch()`, `finally()`: Promise interface for await support
 
 #### Properties

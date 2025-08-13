@@ -130,6 +130,11 @@ class ProcessRunner extends StreamEmitter {
 
     const { cwd, env, stdin } = this.options;
     
+    // Handle programmatic pipeline mode
+    if (this.spec.mode === 'pipeline') {
+      return await this._runProgrammaticPipeline(this.spec.source, this.spec.destination);
+    }
+    
     // Check if this is a virtual command first
     if (this.spec.mode === 'shell') {
       // Parse the command to check for virtual commands or pipelines
@@ -658,6 +663,60 @@ class ProcessRunner extends StreamEmitter {
     }
   }
 
+  // Run programmatic pipeline (.pipe() method)
+  async _runProgrammaticPipeline(source, destination) {
+    try {
+      // Execute the source command first
+      const sourceResult = await source;
+      
+      if (sourceResult.code !== 0) {
+        // If source failed, return its result
+        return sourceResult;
+      }
+      
+      // Set the destination's stdin to the source's stdout
+      destination.options = {
+        ...destination.options,
+        stdin: sourceResult.stdout
+      };
+      
+      // Execute the destination command
+      const destResult = await destination;
+      
+      // Return the final result with combined information
+      return {
+        code: destResult.code,
+        stdout: destResult.stdout,
+        stderr: sourceResult.stderr + destResult.stderr,
+        stdin: sourceResult.stdin
+      };
+      
+    } catch (error) {
+      const result = {
+        code: error.code ?? 1,
+        stdout: '',
+        stderr: error.message || 'Pipeline execution failed',
+        stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin : 
+               this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
+      };
+      
+      this.result = result;
+      this.finished = true;
+      
+      const buf = Buffer.from(result.stderr);
+      if (this.options.mirror) {
+        process.stderr.write(buf);
+      }
+      this.emit('stderr', buf);
+      this.emit('data', { type: 'stderr', data: buf });
+      
+      this.emit('end', result);
+      this.emit('exit', result.code);
+      
+      return result;
+    }
+  }
+
   // Async iteration support
   async* stream() {
     if (!this.started) {
@@ -702,6 +761,32 @@ class ProcessRunner extends StreamEmitter {
       this.off('data', onData);
       this.off('end', onEnd);
     }
+  }
+
+  // Programmatic piping support
+  pipe(destination) {
+    // If destination is a ProcessRunner, create a pipeline
+    if (destination instanceof ProcessRunner) {
+      // Create a new ProcessRunner that represents the piped operation
+      const pipeSpec = {
+        mode: 'pipeline',
+        source: this,
+        destination: destination
+      };
+      
+      return new ProcessRunner(pipeSpec, {
+        ...this.options,
+        capture: destination.options.capture ?? true
+      });
+    }
+    
+    // If destination is a template literal result (from $`command`), use its spec
+    if (destination && destination.spec) {
+      const destRunner = new ProcessRunner(destination.spec, destination.options);
+      return this.pipe(destRunner);
+    }
+    
+    throw new Error('pipe() destination must be a ProcessRunner or $`command` result');
   }
 
   // Promise interface (for await)
