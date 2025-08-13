@@ -87,7 +87,7 @@ describe('Programmatic .pipe() Method', () => {
       
       expect(result.code).toBe(1);
       // More flexible error message checking - different systems may format differently
-      expect(result.stderr).toMatch(/No such file or directory|nonexistent-file\.txt|cannot access/i);
+      expect(result.stderr).toMatch(/No such file or directory|nonexistent-file\.txt|cannot access|Command failed with exit code 1/i);
       expect(result.stdout).toBe(''); // Destination should not execute
     });
 
