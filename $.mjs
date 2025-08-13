@@ -315,6 +315,113 @@ class ProcessRunner extends StreamEmitter {
     return this.promise.finally(onFinally);
   }
 
+  // Synchronous execution
+  sync() {
+    if (this.started) {
+      throw new Error('Command already started - cannot run sync after async start');
+    }
+    
+    const { cwd, env, stdin } = this.options;
+    const argv = this.spec.mode === 'shell' ? ['sh', '-lc', this.spec.command] : [this.spec.file, ...this.spec.args];
+    
+    // Shell tracing (set -x equivalent)
+    if (globalShellSettings.xtrace) {
+      const traceCmd = this.spec.mode === 'shell' ? this.spec.command : argv.join(' ');
+      console.log(`+ ${traceCmd}`);
+    }
+    
+    // Verbose mode (set -v equivalent)
+    if (globalShellSettings.verbose) {
+      const verboseCmd = this.spec.mode === 'shell' ? this.spec.command : argv.join(' ');
+      console.log(verboseCmd);
+    }
+    
+    let result;
+    
+    if (isBun) {
+      // Use Bun's synchronous spawn
+      const proc = Bun.spawnSync(argv, {
+        cwd,
+        env,
+        stdin: typeof stdin === 'string' ? Buffer.from(stdin) : 
+               Buffer.isBuffer(stdin) ? stdin : 
+               stdin === 'ignore' ? undefined : undefined,
+        stdout: 'pipe',
+        stderr: 'pipe'
+      });
+      
+      result = {
+        code: proc.exitCode || 0,
+        stdout: proc.stdout?.toString('utf8') || '',
+        stderr: proc.stderr?.toString('utf8') || '',
+        stdin: typeof stdin === 'string' ? stdin : 
+               Buffer.isBuffer(stdin) ? stdin.toString('utf8') : '',
+        child: proc
+      };
+    } else {
+      // Use Node's synchronous spawn
+      const cp = require('child_process');
+      const proc = cp.spawnSync(argv[0], argv.slice(1), {
+        cwd,
+        env,
+        input: typeof stdin === 'string' ? stdin : 
+               Buffer.isBuffer(stdin) ? stdin : undefined,
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+      
+      result = {
+        code: proc.status || 0,
+        stdout: proc.stdout || '',
+        stderr: proc.stderr || '',
+        stdin: typeof stdin === 'string' ? stdin : 
+               Buffer.isBuffer(stdin) ? stdin.toString('utf8') : '',
+        child: proc
+      };
+    }
+    
+    // Mirror output if requested (but always capture for result)
+    if (this.options.mirror) {
+      if (result.stdout) process.stdout.write(result.stdout);
+      if (result.stderr) process.stderr.write(result.stderr);
+    }
+    
+    // Store chunks for events (batched after completion)
+    this.outChunks = result.stdout ? [Buffer.from(result.stdout)] : [];
+    this.errChunks = result.stderr ? [Buffer.from(result.stderr)] : [];
+    
+    this.result = result;
+    this.finished = true;
+    
+    // Emit batched events after completion
+    if (result.stdout) {
+      const stdoutBuf = Buffer.from(result.stdout);
+      this.emit('stdout', stdoutBuf);
+      this.emit('data', { type: 'stdout', data: stdoutBuf });
+    }
+    
+    if (result.stderr) {
+      const stderrBuf = Buffer.from(result.stderr);
+      this.emit('stderr', stderrBuf);
+      this.emit('data', { type: 'stderr', data: stderrBuf });
+    }
+    
+    this.emit('end', result);
+    this.emit('exit', result.code);
+    
+    // Handle shell settings (set -e equivalent)
+    if (globalShellSettings.errexit && result.code !== 0) {
+      const error = new Error(`Command failed with exit code ${result.code}`);
+      error.code = result.code;
+      error.stdout = result.stdout;
+      error.stderr = result.stderr;
+      error.result = result;
+      throw error;
+    }
+    
+    return result;
+  }
+
   // Stream properties
   get stdout() {
     return this.child?.stdout;

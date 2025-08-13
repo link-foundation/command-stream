@@ -20,7 +20,8 @@
     "test:coverage": "bun test --coverage",
     "test:features": "bun test *.features.test.mjs",
     "test:comparison": "bun test *.features.test.mjs --reporter=verbose",
-    "test:readme": "bun test readme-examples.test.mjs"
+    "test:readme": "bun test readme-examples.test.mjs",
+    "test:sync": "bun test sync.test.mjs"
   },
   "keywords": [
     "shell",

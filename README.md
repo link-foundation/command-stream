@@ -22,6 +22,7 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 | **Runtime Support** | ✅ Bun + Node.js | 🟡 Bun only | ✅ Node.js | ✅ Node.js |
 | **Template Literals** | ✅ `` $`cmd` `` | ✅ `` $`cmd` `` | ✅ `` $`cmd` `` | ✅ `` $`cmd` `` |
 | **Real-time Streaming** | ✅ Live output | ❌ Buffer only | 🟡 Limited | ❌ Buffer only |
+| **Synchronous Execution** | ✅ `.sync()` with events | ❌ No | ✅ `execaSync` | ❌ No |
 | **Async Iteration** | ✅ `for await (chunk of $.stream())` | ❌ No | ❌ No | ❌ No |
 | **EventEmitter Pattern** | ✅ `.on('data', ...)` | ❌ No | 🟡 Limited events | ❌ No |
 | **Mixed Patterns** | ✅ Events + await | ❌ No | ❌ No | ❌ No |
@@ -59,7 +60,7 @@ bun add command-stream
 
 ## Usage Patterns
 
-### 1. Classic Await (Backward Compatible)
+### Classic Await (Backward Compatible)
 
 ```javascript
 import { $ } from 'command-stream';
@@ -69,7 +70,22 @@ console.log(result.stdout);
 console.log(result.code); // exit code
 ```
 
-### 2. Async Iteration (Real-time Streaming)
+### Synchronous Execution
+
+```javascript
+import { $ } from 'command-stream';
+
+// Use .sync() for blocking execution
+const result = $`echo "hello"`.sync();
+console.log(result.stdout); // "hello\n"
+
+// Events still work but are batched after completion
+$`echo "world"`
+  .on('end', result => console.log('Done:', result))
+  .sync();
+```
+
+### Async Iteration (Real-time Streaming)
 
 ```javascript
 import { $ } from 'command-stream';
@@ -81,7 +97,7 @@ for await (const chunk of $`long-running-command`.stream()) {
 }
 ```
 
-### 3. EventEmitter Pattern (Event-driven)
+### EventEmitter Pattern (Event-driven)
 
 ```javascript
 import { $ } from 'command-stream';
@@ -97,7 +113,7 @@ $`command`
   .on('exit', code => console.log('Exit code:', code));
 ```
 
-### 4. Mixed Pattern (Best of Both Worlds)
+### Mixed Pattern (Best of Both Worlds)
 
 ```javascript
 import { $ } from 'command-stream';
@@ -114,7 +130,7 @@ const result = await process;
 console.log('Final output:', result.stdout);
 ```
 
-### 5. Shell Replacement (.sh → .mjs)
+### Shell Replacement (.sh → .mjs)
 
 Replace bash scripts with JavaScript while keeping shell semantics:
 
@@ -261,6 +277,7 @@ The enhanced `$` function returns a `ProcessRunner` instance that extends `Event
 #### Methods
 
 - `stream()`: Returns an async iterator for real-time chunk processing
+- `sync()`: Execute command synchronously (blocks until completion, events batched)
 - `then()`, `catch()`, `finally()`: Promise interface for await support
 
 #### Properties
