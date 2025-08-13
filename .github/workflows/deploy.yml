@@ -105,6 +105,6 @@ jobs:
             [View on NPM](https://www.npmjs.com/package/${{ steps.version_check.outputs.package_name }}/v/${{ steps.version_check.outputs.package_version }})
             
             ### 📋 Changes
-            See [CHANGELOG](https://github.com/${{ github.repository }}/compare/v${{ steps.version_check.outputs.package_version }}...main) for details.
+            See [commit history](https://github.com/${{ github.repository }}/compare/v${{ steps.version_check.outputs.package_version }}...main) for details.
           draft: false
           prerelease: false
