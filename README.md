@@ -6,6 +6,8 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 
 ## Features
 
+- 🐚 **Shell-like by Default**: Commands behave exactly like running in terminal (stdout→stdout, stderr→stderr, stdin→stdin)
+- 🎛️ **Fully Controllable**: Override default behavior with options (`mirror`, `capture`, `stdin`)
 - 🚀 **Multiple Usage Patterns**: Classic await, async iteration, EventEmitter, and mixed patterns
 - 📡 **Real-time Streaming**: Process command output as it arrives, not after completion
 - 🔄 **Bun Optimized**: Designed for Bun runtime with Node.js compatibility
@@ -144,6 +146,49 @@ set('x');    // set -x
 set('verbose'); // Long form also supported
 ```
 
+## Default Behavior: Shell-like with Programmatic Control
+
+**command-stream behaves exactly like running commands in your shell by default:**
+
+```javascript
+import { $ } from 'command-stream';
+
+// This command will:
+// 1. Print "Hello" to your terminal (stdout→stdout)
+// 2. Print "Error!" to your terminal (stderr→stderr) 
+// 3. Capture both outputs for programmatic access
+const result = await $`sh -c "echo 'Hello'; echo 'Error!' >&2"`;
+
+console.log('Captured stdout:', result.stdout); // "Hello\n"
+console.log('Captured stderr:', result.stderr); // "Error!\n"
+console.log('Exit code:', result.code);         // 0
+```
+
+**Key Default Options:**
+- `mirror: true` - Live output to terminal (like shell)
+- `capture: true` - Capture output for later use (unlike shell)
+- `stdin: 'inherit'` - Inherit stdin from parent process
+
+**Fully Controllable:**
+```javascript
+import { $, create, sh } from 'command-stream';
+
+// Disable terminal output but still capture
+const result = await sh('echo "silent"', { mirror: false });
+
+// Custom stdin input  
+const custom = await sh('cat', { stdin: "custom input" });
+
+// Create custom $ with different defaults
+const quiet$ = create({ mirror: false });
+await quiet$`echo "silent"`; // Won't print to terminal
+
+// Disable both mirroring and capturing for performance
+await sh('make build', { mirror: false, capture: false });
+```
+
+**This gives you the best of both worlds:** shell-like behavior by default, but with full programmatic control and real-time streaming capabilities.
+
 ## Real-world Examples
 
 ### Log File Streaming with Session ID Extraction
@@ -223,6 +268,29 @@ The enhanced `$` function returns a `ProcessRunner` instance that extends `Event
 - `stdout`: Direct access to child process stdout stream
 - `stderr`: Direct access to child process stderr stream  
 - `stdin`: Direct access to child process stdin stream
+
+### Default Options
+
+**By default, command-stream behaves like running commands in the shell:**
+
+```javascript
+{
+  mirror: true,    // Live output to terminal (stdout→stdout, stderr→stderr)
+  capture: true,   // Capture output for programmatic access
+  stdin: 'inherit' // Inherit stdin from parent process
+}
+```
+
+**Option Details:**
+- `mirror: boolean` - Whether to pipe output to terminal in real-time
+- `capture: boolean` - Whether to capture output in result object
+- `stdin: 'inherit' | 'ignore' | string | Buffer` - How to handle stdin
+- `cwd: string` - Working directory for command
+- `env: object` - Environment variables
+
+**Override defaults:**
+- Use `sh(command, options)` for one-off overrides
+- Use `create(defaultOptions)` to create custom `$` with different defaults
 
 ### Shell Settings API
 
