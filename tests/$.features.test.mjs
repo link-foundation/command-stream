@@ -1,5 +1,5 @@
 import { test, expect, describe, beforeEach } from 'bun:test';
-import { $, shell, disableVirtualCommands } from './$.mjs';
+import { $, shell, disableVirtualCommands } from '../$.mjs';
 
 // Reset shell settings before each test to prevent interference
 beforeEach(() => {
@@ -228,20 +228,20 @@ describe('command-stream Feature Validation', () => {
 
   describe('Stdin Support', () => {
     test('should support string stdin through sh helper', async () => {
-      const { sh } = await import('./$.mjs');
+      const { sh } = await import('../$.mjs');
       const result = await sh('cat', { stdin: 'stdin string test' });
       expect(result.stdout.trim()).toBe('stdin string test');
     });
 
     test('should support Buffer stdin through sh helper', async () => {
-      const { sh } = await import('./$.mjs');
+      const { sh } = await import('../$.mjs');
       const input = Buffer.from('buffer stdin test');
       const result = await sh('cat', { stdin: input });
       expect(result.stdout.trim()).toBe('buffer stdin test');
     });
 
     test('should support ignore stdin through options', async () => {
-      const { sh } = await import('./$.mjs');
+      const { sh } = await import('../$.mjs');
       const result = await sh('echo "ignore stdin test"', { stdin: 'ignore' });
       expect(result.code).toBe(0);
       expect(result.stdout.trim()).toBe('ignore stdin test');

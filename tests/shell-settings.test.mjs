@@ -1,5 +1,5 @@
 import { test, expect, describe, beforeEach } from 'bun:test';
-import { $, shell, set, unset } from './$.mjs';
+import { $, shell, set, unset } from '../$.mjs';
 
 describe('Shell Settings (set -e / set +e equivalent)', () => {
   beforeEach(() => {

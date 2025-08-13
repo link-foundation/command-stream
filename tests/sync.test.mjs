@@ -1,5 +1,5 @@
 import { test, expect, describe, beforeEach } from 'bun:test';
-import { $, shell } from './$.mjs';
+import { $, shell } from '../$.mjs';
 
 // Reset shell settings before each test
 beforeEach(() => {

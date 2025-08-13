@@ -16,13 +16,14 @@
     "url": "https://github.com/link-foundation/command-stream/issues"
   },
   "scripts": {
-    "test": "bun test",
-    "test:coverage": "bun test --coverage",
-    "test:features": "bun test *.features.test.mjs",
-    "test:comparison": "bun test *.features.test.mjs --reporter=verbose",
-    "test:readme": "bun test readme-examples.test.mjs",
-    "test:sync": "bun test sync.test.mjs",
-    "test:builtin": "bun test builtin-commands.test.mjs"
+    "test": "bun test tests/",
+    "test:coverage": "bun test tests/ --coverage",
+    "test:features": "bun test tests/*.features.test.mjs",
+    "test:comparison": "bun test tests/*.features.test.mjs --reporter=verbose",
+    "test:readme": "bun test tests/readme-examples.test.mjs",
+    "test:sync": "bun test tests/sync.test.mjs",
+    "test:builtin": "bun test tests/builtin-commands.test.mjs",
+    "test:pipe": "bun test tests/pipe.test.mjs"
   },
   "keywords": [
     "shell",

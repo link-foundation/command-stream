@@ -1,5 +1,5 @@
 import { test, expect, describe, beforeEach } from 'bun:test';
-import { $, shell, register, unregister, listCommands, enableVirtualCommands } from './$.mjs';
+import { $, shell, register, unregister, listCommands, enableVirtualCommands } from '../$.mjs';
 
 // Reset shell settings before each test
 beforeEach(() => {
