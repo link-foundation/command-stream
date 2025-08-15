@@ -5,6 +5,9 @@
 // 3. EventEmitter: $`command`.on('data', chunk => ...).on('end', result => ...)
 // 4. Stream access: $`command`.stdout, $`command`.stderr
 
+import { createRequire } from 'module';
+import { fileURLToPath } from 'url';
+
 const isBun = typeof globalThis.Bun !== 'undefined';
 
 // Global shell settings (like bash set -e / set +e)
@@ -878,6 +881,7 @@ class ProcessRunner extends StreamEmitter {
       result.child = proc;
     } else {
       // Use Node's synchronous spawn
+      const require = createRequire(import.meta.url);
       const cp = require('child_process');
       const proc = cp.spawnSync(argv[0], argv.slice(1), {
         cwd,
