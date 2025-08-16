@@ -311,12 +311,12 @@ class ProcessRunner extends StreamEmitter {
     
     const cmd = parts[0];
     const args = parts.slice(1).map(arg => {
-      // Remove quotes if present
+      // Keep track of whether the arg was quoted
       if ((arg.startsWith('"') && arg.endsWith('"')) || 
           (arg.startsWith("'") && arg.endsWith("'"))) {
-        return arg.slice(1, -1);
+        return { value: arg.slice(1, -1), quoted: true, quoteChar: arg[0] };
       }
-      return arg;
+      return { value: arg, quoted: false };
     });
     
     return { cmd, args, type: 'simple' };
@@ -359,11 +359,13 @@ class ProcessRunner extends StreamEmitter {
       
       const cmd = parts[0];
       const args = parts.slice(1).map(arg => {
+        // Keep track of whether the arg was quoted
         if ((arg.startsWith('"') && arg.endsWith('"')) || 
             (arg.startsWith("'") && arg.endsWith("'"))) {
-          return arg.slice(1, -1);
+          // Store the original with quotes for system commands
+          return { value: arg.slice(1, -1), quoted: true, quoteChar: arg[0] };
         }
-        return arg;
+        return { value: arg, quoted: false };
       });
       
       return { cmd, args };
@@ -387,12 +389,15 @@ class ProcessRunner extends StreamEmitter {
         stdinData = this.options.stdin.toString('utf8');
       }
 
+      // Extract actual values for virtual command
+      const argValues = args.map(arg => arg.value !== undefined ? arg.value : arg);
+
       // Shell tracing for virtual commands
       if (globalShellSettings.xtrace) {
-        console.log(`+ ${cmd} ${args.join(' ')}`);
+        console.log(`+ ${cmd} ${argValues.join(' ')}`);
       }
       if (globalShellSettings.verbose) {
-        console.log(`${cmd} ${args.join(' ')}`);
+        console.log(`${cmd} ${argValues.join(' ')}`);
       }
 
       // Execute the virtual command
@@ -402,7 +407,7 @@ class ProcessRunner extends StreamEmitter {
       if (handler.constructor.name === 'AsyncGeneratorFunction') {
         // Handle streaming virtual command
         const chunks = [];
-        for await (const chunk of handler(args, stdinData, this.options)) {
+        for await (const chunk of handler(argValues, stdinData, this.options)) {
           const buf = Buffer.from(chunk);
           chunks.push(buf);
           
@@ -422,7 +427,7 @@ class ProcessRunner extends StreamEmitter {
         };
       } else {
         // Regular async function
-        result = await handler(args, stdinData, this.options);
+        result = await handler(argValues, stdinData, this.options);
         
         // Ensure result has required fields, respecting capture option
         result = {
@@ -524,18 +529,21 @@ class ProcessRunner extends StreamEmitter {
       const command = commands[i];
       const { cmd, args } = command;
       
-      // Check if this is a virtual command
+      // Check if this is a virtual command (only if virtual commands are enabled)
       if (virtualCommandsEnabled && virtualCommands.has(cmd)) {
         // Run virtual command with current input
         const handler = virtualCommands.get(cmd);
         
         try {
+          // Extract actual values for virtual command
+          const argValues = args.map(arg => arg.value !== undefined ? arg.value : arg);
+          
           // Shell tracing for virtual commands
           if (globalShellSettings.xtrace) {
-            console.log(`+ ${cmd} ${args.join(' ')}`);
+            console.log(`+ ${cmd} ${argValues.join(' ')}`);
           }
           if (globalShellSettings.verbose) {
-            console.log(`${cmd} ${args.join(' ')}`);
+            console.log(`${cmd} ${argValues.join(' ')}`);
           }
 
           let result;
@@ -543,7 +551,7 @@ class ProcessRunner extends StreamEmitter {
           // Check if handler is async generator (streaming)
           if (handler.constructor.name === 'AsyncGeneratorFunction') {
             const chunks = [];
-            for await (const chunk of handler(args, currentInput, this.options)) {
+            for await (const chunk of handler(argValues, currentInput, this.options)) {
               chunks.push(Buffer.from(chunk));
             }
             result = {
@@ -554,7 +562,7 @@ class ProcessRunner extends StreamEmitter {
             };
           } else {
             // Regular async function
-            result = await handler(args, currentInput, this.options);
+            result = await handler(argValues, currentInput, this.options);
             result = {
               code: result.code ?? 0,
               stdout: this.options.capture ? (result.stdout ?? '') : undefined,
@@ -660,30 +668,194 @@ class ProcessRunner extends StreamEmitter {
           return result;
         }
       } else {
-        // For system commands in pipeline, we would need to spawn processes
-        // For now, return an error indicating this isn't supported
-        const result = createResult({
-          code: 1,
-          stdout: currentOutput,
-          stderr: `Pipeline with system command '${cmd}' not yet supported`,
-          stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin : 
-                 this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
-        });
-        
-        this.result = result;
-        this.finished = true;
-        
-        const buf = Buffer.from(result.stderr);
-        if (this.options.mirror) {
-          process.stderr.write(buf);
+        // Execute system command in pipeline
+        try {
+          // Build command string for this part of the pipeline
+          const commandParts = [cmd];
+          for (const arg of args) {
+            if (arg.value !== undefined) {
+              // Handle our parsed arg structure
+              if (arg.quoted) {
+                // Preserve original quotes
+                commandParts.push(`${arg.quoteChar}${arg.value}${arg.quoteChar}`);
+              } else if (arg.value.includes(' ')) {
+                // Quote if contains spaces
+                commandParts.push(`"${arg.value}"`);
+              } else {
+                commandParts.push(arg.value);
+              }
+            } else {
+              // Handle plain string args (backward compatibility)
+              if (typeof arg === 'string' && arg.includes(' ') && !arg.startsWith('"') && !arg.startsWith("'")) {
+                commandParts.push(`"${arg}"`);
+              } else {
+                commandParts.push(arg);
+              }
+            }
+          }
+          const commandStr = commandParts.join(' ');
+          
+          // Shell tracing for system commands
+          if (globalShellSettings.xtrace) {
+            console.log(`+ ${commandStr}`);
+          }
+          if (globalShellSettings.verbose) {
+            console.log(commandStr);
+          }
+          
+          // Execute the system command with current input as stdin
+          const spawnBun = (argv, stdin) => {
+            return Bun.spawnSync(argv, {
+              cwd: this.options.cwd,
+              env: this.options.env,
+              stdin: stdin ? Buffer.from(stdin) : undefined,
+              stdout: 'pipe',
+              stderr: 'pipe'
+            });
+          };
+          
+          const spawnNode = (argv, stdin) => {
+            const require = createRequire(import.meta.url);
+            const cp = require('child_process');
+            return cp.spawnSync(argv[0], argv.slice(1), {
+              cwd: this.options.cwd,
+              env: this.options.env,
+              input: stdin || undefined,
+              encoding: 'utf8',
+              stdio: ['pipe', 'pipe', 'pipe']
+            });
+          };
+          
+          // Execute using shell to handle complex commands
+          const argv = ['sh', '-c', commandStr];
+          const proc = isBun ? spawnBun(argv, currentInput) : spawnNode(argv, currentInput);
+          
+          let result;
+          if (isBun) {
+            result = {
+              code: proc.exitCode || 0,
+              stdout: proc.stdout?.toString('utf8') || '',
+              stderr: proc.stderr?.toString('utf8') || '',
+              stdin: currentInput
+            };
+          } else {
+            result = {
+              code: proc.status || 0,
+              stdout: proc.stdout || '',
+              stderr: proc.stderr || '',
+              stdin: currentInput
+            };
+          }
+          
+          // If command failed and pipefail is set, fail the entire pipeline
+          if (globalShellSettings.pipefail && result.code !== 0) {
+            const error = new Error(`Pipeline command '${commandStr}' failed with exit code ${result.code}`);
+            error.code = result.code;
+            error.stdout = result.stdout;
+            error.stderr = result.stderr;
+            throw error;
+          }
+          
+          // If this isn't the last command, pass stdout as stdin to next command
+          if (i < commands.length - 1) {
+            currentInput = result.stdout;
+            // Accumulate stderr from all commands
+            if (result.stderr && this.options.capture) {
+              this.errChunks = this.errChunks || [];
+              this.errChunks.push(Buffer.from(result.stderr));
+            }
+          } else {
+            // This is the last command - emit output and store final result
+            currentOutput = result.stdout;
+            
+            // Collect all accumulated stderr
+            let allStderr = '';
+            if (this.errChunks && this.errChunks.length > 0) {
+              allStderr = Buffer.concat(this.errChunks).toString('utf8');
+            }
+            if (result.stderr) {
+              allStderr += result.stderr;
+            }
+            
+            // Mirror and emit output for final command
+            if (result.stdout) {
+              const buf = Buffer.from(result.stdout);
+              if (this.options.mirror) {
+                process.stdout.write(buf);
+              }
+              this.emit('stdout', buf);
+              this.emit('data', { type: 'stdout', data: buf });
+            }
+            
+            if (allStderr) {
+              const buf = Buffer.from(allStderr);
+              if (this.options.mirror) {
+                process.stderr.write(buf);
+              }
+              this.emit('stderr', buf);
+              this.emit('data', { type: 'stderr', data: buf });
+            }
+            
+            // Store final result using createResult helper for .text() method compatibility
+            const finalResult = createResult({
+              code: result.code,
+              stdout: currentOutput,
+              stderr: allStderr,
+              stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin : 
+                     this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
+            });
+            
+            this.result = finalResult;
+            this.finished = true;
+            
+            // Emit completion events
+            this.emit('end', finalResult);
+            this.emit('exit', finalResult.code);
+            
+            // Handle shell settings
+            if (globalShellSettings.errexit && finalResult.code !== 0) {
+              const error = new Error(`Pipeline failed with exit code ${finalResult.code}`);
+              error.code = finalResult.code;
+              error.stdout = finalResult.stdout;
+              error.stderr = finalResult.stderr;
+              error.result = finalResult;
+              throw error;
+            }
+            
+            return finalResult;
+          }
+          
+        } catch (error) {
+          // Handle errors from system commands in pipeline
+          const result = createResult({
+            code: error.code ?? 1,
+            stdout: currentOutput,
+            stderr: error.stderr ?? error.message,
+            stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin : 
+                   this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
+          });
+          
+          this.result = result;
+          this.finished = true;
+          
+          if (result.stderr) {
+            const buf = Buffer.from(result.stderr);
+            if (this.options.mirror) {
+              process.stderr.write(buf);
+            }
+            this.emit('stderr', buf);
+            this.emit('data', { type: 'stderr', data: buf });
+          }
+          
+          this.emit('end', result);
+          this.emit('exit', result.code);
+          
+          if (globalShellSettings.errexit) {
+            throw error;
+          }
+          
+          return result;
         }
-        this.emit('stderr', buf);
-        this.emit('data', { type: 'stderr', data: buf });
-        
-        this.emit('end', result);
-        this.emit('exit', result.code);
-        
-        return result;
       }
     }
   }

@@ -56,14 +56,14 @@ describe('System Command Piping (Issue #8)', () => {
 
   describe('Piping to grep', () => {
     test('should pipe to grep for pattern matching', async () => {
-      const result = await $`echo -e "line1\\nline2\\nline3" | grep line2`;
+      const result = await $`printf "line1\\nline2\\nline3" | grep line2`;
       
       expect(result.code).toBe(0);
       expect(result.stdout.trim()).toBe('line2');
     });
 
     test('should handle grep with flags', async () => {
-      const result = await $`echo -e "Line1\\nline2\\nLINE3" | grep -i line`;
+      const result = await $`printf "Line1\\nline2\\nLINE3" | grep -i line`;
       
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('Line1');
@@ -106,7 +106,7 @@ describe('System Command Piping (Issue #8)', () => {
 
   describe('Piping to wc', () => {
     test('should pipe to wc for line counting', async () => {
-      const result = await $`echo -e "line1\\nline2\\nline3" | wc -l`;
+      const result = await $`printf "line1\\nline2\\nline3\\n" | wc -l`;
       
       expect(result.code).toBe(0);
       expect(parseInt(result.stdout.trim())).toBe(3);
@@ -138,7 +138,7 @@ describe('System Command Piping (Issue #8)', () => {
 
   describe('Piping to sort', () => {
     test('should pipe to sort for sorting lines', async () => {
-      const result = await $`echo -e "banana\\napple\\ncherry" | sort`;
+      const result = await $`printf "banana\\napple\\ncherry" | sort`;
       
       expect(result.code).toBe(0);
       const lines = result.stdout.trim().split('\n');
@@ -148,7 +148,7 @@ describe('System Command Piping (Issue #8)', () => {
     });
 
     test('should handle sort with reverse flag', async () => {
-      const result = await $`echo -e "1\\n3\\n2" | sort -r`;
+      const result = await $`printf "1\\n3\\n2" | sort -r`;
       
       expect(result.code).toBe(0);
       const lines = result.stdout.trim().split('\n');
@@ -160,7 +160,7 @@ describe('System Command Piping (Issue #8)', () => {
 
   describe('Piping to head/tail', () => {
     test('should pipe to head for first lines', async () => {
-      const result = await $`echo -e "1\\n2\\n3\\n4\\n5" | head -n 2`;
+      const result = await $`printf "1\\n2\\n3\\n4\\n5" | head -n 2`;
       
       expect(result.code).toBe(0);
       const lines = result.stdout.trim().split('\n');
@@ -170,7 +170,7 @@ describe('System Command Piping (Issue #8)', () => {
     });
 
     test('should pipe to tail for last lines', async () => {
-      const result = await $`echo -e "1\\n2\\n3\\n4\\n5" | tail -n 2`;
+      const result = await $`printf "1\\n2\\n3\\n4\\n5" | tail -n 2`;
       
       expect(result.code).toBe(0);
       const lines = result.stdout.trim().split('\n');
@@ -182,7 +182,7 @@ describe('System Command Piping (Issue #8)', () => {
 
   describe('Complex multi-pipe operations', () => {
     test('should handle multiple system command pipes', async () => {
-      const result = await $`echo -e "apple\\nbanana\\ncherry\\napricot" | grep ^a | sort | head -n 1`;
+      const result = await $`printf "apple\\nbanana\\ncherry\\napricot" | grep ^a | sort | head -n 1`;
       
       expect(result.code).toBe(0);
       expect(result.stdout.trim()).toBe('apple');
