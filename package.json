@@ -1,6 +1,6 @@
 {
   "name": "command-stream",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Modern $ shell utility library with streaming, async iteration, and EventEmitter support, optimized for Bun runtime",
   "type": "module",
   "main": "$.mjs",
