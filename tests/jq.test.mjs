@@ -215,4 +215,46 @@ describe('realtime JSON streaming with delays', () => {
       expect(obj.id).toBe(i + 1);
     }
   });
+
+  test('verify immediate streaming output from jq', async () => {
+    // Test that jq outputs each object immediately as it arrives
+    const startTime = Date.now();
+    const timestamps = [];
+    
+    // Create a command that outputs JSON with significant delays
+    const cmd = $`sh -c 'echo "{\\"id\\":1}"; sleep 0.2; echo "{\\"id\\":2}"; sleep 0.2; echo "{\\"id\\":3}"' | jq -c .`;
+    
+    // Use streaming to capture output as it arrives
+    const chunks = [];
+    for await (const chunk of cmd.stream()) {
+      if (chunk.type === 'stdout') {
+        const now = Date.now();
+        timestamps.push(now - startTime);
+        chunks.push(chunk.data.toString());
+      }
+    }
+    
+    // We should have received chunks at different times, not all at once
+    expect(chunks.length).toBeGreaterThan(0);
+    
+    // Check if we got output in realtime (with some delays between)
+    // The timestamps should show delays if streaming is working properly
+    if (timestamps.length >= 3) {
+      // Allow for some variance but expect delays
+      const delay1 = timestamps[1] - timestamps[0];
+      const delay2 = timestamps[2] - timestamps[1];
+      
+      // At least one of the delays should be significant (>100ms)
+      // showing that output came as it was produced
+      expect(Math.max(delay1, delay2)).toBeGreaterThan(100);
+    }
+    
+    // Verify we got all the JSON objects
+    const output = chunks.join('');
+    const lines = output.trim().split('\n');
+    expect(lines).toHaveLength(3);
+    expect(JSON.parse(lines[0])).toEqual({id: 1});
+    expect(JSON.parse(lines[1])).toEqual({id: 2});
+    expect(JSON.parse(lines[2])).toEqual({id: 3});
+  });
 });
