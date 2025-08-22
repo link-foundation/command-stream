@@ -703,39 +703,136 @@ class ProcessRunner extends StreamEmitter {
             console.log(commandStr);
           }
           
-          // Execute the system command with current input as stdin
-          const spawnBun = (argv, stdin) => {
-            return Bun.spawnSync(argv, {
+          // Execute the system command with current input as stdin (ASYNC VERSION)
+          const spawnBunAsync = async (argv, stdin, isLastCommand = false) => {
+            const proc = Bun.spawn(argv, {
               cwd: this.options.cwd,
               env: this.options.env,
-              stdin: stdin ? Buffer.from(stdin) : undefined,
+              stdin: 'pipe',
               stdout: 'pipe',
               stderr: 'pipe'
             });
+            
+            if (stdin) {
+              await proc.stdin.write(Buffer.from(stdin));
+              proc.stdin.end();
+            } else {
+              proc.stdin.end();
+            }
+            
+            let stdout = '';
+            let stderr = '';
+            
+            // Stream output for last command in pipeline
+            if (isLastCommand) {
+              // Use async iteration for streaming
+              const streamPromises = [];
+              
+              streamPromises.push((async () => {
+                for await (const chunk of proc.stdout) {
+                  const buf = Buffer.from(chunk);
+                  stdout += buf.toString();
+                  if (this.options.mirror) {
+                    process.stdout.write(buf);
+                  }
+                  this.emit('stdout', buf);
+                  this.emit('data', { type: 'stdout', data: buf });
+                }
+              })());
+              
+              streamPromises.push((async () => {
+                for await (const chunk of proc.stderr) {
+                  const buf = Buffer.from(chunk);
+                  stderr += buf.toString();
+                  if (this.options.mirror) {
+                    process.stderr.write(buf);
+                  }
+                  this.emit('stderr', buf);
+                  this.emit('data', { type: 'stderr', data: buf });
+                }
+              })());
+              
+              await Promise.all(streamPromises);
+            } else {
+              stdout = await new Response(proc.stdout).text();
+              stderr = await new Response(proc.stderr).text();
+            }
+            
+            const exitCode = await proc.exited;
+            
+            return {
+              exitCode,
+              stdout,
+              stderr
+            };
           };
           
-          const spawnNode = (argv, stdin) => {
+          const spawnNodeAsync = async (argv, stdin, isLastCommand = false) => {
             const require = createRequire(import.meta.url);
             const cp = require('child_process');
-            return cp.spawnSync(argv[0], argv.slice(1), {
-              cwd: this.options.cwd,
-              env: this.options.env,
-              input: stdin || undefined,
-              encoding: 'utf8',
-              stdio: ['pipe', 'pipe', 'pipe']
+            
+            return new Promise((resolve, reject) => {
+              const proc = cp.spawn(argv[0], argv.slice(1), {
+                cwd: this.options.cwd,
+                env: this.options.env,
+                stdio: ['pipe', 'pipe', 'pipe']
+              });
+              
+              let stdout = '';
+              let stderr = '';
+              
+              proc.stdout.on('data', (chunk) => {
+                stdout += chunk.toString();
+                // If this is the last command, emit streaming data
+                if (isLastCommand) {
+                  if (this.options.mirror) {
+                    process.stdout.write(chunk);
+                  }
+                  this.emit('stdout', chunk);
+                  this.emit('data', { type: 'stdout', data: chunk });
+                }
+              });
+              
+              proc.stderr.on('data', (chunk) => {
+                stderr += chunk.toString();
+                // If this is the last command, emit streaming data
+                if (isLastCommand) {
+                  if (this.options.mirror) {
+                    process.stderr.write(chunk);
+                  }
+                  this.emit('stderr', chunk);
+                  this.emit('data', { type: 'stderr', data: chunk });
+                }
+              });
+              
+              proc.on('close', (code) => {
+                resolve({
+                  status: code,
+                  stdout,
+                  stderr
+                });
+              });
+              
+              proc.on('error', reject);
+              
+              if (stdin) {
+                proc.stdin.write(stdin);
+              }
+              proc.stdin.end();
             });
           };
           
           // Execute using shell to handle complex commands
           const argv = ['sh', '-c', commandStr];
-          const proc = isBun ? spawnBun(argv, currentInput) : spawnNode(argv, currentInput);
+          const isLastCommand = (i === commands.length - 1);
+          const proc = isBun ? await spawnBunAsync(argv, currentInput, isLastCommand) : await spawnNodeAsync(argv, currentInput, isLastCommand);
           
           let result;
           if (isBun) {
             result = {
               code: proc.exitCode || 0,
-              stdout: proc.stdout?.toString('utf8') || '',
-              stderr: proc.stderr?.toString('utf8') || '',
+              stdout: proc.stdout || '',
+              stderr: proc.stderr || '',
               stdin: currentInput
             };
           } else {
@@ -765,7 +862,7 @@ class ProcessRunner extends StreamEmitter {
               this.errChunks.push(Buffer.from(result.stderr));
             }
           } else {
-            // This is the last command - emit output and store final result
+            // This is the last command - store final result (streaming already handled during execution)
             currentOutput = result.stdout;
             
             // Collect all accumulated stderr
@@ -775,25 +872,6 @@ class ProcessRunner extends StreamEmitter {
             }
             if (result.stderr) {
               allStderr += result.stderr;
-            }
-            
-            // Mirror and emit output for final command
-            if (result.stdout) {
-              const buf = Buffer.from(result.stdout);
-              if (this.options.mirror) {
-                process.stdout.write(buf);
-              }
-              this.emit('stdout', buf);
-              this.emit('data', { type: 'stdout', data: buf });
-            }
-            
-            if (allStderr) {
-              const buf = Buffer.from(allStderr);
-              if (this.options.mirror) {
-                process.stderr.write(buf);
-              }
-              this.emit('stderr', buf);
-              this.emit('data', { type: 'stderr', data: buf });
             }
             
             // Store final result using createResult helper for .text() method compatibility
