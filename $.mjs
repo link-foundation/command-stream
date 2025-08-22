@@ -50,6 +50,12 @@ class StreamEmitter {
       this.listeners.set(event, []);
     }
     this.listeners.get(event).push(listener);
+    
+    // Auto-start process when event listeners are attached
+    if (this._autoStart && !this.started && !this.promise) {
+      this.promise = this._start();
+    }
+    
     return this;
   }
 
@@ -139,6 +145,9 @@ class ProcessRunner extends StreamEmitter {
     
     // Promise for awaiting final result
     this.promise = null;
+    
+    // Enable auto-start when event listeners are attached
+    this._autoStart = true;
   }
 
   async _start() {
@@ -509,11 +518,597 @@ class ProcessRunner extends StreamEmitter {
     }
   }
 
-  async _runPipeline(commands) {
-    if (commands.length === 0) {
-      return createResult({ code: 1, stdout: '', stderr: 'No commands in pipeline', stdin: '' });
+  async _runStreamingPipelineBun(commands) {
+    
+    // For true streaming, we need to handle virtual and real commands differently
+    // but make them work together seamlessly
+    
+    // First, analyze the pipeline to identify virtual vs real commands
+    const pipelineInfo = commands.map(command => {
+      const { cmd, args } = command;
+      const isVirtual = virtualCommandsEnabled && virtualCommands.has(cmd);
+      return { ...command, isVirtual };
+    });
+    
+    // If pipeline contains virtual commands, use advanced streaming
+    if (pipelineInfo.some(info => info.isVirtual)) {
+      return this._runMixedStreamingPipeline(commands);
     }
+    
+    // For pipelines with commands that buffer (like jq), use tee streaming
+    const needsStreamingWorkaround = commands.some(c => 
+      c.cmd === 'jq' || c.cmd === 'grep' || c.cmd === 'sed' || c.cmd === 'cat' || c.cmd === 'awk'
+    );
+    if (needsStreamingWorkaround) {
+      return this._runTeeStreamingPipeline(commands);
+    }
+    
+    // All real commands - use native pipe connections
+    const processes = [];
+    let allStderr = '';
+    
+    for (let i = 0; i < commands.length; i++) {
+      const command = commands[i];
+      const { cmd, args } = command;
+      
+      // Build command string
+      const commandParts = [cmd];
+      for (const arg of args) {
+        if (arg.value !== undefined) {
+          if (arg.quoted) {
+            commandParts.push(`${arg.quoteChar}${arg.value}${arg.quoteChar}`);
+          } else if (arg.value.includes(' ')) {
+            commandParts.push(`"${arg.value}"`);
+          } else {
+            commandParts.push(arg.value);
+          }
+        } else {
+          if (typeof arg === 'string' && arg.includes(' ') && !arg.startsWith('"') && !arg.startsWith("'")) {
+            commandParts.push(`"${arg}"`);
+          } else {
+            commandParts.push(arg);
+          }
+        }
+      }
+      const commandStr = commandParts.join(' ');
+      
+      // Determine stdin for this process
+      let stdin;
+      let needsManualStdin = false;
+      let stdinData;
+      
+      if (i === 0) {
+        // First command - use provided stdin or pipe
+        if (this.options.stdin && typeof this.options.stdin === 'string') {
+          stdin = 'pipe';
+          needsManualStdin = true;
+          stdinData = Buffer.from(this.options.stdin);
+        } else if (this.options.stdin && Buffer.isBuffer(this.options.stdin)) {
+          stdin = 'pipe';
+          needsManualStdin = true;
+          stdinData = this.options.stdin;
+        } else {
+          stdin = 'ignore';
+        }
+      } else {
+        // Connect to previous process stdout
+        stdin = processes[i - 1].stdout;
+      }
+      
+      // Spawn the process directly (not through sh) for better streaming
+      // Only use sh -c for complex commands that need shell features
+      const needsShell = commandStr.includes('*') || commandStr.includes('$') || 
+                         commandStr.includes('>') || commandStr.includes('<') ||
+                         commandStr.includes('&&') || commandStr.includes('||') ||
+                         commandStr.includes(';') || commandStr.includes('`');
+      
+      const spawnArgs = needsShell 
+        ? ['sh', '-c', commandStr]
+        : [cmd, ...args.map(a => a.value !== undefined ? a.value : a)];
+      
+      const proc = Bun.spawn(spawnArgs, {
+        cwd: this.options.cwd,
+        env: this.options.env,
+        stdin: stdin,
+        stdout: 'pipe',
+        stderr: 'pipe'
+      });
+      
+      // Write stdin data if needed for first process
+      if (needsManualStdin && stdinData && proc.stdin) {
+        (async () => {
+          try {
+            // Bun's FileSink has write and end methods
+            await proc.stdin.write(stdinData);
+            await proc.stdin.end();
+          } catch (e) {
+            console.error('Error writing stdin:', e);
+          }
+        })();
+      }
+      
+      processes.push(proc);
+      
+      // Collect stderr from all processes
+      (async () => {
+        for await (const chunk of proc.stderr) {
+          const buf = Buffer.from(chunk);
+          allStderr += buf.toString();
+          // Only emit stderr for the last command
+          if (i === commands.length - 1) {
+            if (this.options.mirror) {
+              process.stderr.write(buf);
+            }
+            this.emit('stderr', buf);
+            this.emit('data', { type: 'stderr', data: buf });
+          }
+        }
+      })();
+    }
+    
+    // Stream output from the last process
+    const lastProc = processes[processes.length - 1];
+    let finalOutput = '';
+    
+    // Stream stdout from last process
+    for await (const chunk of lastProc.stdout) {
+      const buf = Buffer.from(chunk);
+      finalOutput += buf.toString();
+      if (this.options.mirror) {
+        process.stdout.write(buf);
+      }
+      this.emit('stdout', buf);
+      this.emit('data', { type: 'stdout', data: buf });
+    }
+    
+    // Wait for all processes to complete
+    const exitCodes = await Promise.all(processes.map(p => p.exited));
+    const lastExitCode = exitCodes[exitCodes.length - 1];
+    
+    // Check for pipeline failures if pipefail is set
+    if (globalShellSettings.pipefail) {
+      const failedIndex = exitCodes.findIndex(code => code !== 0);
+      if (failedIndex !== -1) {
+        const error = new Error(`Pipeline command at index ${failedIndex} failed with exit code ${exitCodes[failedIndex]}`);
+        error.code = exitCodes[failedIndex];
+        throw error;
+      }
+    }
+    
+    const result = createResult({
+      code: lastExitCode || 0,
+      stdout: finalOutput,
+      stderr: allStderr,
+      stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin : 
+             this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
+    });
+    
+    this.result = result;
+    this.finished = true;
+    
+    this.emit('end', result);
+    this.emit('exit', result.code);
+    
+    if (globalShellSettings.errexit && result.code !== 0) {
+      const error = new Error(`Pipeline failed with exit code ${result.code}`);
+      error.code = result.code;
+      error.stdout = result.stdout;
+      error.stderr = result.stderr;
+      error.result = result;
+      throw error;
+    }
+    
+    return result;
+  }
 
+  async _runTeeStreamingPipeline(commands) {
+    // Use tee() to split streams for real-time reading
+    // This works around jq and similar commands that buffer when piped
+    
+    const processes = [];
+    let allStderr = '';
+    let currentStream = null;
+    
+    for (let i = 0; i < commands.length; i++) {
+      const command = commands[i];
+      const { cmd, args } = command;
+      
+      // Build command string
+      const commandParts = [cmd];
+      for (const arg of args) {
+        if (arg.value !== undefined) {
+          if (arg.quoted) {
+            commandParts.push(`${arg.quoteChar}${arg.value}${arg.quoteChar}`);
+          } else if (arg.value.includes(' ')) {
+            commandParts.push(`"${arg.value}"`);
+          } else {
+            commandParts.push(arg.value);
+          }
+        } else {
+          if (typeof arg === 'string' && arg.includes(' ') && !arg.startsWith('"') && !arg.startsWith("'")) {
+            commandParts.push(`"${arg}"`);
+          } else {
+            commandParts.push(arg);
+          }
+        }
+      }
+      const commandStr = commandParts.join(' ');
+      
+      // Determine stdin for this process
+      let stdin;
+      let needsManualStdin = false;
+      let stdinData;
+      
+      if (i === 0) {
+        // First command - use provided stdin or ignore
+        if (this.options.stdin && typeof this.options.stdin === 'string') {
+          stdin = 'pipe';
+          needsManualStdin = true;
+          stdinData = Buffer.from(this.options.stdin);
+        } else if (this.options.stdin && Buffer.isBuffer(this.options.stdin)) {
+          stdin = 'pipe';
+          needsManualStdin = true;
+          stdinData = this.options.stdin;
+        } else {
+          stdin = 'ignore';
+        }
+      } else {
+        // Use the stream from previous process
+        stdin = currentStream;
+      }
+      
+      // Spawn the process directly (not through sh) for better control
+      const needsShell = commandStr.includes('*') || commandStr.includes('$') || 
+                         commandStr.includes('>') || commandStr.includes('<') ||
+                         commandStr.includes('&&') || commandStr.includes('||') ||
+                         commandStr.includes(';') || commandStr.includes('`');
+      
+      const spawnArgs = needsShell 
+        ? ['sh', '-c', commandStr]
+        : [cmd, ...args.map(a => a.value !== undefined ? a.value : a)];
+      
+      const proc = Bun.spawn(spawnArgs, {
+        cwd: this.options.cwd,
+        env: this.options.env,
+        stdin: stdin,
+        stdout: 'pipe',
+        stderr: 'pipe'
+      });
+      
+      // Write stdin data if needed for first process
+      if (needsManualStdin && stdinData && proc.stdin) {
+        try {
+          await proc.stdin.write(stdinData);
+          await proc.stdin.end();
+        } catch (e) {
+          // Ignore stdin errors
+        }
+      }
+      
+      processes.push(proc);
+      
+      // For non-last processes, tee the output so we can both pipe and read
+      if (i < commands.length - 1) {
+        const [readStream, pipeStream] = proc.stdout.tee();
+        currentStream = pipeStream;
+        
+        // Read from the tee'd stream for real-time updates
+        // Always read from the first process for best streaming
+        if (i === 0) {
+          (async () => {
+            for await (const chunk of readStream) {
+              // Emit from the first process for real-time updates
+              const buf = Buffer.from(chunk);
+              if (this.options.mirror) {
+                process.stdout.write(buf);
+              }
+              this.emit('stdout', buf);
+              this.emit('data', { type: 'stdout', data: buf });
+            }
+          })();
+        } else {
+          // Consume other tee'd streams to prevent blocking
+          (async () => {
+            for await (const chunk of readStream) {
+              // Just consume to keep flowing
+            }
+          })();
+        }
+      } else {
+        currentStream = proc.stdout;
+      }
+      
+      // Collect stderr from all processes
+      (async () => {
+        for await (const chunk of proc.stderr) {
+          const buf = Buffer.from(chunk);
+          allStderr += buf.toString();
+          if (i === commands.length - 1) {
+            if (this.options.mirror) {
+              process.stderr.write(buf);
+            }
+            this.emit('stderr', buf);
+            this.emit('data', { type: 'stderr', data: buf });
+          }
+        }
+      })();
+    }
+    
+    // Read final output from the last process
+    const lastProc = processes[processes.length - 1];
+    let finalOutput = '';
+    
+    // If we haven't emitted stdout yet (no tee), emit from last process
+    const shouldEmitFromLast = commands.length === 1;
+    
+    for await (const chunk of lastProc.stdout) {
+      const buf = Buffer.from(chunk);
+      finalOutput += buf.toString();
+      if (shouldEmitFromLast) {
+        if (this.options.mirror) {
+          process.stdout.write(buf);
+        }
+        this.emit('stdout', buf);
+        this.emit('data', { type: 'stdout', data: buf });
+      }
+    }
+    
+    // Wait for all processes to complete
+    const exitCodes = await Promise.all(processes.map(p => p.exited));
+    const lastExitCode = exitCodes[exitCodes.length - 1];
+    
+    // Check for pipeline failures if pipefail is set
+    if (globalShellSettings.pipefail) {
+      const failedIndex = exitCodes.findIndex(code => code !== 0);
+      if (failedIndex !== -1) {
+        const error = new Error(`Pipeline command at index ${failedIndex} failed with exit code ${exitCodes[failedIndex]}`);
+        error.code = exitCodes[failedIndex];
+        throw error;
+      }
+    }
+    
+    const result = createResult({
+      code: lastExitCode || 0,
+      stdout: finalOutput,
+      stderr: allStderr,
+      stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin : 
+             this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
+    });
+    
+    this.result = result;
+    this.finished = true;
+    
+    this.emit('end', result);
+    this.emit('exit', result.code);
+    
+    if (globalShellSettings.errexit && result.code !== 0) {
+      const error = new Error(`Pipeline failed with exit code ${result.code}`);
+      error.code = result.code;
+      error.stdout = result.stdout;
+      error.stderr = result.stderr;
+      error.result = result;
+      throw error;
+    }
+    
+    return result;
+  }
+
+
+  async _runMixedStreamingPipeline(commands) {
+    // Handle pipelines with both virtual and real commands
+    // Each stage reads from previous stage's output stream
+    
+    let currentInputStream = null;
+    let finalOutput = '';
+    let allStderr = '';
+    
+    // Set up initial input stream if provided
+    if (this.options.stdin) {
+      const inputData = typeof this.options.stdin === 'string' 
+        ? this.options.stdin 
+        : this.options.stdin.toString('utf8');
+      
+      // Create a readable stream from the input
+      currentInputStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode(inputData));
+          controller.close();
+        }
+      });
+    }
+    
+    for (let i = 0; i < commands.length; i++) {
+      const command = commands[i];
+      const { cmd, args } = command;
+      const isLastCommand = i === commands.length - 1;
+      
+      if (virtualCommandsEnabled && virtualCommands.has(cmd)) {
+        // Handle virtual command with streaming
+        const handler = virtualCommands.get(cmd);
+        const argValues = args.map(arg => arg.value !== undefined ? arg.value : arg);
+        
+        // Read input from stream if available
+        let inputData = '';
+        if (currentInputStream) {
+          const reader = currentInputStream.getReader();
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              inputData += new TextDecoder().decode(value);
+            }
+          } finally {
+            reader.releaseLock();
+          }
+        }
+        
+        // Check if handler is async generator (streaming)
+        if (handler.constructor.name === 'AsyncGeneratorFunction') {
+          // Create output stream from generator
+          const chunks = [];
+          const self = this; // Capture this context
+          currentInputStream = new ReadableStream({
+            async start(controller) {
+              for await (const chunk of handler(argValues, inputData, {})) {
+                const data = Buffer.from(chunk);
+                controller.enqueue(data);
+                
+                // Emit for last command
+                if (isLastCommand) {
+                  chunks.push(data);
+                  if (self.options.mirror) {
+                    process.stdout.write(data);
+                  }
+                  self.emit('stdout', data);
+                  self.emit('data', { type: 'stdout', data });
+                }
+              }
+              controller.close();
+              
+              if (isLastCommand) {
+                finalOutput = Buffer.concat(chunks).toString('utf8');
+              }
+            }
+          });
+        } else {
+          // Regular async function
+          const result = await handler(argValues, inputData, {});
+          const outputData = result.stdout || '';
+          
+          if (isLastCommand) {
+            finalOutput = outputData;
+            const buf = Buffer.from(outputData);
+            if (this.options.mirror) {
+              process.stdout.write(buf);
+            }
+            this.emit('stdout', buf);
+            this.emit('data', { type: 'stdout', data: buf });
+          }
+          
+          // Create stream from output
+          currentInputStream = new ReadableStream({
+            start(controller) {
+              controller.enqueue(new TextEncoder().encode(outputData));
+              controller.close();
+            }
+          });
+          
+          if (result.stderr) {
+            allStderr += result.stderr;
+          }
+        }
+      } else {
+        // Handle real command - spawn with streaming
+        const commandParts = [cmd];
+        for (const arg of args) {
+          if (arg.value !== undefined) {
+            if (arg.quoted) {
+              commandParts.push(`${arg.quoteChar}${arg.value}${arg.quoteChar}`);
+            } else if (arg.value.includes(' ')) {
+              commandParts.push(`"${arg.value}"`);
+            } else {
+              commandParts.push(arg.value);
+            }
+          } else {
+            if (typeof arg === 'string' && arg.includes(' ') && !arg.startsWith('"') && !arg.startsWith("'")) {
+              commandParts.push(`"${arg}"`);
+            } else {
+              commandParts.push(arg);
+            }
+          }
+        }
+        const commandStr = commandParts.join(' ');
+        
+        // Spawn the process
+        const proc = Bun.spawn(['sh', '-c', commandStr], {
+          cwd: this.options.cwd,
+          env: this.options.env,
+          stdin: currentInputStream ? 'pipe' : 'ignore',
+          stdout: 'pipe',
+          stderr: 'pipe'
+        });
+        
+        // Write input stream to process stdin if needed
+        if (currentInputStream && proc.stdin) {
+          const reader = currentInputStream.getReader();
+          const writer = proc.stdin.getWriter ? proc.stdin.getWriter() : proc.stdin;
+          
+          (async () => {
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                if (writer.write) {
+                  await writer.write(value);
+                } else if (writer.getWriter) {
+                  const w = writer.getWriter();
+                  await w.write(value);
+                  w.releaseLock();
+                }
+              }
+            } finally {
+              reader.releaseLock();
+              if (writer.close) await writer.close();
+              else if (writer.end) writer.end();
+            }
+          })();
+        }
+        
+        // Set up output stream
+        currentInputStream = proc.stdout;
+        
+        // Handle stderr
+        (async () => {
+          for await (const chunk of proc.stderr) {
+            const buf = Buffer.from(chunk);
+            allStderr += buf.toString();
+            if (isLastCommand) {
+              if (this.options.mirror) {
+                process.stderr.write(buf);
+              }
+              this.emit('stderr', buf);
+              this.emit('data', { type: 'stderr', data: buf });
+            }
+          }
+        })();
+        
+        // For last command, stream output
+        if (isLastCommand) {
+          const chunks = [];
+          for await (const chunk of proc.stdout) {
+            const buf = Buffer.from(chunk);
+            chunks.push(buf);
+            if (this.options.mirror) {
+              process.stdout.write(buf);
+            }
+            this.emit('stdout', buf);
+            this.emit('data', { type: 'stdout', data: buf });
+          }
+          finalOutput = Buffer.concat(chunks).toString('utf8');
+          await proc.exited;
+        }
+      }
+    }
+    
+    const result = createResult({
+      code: 0, // TODO: Track exit codes properly
+      stdout: finalOutput,
+      stderr: allStderr,
+      stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin : 
+             this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
+    });
+    
+    this.result = result;
+    this.finished = true;
+    
+    this.emit('end', result);
+    this.emit('exit', result.code);
+    
+    return result;
+  }
+
+  async _runPipelineNonStreaming(commands) {
+    // Original non-streaming implementation for fallback (e.g., virtual commands)
     let currentOutput = '';
     let currentInput = '';
     
@@ -704,69 +1299,6 @@ class ProcessRunner extends StreamEmitter {
           }
           
           // Execute the system command with current input as stdin (ASYNC VERSION)
-          const spawnBunAsync = async (argv, stdin, isLastCommand = false) => {
-            const proc = Bun.spawn(argv, {
-              cwd: this.options.cwd,
-              env: this.options.env,
-              stdin: 'pipe',
-              stdout: 'pipe',
-              stderr: 'pipe'
-            });
-            
-            if (stdin) {
-              await proc.stdin.write(Buffer.from(stdin));
-              proc.stdin.end();
-            } else {
-              proc.stdin.end();
-            }
-            
-            let stdout = '';
-            let stderr = '';
-            
-            // Stream output for last command in pipeline
-            if (isLastCommand) {
-              // Use async iteration for streaming
-              const streamPromises = [];
-              
-              streamPromises.push((async () => {
-                for await (const chunk of proc.stdout) {
-                  const buf = Buffer.from(chunk);
-                  stdout += buf.toString();
-                  if (this.options.mirror) {
-                    process.stdout.write(buf);
-                  }
-                  this.emit('stdout', buf);
-                  this.emit('data', { type: 'stdout', data: buf });
-                }
-              })());
-              
-              streamPromises.push((async () => {
-                for await (const chunk of proc.stderr) {
-                  const buf = Buffer.from(chunk);
-                  stderr += buf.toString();
-                  if (this.options.mirror) {
-                    process.stderr.write(buf);
-                  }
-                  this.emit('stderr', buf);
-                  this.emit('data', { type: 'stderr', data: buf });
-                }
-              })());
-              
-              await Promise.all(streamPromises);
-            } else {
-              stdout = await new Response(proc.stdout).text();
-              stderr = await new Response(proc.stderr).text();
-            }
-            
-            const exitCode = await proc.exited;
-            
-            return {
-              exitCode,
-              stdout,
-              stderr
-            };
-          };
-          
           const spawnNodeAsync = async (argv, stdin, isLastCommand = false) => {
             const require = createRequire(import.meta.url);
             const cp = require('child_process');
@@ -825,24 +1357,14 @@ class ProcessRunner extends StreamEmitter {
           // Execute using shell to handle complex commands
           const argv = ['sh', '-c', commandStr];
           const isLastCommand = (i === commands.length - 1);
-          const proc = isBun ? await spawnBunAsync(argv, currentInput, isLastCommand) : await spawnNodeAsync(argv, currentInput, isLastCommand);
+          const proc = await spawnNodeAsync(argv, currentInput, isLastCommand);
           
-          let result;
-          if (isBun) {
-            result = {
-              code: proc.exitCode || 0,
-              stdout: proc.stdout || '',
-              stderr: proc.stderr || '',
-              stdin: currentInput
-            };
-          } else {
-            result = {
-              code: proc.status || 0,
-              stdout: proc.stdout || '',
-              stderr: proc.stderr || '',
-              stdin: currentInput
-            };
-          }
+          let result = {
+            code: proc.status || 0,
+            stdout: proc.stdout || '',
+            stderr: proc.stderr || '',
+            stdin: currentInput
+          };
           
           // If command failed and pipefail is set, fail the entire pipeline
           if (globalShellSettings.pipefail && result.code !== 0) {
@@ -936,6 +1458,21 @@ class ProcessRunner extends StreamEmitter {
         }
       }
     }
+  }
+
+  async _runPipeline(commands) {
+    if (commands.length === 0) {
+      return createResult({ code: 1, stdout: '', stderr: 'No commands in pipeline', stdin: '' });
+    }
+
+
+    // For true streaming, we need to connect processes via pipes
+    if (isBun) {
+      return this._runStreamingPipelineBun(commands);
+    }
+    
+    // For Node.js, fall back to non-streaming implementation for now
+    return this._runPipelineNonStreaming(commands);
   }
 
   // Run programmatic pipeline (.pipe() method)
