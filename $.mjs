@@ -12,13 +12,11 @@ import path from 'path';
 
 const isBun = typeof globalThis.Bun !== 'undefined';
 
-// Verbose tracing for debugging (enabled in CI or when COMMAND_STREAM_VERBOSE is set)
 const VERBOSE = process.env.COMMAND_STREAM_VERBOSE === 'true' || process.env.CI === 'true';
 
 // Trace function for verbose logging
 function trace(category, messageOrFunc) {
   if (!VERBOSE) return;
-  
   const message = typeof messageOrFunc === 'function' ? messageOrFunc() : messageOrFunc;
   const timestamp = new Date().toISOString();
   console.error(`[TRACE ${timestamp}] [${category}] ${message}`);
@@ -33,12 +31,10 @@ function monitorParentStreams() {
   if (parentStreamsMonitored) return;
   parentStreamsMonitored = true;
   
-  // Monitor parent stdout/stderr for closure
   const checkParentStream = (stream, name) => {
     if (stream && typeof stream.on === 'function') {
       stream.on('close', () => {
         trace('ProcessRunner', () => `Parent ${name} closed - triggering graceful shutdown | ${JSON.stringify({ activeProcesses: activeProcessRunners.size }, null, 2)}`);
-        // Signal all active ProcessRunners to gracefully shutdown
         for (const runner of activeProcessRunners) {
           runner._handleParentStreamClosure();
         }
@@ -50,12 +46,9 @@ function monitorParentStreams() {
   checkParentStream(process.stderr, 'stderr');
 }
 
-// Safe write function that checks stream state and handles parent closure
 function safeWrite(stream, data, processRunner = null) {
-  // Ensure parent stream monitoring is active
   monitorParentStreams();
   
-  // Check if stream is writable and not destroyed/closed
   if (!StreamUtils.isStreamWritable(stream)) {
     trace('ProcessRunner', () => `safeWrite skipped - stream not writable | ${JSON.stringify({ 
       hasStream: !!stream,
@@ -64,7 +57,6 @@ function safeWrite(stream, data, processRunner = null) {
       closed: stream?.closed
     }, null, 2)}`);
     
-    // If this is a parent stream closure, signal graceful shutdown
     if (processRunner && (stream === process.stdout || stream === process.stderr)) {
       processRunner._handleParentStreamClosure();
     }
@@ -82,7 +74,6 @@ function safeWrite(stream, data, processRunner = null) {
       destroyed: stream.destroyed
     }, null, 2)}`);
     
-    // If this is an EPIPE on parent streams, signal graceful shutdown
     if (error.code === 'EPIPE' && processRunner && 
         (stream === process.stdout || stream === process.stderr)) {
       processRunner._handleParentStreamClosure();
@@ -333,7 +324,6 @@ const VirtualUtils = {
   }
 };
 
-// Global shell settings (like bash set -e / set +e)
 let globalShellSettings = {
   errexit: false,    // set -e equivalent: exit on error
   verbose: false,    // set -v equivalent: print commands
@@ -342,24 +332,20 @@ let globalShellSettings = {
   nounset: false     // set -u equivalent: error on undefined variables
 };
 
-// Helper function to create result objects with Bun.$ compatibility
 function createResult({ code, stdout = '', stderr = '', stdin = '' }) {
   return {
     code,
     stdout,
     stderr,
     stdin,
-    // Bun.$ compatibility method
     async text() {
       return stdout;
     }
   };
 }
 
-// Virtual command registry - unified system for all commands
 const virtualCommands = new Map();
 
-// Global flag to enable/disable virtual commands (for backward compatibility)
 let virtualCommandsEnabled = true;
 
 // EventEmitter-like implementation
@@ -482,22 +468,18 @@ class ProcessRunner extends StreamEmitter {
     // Promise for awaiting final result
     this.promise = null;
     
-    // Track the execution mode
-    this._mode = null; // 'async' or 'sync'
+      this._mode = null; // 'async' or 'sync'
     
-    // Cancellation support for virtual commands
     this._cancelled = false;
     this._virtualGenerator = null;
     this._abortController = new AbortController();
     
-    // Register this ProcessRunner for parent stream monitoring
     activeProcessRunners.add(this);
     
     // Track finished state changes to trigger cleanup
     this._finished = false;
   }
   
-  // Override finished property to trigger cleanup when set to true
   get finished() {
     return this._finished;
   }
@@ -511,7 +493,6 @@ class ProcessRunner extends StreamEmitter {
     }
   }
 
-  // Handle parent stream closure by gracefully shutting down child processes
   _handleParentStreamClosure() {
     if (this.finished || this._cancelled) return;
     
@@ -521,7 +502,6 @@ class ProcessRunner extends StreamEmitter {
       command: this.spec.command?.slice(0, 50) || this.spec.file
     }, null, 2)}`);
     
-    // Mark as cancelled to prevent further operations
     this._cancelled = true;
     
     // Cancel abort controller for virtual commands
@@ -540,7 +520,6 @@ class ProcessRunner extends StreamEmitter {
           writer.close().catch(() => {}); // Ignore close errors
         }
         
-        // Give the process a moment to exit gracefully, then terminate
         setTimeout(() => {
           if (this.child && !this.finished) {
             trace('ProcessRunner', () => 'Terminating child process after parent stream closure');
@@ -555,11 +534,9 @@ class ProcessRunner extends StreamEmitter {
       }
     }
     
-    // Remove from active set
     activeProcessRunners.delete(this);
   }
 
-  // Cleanup method to remove from active set when process completes normally
   _cleanup() {
     activeProcessRunners.delete(this);
   }
@@ -608,8 +585,7 @@ class ProcessRunner extends StreamEmitter {
 
     const { cwd, env, stdin } = this.options;
     
-    // Handle programmatic pipeline mode
-    if (this.spec.mode === 'pipeline') {
+      if (this.spec.mode === 'pipeline') {
       trace('ProcessRunner', () => `BRANCH: spec.mode => pipeline | ${JSON.stringify({ 
         hasSource: !!this.spec.source,
         hasDestination: !!this.spec.destination
@@ -617,11 +593,9 @@ class ProcessRunner extends StreamEmitter {
       return await this._runProgrammaticPipeline(this.spec.source, this.spec.destination);
     }
     
-    // Check if this is a virtual command first
-    if (this.spec.mode === 'shell') {
+      if (this.spec.mode === 'shell') {
       trace('ProcessRunner', () => `BRANCH: spec.mode => shell | ${JSON.stringify({}, null, 2)}`);
       
-      // Parse the command to check for virtual commands or pipelines
       const parsed = this._parseCommand(this.spec.command);
       trace('ProcessRunner', () => `Parsed command | ${JSON.stringify({ 
         type: parsed?.type,
@@ -654,13 +628,11 @@ class ProcessRunner extends StreamEmitter {
 
     const argv = this.spec.mode === 'shell' ? ['sh', '-lc', this.spec.command] : [this.spec.file, ...this.spec.args];
     
-    // Shell tracing (set -x equivalent)
     if (globalShellSettings.xtrace) {
       const traceCmd = this.spec.mode === 'shell' ? this.spec.command : argv.join(' ');
       console.log(`+ ${traceCmd}`);
     }
     
-    // Verbose mode (set -v equivalent)
     if (globalShellSettings.verbose) {
       const verboseCmd = this.spec.mode === 'shell' ? this.spec.command : argv.join(' ');
       console.log(verboseCmd);
@@ -670,7 +642,6 @@ class ProcessRunner extends StreamEmitter {
     const preferNodeForInput = isBun && needsExplicitPipe;
     this.child = preferNodeForInput ? await spawnNode(argv) : (isBun ? spawnBun(argv) : await spawnNode(argv));
 
-    // Setup stdout streaming
     const outPump = pumpReadable(this.child.stdout, async (buf) => {
       if (this.options.capture) this.outChunks.push(buf);
       if (this.options.mirror) safeWrite(process.stdout, buf);
@@ -680,7 +651,6 @@ class ProcessRunner extends StreamEmitter {
       this.emit('data', { type: 'stdout', data: buf });
     });
 
-    // Setup stderr streaming  
     const errPump = pumpReadable(this.child.stderr, async (buf) => {
       if (this.options.capture) this.errChunks.push(buf);
       if (this.options.mirror) safeWrite(process.stderr, buf);
@@ -690,8 +660,7 @@ class ProcessRunner extends StreamEmitter {
       this.emit('data', { type: 'stderr', data: buf });
     });
 
-    // Handle stdin
-    let stdinPumpPromise = Promise.resolve();
+      let stdinPumpPromise = Promise.resolve();
     if (stdin === 'inherit') {
       const isPipedIn = process.stdin && process.stdin.isTTY === false;
       if (isPipedIn) {
@@ -733,8 +702,7 @@ class ProcessRunner extends StreamEmitter {
     
     this.result = {
       ...resultData,
-      // Bun.$ compatibility method
-      async text() {
+        async text() {
         return resultData.stdout || '';
       }
     };
@@ -743,7 +711,6 @@ class ProcessRunner extends StreamEmitter {
     this.emit('end', this.result);
     this.emit('exit', this.result.code);
     
-    // Handle shell settings (set -e equivalent)
     if (globalShellSettings.errexit && this.result.code !== 0) {
       const error = new Error(`Command failed with exit code ${this.result.code}`);
       error.code = this.result.code;
@@ -792,8 +759,7 @@ class ProcessRunner extends StreamEmitter {
     const trimmed = command.trim();
     if (!trimmed) return null;
     
-    // Check for pipes
-    if (trimmed.includes('|')) {
+      if (trimmed.includes('|')) {
       return this._parsePipeline(trimmed);
     }
     
@@ -844,7 +810,6 @@ class ProcessRunner extends StreamEmitter {
       segments.push(current.trim());
     }
     
-    // Parse each segment as a simple command
     const commands = segments.map(segment => {
       const parts = segment.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) || [];
       if (parts.length === 0) return null;
@@ -854,8 +819,7 @@ class ProcessRunner extends StreamEmitter {
         // Keep track of whether the arg was quoted
         if ((arg.startsWith('"') && arg.endsWith('"')) || 
             (arg.startsWith("'") && arg.endsWith("'"))) {
-          // Store the original with quotes for system commands
-          return { value: arg.slice(1, -1), quoted: true, quoteChar: arg[0] };
+            return { value: arg.slice(1, -1), quoted: true, quoteChar: arg[0] };
         }
         return { value: arg, quoted: false };
       });
@@ -900,15 +864,11 @@ class ProcessRunner extends StreamEmitter {
         console.log(`${cmd} ${argValues.join(' ')}`);
       }
 
-      // Execute the virtual command
       let result;
       
-      // Check if handler is async generator (streaming)
       if (handler.constructor.name === 'AsyncGeneratorFunction') {
-        // Handle streaming virtual command with cancellation support
         const chunks = [];
         
-        // Create options with cancellation check and abort signal
         const commandOptions = {
           ...this.options,
           isCancelled: () => this._cancelled,
@@ -918,7 +878,6 @@ class ProcessRunner extends StreamEmitter {
         const generator = handler({ args: argValues, stdin: stdinData, ...commandOptions });
         this._virtualGenerator = generator;
         
-        // Create a promise that resolves when cancelled
         const cancelPromise = new Promise(resolve => {
           this._cancelResolve = resolve;
         });
@@ -928,7 +887,6 @@ class ProcessRunner extends StreamEmitter {
           let done = false;
           
           while (!done && !this._cancelled) {
-            // Race between getting next value and cancellation
             const result = await Promise.race([
               iterator.next(),
               cancelPromise.then(() => ({ done: true, cancelled: true }))
@@ -976,7 +934,6 @@ class ProcessRunner extends StreamEmitter {
         // Regular async function
         result = await handler({ args: argValues, stdin: stdinData, ...this.options });
         
-        // Ensure result has required fields, respecting capture option
         result = {
           code: result.code ?? 0,
           stdout: this.options.capture ? (result.stdout ?? '') : undefined,
@@ -1013,7 +970,6 @@ class ProcessRunner extends StreamEmitter {
       this.emit('end', result);
       this.emit('exit', result.code);
       
-      // Handle shell settings
       if (globalShellSettings.errexit && result.code !== 0) {
         const error = new Error(`Command failed with exit code ${result.code}`);
         error.code = result.code;
@@ -1025,7 +981,6 @@ class ProcessRunner extends StreamEmitter {
       
       return result;
     } catch (error) {
-      // Handle errors from virtual commands
       const result = {
         code: error.code ?? 1,
         stdout: error.stdout ?? '',
@@ -1062,8 +1017,7 @@ class ProcessRunner extends StreamEmitter {
     }, null, 2)}`);
     
     // For true streaming, we need to handle virtual and real commands differently
-    // but make them work together seamlessly
-    
+      
     // First, analyze the pipeline to identify virtual vs real commands
     const pipelineInfo = commands.map(command => {
       const { cmd, args } = command;
@@ -1147,8 +1101,7 @@ class ProcessRunner extends StreamEmitter {
         stdin = processes[i - 1].stdout;
       }
       
-      // Spawn the process directly (not through sh) for better streaming
-      // Only use sh -c for complex commands that need shell features
+          // Only use sh -c for complex commands that need shell features
       const needsShell = commandStr.includes('*') || commandStr.includes('$') || 
                          commandStr.includes('>') || commandStr.includes('<') ||
                          commandStr.includes('&&') || commandStr.includes('||') ||
@@ -1223,7 +1176,6 @@ class ProcessRunner extends StreamEmitter {
     const exitCodes = await Promise.all(processes.map(p => p.exited));
     const lastExitCode = exitCodes[exitCodes.length - 1];
     
-    // Check for pipeline failures if pipefail is set
     if (globalShellSettings.pipefail) {
       const failedIndex = exitCodes.findIndex(code => code !== 0);
       if (failedIndex !== -1) {
@@ -1315,11 +1267,9 @@ class ProcessRunner extends StreamEmitter {
           stdin = 'ignore';
         }
       } else {
-        // Use the stream from previous process
         stdin = currentStream;
       }
       
-      // Spawn the process directly (not through sh) for better control
       const needsShell = commandStr.includes('*') || commandStr.includes('$') || 
                          commandStr.includes('>') || commandStr.includes('<') ||
                          commandStr.includes('&&') || commandStr.includes('||') ||
@@ -1376,7 +1326,6 @@ class ProcessRunner extends StreamEmitter {
             }
           })();
         } else {
-          // Consume other tee'd streams to prevent blocking
           (async () => {
             for await (const chunk of readStream) {
               // Just consume to keep flowing
@@ -1426,7 +1375,6 @@ class ProcessRunner extends StreamEmitter {
     const exitCodes = await Promise.all(processes.map(p => p.exited));
     const lastExitCode = exitCodes[exitCodes.length - 1];
     
-    // Check for pipeline failures if pipefail is set
     if (globalShellSettings.pipefail) {
       const failedIndex = exitCodes.findIndex(code => code !== 0);
       if (failedIndex !== -1) {
@@ -1468,20 +1416,17 @@ class ProcessRunner extends StreamEmitter {
       commandsCount: commands.length 
     }, null, 2)}`);
     
-    // Handle pipelines with both virtual and real commands
     // Each stage reads from previous stage's output stream
     
     let currentInputStream = null;
     let finalOutput = '';
     let allStderr = '';
     
-    // Set up initial input stream if provided
     if (this.options.stdin) {
       const inputData = typeof this.options.stdin === 'string' 
         ? this.options.stdin 
         : this.options.stdin.toString('utf8');
       
-      // Create a readable stream from the input
       currentInputStream = new ReadableStream({
         start(controller) {
           controller.enqueue(new TextEncoder().encode(inputData));
@@ -1496,7 +1441,6 @@ class ProcessRunner extends StreamEmitter {
       const isLastCommand = i === commands.length - 1;
       
       if (virtualCommandsEnabled && virtualCommands.has(cmd)) {
-        // Handle virtual command with streaming
         trace('ProcessRunner', () => `BRANCH: _runMixedStreamingPipeline => VIRTUAL_COMMAND | ${JSON.stringify({ 
           cmd,
           commandIndex: i 
@@ -1519,9 +1463,7 @@ class ProcessRunner extends StreamEmitter {
           }
         }
         
-        // Check if handler is async generator (streaming)
-        if (handler.constructor.name === 'AsyncGeneratorFunction') {
-          // Create output stream from generator
+          if (handler.constructor.name === 'AsyncGeneratorFunction') {
           const chunks = [];
           const self = this; // Capture this context
           currentInputStream = new ReadableStream({
@@ -1564,7 +1506,6 @@ class ProcessRunner extends StreamEmitter {
             this.emit('data', { type: 'stdout', data: buf });
           }
           
-          // Create stream from output
           currentInputStream = new ReadableStream({
             start(controller) {
               controller.enqueue(new TextEncoder().encode(outputData));
@@ -1577,7 +1518,6 @@ class ProcessRunner extends StreamEmitter {
           }
         }
       } else {
-        // Handle real command - spawn with streaming
         const commandParts = [cmd];
         for (const arg of args) {
           if (arg.value !== undefined) {
@@ -1598,7 +1538,6 @@ class ProcessRunner extends StreamEmitter {
         }
         const commandStr = commandParts.join(' ');
         
-        // Spawn the process
         const proc = Bun.spawn(['sh', '-c', commandStr], {
           cwd: this.options.cwd,
           env: this.options.env,
@@ -1643,10 +1582,8 @@ class ProcessRunner extends StreamEmitter {
           })();
         }
         
-        // Set up output stream
         currentInputStream = proc.stdout;
         
-        // Handle stderr
         (async () => {
           for await (const chunk of proc.stderr) {
             const buf = Buffer.from(chunk);
@@ -1701,12 +1638,10 @@ class ProcessRunner extends StreamEmitter {
       commandsCount: commands.length 
     }, null, 2)}`);
     
-    // Original non-streaming implementation for fallback (e.g., virtual commands)
     let currentOutput = '';
     let currentInput = '';
     
-    // Get initial stdin from options
-    if (this.options.stdin && typeof this.options.stdin === 'string') {
+      if (this.options.stdin && typeof this.options.stdin === 'string') {
       currentInput = this.options.stdin;
     } else if (this.options.stdin && Buffer.isBuffer(this.options.stdin)) {
       currentInput = this.options.stdin.toString('utf8');
@@ -1717,7 +1652,6 @@ class ProcessRunner extends StreamEmitter {
       const command = commands[i];
       const { cmd, args } = command;
       
-      // Check if this is a virtual command (only if virtual commands are enabled)
       if (virtualCommandsEnabled && virtualCommands.has(cmd)) {
         trace('ProcessRunner', () => `BRANCH: _runPipelineNonStreaming => VIRTUAL_COMMAND | ${JSON.stringify({ 
           cmd,
@@ -1741,8 +1675,7 @@ class ProcessRunner extends StreamEmitter {
 
           let result;
           
-          // Check if handler is async generator (streaming)
-          if (handler.constructor.name === 'AsyncGeneratorFunction') {
+              if (handler.constructor.name === 'AsyncGeneratorFunction') {
             trace('ProcessRunner', () => `BRANCH: _runPipelineNonStreaming => ASYNC_GENERATOR | ${JSON.stringify({ cmd }, null, 2)}`);
             const chunks = [];
             for await (const chunk of handler({ args: argValues, stdin: currentInput, ...this.options })) {
@@ -1792,7 +1725,6 @@ class ProcessRunner extends StreamEmitter {
               this.emit('data', { type: 'stderr', data: buf });
             }
             
-            // Store final result using createResult helper for .text() method compatibility
             const finalResult = createResult({
               code: result.code,
               stdout: currentOutput,
@@ -1808,8 +1740,7 @@ class ProcessRunner extends StreamEmitter {
             this.emit('end', finalResult);
             this.emit('exit', finalResult.code);
             
-            // Handle shell settings
-            if (globalShellSettings.errexit && finalResult.code !== 0) {
+                  if (globalShellSettings.errexit && finalResult.code !== 0) {
               const error = new Error(`Pipeline failed with exit code ${finalResult.code}`);
               error.code = finalResult.code;
               error.stdout = finalResult.stdout;
@@ -1821,7 +1752,6 @@ class ProcessRunner extends StreamEmitter {
             return finalResult;
           }
           
-          // Handle errors from intermediate commands
           if (globalShellSettings.errexit && result.code !== 0) {
             const error = new Error(`Pipeline command failed with exit code ${result.code}`);
             error.code = result.code;
@@ -1831,7 +1761,6 @@ class ProcessRunner extends StreamEmitter {
             throw error;
           }
         } catch (error) {
-          // Handle errors from virtual commands in pipeline
           const result = createResult({
             code: error.code ?? 1,
             stdout: currentOutput,
@@ -1868,7 +1797,6 @@ class ProcessRunner extends StreamEmitter {
           const commandParts = [cmd];
           for (const arg of args) {
             if (arg.value !== undefined) {
-              // Handle our parsed arg structure
               if (arg.quoted) {
                 // Preserve original quotes
                 commandParts.push(`${arg.quoteChar}${arg.value}${arg.quoteChar}`);
@@ -1879,7 +1807,6 @@ class ProcessRunner extends StreamEmitter {
                 commandParts.push(arg.value);
               }
             } else {
-              // Handle plain string args (backward compatibility)
               if (typeof arg === 'string' && arg.includes(' ') && !arg.startsWith('"') && !arg.startsWith("'")) {
                 commandParts.push(`"${arg}"`);
               } else {
@@ -1897,7 +1824,6 @@ class ProcessRunner extends StreamEmitter {
             console.log(commandStr);
           }
           
-          // Execute the system command with current input as stdin (ASYNC VERSION)
           const spawnNodeAsync = async (argv, stdin, isLastCommand = false) => {
             
             return new Promise((resolve, reject) => {
@@ -1978,7 +1904,6 @@ class ProcessRunner extends StreamEmitter {
             stdin: currentInput
           };
           
-          // If command failed and pipefail is set, fail the entire pipeline
           if (globalShellSettings.pipefail && result.code !== 0) {
             const error = new Error(`Pipeline command '${commandStr}' failed with exit code ${result.code}`);
             error.code = result.code;
@@ -2008,7 +1933,6 @@ class ProcessRunner extends StreamEmitter {
               allStderr += result.stderr;
             }
             
-            // Store final result using createResult helper for .text() method compatibility
             const finalResult = createResult({
               code: result.code,
               stdout: currentOutput,
@@ -2024,8 +1948,7 @@ class ProcessRunner extends StreamEmitter {
             this.emit('end', finalResult);
             this.emit('exit', finalResult.code);
             
-            // Handle shell settings
-            if (globalShellSettings.errexit && finalResult.code !== 0) {
+                  if (globalShellSettings.errexit && finalResult.code !== 0) {
               const error = new Error(`Pipeline failed with exit code ${finalResult.code}`);
               error.code = finalResult.code;
               error.stdout = finalResult.stdout;
@@ -2038,7 +1961,6 @@ class ProcessRunner extends StreamEmitter {
           }
           
         } catch (error) {
-          // Handle errors from system commands in pipeline
           const result = createResult({
             code: error.code ?? 1,
             stdout: currentOutput,
@@ -2099,12 +2021,10 @@ class ProcessRunner extends StreamEmitter {
     trace('ProcessRunner', () => `_runProgrammaticPipeline ENTER | ${JSON.stringify({}, null, 2)}`);
     
     try {
-      // Execute the source command first
       trace('ProcessRunner', () => 'Executing source command');
       const sourceResult = await source;
       
       if (sourceResult.code !== 0) {
-        // If source failed, return its result
         trace('ProcessRunner', () => `BRANCH: _runProgrammaticPipeline => SOURCE_FAILED | ${JSON.stringify({ 
           code: sourceResult.code,
           stderr: sourceResult.stderr 
@@ -2112,13 +2032,11 @@ class ProcessRunner extends StreamEmitter {
         return sourceResult;
       }
       
-      // Create a new ProcessRunner with the correct stdin for the destination
       const destWithStdin = new ProcessRunner(destination.spec, {
         ...destination.options,
         stdin: sourceResult.stdout
       });
       
-      // Execute the destination command
       const destResult = await destWithStdin;
       
       // Debug: Log what destResult looks like
@@ -2131,7 +2049,6 @@ class ProcessRunner extends StreamEmitter {
         fullResult: JSON.stringify(destResult, null, 2).slice(0, 200)
       }, null, 2)}`);
 
-      // Return the final result with combined information
       return createResult({
         code: destResult.code,
         stdout: destResult.stdout,
@@ -2165,7 +2082,6 @@ class ProcessRunner extends StreamEmitter {
     }
   }
 
-  // Async iteration support
   async* stream() {
     trace('ProcessRunner', () => `stream ENTER | ${JSON.stringify({ 
       started: this.started,
@@ -2217,7 +2133,6 @@ class ProcessRunner extends StreamEmitter {
       this.off('data', onData);
       this.off('end', onEnd);
       
-      // Kill the process if it's still running when iteration is stopped
       // This happens when breaking from a for-await loop
       if (!this.finished) {
         this.kill();
@@ -2225,7 +2140,6 @@ class ProcessRunner extends StreamEmitter {
     }
   }
   
-  // Kill the running process or cancel virtual command
   kill() {
     trace('ProcessRunner', () => `kill ENTER | ${JSON.stringify({ 
       cancelled: this._cancelled,
@@ -2237,7 +2151,6 @@ class ProcessRunner extends StreamEmitter {
     // Mark as cancelled for virtual commands
     this._cancelled = true;
     
-    // Resolve the cancel promise to break the race in virtual command execution
     if (this._cancelResolve) {
       trace('ProcessRunner', () => 'Resolving cancel promise');
       this._cancelResolve();
@@ -2263,7 +2176,6 @@ class ProcessRunner extends StreamEmitter {
     if (this.child && !this.finished) {
       trace('ProcessRunner', () => `BRANCH: hasChild => killing | ${JSON.stringify({ pid: this.child.pid }, null, 2)}`);
       try {
-        // Kill the process group to ensure all child processes are terminated
         if (this.child.pid) {
           if (isBun) {
             trace('ProcessRunner', () => `Killing Bun process | ${JSON.stringify({ pid: this.child.pid }, null, 2)}`);
@@ -2291,17 +2203,14 @@ class ProcessRunner extends StreamEmitter {
     }, null, 2)}`);
   }
 
-  // Programmatic piping support
   pipe(destination) {
     trace('ProcessRunner', () => `pipe ENTER | ${JSON.stringify({ 
       hasDestination: !!destination,
       destinationType: destination?.constructor?.name 
     }, null, 2)}`);
     
-    // If destination is a ProcessRunner, create a pipeline
     if (destination instanceof ProcessRunner) {
       trace('ProcessRunner', () => `BRANCH: pipe => PROCESS_RUNNER_DEST | ${JSON.stringify({}, null, 2)}`);
-      // Create a new ProcessRunner that represents the piped operation
       const pipeSpec = {
         mode: 'pipeline',
         source: this,
@@ -2369,13 +2278,11 @@ class ProcessRunner extends StreamEmitter {
     const { cwd, env, stdin } = this.options;
     const argv = this.spec.mode === 'shell' ? ['sh', '-lc', this.spec.command] : [this.spec.file, ...this.spec.args];
     
-    // Shell tracing (set -x equivalent)
     if (globalShellSettings.xtrace) {
       const traceCmd = this.spec.mode === 'shell' ? this.spec.command : argv.join(' ');
       console.log(`+ ${traceCmd}`);
     }
     
-    // Verbose mode (set -v equivalent)
     if (globalShellSettings.verbose) {
       const verboseCmd = this.spec.mode === 'shell' ? this.spec.command : argv.join(' ');
       console.log(verboseCmd);
@@ -2453,7 +2360,6 @@ class ProcessRunner extends StreamEmitter {
     this.emit('end', result);
     this.emit('exit', result.code);
     
-    // Handle shell settings (set -e equivalent)
     if (globalShellSettings.errexit && result.code !== 0) {
       const error = new Error(`Command failed with exit code ${result.code}`);
       error.code = result.code;
@@ -2524,7 +2430,6 @@ async function run(commandOrTokens, options = {}) {
   return exec(file, args, { ...options, mirror: false, capture: true });
 }
 
-// Enhanced tagged template that returns ProcessRunner
 function $tagged(strings, ...values) {
   trace('API', () => `$tagged ENTER | ${JSON.stringify({ 
     stringsLength: strings.length,
@@ -2558,11 +2463,10 @@ function create(defaultOptions = {}) {
   return tagged;
 }
 
-function raw(value) { 
-  return { raw: String(value) }; 
+function raw(value) {
+  return { raw: String(value) };
 }
 
-// Shell setting control functions (like bash set/unset)
 function set(option) {
   const mapping = {
     'e': 'errexit',     // set -e: exit on error
@@ -2626,18 +2530,14 @@ const shell = {
 // Virtual command registration API
 function register(name, handler) {
   trace('VirtualCommands', () => `register ENTER | ${JSON.stringify({ name }, null, 2)}`);
-  
   virtualCommands.set(name, handler);
-  
   trace('VirtualCommands', () => `register EXIT | ${JSON.stringify({ registered: true }, null, 2)}`);
   return virtualCommands;
 }
 
 function unregister(name) {
   trace('VirtualCommands', () => `unregister ENTER | ${JSON.stringify({ name }, null, 2)}`);
-  
   const deleted = virtualCommands.delete(name);
-  
   trace('VirtualCommands', () => `unregister EXIT | ${JSON.stringify({ deleted }, null, 2)}`);
   return deleted;
 }
@@ -2729,12 +2629,10 @@ function registerBuiltins() {
     
     const cmd = args[0];
     
-    // Check virtual commands first
     if (virtualCommands.has(cmd)) {
       return VirtualUtils.success(`${cmd}: shell builtin\n`);
     }
     
-    // Check PATH for system commands
     const paths = (process.env.PATH || '').split(process.platform === 'win32' ? ';' : ':');
     const extensions = process.platform === 'win32' ? ['', '.exe', '.cmd', '.bat'] : [''];
     
@@ -2788,7 +2686,6 @@ function registerBuiltins() {
       let output = '';
       
       for (const filename of args) {
-        // Handle special flags
         if (filename === '-n') continue; // Line numbering (basic support)
         
         try {
@@ -2799,7 +2696,6 @@ function registerBuiltins() {
           const content = fs.readFileSync(fullPath, 'utf8');
           output += content;
         } catch (error) {
-          // Format error message to match bash/sh style
           const errorMsg = error.code === 'ENOENT' ? 'No such file or directory' : error.message;
           return { 
             stderr: `cat: ${filename}: ${errorMsg}`, 
@@ -2819,7 +2715,6 @@ function registerBuiltins() {
   register('ls', async ({ args, stdin, cwd }) => {
     try {
       
-      // Parse flags and paths
       const flags = args.filter(arg => arg.startsWith('-'));
       const paths = args.filter(arg => !arg.startsWith('-'));
       const isLongFormat = flags.includes('-l');
@@ -2854,7 +2749,6 @@ function registerBuiltins() {
             }
             
             if (isLongFormat) {
-              // Long format: permissions, links, owner, group, size, date, name
               for (const entry of filteredEntries) {
                 const entryPath = path.join(fullPath, entry);
                 try {
@@ -2869,7 +2763,6 @@ function registerBuiltins() {
                 }
               }
             } else {
-              // Simple format: just names
               output += filteredEntries.join('\n') + (filteredEntries.length > 0 ? '\n' : '');
             }
           }
@@ -2887,7 +2780,6 @@ function registerBuiltins() {
     }
   });
 
-  // mkdir - create directories
   register('mkdir', async ({ args, stdin, cwd }) => {
     const argError = VirtualUtils.validateArgs(args, 1, 'mkdir');
     if (argError) return argError;
@@ -2984,7 +2876,6 @@ function registerBuiltins() {
         let destPath = path.isAbsolute(dest) ? dest : path.join(basePath, dest);
         
         try {
-          // Check if destination is an existing directory
           try {
             const destStat = fs.statSync(destPath);
             if (destStat.isDirectory()) {
@@ -3009,7 +2900,6 @@ function registerBuiltins() {
         const dest = args[args.length - 1];
         const destPath = path.isAbsolute(dest) ? dest : path.join(basePath, dest);
         
-        // Check if destination is a directory
         try {
           const destStat = fs.statSync(destPath);
           if (!destStat.isDirectory()) {
@@ -3091,7 +2981,6 @@ function registerBuiltins() {
         const dest = paths[paths.length - 1];
         const destPath = path.isAbsolute(dest) ? dest : path.join(basePath, dest);
         
-        // Check if destination is a directory
         try {
           const destStat = fs.statSync(destPath);
           if (!destStat.isDirectory()) {
@@ -3158,7 +3047,6 @@ function registerBuiltins() {
             const now = new Date();
             fs.utimesSync(fullPath, now, now);
           } catch {
-            // File doesn't exist, create it
             fs.writeFileSync(fullPath, '', { flag: 'w' });
           }
         } catch (error) {
@@ -3221,7 +3109,6 @@ function registerBuiltins() {
     
     // Generate infinite stream of the output
     while (true) {
-      // Check if cancelled via function or abort signal
       if (isCancelled && isCancelled()) {
         trace('VirtualCommand', () => 'yes: cancelled via function');
         return;
@@ -3233,7 +3120,6 @@ function registerBuiltins() {
       
       yield output + '\n';
       
-      // Small delay with abort signal support
       try {
         await new Promise((resolve, reject) => {
           const timeout = setTimeout(resolve, 0);
