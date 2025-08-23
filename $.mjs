@@ -223,6 +223,79 @@ const StreamUtils = {
   }
 };
 
+// Virtual command utility functions for consistent behavior and error handling
+const VirtualUtils = {
+  /**
+   * Create standardized error response for missing operands
+   */
+  missingOperandError(commandName, customMessage = null) {
+    const message = customMessage || `${commandName}: missing operand`;
+    return { stderr: message, code: 1 };
+  },
+
+  /**
+   * Create standardized error response for invalid arguments
+   */
+  invalidArgumentError(commandName, message) {
+    return { stderr: `${commandName}: ${message}`, code: 1 };
+  },
+
+  /**
+   * Create standardized success response
+   */
+  success(stdout = '', code = 0) {
+    return { stdout, stderr: '', code };
+  },
+
+  /**
+   * Create standardized error response
+   */
+  error(stderr = '', code = 1) {
+    return { stdout: '', stderr, code };
+  },
+
+  /**
+   * Validate that command has required number of arguments
+   */
+  validateArgs(args, minCount, commandName) {
+    if (args.length < minCount) {
+      if (minCount === 1) {
+        return this.missingOperandError(commandName);
+      } else {
+        return this.invalidArgumentError(commandName, `requires at least ${minCount} arguments`);
+      }
+    }
+    return null; // No error
+  },
+
+  /**
+   * Resolve file path with optional cwd parameter
+   */
+  resolvePath(filePath, cwd = null) {
+    const path = require('path');
+    const basePath = cwd || process.cwd();
+    return path.isAbsolute(filePath) ? filePath : path.resolve(basePath, filePath);
+  },
+
+  /**
+   * Safe file system operation wrapper
+   */
+  async safeFsOperation(operation, errorPrefix) {
+    try {
+      return await operation();
+    } catch (error) {
+      return this.error(`${errorPrefix}: ${error.message}`);
+    }
+  },
+
+  /**
+   * Create async wrapper for Promise-based operations
+   */
+  createAsyncWrapper(promiseFactory) {
+    return new Promise(promiseFactory);
+  }
+};
+
 // Global shell settings (like bash set -e / set +e)
 let globalShellSettings = {
   errexit: false,    // set -e equivalent: exit on error
@@ -2584,7 +2657,7 @@ function registerBuiltins() {
       process.chdir(target);
       const newDir = process.cwd();
       trace('VirtualCommand', 'cd: success', { newDir });
-      return { stdout: newDir, code: 0 };
+      return VirtualUtils.success(newDir);
     } catch (error) {
       trace('VirtualCommand', 'cd: failed', { error: error.message });
       return { stderr: `cd: ${error.message}`, code: 1 };
@@ -2596,7 +2669,7 @@ function registerBuiltins() {
     // If cwd option is provided, return that instead of process.cwd()
     const dir = cwd || process.cwd();
     trace('VirtualCommand', 'pwd: getting directory', { dir });
-    return { stdout: dir, code: 0 };
+    return VirtualUtils.success(dir);
   });
 
   // echo - print arguments
@@ -2611,7 +2684,7 @@ function registerBuiltins() {
     } else {
       output += '\n';
     }
-    return { stdout: output, code: 0 };
+    return VirtualUtils.success(output);
   });
 
   // sleep - wait for specified time
@@ -2631,7 +2704,7 @@ function registerBuiltins() {
 
   // true - always succeed
   register('true', async () => {
-    return { stdout: '', code: 0 };
+    return VirtualUtils.success();
   });
 
   // false - always fail
@@ -2641,15 +2714,14 @@ function registerBuiltins() {
 
   // which - locate command
   register('which', async ({ args }) => {
-    if (args.length === 0) {
-      return { stderr: 'which: missing operand', code: 1 };
-    }
+    const argError = VirtualUtils.validateArgs(args, 1, 'which');
+    if (argError) return argError;
     
     const cmd = args[0];
     
     // Check virtual commands first
     if (virtualCommands.has(cmd)) {
-      return { stdout: `${cmd}: shell builtin\n`, code: 0 };
+      return VirtualUtils.success(`${cmd}: shell builtin\n`);
     }
     
     // Check PATH for system commands
@@ -2661,13 +2733,13 @@ function registerBuiltins() {
         const fullPath = require('path').join(path, cmd + ext);
         try {
           if (require('fs').statSync(fullPath).isFile()) {
-            return { stdout: fullPath, code: 0 };
+            return VirtualUtils.success(fullPath);
           }
         } catch {}
       }
     }
     
-    return { stderr: `which: no ${cmd} in PATH`, code: 1 };
+    return VirtualUtils.error(`which: no ${cmd} in PATH`);
   });
 
   // exit - exit with code
@@ -2811,9 +2883,8 @@ function registerBuiltins() {
 
   // mkdir - create directories
   register('mkdir', async ({ args, stdin, cwd }) => {
-    if (args.length === 0) {
-      return { stderr: 'mkdir: missing operand', code: 1 };
-    }
+    const argError = VirtualUtils.validateArgs(args, 1, 'mkdir');
+    if (argError) return argError;
     
     try {
       const fs = await import('fs');
@@ -2849,9 +2920,8 @@ function registerBuiltins() {
 
   // rm - remove files and directories
   register('rm', async ({ args, stdin, cwd }) => {
-    if (args.length === 0) {
-      return { stderr: 'rm: missing operand', code: 1 };
-    }
+    const argError = VirtualUtils.validateArgs(args, 1, 'rm');
+    if (argError) return argError;
     
     try {
       const fs = await import('fs');
@@ -2898,9 +2968,8 @@ function registerBuiltins() {
 
   // mv - move/rename files and directories
   register('mv', async ({ args, stdin, cwd }) => {
-    if (args.length < 2) {
-      return { stderr: 'mv: missing destination file operand', code: 1 };
-    }
+    const argError = VirtualUtils.validateArgs(args, 2, 'mv');
+    if (argError) return VirtualUtils.invalidArgumentError('mv', 'missing destination file operand');
     
     try {
       const fs = await import('fs');
@@ -2979,9 +3048,8 @@ function registerBuiltins() {
 
   // cp - copy files and directories
   register('cp', async ({ args, stdin, cwd }) => {
-    if (args.length < 2) {
-      return { stderr: 'cp: missing destination file operand', code: 1 };
-    }
+    const argError = VirtualUtils.validateArgs(args, 2, 'cp');
+    if (argError) return VirtualUtils.invalidArgumentError('cp', 'missing destination file operand');
     
     try {
       const fs = await import('fs');
@@ -3076,9 +3144,8 @@ function registerBuiltins() {
 
   // touch - create or update file timestamps
   register('touch', async ({ args, stdin, cwd }) => {
-    if (args.length === 0) {
-      return { stderr: 'touch: missing file operand', code: 1 };
-    }
+    const argError = VirtualUtils.validateArgs(args, 1, 'touch');
+    if (argError) return VirtualUtils.missingOperandError('touch', 'touch: missing file operand');
     
     try {
       const fs = await import('fs');
@@ -3114,9 +3181,8 @@ function registerBuiltins() {
 
   // basename - extract filename from path
   register('basename', async ({ args }) => {
-    if (args.length === 0) {
-      return { stderr: 'basename: missing operand', code: 1 };
-    }
+    const argError = VirtualUtils.validateArgs(args, 1, 'basename');
+    if (argError) return argError;
     
     try {
       const path = await import('path');
@@ -3139,9 +3205,8 @@ function registerBuiltins() {
 
   // dirname - extract directory from path
   register('dirname', async ({ args }) => {
-    if (args.length === 0) {
-      return { stderr: 'dirname: missing operand', code: 1 };
-    }
+    const argError = VirtualUtils.validateArgs(args, 1, 'dirname');
+    if (argError) return argError;
     
     try {
       const path = await import('path');
@@ -3202,9 +3267,8 @@ function registerBuiltins() {
 
   // seq - generate sequence of numbers
   register('seq', async ({ args }) => {
-    if (args.length === 0) {
-      return { stderr: 'seq: missing operand', code: 1 };
-    }
+    const argError = VirtualUtils.validateArgs(args, 1, 'seq');
+    if (argError) return argError;
     
     try {
       let start, step, end;
