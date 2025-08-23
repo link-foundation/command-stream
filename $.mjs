@@ -541,7 +541,7 @@ class ProcessRunner extends StreamEmitter {
           signal: this._abortController.signal
         };
         
-        const generator = handler(argValues, stdinData, commandOptions);
+        const generator = handler({ args: argValues, stdin: stdinData, ...commandOptions });
         this._virtualGenerator = generator;
         
         // Create a promise that resolves when cancelled
@@ -600,7 +600,7 @@ class ProcessRunner extends StreamEmitter {
         };
       } else {
         // Regular async function
-        result = await handler(argValues, stdinData, this.options);
+        result = await handler({ args: argValues, stdin: stdinData, ...this.options });
         
         // Ensure result has required fields, respecting capture option
         result = {
@@ -1139,7 +1139,8 @@ class ProcessRunner extends StreamEmitter {
           const self = this; // Capture this context
           currentInputStream = new ReadableStream({
             async start(controller) {
-              for await (const chunk of handler(argValues, inputData, {})) {
+              const { stdin: _, ...optionsWithoutStdin } = self.options;
+              for await (const chunk of handler({ args: argValues, stdin: inputData, ...optionsWithoutStdin })) {
                 const data = Buffer.from(chunk);
                 controller.enqueue(data);
                 
@@ -1162,7 +1163,8 @@ class ProcessRunner extends StreamEmitter {
           });
         } else {
           // Regular async function
-          const result = await handler(argValues, inputData, {});
+          const { stdin: _, ...optionsWithoutStdin } = this.options;
+          const result = await handler({ args: argValues, stdin: inputData, ...optionsWithoutStdin });
           const outputData = result.stdout || '';
           
           if (isLastCommand) {
@@ -1346,7 +1348,7 @@ class ProcessRunner extends StreamEmitter {
           if (handler.constructor.name === 'AsyncGeneratorFunction') {
             traceBranch('ProcessRunner', '_runPipelineNonStreaming', 'ASYNC_GENERATOR', { cmd });
             const chunks = [];
-            for await (const chunk of handler(argValues, currentInput, this.options)) {
+            for await (const chunk of handler({ args: argValues, stdin: currentInput, ...this.options })) {
               chunks.push(Buffer.from(chunk));
             }
             result = {
@@ -1357,7 +1359,7 @@ class ProcessRunner extends StreamEmitter {
             };
           } else {
             // Regular async function
-            result = await handler(argValues, currentInput, this.options);
+            result = await handler({ args: argValues, stdin: currentInput, ...this.options });
             result = {
               code: result.code ?? 0,
               stdout: this.options.capture ? (result.stdout ?? '') : undefined,
@@ -2249,7 +2251,7 @@ function disableVirtualCommands() {
 // Built-in commands that match Bun.$ functionality
 function registerBuiltins() {
   // cd - change directory
-  register('cd', async (args) => {
+  register('cd', async ({ args }) => {
     const target = args[0] || process.env.HOME || process.env.USERPROFILE || '/';
     trace('VirtualCommand', 'cd: changing directory', { target });
     
@@ -2265,15 +2267,15 @@ function registerBuiltins() {
   });
 
   // pwd - print working directory
-  register('pwd', async (args, stdin, options) => {
+  register('pwd', async ({ args, stdin, cwd }) => {
     // If cwd option is provided, return that instead of process.cwd()
-    const dir = options?.cwd || process.cwd();
+    const dir = cwd || process.cwd();
     trace('VirtualCommand', 'pwd: getting directory', { dir });
     return { stdout: dir, code: 0 };
   });
 
   // echo - print arguments
-  register('echo', async (args) => {
+  register('echo', async ({ args }) => {
     trace('VirtualCommand', 'echo: processing', { argsCount: args.length });
     
     let output = args.join(' ');
@@ -2288,7 +2290,7 @@ function registerBuiltins() {
   });
 
   // sleep - wait for specified time
-  register('sleep', async (args) => {
+  register('sleep', async ({ args }) => {
     const seconds = parseFloat(args[0] || 0);
     trace('VirtualCommand', 'sleep: starting', { seconds });
     
@@ -2313,7 +2315,7 @@ function registerBuiltins() {
   });
 
   // which - locate command
-  register('which', async (args) => {
+  register('which', async ({ args }) => {
     if (args.length === 0) {
       return { stderr: 'which: missing operand', code: 1 };
     }
@@ -2344,7 +2346,7 @@ function registerBuiltins() {
   });
 
   // exit - exit with code
-  register('exit', async (args) => {
+  register('exit', async ({ args }) => {
     const code = parseInt(args[0] || 0);
     if (globalShellSettings.errexit || code !== 0) {
       // For virtual commands, we simulate exit by returning the code
@@ -2354,11 +2356,11 @@ function registerBuiltins() {
   });
 
   // env - print environment variables
-  register('env', async (args, stdin, options) => {
+  register('env', async ({ args, stdin, env }) => {
     if (args.length === 0) {
       // Use custom env if provided, otherwise use process.env
-      const env = options?.env || process.env;
-      const output = Object.entries(env)
+      const envVars = env || process.env;
+      const output = Object.entries(envVars)
         .map(([key, value]) => `${key}=${value}`)
         .join('\n') + '\n';
       return { stdout: output, code: 0 };
@@ -2369,7 +2371,7 @@ function registerBuiltins() {
   });
 
   // cat - read and display file contents
-  register('cat', async (args, stdin, options) => {
+  register('cat', async ({ args, stdin, cwd }) => {
     if (args.length === 0) {
       // Read from stdin if no files specified
       return { stdout: stdin || '', code: 0 };
@@ -2386,7 +2388,7 @@ function registerBuiltins() {
         
         try {
           // Resolve path relative to cwd if provided
-          const basePath = options?.cwd || process.cwd();
+          const basePath = cwd || process.cwd();
           const fullPath = path.isAbsolute(filename) ? filename : path.join(basePath, filename);
           
           const content = fs.readFileSync(fullPath, 'utf8');
@@ -2409,7 +2411,7 @@ function registerBuiltins() {
   });
 
   // ls - list directory contents
-  register('ls', async (args, stdin, options) => {
+  register('ls', async ({ args, stdin, cwd }) => {
     try {
       const fs = await import('fs');
       const path = await import('path');
@@ -2428,7 +2430,7 @@ function registerBuiltins() {
       
       for (const targetPath of targetPaths) {
         // Resolve path relative to cwd if provided
-        const basePath = options?.cwd || process.cwd();
+        const basePath = cwd || process.cwd();
         const fullPath = path.isAbsolute(targetPath) ? targetPath : path.join(basePath, targetPath);
         
         try {
@@ -2483,7 +2485,7 @@ function registerBuiltins() {
   });
 
   // mkdir - create directories
-  register('mkdir', async (args, stdin, options) => {
+  register('mkdir', async ({ args, stdin, cwd }) => {
     if (args.length === 0) {
       return { stderr: 'mkdir: missing operand', code: 1 };
     }
@@ -2498,7 +2500,7 @@ function registerBuiltins() {
       
       for (const dir of dirs) {
         try {
-          const basePath = options?.cwd || process.cwd();
+          const basePath = cwd || process.cwd();
           const fullPath = path.isAbsolute(dir) ? dir : path.join(basePath, dir);
           
           if (recursive) {
@@ -2521,7 +2523,7 @@ function registerBuiltins() {
   });
 
   // rm - remove files and directories
-  register('rm', async (args, stdin, options) => {
+  register('rm', async ({ args, stdin, cwd }) => {
     if (args.length === 0) {
       return { stderr: 'rm: missing operand', code: 1 };
     }
@@ -2537,7 +2539,7 @@ function registerBuiltins() {
       
       for (const target of targets) {
         try {
-          const basePath = options?.cwd || process.cwd();
+          const basePath = cwd || process.cwd();
           const fullPath = path.isAbsolute(target) ? target : path.join(basePath, target);
           
           const stat = fs.statSync(fullPath);
@@ -2570,7 +2572,7 @@ function registerBuiltins() {
   });
 
   // mv - move/rename files and directories
-  register('mv', async (args, stdin, options) => {
+  register('mv', async ({ args, stdin, cwd }) => {
     if (args.length < 2) {
       return { stderr: 'mv: missing destination file operand', code: 1 };
     }
@@ -2579,7 +2581,7 @@ function registerBuiltins() {
       const fs = await import('fs');
       const path = await import('path');
       
-      const basePath = options?.cwd || process.cwd();
+      const basePath = cwd || process.cwd();
       
       if (args.length === 2) {
         // Simple rename/move
@@ -2651,7 +2653,7 @@ function registerBuiltins() {
   });
 
   // cp - copy files and directories
-  register('cp', async (args, stdin, options) => {
+  register('cp', async ({ args, stdin, cwd }) => {
     if (args.length < 2) {
       return { stderr: 'cp: missing destination file operand', code: 1 };
     }
@@ -2664,7 +2666,7 @@ function registerBuiltins() {
       const paths = args.filter(arg => !arg.startsWith('-'));
       const recursive = flags.includes('-r') || flags.includes('-R');
       
-      const basePath = options?.cwd || process.cwd();
+      const basePath = cwd || process.cwd();
       
       if (paths.length === 2) {
         // Simple copy
@@ -2748,7 +2750,7 @@ function registerBuiltins() {
   });
 
   // touch - create or update file timestamps
-  register('touch', async (args, stdin, options) => {
+  register('touch', async ({ args, stdin, cwd }) => {
     if (args.length === 0) {
       return { stderr: 'touch: missing file operand', code: 1 };
     }
@@ -2757,7 +2759,7 @@ function registerBuiltins() {
       const fs = await import('fs');
       const path = await import('path');
       
-      const basePath = options?.cwd || process.cwd();
+      const basePath = cwd || process.cwd();
       
       for (const file of args) {
         try {
@@ -2786,7 +2788,7 @@ function registerBuiltins() {
   });
 
   // basename - extract filename from path
-  register('basename', async (args) => {
+  register('basename', async ({ args }) => {
     if (args.length === 0) {
       return { stderr: 'basename: missing operand', code: 1 };
     }
@@ -2811,7 +2813,7 @@ function registerBuiltins() {
   });
 
   // dirname - extract directory from path
-  register('dirname', async (args) => {
+  register('dirname', async ({ args }) => {
     if (args.length === 0) {
       return { stderr: 'dirname: missing operand', code: 1 };
     }
@@ -2829,22 +2831,20 @@ function registerBuiltins() {
   });
 
   // yes - output a string repeatedly
-  register('yes', async function* (args, stdin, options) {
+  register('yes', async function* ({ args, stdin, isCancelled, signal, ...rest }) {
     const output = args.length > 0 ? args.join(' ') : 'y';
     trace('VirtualCommand', 'yes: starting infinite generator', { output });
     
     // Generate infinite stream of the output
     while (true) {
       // Check if cancelled via function or abort signal
-      if (options) {
-        if (options.isCancelled && options.isCancelled()) {
-          trace('VirtualCommand', 'yes: cancelled via function', {});
-          return;
-        }
-        if (options.signal && options.signal.aborted) {
-          trace('VirtualCommand', 'yes: cancelled via abort signal', {});
-          return;
-        }
+      if (isCancelled && isCancelled()) {
+        trace('VirtualCommand', 'yes: cancelled via function', {});
+        return;
+      }
+      if (signal && signal.aborted) {
+        trace('VirtualCommand', 'yes: cancelled via abort signal', {});
+        return;
       }
       
       yield output + '\n';
@@ -2855,16 +2855,16 @@ function registerBuiltins() {
           const timeout = setTimeout(resolve, 0);
           
           // Listen for abort signal if available
-          if (options && options.signal) {
+          if (signal) {
             const abortHandler = () => {
               clearTimeout(timeout);
               reject(new Error('Aborted'));
             };
             
-            if (options.signal.aborted) {
+            if (signal.aborted) {
               abortHandler();
             } else {
-              options.signal.addEventListener('abort', abortHandler, { once: true });
+              signal.addEventListener('abort', abortHandler, { once: true });
             }
           }
         });
@@ -2876,7 +2876,7 @@ function registerBuiltins() {
   });
 
   // seq - generate sequence of numbers
-  register('seq', async (args) => {
+  register('seq', async ({ args }) => {
     if (args.length === 0) {
       return { stderr: 'seq: missing operand', code: 1 };
     }
@@ -2924,7 +2924,7 @@ function registerBuiltins() {
   });
 
   // test - test file conditions (basic implementation)
-  register('test', async (args) => {
+  register('test', async ({ args }) => {
     if (args.length === 0) {
       return { stdout: '', code: 1 };
     }

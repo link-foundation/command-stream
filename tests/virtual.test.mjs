@@ -15,7 +15,7 @@ beforeEach(() => {
 describe('Virtual Commands System', () => {
   describe('Registration API', () => {
     test('should register and execute custom virtual command', async () => {
-      register('greet', async (args) => {
+      register('greet', async ({ args }) => {
         const name = args[0] || 'World';
         return { stdout: `Hello, ${name}!\n`, code: 0 };
       });
@@ -155,7 +155,7 @@ describe('Virtual Commands System', () => {
   describe('Virtual vs System Commands', () => {
     test('should prioritize virtual commands over system commands', async () => {
       // Register a virtual 'ls' that overrides system ls
-      register('ls', async (args) => {
+      register('ls', async ({ args }) => {
         return { stdout: 'virtual ls output\n', code: 0 };
       });
 
@@ -181,7 +181,7 @@ describe('Virtual Commands System', () => {
 
   describe('Streaming Virtual Commands', () => {
     test('should support async generator virtual commands', async () => {
-      register('count', async function* (args) {
+      register('count', async function* ({ args }) {
         const max = parseInt(args[0] || 3);
         for (let i = 1; i <= max; i++) {
           yield `${i}\n`;
@@ -204,7 +204,7 @@ describe('Virtual Commands System', () => {
     });
 
     test('should handle events with streaming virtual commands', async () => {
-      register('stream-test', async function* (args) {
+      register('stream-test', async function* ({ args }) {
         yield 'chunk1\n';
         yield 'chunk2\n';
       });
@@ -229,7 +229,7 @@ describe('Virtual Commands System', () => {
 
   describe('Error Handling', () => {
     test('should handle virtual command errors', async () => {
-      register('fail', async (args) => {
+      register('fail', async ({ args }) => {
         throw new Error('Virtual command failed');
       });
 
@@ -242,7 +242,7 @@ describe('Virtual Commands System', () => {
     });
 
     test('should respect errexit setting with virtual commands', async () => {
-      register('fail-code', async (args) => {
+      register('fail-code', async ({ args }) => {
         return { stdout: '', stderr: 'Failed', code: 42 };
       });
 
@@ -266,7 +266,7 @@ describe('Virtual Commands System', () => {
 
   describe('Command Arguments and Stdin', () => {
     test('should pass arguments correctly to virtual commands', async () => {
-      register('args-test', async (args) => {
+      register('args-test', async ({ args }) => {
         return { stdout: `Args: [${args.join(', ')}]\n`, code: 0 };
       });
 
@@ -278,7 +278,7 @@ describe('Virtual Commands System', () => {
     });
 
     test('should pass stdin to virtual commands', async () => {
-      register('stdin-test', async (args, stdin) => {
+      register('stdin-test', async ({ args, stdin }) => {
         return { stdout: `Received: ${stdin}\n`, code: 0 };
       });
 
