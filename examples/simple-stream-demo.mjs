@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from './$.mjs';
+import { $ } from '../$.mjs';
 
 console.log('Testing simple streaming without jq...\n');
 

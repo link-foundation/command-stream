@@ -3,7 +3,7 @@
 import { $, register } from '../$.mjs';
 
 // Register a custom virtual command with the new object-based signature
-register('greet', async ({ args, stdin }) => {
+register('greet', async ({ stdin }) => {
   return { stdout: `Hello, ${stdin.trim()}!\n`, code: 0 };
 });
 
