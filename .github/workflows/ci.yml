@@ -39,11 +39,15 @@ jobs:
       - name: Install dependencies
         run: bun install
       
-      - name: Run tests
+      - name: Run tests (verbose mode)
         run: bun test
+        env:
+          COMMAND_STREAM_VERBOSE: true
       
-      - name: Run tests with coverage
+      - name: Run tests with coverage (verbose mode)
         run: bun test --coverage
+        env:
+          COMMAND_STREAM_VERBOSE: true
       
       - name: Lint package.json
         run: |
