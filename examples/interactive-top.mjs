@@ -5,7 +5,7 @@ import { $ } from '../$.mjs';
 console.log('=== Interactive top command (preserves ANSI colors and interactive controls) ===');
 console.log('This will run top interactively. Press q to quit when ready.\n');
 
-// Start top in interactive mode - no time limits, full interactivity
+// Start top in interactive mode - it should work automatically
 const proc = $`top`;
 
 // Forward all stdout to terminal (preserving colors and formatting)

@@ -14,12 +14,31 @@ const isBun = typeof globalThis.Bun !== 'undefined';
 
 const VERBOSE = process.env.COMMAND_STREAM_VERBOSE === 'true' || process.env.CI === 'true';
 
+// Interactive commands that need TTY forwarding by default
+const INTERACTIVE_COMMANDS = new Set([
+  'top', 'htop', 'btop', 'less', 'more', 'vi', 'vim', 'nano', 'emacs',
+  'man', 'pager', 'watch', 'tmux', 'screen', 'ssh', 'ftp', 'sftp',
+  'mysql', 'psql', 'redis-cli', 'mongo', 'sqlite3', 'irb', 'python',
+  'node', 'repl', 'gdb', 'lldb', 'bc', 'dc', 'ed'
+]);
+
 // Trace function for verbose logging
 function trace(category, messageOrFunc) {
   if (!VERBOSE) return;
   const message = typeof messageOrFunc === 'function' ? messageOrFunc() : messageOrFunc;
   const timestamp = new Date().toISOString();
   console.error(`[TRACE ${timestamp}] [${category}] ${message}`);
+}
+
+// Check if a command is interactive and needs TTY forwarding
+function isInteractiveCommand(command) {
+  if (!command || typeof command !== 'string') return false;
+  
+  // Extract command name from shell command string
+  const commandName = command.trim().split(/\s+/)[0];
+  const baseName = path.basename(commandName);
+  
+  return INTERACTIVE_COMMANDS.has(baseName);
 }
 
 
@@ -490,6 +509,53 @@ class ProcessRunner extends StreamEmitter {
     this.emit('data', { type, data: processedBuf });
   }
 
+  async _forwardTTYStdin() {
+    if (!process.stdin.isTTY || !this.child.stdin) {
+      return;
+    }
+
+    try {
+      // Set raw mode to forward keystrokes immediately
+      if (process.stdin.setRawMode) {
+        process.stdin.setRawMode(true);
+      }
+      process.stdin.resume();
+
+      // Forward stdin data to child process
+      const onData = (chunk) => {
+        if (this.child.stdin) {
+          if (isBun && this.child.stdin.write) {
+            this.child.stdin.write(chunk);
+          } else if (this.child.stdin.write) {
+            this.child.stdin.write(chunk);
+          }
+        }
+      };
+
+      const cleanup = () => {
+        process.stdin.removeListener('data', onData);
+        if (process.stdin.setRawMode) {
+          process.stdin.setRawMode(false);
+        }
+        process.stdin.pause();
+      };
+
+      process.stdin.on('data', onData);
+
+      // Clean up when child process exits
+      const childExit = isBun ? this.child.exited : new Promise((resolve) => {
+        this.child.once('close', resolve);
+        this.child.once('exit', resolve);
+      });
+
+      childExit.then(cleanup).catch(cleanup);
+
+      return childExit;
+    } catch (error) {
+      trace('ProcessRunner', () => `TTY stdin forwarding error | ${JSON.stringify({ error: error.message }, null, 2)}`);
+    }
+  }
+
   set finished(value) {
     if (value === true && this._finished === false) {
       this._finished = true;
@@ -625,13 +691,6 @@ class ProcessRunner extends StreamEmitter {
       }
     }
 
-    const spawnBun = (argv) => {
-      return Bun.spawn(argv, { cwd, env, stdin: 'pipe', stdout: 'pipe', stderr: 'pipe' });
-    };
-    const spawnNode = async (argv) => {
-      return cp.spawn(argv[0], argv.slice(1), { cwd, env, stdio: ['pipe', 'pipe', 'pipe'] });
-    };
-
     const argv = this.spec.mode === 'shell' ? ['sh', '-lc', this.spec.command] : [this.spec.file, ...this.spec.args];
 
     if (globalShellSettings.xtrace) {
@@ -644,36 +703,58 @@ class ProcessRunner extends StreamEmitter {
       console.log(verboseCmd);
     }
 
+    // Detect if this is an interactive command that needs direct TTY access
+    const isInteractive = stdin === 'inherit' && process.stdin.isTTY && 
+      (this.spec.mode === 'shell' ? isInteractiveCommand(this.spec.command) : isInteractiveCommand(this.spec.file));
+
+    const spawnBun = (argv) => {
+      if (isInteractive) {
+        // For interactive commands, use inherit to provide direct TTY access
+        return Bun.spawn(argv, { cwd, env, stdin: 'inherit', stdout: 'inherit', stderr: 'inherit' });
+      }
+      return Bun.spawn(argv, { cwd, env, stdin: 'pipe', stdout: 'pipe', stderr: 'pipe' });
+    };
+    const spawnNode = async (argv) => {
+      if (isInteractive) {
+        // For interactive commands, use inherit to provide direct TTY access
+        return cp.spawn(argv[0], argv.slice(1), { cwd, env, stdio: 'inherit' });
+      }
+      return cp.spawn(argv[0], argv.slice(1), { cwd, env, stdio: ['pipe', 'pipe', 'pipe'] });
+    };
+
     const needsExplicitPipe = stdin !== 'inherit' && stdin !== 'ignore';
     const preferNodeForInput = isBun && needsExplicitPipe;
     this.child = preferNodeForInput ? await spawnNode(argv) : (isBun ? spawnBun(argv) : await spawnNode(argv));
 
-    const outPump = pumpReadable(this.child.stdout, async (buf) => {
+    // For interactive commands with stdio: 'inherit', stdout/stderr will be null
+    const outPump = this.child.stdout ? pumpReadable(this.child.stdout, async (buf) => {
       if (this.options.capture) this.outChunks.push(buf);
       if (this.options.mirror) safeWrite(process.stdout, buf);
 
       // Emit chunk events
       this._emitProcessedData('stdout', buf);
-    });
+    }) : Promise.resolve();
 
-    const errPump = pumpReadable(this.child.stderr, async (buf) => {
+    const errPump = this.child.stderr ? pumpReadable(this.child.stderr, async (buf) => {
       if (this.options.capture) this.errChunks.push(buf);
       if (this.options.mirror) safeWrite(process.stderr, buf);
 
       // Emit chunk events
       this._emitProcessedData('stderr', buf);
-    });
+    }) : Promise.resolve();
 
     let stdinPumpPromise = Promise.resolve();
     if (stdin === 'inherit') {
-      const isPipedIn = process.stdin && process.stdin.isTTY === false;
-      if (isPipedIn) {
-        stdinPumpPromise = this._pumpStdinTo(this.child, this.options.capture ? this.inChunks : null);
+      if (isInteractive) {
+        // For interactive commands with stdio: 'inherit', stdin is handled automatically
+        stdinPumpPromise = Promise.resolve();
       } else {
-        if (this.child.stdin && typeof this.child.stdin.end === 'function') {
-          try { this.child.stdin.end(); } catch { }
-        } else if (isBun && this.child.stdin && typeof this.child.stdin.getWriter === 'function') {
-          try { const w = this.child.stdin.getWriter(); await w.close(); } catch { }
+        const isPipedIn = process.stdin && process.stdin.isTTY === false;
+        if (isPipedIn) {
+          stdinPumpPromise = this._pumpStdinTo(this.child, this.options.capture ? this.inChunks : null);
+        } else {
+          // For TTY (interactive terminal), forward stdin directly for non-interactive commands
+          stdinPumpPromise = this._forwardTTYStdin();
         }
       }
     } else if (stdin === 'ignore') {
