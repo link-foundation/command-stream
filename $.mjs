@@ -6,6 +6,9 @@
 // 4. Stream access: $`command`.stdout, $`command`.stderr
 
 import { createRequire } from 'module';
+import cp from 'child_process';
+import fs from 'fs';
+import path from 'path';
 
 const isBun = typeof globalThis.Bun !== 'undefined';
 
@@ -307,7 +310,6 @@ const VirtualUtils = {
    * Resolve file path with optional cwd parameter
    */
   resolvePath(filePath, cwd = null) {
-    const path = require('path');
     const basePath = cwd || process.cwd();
     return path.isAbsolute(filePath) ? filePath : path.resolve(basePath, filePath);
   },
@@ -647,7 +649,6 @@ class ProcessRunner extends StreamEmitter {
       return Bun.spawn(argv, { cwd, env, stdin: 'pipe', stdout: 'pipe', stderr: 'pipe' });
     };
     const spawnNode = async (argv) => {
-      const cp = await import('child_process');
       return cp.spawn(argv[0], argv.slice(1), { cwd, env, stdio: ['pipe', 'pipe', 'pipe'] });
     };
 
@@ -1898,8 +1899,6 @@ class ProcessRunner extends StreamEmitter {
           
           // Execute the system command with current input as stdin (ASYNC VERSION)
           const spawnNodeAsync = async (argv, stdin, isLastCommand = false) => {
-            const require = createRequire(import.meta.url);
-            const cp = require('child_process');
             
             return new Promise((resolve, reject) => {
               const proc = cp.spawn(argv[0], argv.slice(1), {
@@ -2406,8 +2405,6 @@ class ProcessRunner extends StreamEmitter {
       result.child = proc;
     } else {
       // Use Node's synchronous spawn
-      const require = createRequire(import.meta.url);
-      const cp = require('child_process');
       const proc = cp.spawnSync(argv[0], argv.slice(1), {
         cwd,
         env,
@@ -2743,9 +2740,9 @@ function registerBuiltins() {
     
     for (const path of paths) {
       for (const ext of extensions) {
-        const fullPath = require('path').join(path, cmd + ext);
+        const fullPath = path.join(path, cmd + ext);
         try {
-          if (require('fs').statSync(fullPath).isFile()) {
+          if (fs.statSync(fullPath).isFile()) {
             return VirtualUtils.success(fullPath);
           }
         } catch {}
@@ -2788,8 +2785,6 @@ function registerBuiltins() {
     }
     
     try {
-      const fs = await import('fs');
-      const path = await import('path');
       let output = '';
       
       for (const filename of args) {
@@ -2823,8 +2818,6 @@ function registerBuiltins() {
   // ls - list directory contents
   register('ls', async ({ args, stdin, cwd }) => {
     try {
-      const fs = await import('fs');
-      const path = await import('path');
       
       // Parse flags and paths
       const flags = args.filter(arg => arg.startsWith('-'));
@@ -2900,8 +2893,6 @@ function registerBuiltins() {
     if (argError) return argError;
     
     try {
-      const fs = await import('fs');
-      const path = await import('path');
       
       const flags = args.filter(arg => arg.startsWith('-'));
       const dirs = args.filter(arg => !arg.startsWith('-'));
@@ -2937,8 +2928,6 @@ function registerBuiltins() {
     if (argError) return argError;
     
     try {
-      const fs = await import('fs');
-      const path = await import('path');
       
       const flags = args.filter(arg => arg.startsWith('-'));
       const targets = args.filter(arg => !arg.startsWith('-'));
@@ -2985,8 +2974,6 @@ function registerBuiltins() {
     if (argError) return VirtualUtils.invalidArgumentError('mv', 'missing destination file operand');
     
     try {
-      const fs = await import('fs');
-      const path = await import('path');
       
       const basePath = cwd || process.cwd();
       
@@ -3065,8 +3052,6 @@ function registerBuiltins() {
     if (argError) return VirtualUtils.invalidArgumentError('cp', 'missing destination file operand');
     
     try {
-      const fs = await import('fs');
-      const path = await import('path');
       
       const flags = args.filter(arg => arg.startsWith('-'));
       const paths = args.filter(arg => !arg.startsWith('-'));
@@ -3161,8 +3146,6 @@ function registerBuiltins() {
     if (argError) return VirtualUtils.missingOperandError('touch', 'touch: missing file operand');
     
     try {
-      const fs = await import('fs');
-      const path = await import('path');
       
       const basePath = cwd || process.cwd();
       
@@ -3198,7 +3181,6 @@ function registerBuiltins() {
     if (argError) return argError;
     
     try {
-      const path = await import('path');
       
       const pathname = args[0];
       const suffix = args[1];
@@ -3222,7 +3204,6 @@ function registerBuiltins() {
     if (argError) return argError;
     
     try {
-      const path = await import('path');
       
       const pathname = args[0];
       const result = path.dirname(pathname);
@@ -3337,15 +3318,15 @@ function registerBuiltins() {
     try {
       if (arg === '-d' && args[1]) {
         // Test if directory
-        const stat = require('fs').statSync(args[1]);
+        const stat = fs.statSync(args[1]);
         return { stdout: '', code: stat.isDirectory() ? 0 : 1 };
       } else if (arg === '-f' && args[1]) {
         // Test if file
-        const stat = require('fs').statSync(args[1]);
+        const stat = fs.statSync(args[1]);
         return { stdout: '', code: stat.isFile() ? 0 : 1 };
       } else if (arg === '-e' && args[1]) {
         // Test if exists
-        require('fs').statSync(args[1]);
+        fs.statSync(args[1]);
         return { stdout: '', code: 0 };
       }
     } catch {
