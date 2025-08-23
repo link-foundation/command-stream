@@ -69,7 +69,7 @@ function safeWrite(stream, data, processRunner = null) {
   monitorParentStreams();
   
   // Check if stream is writable and not destroyed/closed
-  if (!stream || !stream.writable || stream.destroyed || stream.closed) {
+  if (!StreamUtils.isStreamWritable(stream)) {
     trace('ProcessRunner', 'safeWrite skipped - stream not writable', { 
       hasStream: !!stream,
       writable: stream?.writable,
@@ -117,21 +117,12 @@ const StreamUtils = {
   /**
    * Add standardized error handler to stdin streams
    */
-  addStdinErrorHandler(stream, contextName = 'stdin') {
+  addStdinErrorHandler(stream, contextName = 'stdin', onNonEpipeError = null) {
     if (stream && typeof stream.on === 'function') {
       stream.on('error', (error) => {
-        if (error.code !== 'EPIPE') {
-          trace('ProcessRunner', `${contextName} error event`, { 
-            error: error.message, 
-            code: error.code,
-            isEPIPE: false
-          });
-        } else {
-          trace('ProcessRunner', `${contextName} EPIPE error (ignored)`, { 
-            error: error.message, 
-            code: error.code,
-            isEPIPE: true
-          });
+        const handled = this.handleStreamError(error, `${contextName} error event`, false);
+        if (!handled && onNonEpipeError) {
+          onNonEpipeError(error);
         }
       });
     }
@@ -220,6 +211,66 @@ const StreamUtils = {
       end: () => this.safeStreamEnd(stream, contextName),
       isWritable: () => this.isStreamWritable(stream)
     };
+  },
+
+  /**
+   * Handle stream errors with consistent EPIPE behavior
+   */
+  handleStreamError(error, contextName, shouldThrow = true) {
+    if (error.code !== 'EPIPE') {
+      trace('ProcessRunner', `${contextName} error`, { 
+        error: error.message, 
+        code: error.code,
+        isEPIPE: false
+      });
+      if (shouldThrow) throw error;
+      return false;
+    } else {
+      trace('ProcessRunner', `${contextName} EPIPE error (ignored)`, { 
+        error: error.message, 
+        code: error.code,
+        isEPIPE: true
+      });
+      return true; // EPIPE handled gracefully
+    }
+  },
+
+  /**
+   * Detect if stream supports Bun-style writing
+   */
+  isBunStream(stream) {
+    return isBun && stream && typeof stream.getWriter === 'function';
+  },
+
+  /**
+   * Detect if stream supports Node.js-style writing  
+   */
+  isNodeStream(stream) {
+    return stream && typeof stream.write === 'function';
+  },
+
+  /**
+   * Write to either Bun or Node.js style stream
+   */
+  async writeToStream(stream, data, contextName = 'stream') {
+    if (this.isBunStream(stream)) {
+      try {
+        const writer = stream.getWriter();
+        await writer.write(data);
+        writer.releaseLock();
+        return true;
+      } catch (error) {
+        return this.handleStreamError(error, `${contextName} Bun writer`, false);
+      }
+    } else if (this.isNodeStream(stream)) {
+      try {
+        stream.write(data);
+        return true;
+      } catch (error) {
+        return this.handleStreamError(error, `${contextName} Node writer`, false);
+      }
+    }
+    return false;
   }
 };
 
@@ -739,19 +790,14 @@ class ProcessRunner extends StreamEmitter {
   }
 
   async _writeToStdin(buf) {
-    if (isBun && this.child.stdin && typeof this.child.stdin.getWriter === 'function') {
-      const w = this.child.stdin.getWriter();
-      const bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf.buffer, buf.byteOffset ?? 0, buf.byteLength);
-      try {
-        await w.write(bytes);
-        await w.close();
-      } catch (error) {
-        if (error.code !== 'EPIPE') {
-          trace('ProcessRunner', 'Error writing to Bun writer', { error: error.message, code: error.code });
-        }
+    const bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf.buffer, buf.byteOffset ?? 0, buf.byteLength);
+    if (await StreamUtils.writeToStream(this.child.stdin, bytes, 'stdin')) {
+      // Successfully wrote to stream
+      if (StreamUtils.isBunStream(this.child.stdin)) {
+        // Stream was already closed by writeToStream utility
+      } else if (StreamUtils.isNodeStream(this.child.stdin)) {
+        try { this.child.stdin.end(); } catch {}
       }
-    } else if (this.child.stdin && typeof this.child.stdin.write === 'function') {
-      this.child.stdin.end(buf);
     } else if (isBun && typeof Bun.write === 'function') {
       await Bun.write(this.child.stdin, buf);
     }
@@ -1590,9 +1636,7 @@ class ProcessRunner extends StreamEmitter {
                   try {
                     await writer.write(value);
                   } catch (error) {
-                    if (error.code !== 'EPIPE') {
-                      trace('ProcessRunner', 'Error writing to stream writer', { error: error.message, code: error.code });
-                    }
+                    StreamUtils.handleStreamError(error, 'stream writer', false);
                     break; // Stop streaming if write fails
                   }
                 } else if (writer.getWriter) {
@@ -1601,9 +1645,7 @@ class ProcessRunner extends StreamEmitter {
                     await w.write(value);
                     w.releaseLock();
                   } catch (error) {
-                    if (error.code !== 'EPIPE') {
-                      trace('ProcessRunner', 'Error writing to stream writer (getWriter)', { error: error.message, code: error.code });
-                    }
+                    StreamUtils.handleStreamError(error, 'stream writer (getWriter)', false);
                     break; // Stop streaming if write fails
                   }
                 }
@@ -1921,20 +1963,7 @@ class ProcessRunner extends StreamEmitter {
               
               // Use StreamUtils for comprehensive stdin handling
               if (proc.stdin) {
-                // Add error handler that can reject promise for non-EPIPE errors
-                proc.stdin.on('error', (error) => {
-                  trace('ProcessRunner', 'spawnNodeAsync stdin error event', { 
-                    error: error.message, 
-                    code: error.code,
-                    isEPIPE: error.code === 'EPIPE'
-                  });
-                  
-                  // Only reject on non-EPIPE errors
-                  if (error.code !== 'EPIPE') {
-                    reject(error);
-                  }
-                  // EPIPE errors are expected when pipe is closed, so we ignore them
-                });
+                StreamUtils.addStdinErrorHandler(proc.stdin, 'spawnNodeAsync stdin', reject);
               }
               
               if (stdin) {
