@@ -36,6 +36,32 @@ function traceFunc(category, funcName, phase, data = {}) {
   trace(category, `${funcName} ${phase}`, data);
 }
 
+// Safe write function that checks stream state before writing
+function safeWrite(stream, data) {
+  // Check if stream is writable and not destroyed/closed
+  if (!stream || !stream.writable || stream.destroyed || stream.closed) {
+    trace('ProcessRunner', 'safeWrite skipped - stream not writable', { 
+      hasStream: !!stream,
+      writable: stream?.writable,
+      destroyed: stream?.destroyed,
+      closed: stream?.closed
+    });
+    return false;
+  }
+  
+  try {
+    return stream.write(data);
+  } catch (error) {
+    trace('ProcessRunner', 'safeWrite error', { 
+      error: error.message, 
+      code: error.code,
+      writable: stream.writable,
+      destroyed: stream.destroyed
+    });
+    return false;
+  }
+}
+
 // Global shell settings (like bash set -e / set +e)
 let globalShellSettings = {
   errexit: false,    // set -e equivalent: exit on error
@@ -304,7 +330,7 @@ class ProcessRunner extends StreamEmitter {
     // Setup stdout streaming
     const outPump = pumpReadable(this.child.stdout, async (buf) => {
       if (this.options.capture) this.outChunks.push(buf);
-      if (this.options.mirror) process.stdout.write(buf);
+      if (this.options.mirror) safeWrite(process.stdout, buf);
       
       // Emit chunk events
       this.emit('stdout', buf);
@@ -314,7 +340,7 @@ class ProcessRunner extends StreamEmitter {
     // Setup stderr streaming  
     const errPump = pumpReadable(this.child.stderr, async (buf) => {
       if (this.options.capture) this.errChunks.push(buf);
-      if (this.options.mirror) process.stderr.write(buf);
+      if (this.options.mirror) safeWrite(process.stderr, buf);
       
       // Emit chunk events
       this.emit('stderr', buf);
@@ -578,7 +604,7 @@ class ProcessRunner extends StreamEmitter {
               // Only output if not cancelled
               if (!this._cancelled) {
                 if (this.options.mirror) {
-                  process.stdout.write(buf);
+                  safeWrite(process.stdout, buf);
                 }
                 
                 this.emit('stdout', buf);
@@ -615,7 +641,7 @@ class ProcessRunner extends StreamEmitter {
         if (result.stdout) {
           const buf = Buffer.from(result.stdout);
           if (this.options.mirror) {
-            process.stdout.write(buf);
+            safeWrite(process.stdout, buf);
           }
           this.emit('stdout', buf);
           this.emit('data', { type: 'stdout', data: buf });
@@ -624,7 +650,7 @@ class ProcessRunner extends StreamEmitter {
         if (result.stderr) {
           const buf = Buffer.from(result.stderr);
           if (this.options.mirror) {
-            process.stderr.write(buf);
+            safeWrite(process.stderr, buf);
           }
           this.emit('stderr', buf);
           this.emit('data', { type: 'stderr', data: buf });
@@ -665,7 +691,7 @@ class ProcessRunner extends StreamEmitter {
       if (result.stderr) {
         const buf = Buffer.from(result.stderr);
         if (this.options.mirror) {
-          process.stderr.write(buf);
+          safeWrite(process.stderr, buf);
         }
         this.emit('stderr', buf);
         this.emit('data', { type: 'stderr', data: buf });
@@ -815,7 +841,7 @@ class ProcessRunner extends StreamEmitter {
           // Only emit stderr for the last command
           if (i === commands.length - 1) {
             if (this.options.mirror) {
-              process.stderr.write(buf);
+              safeWrite(process.stderr, buf);
             }
             this.emit('stderr', buf);
             this.emit('data', { type: 'stderr', data: buf });
@@ -833,7 +859,7 @@ class ProcessRunner extends StreamEmitter {
       const buf = Buffer.from(chunk);
       finalOutput += buf.toString();
       if (this.options.mirror) {
-        process.stdout.write(buf);
+        safeWrite(process.stdout, buf);
       }
       this.emit('stdout', buf);
       this.emit('data', { type: 'stdout', data: buf });
@@ -982,7 +1008,7 @@ class ProcessRunner extends StreamEmitter {
               // Emit from the first process for real-time updates
               const buf = Buffer.from(chunk);
               if (this.options.mirror) {
-                process.stdout.write(buf);
+                safeWrite(process.stdout, buf);
               }
               this.emit('stdout', buf);
               this.emit('data', { type: 'stdout', data: buf });
@@ -1007,7 +1033,7 @@ class ProcessRunner extends StreamEmitter {
           allStderr += buf.toString();
           if (i === commands.length - 1) {
             if (this.options.mirror) {
-              process.stderr.write(buf);
+              safeWrite(process.stderr, buf);
             }
             this.emit('stderr', buf);
             this.emit('data', { type: 'stderr', data: buf });
@@ -1028,7 +1054,7 @@ class ProcessRunner extends StreamEmitter {
       finalOutput += buf.toString();
       if (shouldEmitFromLast) {
         if (this.options.mirror) {
-          process.stdout.write(buf);
+          safeWrite(process.stdout, buf);
         }
         this.emit('stdout', buf);
         this.emit('data', { type: 'stdout', data: buf });
@@ -1148,7 +1174,7 @@ class ProcessRunner extends StreamEmitter {
                 if (isLastCommand) {
                   chunks.push(data);
                   if (self.options.mirror) {
-                    process.stdout.write(data);
+                    safeWrite(process.stdout, data);
                   }
                   self.emit('stdout', data);
                   self.emit('data', { type: 'stdout', data });
@@ -1171,7 +1197,7 @@ class ProcessRunner extends StreamEmitter {
             finalOutput = outputData;
             const buf = Buffer.from(outputData);
             if (this.options.mirror) {
-              process.stdout.write(buf);
+              safeWrite(process.stdout, buf);
             }
             this.emit('stdout', buf);
             this.emit('data', { type: 'stdout', data: buf });
@@ -1256,7 +1282,7 @@ class ProcessRunner extends StreamEmitter {
             allStderr += buf.toString();
             if (isLastCommand) {
               if (this.options.mirror) {
-                process.stderr.write(buf);
+                safeWrite(process.stderr, buf);
               }
               this.emit('stderr', buf);
               this.emit('data', { type: 'stderr', data: buf });
@@ -1271,7 +1297,7 @@ class ProcessRunner extends StreamEmitter {
             const buf = Buffer.from(chunk);
             chunks.push(buf);
             if (this.options.mirror) {
-              process.stdout.write(buf);
+              safeWrite(process.stdout, buf);
             }
             this.emit('stdout', buf);
             this.emit('data', { type: 'stdout', data: buf });
@@ -1380,7 +1406,7 @@ class ProcessRunner extends StreamEmitter {
             if (result.stdout) {
               const buf = Buffer.from(result.stdout);
               if (this.options.mirror) {
-                process.stdout.write(buf);
+                safeWrite(process.stdout, buf);
               }
               this.emit('stdout', buf);
               this.emit('data', { type: 'stdout', data: buf });
@@ -1389,7 +1415,7 @@ class ProcessRunner extends StreamEmitter {
             if (result.stderr) {
               const buf = Buffer.from(result.stderr);
               if (this.options.mirror) {
-                process.stderr.write(buf);
+                safeWrite(process.stderr, buf);
               }
               this.emit('stderr', buf);
               this.emit('data', { type: 'stderr', data: buf });
@@ -1449,7 +1475,7 @@ class ProcessRunner extends StreamEmitter {
           if (result.stderr) {
             const buf = Buffer.from(result.stderr);
             if (this.options.mirror) {
-              process.stderr.write(buf);
+              safeWrite(process.stderr, buf);
             }
             this.emit('stderr', buf);
             this.emit('data', { type: 'stderr', data: buf });
@@ -1520,7 +1546,7 @@ class ProcessRunner extends StreamEmitter {
                 // If this is the last command, emit streaming data
                 if (isLastCommand) {
                   if (this.options.mirror) {
-                    process.stdout.write(chunk);
+                    safeWrite(process.stdout, chunk);
                   }
                   this.emit('stdout', chunk);
                   this.emit('data', { type: 'stdout', data: chunk });
@@ -1532,7 +1558,7 @@ class ProcessRunner extends StreamEmitter {
                 // If this is the last command, emit streaming data
                 if (isLastCommand) {
                   if (this.options.mirror) {
-                    process.stderr.write(chunk);
+                    safeWrite(process.stderr, chunk);
                   }
                   this.emit('stderr', chunk);
                   this.emit('data', { type: 'stderr', data: chunk });
@@ -1643,7 +1669,7 @@ class ProcessRunner extends StreamEmitter {
           if (result.stderr) {
             const buf = Buffer.from(result.stderr);
             if (this.options.mirror) {
-              process.stderr.write(buf);
+              safeWrite(process.stderr, buf);
             }
             this.emit('stderr', buf);
             this.emit('data', { type: 'stderr', data: buf });
@@ -1743,7 +1769,7 @@ class ProcessRunner extends StreamEmitter {
       
       const buf = Buffer.from(result.stderr);
       if (this.options.mirror) {
-        process.stderr.write(buf);
+        safeWrite(process.stderr, buf);
       }
       this.emit('stderr', buf);
       this.emit('data', { type: 'stderr', data: buf });
@@ -2018,8 +2044,8 @@ class ProcessRunner extends StreamEmitter {
     
     // Mirror output if requested (but always capture for result)
     if (this.options.mirror) {
-      if (result.stdout) process.stdout.write(result.stdout);
-      if (result.stderr) process.stderr.write(result.stderr);
+      if (result.stdout) safeWrite(process.stdout, result.stdout);
+      if (result.stderr) safeWrite(process.stderr, result.stderr);
     }
     
     // Store chunks for events (batched after completion)
