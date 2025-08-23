@@ -30,7 +30,7 @@ const activeProcessRunners = new Set();
 function monitorParentStreams() {
   if (parentStreamsMonitored) return;
   parentStreamsMonitored = true;
-  
+
   const checkParentStream = (stream, name) => {
     if (stream && typeof stream.on === 'function') {
       stream.on('close', () => {
@@ -41,44 +41,44 @@ function monitorParentStreams() {
       });
     }
   };
-  
+
   checkParentStream(process.stdout, 'stdout');
   checkParentStream(process.stderr, 'stderr');
 }
 
 function safeWrite(stream, data, processRunner = null) {
   monitorParentStreams();
-  
+
   if (!StreamUtils.isStreamWritable(stream)) {
-    trace('ProcessRunner', () => `safeWrite skipped - stream not writable | ${JSON.stringify({ 
+    trace('ProcessRunner', () => `safeWrite skipped - stream not writable | ${JSON.stringify({
       hasStream: !!stream,
       writable: stream?.writable,
       destroyed: stream?.destroyed,
       closed: stream?.closed
     }, null, 2)}`);
-    
+
     if (processRunner && (stream === process.stdout || stream === process.stderr)) {
       processRunner._handleParentStreamClosure();
     }
-    
+
     return false;
   }
-  
+
   try {
     return stream.write(data);
   } catch (error) {
-    trace('ProcessRunner', () => `safeWrite error | ${JSON.stringify({ 
-      error: error.message, 
+    trace('ProcessRunner', () => `safeWrite error | ${JSON.stringify({
+      error: error.message,
       code: error.code,
       writable: stream.writable,
       destroyed: stream.destroyed
     }, null, 2)}`);
-    
-    if (error.code === 'EPIPE' && processRunner && 
-        (stream === process.stdout || stream === process.stderr)) {
+
+    if (error.code === 'EPIPE' && processRunner &&
+      (stream === process.stdout || stream === process.stderr)) {
       processRunner._handleParentStreamClosure();
     }
-    
+
     return false;
   }
 }
@@ -122,21 +122,21 @@ const StreamUtils = {
 
     try {
       const result = stream.write(data);
-      trace('ProcessRunner', () => `${contextName} write successful | ${JSON.stringify({ 
+      trace('ProcessRunner', () => `${contextName} write successful | ${JSON.stringify({
         dataLength: data?.length || 0
       }, null, 2)}`);
       return result;
     } catch (error) {
       if (error.code !== 'EPIPE') {
-        trace('ProcessRunner', () => `${contextName} write error | ${JSON.stringify({ 
-          error: error.message, 
+        trace('ProcessRunner', () => `${contextName} write error | ${JSON.stringify({
+          error: error.message,
           code: error.code,
           isEPIPE: false
         }, null, 2)}`);
         throw error; // Re-throw non-EPIPE errors
       } else {
-        trace('ProcessRunner', () => `${contextName} EPIPE error (ignored) | ${JSON.stringify({ 
-          error: error.message, 
+        trace('ProcessRunner', () => `${contextName} EPIPE error (ignored) | ${JSON.stringify({
+          error: error.message,
           code: error.code,
           isEPIPE: true
         }, null, 2)}`);
@@ -164,13 +164,13 @@ const StreamUtils = {
       return true;
     } catch (error) {
       if (error.code !== 'EPIPE') {
-        trace('ProcessRunner', () => `${contextName} end error | ${JSON.stringify({ 
-          error: error.message, 
+        trace('ProcessRunner', () => `${contextName} end error | ${JSON.stringify({
+          error: error.message,
           code: error.code
         }, null, 2)}`);
       } else {
-        trace('ProcessRunner', () => `${contextName} EPIPE on end (ignored) | ${JSON.stringify({ 
-          error: error.message, 
+        trace('ProcessRunner', () => `${contextName} EPIPE on end (ignored) | ${JSON.stringify({
+          error: error.message,
           code: error.code
         }, null, 2)}`);
       }
@@ -183,7 +183,7 @@ const StreamUtils = {
    */
   setupStdinHandling(stream, contextName = 'stdin') {
     this.addStdinErrorHandler(stream, contextName);
-    
+
     return {
       write: (data) => this.safeStreamWrite(stream, data, contextName),
       end: () => this.safeStreamEnd(stream, contextName),
@@ -196,16 +196,16 @@ const StreamUtils = {
    */
   handleStreamError(error, contextName, shouldThrow = true) {
     if (error.code !== 'EPIPE') {
-      trace('ProcessRunner', () => `${contextName} error | ${JSON.stringify({ 
-        error: error.message, 
+      trace('ProcessRunner', () => `${contextName} error | ${JSON.stringify({
+        error: error.message,
         code: error.code,
         isEPIPE: false
       }, null, 2)}`);
       if (shouldThrow) throw error;
       return false;
     } else {
-      trace('ProcessRunner', () => `${contextName} EPIPE error (ignored) | ${JSON.stringify({ 
-        error: error.message, 
+      trace('ProcessRunner', () => `${contextName} EPIPE error (ignored) | ${JSON.stringify({
+        error: error.message,
         code: error.code,
         isEPIPE: true
       }, null, 2)}`);
@@ -359,9 +359,9 @@ class StreamEmitter {
       this.listeners.set(event, []);
     }
     this.listeners.get(event).push(listener);
-    
+
     // No auto-start - explicit start() or await will start the process
-    
+
     return this;
   }
 
@@ -396,11 +396,11 @@ function quote(value) {
 }
 
 function buildShellCommand(strings, values) {
-  trace('Utils', () => `buildShellCommand ENTER | ${JSON.stringify({ 
+  trace('Utils', () => `buildShellCommand ENTER | ${JSON.stringify({
     stringsLength: strings.length,
     valuesLength: values.length
   }, null, 2)}`);
-  
+
   let out = '';
   for (let i = 0; i < strings.length; i++) {
     out += strings[i];
@@ -416,7 +416,7 @@ function buildShellCommand(strings, values) {
       }
     }
   }
-  
+
   trace('Utils', () => `buildShellCommand EXIT | ${JSON.stringify({ command: out }, null, 2)}`);
   return out;
 }
@@ -438,12 +438,12 @@ async function pumpReadable(readable, onChunk) {
 class ProcessRunner extends StreamEmitter {
   constructor(spec, options = {}) {
     super();
-    
-    trace('ProcessRunner', () => `constructor ENTER | ${JSON.stringify({ 
+
+    trace('ProcessRunner', () => `constructor ENTER | ${JSON.stringify({
       spec: typeof spec === 'object' ? { ...spec, command: spec.command?.slice(0, 100) } : spec,
-      options 
+      options
     }, null, 2)}`);
-    
+
     this.spec = spec;
     this.options = {
       mirror: true,
@@ -453,37 +453,43 @@ class ProcessRunner extends StreamEmitter {
       env: undefined,
       ...options
     };
-    
+
     this.outChunks = this.options.capture ? [] : null;
     this.errChunks = this.options.capture ? [] : null;
-    this.inChunks = this.options.capture && this.options.stdin === 'inherit' ? [] : 
-                   this.options.capture && (typeof this.options.stdin === 'string' || Buffer.isBuffer(this.options.stdin)) ? 
-                   [Buffer.from(this.options.stdin)] : [];
-    
+    this.inChunks = this.options.capture && this.options.stdin === 'inherit' ? [] :
+      this.options.capture && (typeof this.options.stdin === 'string' || Buffer.isBuffer(this.options.stdin)) ?
+        [Buffer.from(this.options.stdin)] : [];
+
     this.result = null;
     this.child = null;
     this.started = false;
     this.finished = false;
-    
+
     // Promise for awaiting final result
     this.promise = null;
-    
-      this._mode = null; // 'async' or 'sync'
-    
+
+    this._mode = null; // 'async' or 'sync'
+
     this._cancelled = false;
     this._virtualGenerator = null;
     this._abortController = new AbortController();
-    
+
     activeProcessRunners.add(this);
-    
+
     // Track finished state changes to trigger cleanup
     this._finished = false;
   }
-  
+
   get finished() {
     return this._finished;
   }
-  
+
+  _emitProcessedData(type, buf) {
+    const processedBuf = processOutput(buf, this.options.ansi);
+    this.emit(type, processedBuf);
+    this.emit('data', { type, data: processedBuf });
+  }
+
   set finished(value) {
     if (value === true && this._finished === false) {
       this._finished = true;
@@ -495,20 +501,20 @@ class ProcessRunner extends StreamEmitter {
 
   _handleParentStreamClosure() {
     if (this.finished || this._cancelled) return;
-    
+
     trace('ProcessRunner', () => `Handling parent stream closure | ${JSON.stringify({
       started: this.started,
       hasChild: !!this.child,
       command: this.spec.command?.slice(0, 50) || this.spec.file
     }, null, 2)}`);
-    
+
     this._cancelled = true;
-    
+
     // Cancel abort controller for virtual commands
     if (this._abortController) {
       this._abortController.abort();
     }
-    
+
     // Gracefully close child process if it exists
     if (this.child) {
       try {
@@ -517,9 +523,9 @@ class ProcessRunner extends StreamEmitter {
           this.child.stdin.end();
         } else if (isBun && this.child.stdin && typeof this.child.stdin.getWriter === 'function') {
           const writer = this.child.stdin.getWriter();
-          writer.close().catch(() => {}); // Ignore close errors
+          writer.close().catch(() => { }); // Ignore close errors
         }
-        
+
         setTimeout(() => {
           if (this.child && !this.finished) {
             trace('ProcessRunner', () => 'Terminating child process after parent stream closure');
@@ -528,12 +534,12 @@ class ProcessRunner extends StreamEmitter {
             }
           }
         }, 100);
-        
+
       } catch (error) {
         trace('ProcessRunner', () => `Error during graceful shutdown | ${JSON.stringify({ error: error.message }, null, 2)}`);
       }
     }
-    
+
     activeProcessRunners.delete(this);
   }
 
@@ -544,9 +550,9 @@ class ProcessRunner extends StreamEmitter {
   // Unified start method that can work in both async and sync modes
   start(options = {}) {
     const mode = options.mode || 'async';
-    
+
     trace('ProcessRunner', () => `start ENTER | ${JSON.stringify({ mode, options }, null, 2)}`);
-    
+
     if (mode === 'sync') {
       trace('ProcessRunner', () => `BRANCH: mode => sync | ${JSON.stringify({}, null, 2)}`);
       return this._startSync();
@@ -555,70 +561,70 @@ class ProcessRunner extends StreamEmitter {
       return this._startAsync();
     }
   }
-  
+
   // Shortcut for sync mode
   sync() {
     return this.start({ mode: 'sync' });
   }
-  
+
   // Shortcut for async mode
   async() {
     return this.start({ mode: 'async' });
   }
-  
+
   async _startAsync() {
     if (this.started) return this.promise;
     if (this.promise) return this.promise;
-    
+
     this.promise = this._doStartAsync();
     return this.promise;
   }
-  
+
   async _doStartAsync() {
-    trace('ProcessRunner', () => `_doStartAsync ENTER | ${JSON.stringify({ 
+    trace('ProcessRunner', () => `_doStartAsync ENTER | ${JSON.stringify({
       mode: this.spec.mode,
       command: this.spec.command?.slice(0, 100)
     }, null, 2)}`);
-    
+
     this.started = true;
     this._mode = 'async';
 
     const { cwd, env, stdin } = this.options;
-    
-      if (this.spec.mode === 'pipeline') {
-      trace('ProcessRunner', () => `BRANCH: spec.mode => pipeline | ${JSON.stringify({ 
+
+    if (this.spec.mode === 'pipeline') {
+      trace('ProcessRunner', () => `BRANCH: spec.mode => pipeline | ${JSON.stringify({
         hasSource: !!this.spec.source,
         hasDestination: !!this.spec.destination
       }, null, 2)}`);
       return await this._runProgrammaticPipeline(this.spec.source, this.spec.destination);
     }
-    
-      if (this.spec.mode === 'shell') {
+
+    if (this.spec.mode === 'shell') {
       trace('ProcessRunner', () => `BRANCH: spec.mode => shell | ${JSON.stringify({}, null, 2)}`);
-      
+
       const parsed = this._parseCommand(this.spec.command);
-      trace('ProcessRunner', () => `Parsed command | ${JSON.stringify({ 
+      trace('ProcessRunner', () => `Parsed command | ${JSON.stringify({
         type: parsed?.type,
         cmd: parsed?.cmd,
         argsCount: parsed?.args?.length
       }, null, 2)}`);
-      
+
       if (parsed) {
         if (parsed.type === 'pipeline') {
-          trace('ProcessRunner', () => `BRANCH: parsed.type => pipeline | ${JSON.stringify({ 
-            commandCount: parsed.commands?.length 
+          trace('ProcessRunner', () => `BRANCH: parsed.type => pipeline | ${JSON.stringify({
+            commandCount: parsed.commands?.length
           }, null, 2)}`);
           return await this._runPipeline(parsed.commands);
         } else if (parsed.type === 'simple' && virtualCommandsEnabled && virtualCommands.has(parsed.cmd)) {
-          trace('ProcessRunner', () => `BRANCH: virtualCommand => ${parsed.cmd} | ${JSON.stringify({ 
+          trace('ProcessRunner', () => `BRANCH: virtualCommand => ${parsed.cmd} | ${JSON.stringify({
             isVirtual: true,
-            args: parsed.args 
+            args: parsed.args
           }, null, 2)}`);
           return await this._runVirtual(parsed.cmd, parsed.args);
         }
       }
     }
-    
+
     const spawnBun = (argv) => {
       return Bun.spawn(argv, { cwd, env, stdin: 'pipe', stdout: 'pipe', stderr: 'pipe' });
     };
@@ -627,17 +633,17 @@ class ProcessRunner extends StreamEmitter {
     };
 
     const argv = this.spec.mode === 'shell' ? ['sh', '-lc', this.spec.command] : [this.spec.file, ...this.spec.args];
-    
+
     if (globalShellSettings.xtrace) {
       const traceCmd = this.spec.mode === 'shell' ? this.spec.command : argv.join(' ');
       console.log(`+ ${traceCmd}`);
     }
-    
+
     if (globalShellSettings.verbose) {
       const verboseCmd = this.spec.mode === 'shell' ? this.spec.command : argv.join(' ');
       console.log(verboseCmd);
     }
-    
+
     const needsExplicitPipe = stdin !== 'inherit' && stdin !== 'ignore';
     const preferNodeForInput = isBun && needsExplicitPipe;
     this.child = preferNodeForInput ? await spawnNode(argv) : (isBun ? spawnBun(argv) : await spawnNode(argv));
@@ -645,31 +651,29 @@ class ProcessRunner extends StreamEmitter {
     const outPump = pumpReadable(this.child.stdout, async (buf) => {
       if (this.options.capture) this.outChunks.push(buf);
       if (this.options.mirror) safeWrite(process.stdout, buf);
-      
+
       // Emit chunk events
-      this.emit('stdout', buf);
-      this.emit('data', { type: 'stdout', data: buf });
+      this._emitProcessedData('stdout', buf);
     });
 
     const errPump = pumpReadable(this.child.stderr, async (buf) => {
       if (this.options.capture) this.errChunks.push(buf);
       if (this.options.mirror) safeWrite(process.stderr, buf);
-      
+
       // Emit chunk events
-      this.emit('stderr', buf);
-      this.emit('data', { type: 'stderr', data: buf });
+      this._emitProcessedData('stderr', buf);
     });
 
-      let stdinPumpPromise = Promise.resolve();
+    let stdinPumpPromise = Promise.resolve();
     if (stdin === 'inherit') {
       const isPipedIn = process.stdin && process.stdin.isTTY === false;
       if (isPipedIn) {
         stdinPumpPromise = this._pumpStdinTo(this.child, this.options.capture ? this.inChunks : null);
       } else {
         if (this.child.stdin && typeof this.child.stdin.end === 'function') {
-          try { this.child.stdin.end(); } catch {}
+          try { this.child.stdin.end(); } catch { }
         } else if (isBun && this.child.stdin && typeof this.child.stdin.getWriter === 'function') {
-          try { const w = this.child.stdin.getWriter(); await w.close(); } catch {}
+          try { const w = this.child.stdin.getWriter(); await w.close(); } catch { }
         }
       }
     } else if (stdin === 'ignore') {
@@ -685,7 +689,7 @@ class ProcessRunner extends StreamEmitter {
     await Promise.all([outPump, errPump, stdinPumpPromise]);
 
     // Debug: Check the raw exit code
-    trace('ProcessRunner', () => `Raw exit code from child | ${JSON.stringify({ 
+    trace('ProcessRunner', () => `Raw exit code from child | ${JSON.stringify({
       code,
       codeType: typeof code,
       childExitCode: this.child?.exitCode,
@@ -699,10 +703,10 @@ class ProcessRunner extends StreamEmitter {
       stdin: this.options.capture && this.inChunks ? Buffer.concat(this.inChunks).toString('utf8') : undefined,
       child: this.child
     };
-    
+
     this.result = {
       ...resultData,
-        async text() {
+      async text() {
         return resultData.stdout || '';
       }
     };
@@ -710,7 +714,7 @@ class ProcessRunner extends StreamEmitter {
     this.finished = true;
     this.emit('end', this.result);
     this.emit('exit', this.result.code);
-    
+
     if (globalShellSettings.errexit && this.result.code !== 0) {
       const error = new Error(`Command failed with exit code ${this.result.code}`);
       error.code = this.result.code;
@@ -719,7 +723,7 @@ class ProcessRunner extends StreamEmitter {
       error.result = this.result;
       throw error;
     }
-    
+
     return this.result;
   }
 
@@ -748,7 +752,7 @@ class ProcessRunner extends StreamEmitter {
       if (StreamUtils.isBunStream(this.child.stdin)) {
         // Stream was already closed by writeToStream utility
       } else if (StreamUtils.isNodeStream(this.child.stdin)) {
-        try { this.child.stdin.end(); } catch {}
+        try { this.child.stdin.end(); } catch { }
       }
     } else if (isBun && typeof Bun.write === 'function') {
       await Bun.write(this.child.stdin, buf);
@@ -758,25 +762,25 @@ class ProcessRunner extends StreamEmitter {
   _parseCommand(command) {
     const trimmed = command.trim();
     if (!trimmed) return null;
-    
-      if (trimmed.includes('|')) {
+
+    if (trimmed.includes('|')) {
       return this._parsePipeline(trimmed);
     }
-    
+
     // Simple command parsing
     const parts = trimmed.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) || [];
     if (parts.length === 0) return null;
-    
+
     const cmd = parts[0];
     const args = parts.slice(1).map(arg => {
       // Keep track of whether the arg was quoted
-      if ((arg.startsWith('"') && arg.endsWith('"')) || 
-          (arg.startsWith("'") && arg.endsWith("'"))) {
+      if ((arg.startsWith('"') && arg.endsWith('"')) ||
+        (arg.startsWith("'") && arg.endsWith("'"))) {
         return { value: arg.slice(1, -1), quoted: true, quoteChar: arg[0] };
       }
       return { value: arg, quoted: false };
     });
-    
+
     return { cmd, args, type: 'simple' };
   }
 
@@ -786,10 +790,10 @@ class ProcessRunner extends StreamEmitter {
     let current = '';
     let inQuotes = false;
     let quoteChar = '';
-    
+
     for (let i = 0; i < command.length; i++) {
       const char = command[i];
-      
+
       if (!inQuotes && (char === '"' || char === "'")) {
         inQuotes = true;
         quoteChar = char;
@@ -805,41 +809,41 @@ class ProcessRunner extends StreamEmitter {
         current += char;
       }
     }
-    
+
     if (current.trim()) {
       segments.push(current.trim());
     }
-    
+
     const commands = segments.map(segment => {
       const parts = segment.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) || [];
       if (parts.length === 0) return null;
-      
+
       const cmd = parts[0];
       const args = parts.slice(1).map(arg => {
         // Keep track of whether the arg was quoted
-        if ((arg.startsWith('"') && arg.endsWith('"')) || 
-            (arg.startsWith("'") && arg.endsWith("'"))) {
-            return { value: arg.slice(1, -1), quoted: true, quoteChar: arg[0] };
+        if ((arg.startsWith('"') && arg.endsWith('"')) ||
+          (arg.startsWith("'") && arg.endsWith("'"))) {
+          return { value: arg.slice(1, -1), quoted: true, quoteChar: arg[0] };
         }
         return { value: arg, quoted: false };
       });
-      
+
       return { cmd, args };
     }).filter(Boolean);
-    
+
     return { type: 'pipeline', commands };
   }
 
   async _runVirtual(cmd, args) {
     trace('ProcessRunner', () => `_runVirtual ENTER | ${JSON.stringify({ cmd, args }, null, 2)}`);
-    
+
     const handler = virtualCommands.get(cmd);
     if (!handler) {
       trace('ProcessRunner', () => `Virtual command not found | ${JSON.stringify({ cmd }, null, 2)}`);
       throw new Error(`Virtual command not found: ${cmd}`);
     }
 
-    trace('ProcessRunner', () => `Found virtual command handler | ${JSON.stringify({ 
+    trace('ProcessRunner', () => `Found virtual command handler | ${JSON.stringify({
       cmd,
       isGenerator: handler.constructor.name === 'AsyncGeneratorFunction'
     }, null, 2)}`);
@@ -865,33 +869,33 @@ class ProcessRunner extends StreamEmitter {
       }
 
       let result;
-      
+
       if (handler.constructor.name === 'AsyncGeneratorFunction') {
         const chunks = [];
-        
+
         const commandOptions = {
           ...this.options,
           isCancelled: () => this._cancelled,
           signal: this._abortController.signal
         };
-        
+
         const generator = handler({ args: argValues, stdin: stdinData, ...commandOptions });
         this._virtualGenerator = generator;
-        
+
         const cancelPromise = new Promise(resolve => {
           this._cancelResolve = resolve;
         });
-        
+
         try {
           const iterator = generator[Symbol.asyncIterator]();
           let done = false;
-          
+
           while (!done && !this._cancelled) {
             const result = await Promise.race([
               iterator.next(),
               cancelPromise.then(() => ({ done: true, cancelled: true }))
             ]);
-            
+
             if (result.cancelled || this._cancelled) {
               // Cancelled - close the generator
               if (iterator.return) {
@@ -899,22 +903,21 @@ class ProcessRunner extends StreamEmitter {
               }
               break;
             }
-            
+
             done = result.done;
-            
+
             if (!done) {
               const chunk = result.value;
               const buf = Buffer.from(chunk);
               chunks.push(buf);
-              
+
               // Only output if not cancelled
               if (!this._cancelled) {
                 if (this.options.mirror) {
                   safeWrite(process.stdout, buf);
                 }
-                
-                this.emit('stdout', buf);
-                this.emit('data', { type: 'stdout', data: buf });
+
+                this._emitProcessedData('stdout', buf);
               }
             }
           }
@@ -923,7 +926,7 @@ class ProcessRunner extends StreamEmitter {
           this._virtualGenerator = null;
           this._cancelResolve = null;
         }
-        
+
         result = {
           code: 0,
           stdout: this.options.capture ? Buffer.concat(chunks).toString('utf8') : undefined,
@@ -933,7 +936,7 @@ class ProcessRunner extends StreamEmitter {
       } else {
         // Regular async function
         result = await handler({ args: argValues, stdin: stdinData, ...this.options });
-        
+
         result = {
           code: result.code ?? 0,
           stdout: this.options.capture ? (result.stdout ?? '') : undefined,
@@ -941,35 +944,33 @@ class ProcessRunner extends StreamEmitter {
           stdin: this.options.capture ? stdinData : undefined,
           ...result
         };
-        
+
         // Mirror and emit output
         if (result.stdout) {
           const buf = Buffer.from(result.stdout);
           if (this.options.mirror) {
             safeWrite(process.stdout, buf);
           }
-          this.emit('stdout', buf);
-          this.emit('data', { type: 'stdout', data: buf });
+          this._emitProcessedData('stdout', buf);
         }
-        
+
         if (result.stderr) {
           const buf = Buffer.from(result.stderr);
           if (this.options.mirror) {
             safeWrite(process.stderr, buf);
           }
-          this.emit('stderr', buf);
-          this.emit('data', { type: 'stderr', data: buf });
+          this._emitProcessedData('stderr', buf);
         }
       }
 
       // Store result
       this.result = result;
       this.finished = true;
-      
+
       // Emit completion events
       this.emit('end', result);
       this.emit('exit', result.code);
-      
+
       if (globalShellSettings.errexit && result.code !== 0) {
         const error = new Error(`Command failed with exit code ${result.code}`);
         error.code = result.code;
@@ -978,7 +979,7 @@ class ProcessRunner extends StreamEmitter {
         error.result = result;
         throw error;
       }
-      
+
       return result;
     } catch (error) {
       const result = {
@@ -987,76 +988,75 @@ class ProcessRunner extends StreamEmitter {
         stderr: error.stderr ?? error.message,
         stdin: ''
       };
-      
+
       this.result = result;
       this.finished = true;
-      
+
       if (result.stderr) {
         const buf = Buffer.from(result.stderr);
         if (this.options.mirror) {
           safeWrite(process.stderr, buf);
         }
-        this.emit('stderr', buf);
-        this.emit('data', { type: 'stderr', data: buf });
+        this._emitProcessedData('stderr', buf);
       }
-      
+
       this.emit('end', result);
       this.emit('exit', result.code);
-      
+
       if (globalShellSettings.errexit) {
         throw error;
       }
-      
+
       return result;
     }
   }
 
   async _runStreamingPipelineBun(commands) {
-    trace('ProcessRunner', () => `_runStreamingPipelineBun ENTER | ${JSON.stringify({ 
-      commandsCount: commands.length 
+    trace('ProcessRunner', () => `_runStreamingPipelineBun ENTER | ${JSON.stringify({
+      commandsCount: commands.length
     }, null, 2)}`);
-    
+
     // For true streaming, we need to handle virtual and real commands differently
-      
+
     // First, analyze the pipeline to identify virtual vs real commands
     const pipelineInfo = commands.map(command => {
       const { cmd, args } = command;
       const isVirtual = virtualCommandsEnabled && virtualCommands.has(cmd);
       return { ...command, isVirtual };
     });
-    
-    trace('ProcessRunner', () => `Pipeline analysis | ${JSON.stringify({ 
+
+    trace('ProcessRunner', () => `Pipeline analysis | ${JSON.stringify({
       virtualCount: pipelineInfo.filter(p => p.isVirtual).length,
-      realCount: pipelineInfo.filter(p => !p.isVirtual).length 
+      realCount: pipelineInfo.filter(p => !p.isVirtual).length
     }, null, 2)}`);
-    
+
     // If pipeline contains virtual commands, use advanced streaming
     if (pipelineInfo.some(info => info.isVirtual)) {
       trace('ProcessRunner', () => `BRANCH: _runStreamingPipelineBun => MIXED_PIPELINE | ${JSON.stringify({}, null, 2)}`);
       return this._runMixedStreamingPipeline(commands);
     }
-    
+
     // For pipelines with commands that buffer (like jq), use tee streaming
-    const needsStreamingWorkaround = commands.some(c => 
+    const needsStreamingWorkaround = commands.some(c =>
       c.cmd === 'jq' || c.cmd === 'grep' || c.cmd === 'sed' || c.cmd === 'cat' || c.cmd === 'awk'
     );
     if (needsStreamingWorkaround) {
-      trace('ProcessRunner', () => `BRANCH: _runStreamingPipelineBun => TEE_STREAMING | ${JSON.stringify({ 
-        bufferedCommands: commands.filter(c => 
+      trace('ProcessRunner', () => `BRANCH: _runStreamingPipelineBun => TEE_STREAMING | ${JSON.stringify({
+        bufferedCommands: commands.filter(c =>
           ['jq', 'grep', 'sed', 'cat', 'awk'].includes(c.cmd)
         ).map(c => c.cmd)
       }, null, 2)}`);
       return this._runTeeStreamingPipeline(commands);
     }
-    
+
     // All real commands - use native pipe connections
     const processes = [];
     let allStderr = '';
-    
+
     for (let i = 0; i < commands.length; i++) {
       const command = commands[i];
       const { cmd, args } = command;
-      
+
       // Build command string
       const commandParts = [cmd];
       for (const arg of args) {
@@ -1077,12 +1077,12 @@ class ProcessRunner extends StreamEmitter {
         }
       }
       const commandStr = commandParts.join(' ');
-      
+
       // Determine stdin for this process
       let stdin;
       let needsManualStdin = false;
       let stdinData;
-      
+
       if (i === 0) {
         // First command - use provided stdin or pipe
         if (this.options.stdin && typeof this.options.stdin === 'string') {
@@ -1100,17 +1100,17 @@ class ProcessRunner extends StreamEmitter {
         // Connect to previous process stdout
         stdin = processes[i - 1].stdout;
       }
-      
-          // Only use sh -c for complex commands that need shell features
-      const needsShell = commandStr.includes('*') || commandStr.includes('$') || 
-                         commandStr.includes('>') || commandStr.includes('<') ||
-                         commandStr.includes('&&') || commandStr.includes('||') ||
-                         commandStr.includes(';') || commandStr.includes('`');
-      
-      const spawnArgs = needsShell 
+
+      // Only use sh -c for complex commands that need shell features
+      const needsShell = commandStr.includes('*') || commandStr.includes('$') ||
+        commandStr.includes('>') || commandStr.includes('<') ||
+        commandStr.includes('&&') || commandStr.includes('||') ||
+        commandStr.includes(';') || commandStr.includes('`');
+
+      const spawnArgs = needsShell
         ? ['sh', '-c', commandStr]
         : [cmd, ...args.map(a => a.value !== undefined ? a.value : a)];
-      
+
       const proc = Bun.spawn(spawnArgs, {
         cwd: this.options.cwd,
         env: this.options.env,
@@ -1118,12 +1118,12 @@ class ProcessRunner extends StreamEmitter {
         stdout: 'pipe',
         stderr: 'pipe'
       });
-      
+
       // Write stdin data if needed for first process
       if (needsManualStdin && stdinData && proc.stdin) {
         // Use StreamUtils for consistent stdin handling
         const stdinHandler = StreamUtils.setupStdinHandling(proc.stdin, 'Bun process stdin');
-        
+
         (async () => {
           try {
             if (stdinHandler.isWritable()) {
@@ -1137,9 +1137,9 @@ class ProcessRunner extends StreamEmitter {
           }
         })();
       }
-      
+
       processes.push(proc);
-      
+
       // Collect stderr from all processes
       (async () => {
         for await (const chunk of proc.stderr) {
@@ -1150,17 +1150,16 @@ class ProcessRunner extends StreamEmitter {
             if (this.options.mirror) {
               safeWrite(process.stderr, buf);
             }
-            this.emit('stderr', buf);
-            this.emit('data', { type: 'stderr', data: buf });
+            this._emitProcessedData('stderr', buf);
           }
         }
       })();
     }
-    
+
     // Stream output from the last process
     const lastProc = processes[processes.length - 1];
     let finalOutput = '';
-    
+
     // Stream stdout from last process
     for await (const chunk of lastProc.stdout) {
       const buf = Buffer.from(chunk);
@@ -1168,14 +1167,13 @@ class ProcessRunner extends StreamEmitter {
       if (this.options.mirror) {
         safeWrite(process.stdout, buf);
       }
-      this.emit('stdout', buf);
-      this.emit('data', { type: 'stdout', data: buf });
+      this._emitProcessedData('stdout', buf);
     }
-    
+
     // Wait for all processes to complete
     const exitCodes = await Promise.all(processes.map(p => p.exited));
     const lastExitCode = exitCodes[exitCodes.length - 1];
-    
+
     if (globalShellSettings.pipefail) {
       const failedIndex = exitCodes.findIndex(code => code !== 0);
       if (failedIndex !== -1) {
@@ -1184,21 +1182,21 @@ class ProcessRunner extends StreamEmitter {
         throw error;
       }
     }
-    
+
     const result = createResult({
       code: lastExitCode || 0,
       stdout: finalOutput,
       stderr: allStderr,
-      stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin : 
-             this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
+      stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin :
+        this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
     });
-    
+
     this.result = result;
     this.finished = true;
-    
+
     this.emit('end', result);
     this.emit('exit', result.code);
-    
+
     if (globalShellSettings.errexit && result.code !== 0) {
       const error = new Error(`Pipeline failed with exit code ${result.code}`);
       error.code = result.code;
@@ -1207,26 +1205,26 @@ class ProcessRunner extends StreamEmitter {
       error.result = result;
       throw error;
     }
-    
+
     return result;
   }
 
   async _runTeeStreamingPipeline(commands) {
-    trace('ProcessRunner', () => `_runTeeStreamingPipeline ENTER | ${JSON.stringify({ 
-      commandsCount: commands.length 
+    trace('ProcessRunner', () => `_runTeeStreamingPipeline ENTER | ${JSON.stringify({
+      commandsCount: commands.length
     }, null, 2)}`);
-    
+
     // Use tee() to split streams for real-time reading
     // This works around jq and similar commands that buffer when piped
-    
+
     const processes = [];
     let allStderr = '';
     let currentStream = null;
-    
+
     for (let i = 0; i < commands.length; i++) {
       const command = commands[i];
       const { cmd, args } = command;
-      
+
       // Build command string
       const commandParts = [cmd];
       for (const arg of args) {
@@ -1247,12 +1245,12 @@ class ProcessRunner extends StreamEmitter {
         }
       }
       const commandStr = commandParts.join(' ');
-      
+
       // Determine stdin for this process
       let stdin;
       let needsManualStdin = false;
       let stdinData;
-      
+
       if (i === 0) {
         // First command - use provided stdin or ignore
         if (this.options.stdin && typeof this.options.stdin === 'string') {
@@ -1269,16 +1267,16 @@ class ProcessRunner extends StreamEmitter {
       } else {
         stdin = currentStream;
       }
-      
-      const needsShell = commandStr.includes('*') || commandStr.includes('$') || 
-                         commandStr.includes('>') || commandStr.includes('<') ||
-                         commandStr.includes('&&') || commandStr.includes('||') ||
-                         commandStr.includes(';') || commandStr.includes('`');
-      
-      const spawnArgs = needsShell 
+
+      const needsShell = commandStr.includes('*') || commandStr.includes('$') ||
+        commandStr.includes('>') || commandStr.includes('<') ||
+        commandStr.includes('&&') || commandStr.includes('||') ||
+        commandStr.includes(';') || commandStr.includes('`');
+
+      const spawnArgs = needsShell
         ? ['sh', '-c', commandStr]
         : [cmd, ...args.map(a => a.value !== undefined ? a.value : a)];
-      
+
       const proc = Bun.spawn(spawnArgs, {
         cwd: this.options.cwd,
         env: this.options.env,
@@ -1286,12 +1284,12 @@ class ProcessRunner extends StreamEmitter {
         stdout: 'pipe',
         stderr: 'pipe'
       });
-      
+
       // Write stdin data if needed for first process
       if (needsManualStdin && stdinData && proc.stdin) {
         // Use StreamUtils for consistent stdin handling
         const stdinHandler = StreamUtils.setupStdinHandling(proc.stdin, 'Node process stdin');
-        
+
         try {
           if (stdinHandler.isWritable()) {
             await proc.stdin.write(stdinData); // Node async write
@@ -1303,14 +1301,14 @@ class ProcessRunner extends StreamEmitter {
           }
         }
       }
-      
+
       processes.push(proc);
-      
+
       // For non-last processes, tee the output so we can both pipe and read
       if (i < commands.length - 1) {
         const [readStream, pipeStream] = proc.stdout.tee();
         currentStream = pipeStream;
-        
+
         // Read from the tee'd stream for real-time updates
         // Always read from the first process for best streaming
         if (i === 0) {
@@ -1321,8 +1319,7 @@ class ProcessRunner extends StreamEmitter {
               if (this.options.mirror) {
                 safeWrite(process.stdout, buf);
               }
-              this.emit('stdout', buf);
-              this.emit('data', { type: 'stdout', data: buf });
+              this._emitProcessedData('stdout', buf);
             }
           })();
         } else {
@@ -1335,7 +1332,7 @@ class ProcessRunner extends StreamEmitter {
       } else {
         currentStream = proc.stdout;
       }
-      
+
       // Collect stderr from all processes
       (async () => {
         for await (const chunk of proc.stderr) {
@@ -1345,20 +1342,19 @@ class ProcessRunner extends StreamEmitter {
             if (this.options.mirror) {
               safeWrite(process.stderr, buf);
             }
-            this.emit('stderr', buf);
-            this.emit('data', { type: 'stderr', data: buf });
+            this._emitProcessedData('stderr', buf);
           }
         }
       })();
     }
-    
+
     // Read final output from the last process
     const lastProc = processes[processes.length - 1];
     let finalOutput = '';
-    
+
     // If we haven't emitted stdout yet (no tee), emit from last process
     const shouldEmitFromLast = commands.length === 1;
-    
+
     for await (const chunk of lastProc.stdout) {
       const buf = Buffer.from(chunk);
       finalOutput += buf.toString();
@@ -1366,15 +1362,14 @@ class ProcessRunner extends StreamEmitter {
         if (this.options.mirror) {
           safeWrite(process.stdout, buf);
         }
-        this.emit('stdout', buf);
-        this.emit('data', { type: 'stdout', data: buf });
+        this._emitProcessedData('stdout', buf);
       }
     }
-    
+
     // Wait for all processes to complete
     const exitCodes = await Promise.all(processes.map(p => p.exited));
     const lastExitCode = exitCodes[exitCodes.length - 1];
-    
+
     if (globalShellSettings.pipefail) {
       const failedIndex = exitCodes.findIndex(code => code !== 0);
       if (failedIndex !== -1) {
@@ -1383,21 +1378,21 @@ class ProcessRunner extends StreamEmitter {
         throw error;
       }
     }
-    
+
     const result = createResult({
       code: lastExitCode || 0,
       stdout: finalOutput,
       stderr: allStderr,
-      stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin : 
-             this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
+      stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin :
+        this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
     });
-    
+
     this.result = result;
     this.finished = true;
-    
+
     this.emit('end', result);
     this.emit('exit', result.code);
-    
+
     if (globalShellSettings.errexit && result.code !== 0) {
       const error = new Error(`Pipeline failed with exit code ${result.code}`);
       error.code = result.code;
@@ -1406,27 +1401,27 @@ class ProcessRunner extends StreamEmitter {
       error.result = result;
       throw error;
     }
-    
+
     return result;
   }
 
 
   async _runMixedStreamingPipeline(commands) {
-    trace('ProcessRunner', () => `_runMixedStreamingPipeline ENTER | ${JSON.stringify({ 
-      commandsCount: commands.length 
+    trace('ProcessRunner', () => `_runMixedStreamingPipeline ENTER | ${JSON.stringify({
+      commandsCount: commands.length
     }, null, 2)}`);
-    
+
     // Each stage reads from previous stage's output stream
-    
+
     let currentInputStream = null;
     let finalOutput = '';
     let allStderr = '';
-    
+
     if (this.options.stdin) {
-      const inputData = typeof this.options.stdin === 'string' 
-        ? this.options.stdin 
+      const inputData = typeof this.options.stdin === 'string'
+        ? this.options.stdin
         : this.options.stdin.toString('utf8');
-      
+
       currentInputStream = new ReadableStream({
         start(controller) {
           controller.enqueue(new TextEncoder().encode(inputData));
@@ -1434,20 +1429,20 @@ class ProcessRunner extends StreamEmitter {
         }
       });
     }
-    
+
     for (let i = 0; i < commands.length; i++) {
       const command = commands[i];
       const { cmd, args } = command;
       const isLastCommand = i === commands.length - 1;
-      
+
       if (virtualCommandsEnabled && virtualCommands.has(cmd)) {
-        trace('ProcessRunner', () => `BRANCH: _runMixedStreamingPipeline => VIRTUAL_COMMAND | ${JSON.stringify({ 
+        trace('ProcessRunner', () => `BRANCH: _runMixedStreamingPipeline => VIRTUAL_COMMAND | ${JSON.stringify({
           cmd,
-          commandIndex: i 
+          commandIndex: i
         }, null, 2)}`);
         const handler = virtualCommands.get(cmd);
         const argValues = args.map(arg => arg.value !== undefined ? arg.value : arg);
-        
+
         // Read input from stream if available
         let inputData = '';
         if (currentInputStream) {
@@ -1462,8 +1457,8 @@ class ProcessRunner extends StreamEmitter {
             reader.releaseLock();
           }
         }
-        
-          if (handler.constructor.name === 'AsyncGeneratorFunction') {
+
+        if (handler.constructor.name === 'AsyncGeneratorFunction') {
           const chunks = [];
           const self = this; // Capture this context
           currentInputStream = new ReadableStream({
@@ -1472,7 +1467,7 @@ class ProcessRunner extends StreamEmitter {
               for await (const chunk of handler({ args: argValues, stdin: inputData, ...optionsWithoutStdin })) {
                 const data = Buffer.from(chunk);
                 controller.enqueue(data);
-                
+
                 // Emit for last command
                 if (isLastCommand) {
                   chunks.push(data);
@@ -1484,7 +1479,7 @@ class ProcessRunner extends StreamEmitter {
                 }
               }
               controller.close();
-              
+
               if (isLastCommand) {
                 finalOutput = Buffer.concat(chunks).toString('utf8');
               }
@@ -1495,24 +1490,23 @@ class ProcessRunner extends StreamEmitter {
           const { stdin: _, ...optionsWithoutStdin } = this.options;
           const result = await handler({ args: argValues, stdin: inputData, ...optionsWithoutStdin });
           const outputData = result.stdout || '';
-          
+
           if (isLastCommand) {
             finalOutput = outputData;
             const buf = Buffer.from(outputData);
             if (this.options.mirror) {
               safeWrite(process.stdout, buf);
             }
-            this.emit('stdout', buf);
-            this.emit('data', { type: 'stdout', data: buf });
+            this._emitProcessedData('stdout', buf);
           }
-          
+
           currentInputStream = new ReadableStream({
             start(controller) {
               controller.enqueue(new TextEncoder().encode(outputData));
               controller.close();
             }
           });
-          
+
           if (result.stderr) {
             allStderr += result.stderr;
           }
@@ -1537,7 +1531,7 @@ class ProcessRunner extends StreamEmitter {
           }
         }
         const commandStr = commandParts.join(' ');
-        
+
         const proc = Bun.spawn(['sh', '-c', commandStr], {
           cwd: this.options.cwd,
           env: this.options.env,
@@ -1545,12 +1539,12 @@ class ProcessRunner extends StreamEmitter {
           stdout: 'pipe',
           stderr: 'pipe'
         });
-        
+
         // Write input stream to process stdin if needed
         if (currentInputStream && proc.stdin) {
           const reader = currentInputStream.getReader();
           const writer = proc.stdin.getWriter ? proc.stdin.getWriter() : proc.stdin;
-          
+
           (async () => {
             try {
               while (true) {
@@ -1581,9 +1575,9 @@ class ProcessRunner extends StreamEmitter {
             }
           })();
         }
-        
+
         currentInputStream = proc.stdout;
-        
+
         (async () => {
           for await (const chunk of proc.stderr) {
             const buf = Buffer.from(chunk);
@@ -1592,12 +1586,11 @@ class ProcessRunner extends StreamEmitter {
               if (this.options.mirror) {
                 safeWrite(process.stderr, buf);
               }
-              this.emit('stderr', buf);
-              this.emit('data', { type: 'stderr', data: buf });
+              this._emitProcessedData('stderr', buf);
             }
           }
         })();
-        
+
         // For last command, stream output
         if (isLastCommand) {
           const chunks = [];
@@ -1607,41 +1600,40 @@ class ProcessRunner extends StreamEmitter {
             if (this.options.mirror) {
               safeWrite(process.stdout, buf);
             }
-            this.emit('stdout', buf);
-            this.emit('data', { type: 'stdout', data: buf });
+            this._emitProcessedData('stdout', buf);
           }
           finalOutput = Buffer.concat(chunks).toString('utf8');
           await proc.exited;
         }
       }
     }
-    
+
     const result = createResult({
       code: 0, // TODO: Track exit codes properly
       stdout: finalOutput,
       stderr: allStderr,
-      stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin : 
-             this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
+      stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin :
+        this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
     });
-    
+
     this.result = result;
     this.finished = true;
-    
+
     this.emit('end', result);
     this.emit('exit', result.code);
-    
+
     return result;
   }
 
   async _runPipelineNonStreaming(commands) {
-    trace('ProcessRunner', () => `_runPipelineNonStreaming ENTER | ${JSON.stringify({ 
-      commandsCount: commands.length 
+    trace('ProcessRunner', () => `_runPipelineNonStreaming ENTER | ${JSON.stringify({
+      commandsCount: commands.length
     }, null, 2)}`);
-    
+
     let currentOutput = '';
     let currentInput = '';
-    
-      if (this.options.stdin && typeof this.options.stdin === 'string') {
+
+    if (this.options.stdin && typeof this.options.stdin === 'string') {
       currentInput = this.options.stdin;
     } else if (this.options.stdin && Buffer.isBuffer(this.options.stdin)) {
       currentInput = this.options.stdin.toString('utf8');
@@ -1651,20 +1643,20 @@ class ProcessRunner extends StreamEmitter {
     for (let i = 0; i < commands.length; i++) {
       const command = commands[i];
       const { cmd, args } = command;
-      
+
       if (virtualCommandsEnabled && virtualCommands.has(cmd)) {
-        trace('ProcessRunner', () => `BRANCH: _runPipelineNonStreaming => VIRTUAL_COMMAND | ${JSON.stringify({ 
+        trace('ProcessRunner', () => `BRANCH: _runPipelineNonStreaming => VIRTUAL_COMMAND | ${JSON.stringify({
           cmd,
-          argsCount: args.length 
+          argsCount: args.length
         }, null, 2)}`);
-        
+
         // Run virtual command with current input
         const handler = virtualCommands.get(cmd);
-        
+
         try {
           // Extract actual values for virtual command
           const argValues = args.map(arg => arg.value !== undefined ? arg.value : arg);
-          
+
           // Shell tracing for virtual commands
           if (globalShellSettings.xtrace) {
             console.log(`+ ${cmd} ${argValues.join(' ')}`);
@@ -1674,8 +1666,8 @@ class ProcessRunner extends StreamEmitter {
           }
 
           let result;
-          
-              if (handler.constructor.name === 'AsyncGeneratorFunction') {
+
+          if (handler.constructor.name === 'AsyncGeneratorFunction') {
             trace('ProcessRunner', () => `BRANCH: _runPipelineNonStreaming => ASYNC_GENERATOR | ${JSON.stringify({ cmd }, null, 2)}`);
             const chunks = [];
             for await (const chunk of handler({ args: argValues, stdin: currentInput, ...this.options })) {
@@ -1698,49 +1690,47 @@ class ProcessRunner extends StreamEmitter {
               ...result
             };
           }
-          
+
           // If this isn't the last command, pass stdout as stdin to next command
           if (i < commands.length - 1) {
             currentInput = result.stdout;
           } else {
             // This is the last command - emit output and store final result
             currentOutput = result.stdout;
-            
+
             // Mirror and emit output for final command
             if (result.stdout) {
               const buf = Buffer.from(result.stdout);
               if (this.options.mirror) {
                 safeWrite(process.stdout, buf);
               }
-              this.emit('stdout', buf);
-              this.emit('data', { type: 'stdout', data: buf });
+              this._emitProcessedData('stdout', buf);
             }
-            
+
             if (result.stderr) {
               const buf = Buffer.from(result.stderr);
               if (this.options.mirror) {
                 safeWrite(process.stderr, buf);
               }
-              this.emit('stderr', buf);
-              this.emit('data', { type: 'stderr', data: buf });
+              this._emitProcessedData('stderr', buf);
             }
-            
+
             const finalResult = createResult({
               code: result.code,
               stdout: currentOutput,
               stderr: result.stderr,
-              stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin : 
-                     this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
+              stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin :
+                this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
             });
-            
+
             this.result = finalResult;
             this.finished = true;
-            
+
             // Emit completion events
             this.emit('end', finalResult);
             this.emit('exit', finalResult.code);
-            
-                  if (globalShellSettings.errexit && finalResult.code !== 0) {
+
+            if (globalShellSettings.errexit && finalResult.code !== 0) {
               const error = new Error(`Pipeline failed with exit code ${finalResult.code}`);
               error.code = finalResult.code;
               error.stdout = finalResult.stdout;
@@ -1748,10 +1738,10 @@ class ProcessRunner extends StreamEmitter {
               error.result = finalResult;
               throw error;
             }
-            
+
             return finalResult;
           }
-          
+
           if (globalShellSettings.errexit && result.code !== 0) {
             const error = new Error(`Pipeline command failed with exit code ${result.code}`);
             error.code = result.code;
@@ -1765,29 +1755,28 @@ class ProcessRunner extends StreamEmitter {
             code: error.code ?? 1,
             stdout: currentOutput,
             stderr: error.stderr ?? error.message,
-            stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin : 
-                   this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
+            stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin :
+              this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
           });
-          
+
           this.result = result;
           this.finished = true;
-          
+
           if (result.stderr) {
             const buf = Buffer.from(result.stderr);
             if (this.options.mirror) {
               safeWrite(process.stderr, buf);
             }
-            this.emit('stderr', buf);
-            this.emit('data', { type: 'stderr', data: buf });
+            this._emitProcessedData('stderr', buf);
           }
-          
+
           this.emit('end', result);
           this.emit('exit', result.code);
-          
+
           if (globalShellSettings.errexit) {
             throw error;
           }
-          
+
           return result;
         }
       } else {
@@ -1815,7 +1804,7 @@ class ProcessRunner extends StreamEmitter {
             }
           }
           const commandStr = commandParts.join(' ');
-          
+
           // Shell tracing for system commands
           if (globalShellSettings.xtrace) {
             console.log(`+ ${commandStr}`);
@@ -1823,19 +1812,19 @@ class ProcessRunner extends StreamEmitter {
           if (globalShellSettings.verbose) {
             console.log(commandStr);
           }
-          
+
           const spawnNodeAsync = async (argv, stdin, isLastCommand = false) => {
-            
+
             return new Promise((resolve, reject) => {
               const proc = cp.spawn(argv[0], argv.slice(1), {
                 cwd: this.options.cwd,
                 env: this.options.env,
                 stdio: ['pipe', 'pipe', 'pipe']
               });
-              
+
               let stdout = '';
               let stderr = '';
-              
+
               proc.stdout.on('data', (chunk) => {
                 stdout += chunk.toString();
                 // If this is the last command, emit streaming data
@@ -1843,11 +1832,10 @@ class ProcessRunner extends StreamEmitter {
                   if (this.options.mirror) {
                     safeWrite(process.stdout, chunk);
                   }
-                  this.emit('stdout', chunk);
-                  this.emit('data', { type: 'stdout', data: chunk });
+                  this._emitProcessedData('stdout', chunk);
                 }
               });
-              
+
               proc.stderr.on('data', (chunk) => {
                 stderr += chunk.toString();
                 // If this is the last command, emit streaming data
@@ -1855,11 +1843,10 @@ class ProcessRunner extends StreamEmitter {
                   if (this.options.mirror) {
                     safeWrite(process.stderr, chunk);
                   }
-                  this.emit('stderr', chunk);
-                  this.emit('data', { type: 'stderr', data: chunk });
+                  this._emitProcessedData('stderr', chunk);
                 }
               });
-              
+
               proc.on('close', (code) => {
                 resolve({
                   status: code,
@@ -1867,43 +1854,43 @@ class ProcessRunner extends StreamEmitter {
                   stderr
                 });
               });
-              
+
               proc.on('error', reject);
-              
+
               // Use StreamUtils for comprehensive stdin handling
               if (proc.stdin) {
                 StreamUtils.addStdinErrorHandler(proc.stdin, 'spawnNodeAsync stdin', reject);
               }
-              
+
               if (stdin) {
-                trace('ProcessRunner', () => `Attempting to write stdin to spawnNodeAsync | ${JSON.stringify({ 
+                trace('ProcessRunner', () => `Attempting to write stdin to spawnNodeAsync | ${JSON.stringify({
                   hasStdin: !!proc.stdin,
                   writable: proc.stdin?.writable,
                   destroyed: proc.stdin?.destroyed,
                   closed: proc.stdin?.closed,
                   stdinLength: stdin.length
                 }, null, 2)}`);
-                
+
                 StreamUtils.safeStreamWrite(proc.stdin, stdin, 'spawnNodeAsync stdin');
               }
-              
+
               // Safely end the stdin stream
               StreamUtils.safeStreamEnd(proc.stdin, 'spawnNodeAsync stdin');
             });
           };
-          
+
           // Execute using shell to handle complex commands
           const argv = ['sh', '-c', commandStr];
           const isLastCommand = (i === commands.length - 1);
           const proc = await spawnNodeAsync(argv, currentInput, isLastCommand);
-          
+
           let result = {
             code: proc.status || 0,
             stdout: proc.stdout || '',
             stderr: proc.stderr || '',
             stdin: currentInput
           };
-          
+
           if (globalShellSettings.pipefail && result.code !== 0) {
             const error = new Error(`Pipeline command '${commandStr}' failed with exit code ${result.code}`);
             error.code = result.code;
@@ -1911,7 +1898,7 @@ class ProcessRunner extends StreamEmitter {
             error.stderr = result.stderr;
             throw error;
           }
-          
+
           // If this isn't the last command, pass stdout as stdin to next command
           if (i < commands.length - 1) {
             currentInput = result.stdout;
@@ -1923,7 +1910,7 @@ class ProcessRunner extends StreamEmitter {
           } else {
             // This is the last command - store final result (streaming already handled during execution)
             currentOutput = result.stdout;
-            
+
             // Collect all accumulated stderr
             let allStderr = '';
             if (this.errChunks && this.errChunks.length > 0) {
@@ -1932,23 +1919,23 @@ class ProcessRunner extends StreamEmitter {
             if (result.stderr) {
               allStderr += result.stderr;
             }
-            
+
             const finalResult = createResult({
               code: result.code,
               stdout: currentOutput,
               stderr: allStderr,
-              stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin : 
-                     this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
+              stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin :
+                this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
             });
-            
+
             this.result = finalResult;
             this.finished = true;
-            
+
             // Emit completion events
             this.emit('end', finalResult);
             this.emit('exit', finalResult.code);
-            
-                  if (globalShellSettings.errexit && finalResult.code !== 0) {
+
+            if (globalShellSettings.errexit && finalResult.code !== 0) {
               const error = new Error(`Pipeline failed with exit code ${finalResult.code}`);
               error.code = finalResult.code;
               error.stdout = finalResult.stdout;
@@ -1956,38 +1943,37 @@ class ProcessRunner extends StreamEmitter {
               error.result = finalResult;
               throw error;
             }
-            
+
             return finalResult;
           }
-          
+
         } catch (error) {
           const result = createResult({
             code: error.code ?? 1,
             stdout: currentOutput,
             stderr: error.stderr ?? error.message,
-            stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin : 
-                   this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
+            stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin :
+              this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
           });
-          
+
           this.result = result;
           this.finished = true;
-          
+
           if (result.stderr) {
             const buf = Buffer.from(result.stderr);
             if (this.options.mirror) {
               safeWrite(process.stderr, buf);
             }
-            this.emit('stderr', buf);
-            this.emit('data', { type: 'stderr', data: buf });
+            this._emitProcessedData('stderr', buf);
           }
-          
+
           this.emit('end', result);
           this.emit('exit', result.code);
-          
+
           if (globalShellSettings.errexit) {
             throw error;
           }
-          
+
           return result;
         }
       }
@@ -1995,10 +1981,10 @@ class ProcessRunner extends StreamEmitter {
   }
 
   async _runPipeline(commands) {
-    trace('ProcessRunner', () => `_runPipeline ENTER | ${JSON.stringify({ 
-      commandsCount: commands.length 
+    trace('ProcessRunner', () => `_runPipeline ENTER | ${JSON.stringify({
+      commandsCount: commands.length
     }, null, 2)}`);
-    
+
     if (commands.length === 0) {
       trace('ProcessRunner', () => `BRANCH: _runPipeline => NO_COMMANDS | ${JSON.stringify({}, null, 2)}`);
       return createResult({ code: 1, stdout: '', stderr: 'No commands in pipeline', stdin: '' });
@@ -2010,7 +1996,7 @@ class ProcessRunner extends StreamEmitter {
       trace('ProcessRunner', () => `BRANCH: _runPipeline => BUN_STREAMING | ${JSON.stringify({}, null, 2)}`);
       return this._runStreamingPipelineBun(commands);
     }
-    
+
     // For Node.js, fall back to non-streaming implementation for now
     trace('ProcessRunner', () => `BRANCH: _runPipeline => NODE_NON_STREAMING | ${JSON.stringify({}, null, 2)}`);
     return this._runPipelineNonStreaming(commands);
@@ -2019,29 +2005,29 @@ class ProcessRunner extends StreamEmitter {
   // Run programmatic pipeline (.pipe() method)
   async _runProgrammaticPipeline(source, destination) {
     trace('ProcessRunner', () => `_runProgrammaticPipeline ENTER | ${JSON.stringify({}, null, 2)}`);
-    
+
     try {
       trace('ProcessRunner', () => 'Executing source command');
       const sourceResult = await source;
-      
+
       if (sourceResult.code !== 0) {
-        trace('ProcessRunner', () => `BRANCH: _runProgrammaticPipeline => SOURCE_FAILED | ${JSON.stringify({ 
+        trace('ProcessRunner', () => `BRANCH: _runProgrammaticPipeline => SOURCE_FAILED | ${JSON.stringify({
           code: sourceResult.code,
-          stderr: sourceResult.stderr 
+          stderr: sourceResult.stderr
         }, null, 2)}`);
         return sourceResult;
       }
-      
+
       const destWithStdin = new ProcessRunner(destination.spec, {
         ...destination.options,
         stdin: sourceResult.stdout
       });
-      
+
       const destResult = await destWithStdin;
-      
+
       // Debug: Log what destResult looks like
-      trace('ProcessRunner', () => `destResult debug | ${JSON.stringify({ 
-        code: destResult.code, 
+      trace('ProcessRunner', () => `destResult debug | ${JSON.stringify({
+        code: destResult.code,
         codeType: typeof destResult.code,
         hasCode: 'code' in destResult,
         keys: Object.keys(destResult),
@@ -2055,44 +2041,43 @@ class ProcessRunner extends StreamEmitter {
         stderr: sourceResult.stderr + destResult.stderr,
         stdin: sourceResult.stdin
       });
-      
+
     } catch (error) {
       const result = createResult({
         code: error.code ?? 1,
         stdout: '',
         stderr: error.message || 'Pipeline execution failed',
-        stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin : 
-               this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
+        stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin :
+          this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
       });
-      
+
       this.result = result;
       this.finished = true;
-      
+
       const buf = Buffer.from(result.stderr);
       if (this.options.mirror) {
         safeWrite(process.stderr, buf);
       }
-      this.emit('stderr', buf);
-      this.emit('data', { type: 'stderr', data: buf });
-      
+      this._emitProcessedData('stderr', buf);
+
       this.emit('end', result);
       this.emit('exit', result.code);
-      
+
       return result;
     }
   }
 
   async* stream() {
-    trace('ProcessRunner', () => `stream ENTER | ${JSON.stringify({ 
+    trace('ProcessRunner', () => `stream ENTER | ${JSON.stringify({
       started: this.started,
-      finished: this.finished 
+      finished: this.finished
     }, null, 2)}`);
-    
+
     if (!this.started) {
       trace('ProcessRunner', () => 'Auto-starting async process from stream()');
       this._startAsync(); // Start but don't await
     }
-    
+
     let buffer = [];
     let resolve, reject;
     let ended = false;
@@ -2132,36 +2117,36 @@ class ProcessRunner extends StreamEmitter {
       cleanedUp = true;
       this.off('data', onData);
       this.off('end', onEnd);
-      
+
       // This happens when breaking from a for-await loop
       if (!this.finished) {
         this.kill();
       }
     }
   }
-  
+
   kill() {
-    trace('ProcessRunner', () => `kill ENTER | ${JSON.stringify({ 
+    trace('ProcessRunner', () => `kill ENTER | ${JSON.stringify({
       cancelled: this._cancelled,
       finished: this.finished,
       hasChild: !!this.child,
       hasVirtualGenerator: !!this._virtualGenerator
     }, null, 2)}`);
-    
+
     // Mark as cancelled for virtual commands
     this._cancelled = true;
-    
+
     if (this._cancelResolve) {
       trace('ProcessRunner', () => 'Resolving cancel promise');
       this._cancelResolve();
     }
-    
+
     // Abort any async operations
     if (this._abortController) {
       trace('ProcessRunner', () => 'Aborting controller');
       this._abortController.abort();
     }
-    
+
     // If it's a virtual generator, try to close it
     if (this._virtualGenerator && this._virtualGenerator.return) {
       trace('ProcessRunner', () => 'Closing virtual generator');
@@ -2171,7 +2156,7 @@ class ProcessRunner extends StreamEmitter {
         trace('ProcessRunner', () => `Error closing generator | ${JSON.stringify({ error: err.message }, null, 2)}`);
       }
     }
-    
+
     // Kill child process if it exists
     if (this.child && !this.finished) {
       trace('ProcessRunner', () => `BRANCH: hasChild => killing | ${JSON.stringify({ pid: this.child.pid }, null, 2)}`);
@@ -2193,22 +2178,22 @@ class ProcessRunner extends StreamEmitter {
         console.error('Error killing process:', err.message);
       }
     }
-    
+
     // Mark as finished
     this.finished = true;
-    
-    trace('ProcessRunner', () => `kill EXIT | ${JSON.stringify({ 
+
+    trace('ProcessRunner', () => `kill EXIT | ${JSON.stringify({
       cancelled: this._cancelled,
-      finished: this.finished 
+      finished: this.finished
     }, null, 2)}`);
   }
 
   pipe(destination) {
-    trace('ProcessRunner', () => `pipe ENTER | ${JSON.stringify({ 
+    trace('ProcessRunner', () => `pipe ENTER | ${JSON.stringify({
       hasDestination: !!destination,
-      destinationType: destination?.constructor?.name 
+      destinationType: destination?.constructor?.name
     }, null, 2)}`);
-    
+
     if (destination instanceof ProcessRunner) {
       trace('ProcessRunner', () => `BRANCH: pipe => PROCESS_RUNNER_DEST | ${JSON.stringify({}, null, 2)}`);
       const pipeSpec = {
@@ -2216,23 +2201,23 @@ class ProcessRunner extends StreamEmitter {
         source: this,
         destination: destination
       };
-      
+
       const pipeRunner = new ProcessRunner(pipeSpec, {
         ...this.options,
         capture: destination.options.capture ?? true
       });
-      
+
       trace('ProcessRunner', () => `pipe EXIT | ${JSON.stringify({ mode: 'pipeline' }, null, 2)}`);
       return pipeRunner;
     }
-    
+
     // If destination is a template literal result (from $`command`), use its spec
     if (destination && destination.spec) {
       trace('ProcessRunner', () => `BRANCH: pipe => TEMPLATE_LITERAL_DEST | ${JSON.stringify({}, null, 2)}`);
       const destRunner = new ProcessRunner(destination.spec, destination.options);
       return this.pipe(destRunner);
     }
-    
+
     trace('ProcessRunner', () => `BRANCH: pipe => INVALID_DEST | ${JSON.stringify({}, null, 2)}`);
     throw new Error('pipe() destination must be a ProcessRunner or $`command` result');
   }
@@ -2261,53 +2246,53 @@ class ProcessRunner extends StreamEmitter {
 
   // Internal sync execution
   _startSync() {
-    trace('ProcessRunner', () => `_startSync ENTER | ${JSON.stringify({ 
+    trace('ProcessRunner', () => `_startSync ENTER | ${JSON.stringify({
       started: this.started,
-      spec: this.spec 
+      spec: this.spec
     }, null, 2)}`);
-    
+
     if (this.started) {
       trace('ProcessRunner', () => `BRANCH: _startSync => ALREADY_STARTED | ${JSON.stringify({}, null, 2)}`);
       throw new Error('Command already started - cannot run sync after async start');
     }
-    
+
     this.started = true;
     this._mode = 'sync';
     trace('ProcessRunner', () => `Starting sync execution | ${JSON.stringify({ mode: this._mode }, null, 2)}`);
-    
+
     const { cwd, env, stdin } = this.options;
     const argv = this.spec.mode === 'shell' ? ['sh', '-lc', this.spec.command] : [this.spec.file, ...this.spec.args];
-    
+
     if (globalShellSettings.xtrace) {
       const traceCmd = this.spec.mode === 'shell' ? this.spec.command : argv.join(' ');
       console.log(`+ ${traceCmd}`);
     }
-    
+
     if (globalShellSettings.verbose) {
       const verboseCmd = this.spec.mode === 'shell' ? this.spec.command : argv.join(' ');
       console.log(verboseCmd);
     }
-    
+
     let result;
-    
+
     if (isBun) {
       // Use Bun's synchronous spawn
       const proc = Bun.spawnSync(argv, {
         cwd,
         env,
-        stdin: typeof stdin === 'string' ? Buffer.from(stdin) : 
-               Buffer.isBuffer(stdin) ? stdin : 
-               stdin === 'ignore' ? undefined : undefined,
+        stdin: typeof stdin === 'string' ? Buffer.from(stdin) :
+          Buffer.isBuffer(stdin) ? stdin :
+            stdin === 'ignore' ? undefined : undefined,
         stdout: 'pipe',
         stderr: 'pipe'
       });
-      
+
       result = createResult({
         code: proc.exitCode || 0,
         stdout: proc.stdout?.toString('utf8') || '',
         stderr: proc.stderr?.toString('utf8') || '',
-        stdin: typeof stdin === 'string' ? stdin : 
-               Buffer.isBuffer(stdin) ? stdin.toString('utf8') : ''
+        stdin: typeof stdin === 'string' ? stdin :
+          Buffer.isBuffer(stdin) ? stdin.toString('utf8') : ''
       });
       result.child = proc;
     } else {
@@ -2315,51 +2300,49 @@ class ProcessRunner extends StreamEmitter {
       const proc = cp.spawnSync(argv[0], argv.slice(1), {
         cwd,
         env,
-        input: typeof stdin === 'string' ? stdin : 
-               Buffer.isBuffer(stdin) ? stdin : undefined,
+        input: typeof stdin === 'string' ? stdin :
+          Buffer.isBuffer(stdin) ? stdin : undefined,
         encoding: 'utf8',
         stdio: ['pipe', 'pipe', 'pipe']
       });
-      
+
       result = createResult({
         code: proc.status || 0,
         stdout: proc.stdout || '',
         stderr: proc.stderr || '',
-        stdin: typeof stdin === 'string' ? stdin : 
-               Buffer.isBuffer(stdin) ? stdin.toString('utf8') : ''
+        stdin: typeof stdin === 'string' ? stdin :
+          Buffer.isBuffer(stdin) ? stdin.toString('utf8') : ''
       });
       result.child = proc;
     }
-    
+
     // Mirror output if requested (but always capture for result)
     if (this.options.mirror) {
       if (result.stdout) safeWrite(process.stdout, result.stdout);
       if (result.stderr) safeWrite(process.stderr, result.stderr);
     }
-    
+
     // Store chunks for events (batched after completion)
     this.outChunks = result.stdout ? [Buffer.from(result.stdout)] : [];
     this.errChunks = result.stderr ? [Buffer.from(result.stderr)] : [];
-    
+
     this.result = result;
     this.finished = true;
-    
+
     // Emit batched events after completion
     if (result.stdout) {
       const stdoutBuf = Buffer.from(result.stdout);
-      this.emit('stdout', stdoutBuf);
-      this.emit('data', { type: 'stdout', data: stdoutBuf });
+      this._emitProcessedData('stdout', stdoutBuf);
     }
-    
+
     if (result.stderr) {
       const stderrBuf = Buffer.from(result.stderr);
-      this.emit('stderr', stderrBuf);
-      this.emit('data', { type: 'stderr', data: stderrBuf });
+      this._emitProcessedData('stderr', stderrBuf);
     }
-    
+
     this.emit('end', result);
     this.emit('exit', result.code);
-    
+
     if (globalShellSettings.errexit && result.code !== 0) {
       const error = new Error(`Command failed with exit code ${result.code}`);
       error.code = result.code;
@@ -2368,7 +2351,7 @@ class ProcessRunner extends StreamEmitter {
       error.result = result;
       throw error;
     }
-    
+
     return result;
   }
 
@@ -2388,77 +2371,77 @@ class ProcessRunner extends StreamEmitter {
 
 // Public APIs
 async function sh(commandString, options = {}) {
-  trace('API', () => `sh ENTER | ${JSON.stringify({ 
+  trace('API', () => `sh ENTER | ${JSON.stringify({
     command: commandString,
-    options 
+    options
   }, null, 2)}`);
-  
+
   const runner = new ProcessRunner({ mode: 'shell', command: commandString }, options);
   const result = await runner._startAsync();
-  
+
   trace('API', () => `sh EXIT | ${JSON.stringify({ code: result.code }, null, 2)}`);
   return result;
 }
 
 async function exec(file, args = [], options = {}) {
-  trace('API', () => `exec ENTER | ${JSON.stringify({ 
+  trace('API', () => `exec ENTER | ${JSON.stringify({
     file,
     argsCount: args.length,
-    options 
+    options
   }, null, 2)}`);
-  
+
   const runner = new ProcessRunner({ mode: 'exec', file, args }, options);
   const result = await runner._startAsync();
-  
+
   trace('API', () => `exec EXIT | ${JSON.stringify({ code: result.code }, null, 2)}`);
   return result;
 }
 
 async function run(commandOrTokens, options = {}) {
-  trace('API', () => `run ENTER | ${JSON.stringify({ 
+  trace('API', () => `run ENTER | ${JSON.stringify({
     type: typeof commandOrTokens,
-    options 
+    options
   }, null, 2)}`);
-  
+
   if (typeof commandOrTokens === 'string') {
     trace('API', () => `BRANCH: run => STRING_COMMAND | ${JSON.stringify({ command: commandOrTokens }, null, 2)}`);
     return sh(commandOrTokens, { ...options, mirror: false, capture: true });
   }
-  
+
   const [file, ...args] = commandOrTokens;
   trace('API', () => `BRANCH: run => TOKEN_ARRAY | ${JSON.stringify({ file, argsCount: args.length }, null, 2)}`);
   return exec(file, args, { ...options, mirror: false, capture: true });
 }
 
 function $tagged(strings, ...values) {
-  trace('API', () => `$tagged ENTER | ${JSON.stringify({ 
+  trace('API', () => `$tagged ENTER | ${JSON.stringify({
     stringsLength: strings.length,
-    valuesLength: values.length 
+    valuesLength: values.length
   }, null, 2)}`);
-  
+
   const cmd = buildShellCommand(strings, values);
   const runner = new ProcessRunner({ mode: 'shell', command: cmd }, { mirror: true, capture: true });
-  
+
   trace('API', () => `$tagged EXIT | ${JSON.stringify({ command: cmd }, null, 2)}`);
   return runner;
 }
 
 function create(defaultOptions = {}) {
   trace('API', () => `create ENTER | ${JSON.stringify({ defaultOptions }, null, 2)}`);
-  
+
   const tagged = (strings, ...values) => {
-    trace('API', () => `create.tagged ENTER | ${JSON.stringify({ 
+    trace('API', () => `create.tagged ENTER | ${JSON.stringify({
       stringsLength: strings.length,
-      valuesLength: values.length 
+      valuesLength: values.length
     }, null, 2)}`);
-    
+
     const cmd = buildShellCommand(strings, values);
     const runner = new ProcessRunner({ mode: 'shell', command: cmd }, { mirror: true, capture: true, ...defaultOptions });
-    
+
     trace('API', () => `create.tagged EXIT | ${JSON.stringify({ command: cmd }, null, 2)}`);
     return runner;
   };
-  
+
   trace('API', () => `create EXIT | ${JSON.stringify({}, null, 2)}`);
   return tagged;
 }
@@ -2472,7 +2455,7 @@ function set(option) {
     'e': 'errexit',     // set -e: exit on error
     'errexit': 'errexit',
     'v': 'verbose',     // set -v: verbose
-    'verbose': 'verbose', 
+    'verbose': 'verbose',
     'x': 'xtrace',      // set -x: trace execution
     'xtrace': 'xtrace',
     'u': 'nounset',     // set -u: error on unset vars
@@ -2480,7 +2463,7 @@ function set(option) {
     'o pipefail': 'pipefail',  // set -o pipefail
     'pipefail': 'pipefail'
   };
-  
+
   if (mapping[option]) {
     globalShellSettings[mapping[option]] = true;
     if (globalShellSettings.verbose) {
@@ -2494,7 +2477,7 @@ function unset(option) {
   const mapping = {
     'e': 'errexit',
     'errexit': 'errexit',
-    'v': 'verbose', 
+    'v': 'verbose',
     'verbose': 'verbose',
     'x': 'xtrace',
     'xtrace': 'xtrace',
@@ -2503,7 +2486,7 @@ function unset(option) {
     'o pipefail': 'pipefail',
     'pipefail': 'pipefail'
   };
-  
+
   if (mapping[option]) {
     globalShellSettings[mapping[option]] = false;
     if (globalShellSettings.verbose) {
@@ -2518,10 +2501,10 @@ const shell = {
   set,
   unset,
   settings: () => ({ ...globalShellSettings }),
-  
+
   // Bash-like shortcuts
   errexit: (enable = true) => enable ? set('e') : unset('e'),
-  verbose: (enable = true) => enable ? set('v') : unset('v'), 
+  verbose: (enable = true) => enable ? set('v') : unset('v'),
   xtrace: (enable = true) => enable ? set('x') : unset('x'),
   pipefail: (enable = true) => enable ? set('o pipefail') : unset('o pipefail'),
   nounset: (enable = true) => enable ? set('u') : unset('u'),
@@ -2562,7 +2545,7 @@ function registerBuiltins() {
   register('cd', async ({ args }) => {
     const target = args[0] || process.env.HOME || process.env.USERPROFILE || '/';
     trace('VirtualCommand', () => `cd: changing directory | ${JSON.stringify({ target }, null, 2)}`);
-    
+
     try {
       process.chdir(target);
       const newDir = process.cwd();
@@ -2585,7 +2568,7 @@ function registerBuiltins() {
   // echo - print arguments
   register('echo', async ({ args }) => {
     trace('VirtualCommand', () => `echo: processing | ${JSON.stringify({ argsCount: args.length }, null, 2)}`);
-    
+
     let output = args.join(' ');
     if (args.includes('-n')) {
       // Don't add newline
@@ -2601,12 +2584,12 @@ function registerBuiltins() {
   register('sleep', async ({ args }) => {
     const seconds = parseFloat(args[0] || 0);
     trace('VirtualCommand', () => `sleep: starting | ${JSON.stringify({ seconds }, null, 2)}`);
-    
+
     if (isNaN(seconds) || seconds < 0) {
       trace('VirtualCommand', () => `sleep: invalid interval | ${JSON.stringify({ input: args[0] }, null, 2)}`);
       return { stderr: 'sleep: invalid time interval', code: 1 };
     }
-    
+
     await new Promise(resolve => setTimeout(resolve, seconds * 1000));
     trace('VirtualCommand', () => `sleep: completed | ${JSON.stringify({ seconds }, null, 2)}`);
     return { stdout: '', code: 0 };
@@ -2626,16 +2609,16 @@ function registerBuiltins() {
   register('which', async ({ args }) => {
     const argError = VirtualUtils.validateArgs(args, 1, 'which');
     if (argError) return argError;
-    
+
     const cmd = args[0];
-    
+
     if (virtualCommands.has(cmd)) {
       return VirtualUtils.success(`${cmd}: shell builtin\n`);
     }
-    
+
     const paths = (process.env.PATH || '').split(process.platform === 'win32' ? ';' : ':');
     const extensions = process.platform === 'win32' ? ['', '.exe', '.cmd', '.bat'] : [''];
-    
+
     for (const path of paths) {
       for (const ext of extensions) {
         const fullPath = path.join(path, cmd + ext);
@@ -2643,10 +2626,10 @@ function registerBuiltins() {
           if (fs.statSync(fullPath).isFile()) {
             return VirtualUtils.success(fullPath);
           }
-        } catch {}
+        } catch { }
       }
     }
-    
+
     return VirtualUtils.error(`which: no ${cmd} in PATH`);
   });
 
@@ -2670,7 +2653,7 @@ function registerBuiltins() {
         .join('\n') + '\n';
       return { stdout: output, code: 0 };
     }
-    
+
     // TODO: Support env VAR=value command syntax
     return { stderr: 'env: command execution not yet supported', code: 1 };
   });
@@ -2681,30 +2664,30 @@ function registerBuiltins() {
       // Read from stdin if no files specified
       return { stdout: stdin || '', code: 0 };
     }
-    
+
     try {
       let output = '';
-      
+
       for (const filename of args) {
         if (filename === '-n') continue; // Line numbering (basic support)
-        
+
         try {
           // Resolve path relative to cwd if provided
           const basePath = cwd || process.cwd();
           const fullPath = path.isAbsolute(filename) ? filename : path.join(basePath, filename);
-          
+
           const content = fs.readFileSync(fullPath, 'utf8');
           output += content;
         } catch (error) {
           const errorMsg = error.code === 'ENOENT' ? 'No such file or directory' : error.message;
-          return { 
-            stderr: `cat: ${filename}: ${errorMsg}`, 
+          return {
+            stderr: `cat: ${filename}: ${errorMsg}`,
             stdout: output,
-            code: 1 
+            code: 1
           };
         }
       }
-      
+
       return { stdout: output, code: 0 };
     } catch (error) {
       return { stderr: `cat: ${error.message}`, code: 1 };
@@ -2714,32 +2697,32 @@ function registerBuiltins() {
   // ls - list directory contents
   register('ls', async ({ args, stdin, cwd }) => {
     try {
-      
+
       const flags = args.filter(arg => arg.startsWith('-'));
       const paths = args.filter(arg => !arg.startsWith('-'));
       const isLongFormat = flags.includes('-l');
       const showAll = flags.includes('-a');
       const showAlmostAll = flags.includes('-A');
-      
+
       // Default to current directory if no paths specified
       const targetPaths = paths.length > 0 ? paths : ['.'];
-      
+
       let output = '';
-      
+
       for (const targetPath of targetPaths) {
         // Resolve path relative to cwd if provided
         const basePath = cwd || process.cwd();
         const fullPath = path.isAbsolute(targetPath) ? targetPath : path.join(basePath, targetPath);
-        
+
         try {
           const stat = fs.statSync(fullPath);
-          
+
           if (stat.isFile()) {
             // Just show the file name if it's a file
             output += path.basename(targetPath) + '\n';
           } else if (stat.isDirectory()) {
             const entries = fs.readdirSync(fullPath);
-            
+
             // Filter hidden files unless -a or -A is specified
             let filteredEntries = entries;
             if (!showAll && !showAlmostAll) {
@@ -2747,7 +2730,7 @@ function registerBuiltins() {
             } else if (showAlmostAll) {
               filteredEntries = entries.filter(entry => entry !== '.' && entry !== '..');
             }
-            
+
             if (isLongFormat) {
               for (const entry of filteredEntries) {
                 const entryPath = path.join(fullPath, entry);
@@ -2767,13 +2750,13 @@ function registerBuiltins() {
             }
           }
         } catch (error) {
-          return { 
-            stderr: `ls: cannot access '${targetPath}': ${error.message}`, 
-            code: 2 
+          return {
+            stderr: `ls: cannot access '${targetPath}': ${error.message}`,
+            code: 2
           };
         }
       }
-      
+
       return { stdout: output, code: 0 };
     } catch (error) {
       return { stderr: `ls: ${error.message}`, code: 1 };
@@ -2783,31 +2766,31 @@ function registerBuiltins() {
   register('mkdir', async ({ args, stdin, cwd }) => {
     const argError = VirtualUtils.validateArgs(args, 1, 'mkdir');
     if (argError) return argError;
-    
+
     try {
-      
+
       const flags = args.filter(arg => arg.startsWith('-'));
       const dirs = args.filter(arg => !arg.startsWith('-'));
       const recursive = flags.includes('-p');
-      
+
       for (const dir of dirs) {
         try {
           const basePath = cwd || process.cwd();
           const fullPath = path.isAbsolute(dir) ? dir : path.join(basePath, dir);
-          
+
           if (recursive) {
             fs.mkdirSync(fullPath, { recursive: true });
           } else {
             fs.mkdirSync(fullPath);
           }
         } catch (error) {
-          return { 
-            stderr: `mkdir: cannot create directory '${dir}': ${error.message}`, 
-            code: 1 
+          return {
+            stderr: `mkdir: cannot create directory '${dir}': ${error.message}`,
+            code: 1
           };
         }
       }
-      
+
       return { stdout: '', code: 0 };
     } catch (error) {
       return { stderr: `mkdir: ${error.message}`, code: 1 };
@@ -2818,26 +2801,26 @@ function registerBuiltins() {
   register('rm', async ({ args, stdin, cwd }) => {
     const argError = VirtualUtils.validateArgs(args, 1, 'rm');
     if (argError) return argError;
-    
+
     try {
-      
+
       const flags = args.filter(arg => arg.startsWith('-'));
       const targets = args.filter(arg => !arg.startsWith('-'));
       const recursive = flags.includes('-r') || flags.includes('-R');
       const force = flags.includes('-f');
-      
+
       for (const target of targets) {
         try {
           const basePath = cwd || process.cwd();
           const fullPath = path.isAbsolute(target) ? target : path.join(basePath, target);
-          
+
           const stat = fs.statSync(fullPath);
-          
+
           if (stat.isDirectory()) {
             if (!recursive) {
-              return { 
-                stderr: `rm: cannot remove '${target}': Is a directory`, 
-                code: 1 
+              return {
+                stderr: `rm: cannot remove '${target}': Is a directory`,
+                code: 1
               };
             }
             fs.rmSync(fullPath, { recursive: true, force });
@@ -2846,14 +2829,14 @@ function registerBuiltins() {
           }
         } catch (error) {
           if (!force) {
-            return { 
-              stderr: `rm: cannot remove '${target}': ${error.message}`, 
-              code: 1 
+            return {
+              stderr: `rm: cannot remove '${target}': ${error.message}`,
+              code: 1
             };
           }
         }
       }
-      
+
       return { stdout: '', code: 0 };
     } catch (error) {
       return { stderr: `rm: ${error.message}`, code: 1 };
@@ -2864,17 +2847,17 @@ function registerBuiltins() {
   register('mv', async ({ args, stdin, cwd }) => {
     const argError = VirtualUtils.validateArgs(args, 2, 'mv');
     if (argError) return VirtualUtils.invalidArgumentError('mv', 'missing destination file operand');
-    
+
     try {
-      
+
       const basePath = cwd || process.cwd();
-      
+
       if (args.length === 2) {
         // Simple rename/move
         const [source, dest] = args;
         const sourcePath = path.isAbsolute(source) ? source : path.join(basePath, source);
         let destPath = path.isAbsolute(dest) ? dest : path.join(basePath, dest);
-        
+
         try {
           try {
             const destStat = fs.statSync(destPath);
@@ -2886,12 +2869,12 @@ function registerBuiltins() {
           } catch {
             // Destination doesn't exist, proceed with direct rename
           }
-          
+
           fs.renameSync(sourcePath, destPath);
         } catch (error) {
-          return { 
-            stderr: `mv: cannot move '${source}' to '${dest}': ${error.message}`, 
-            code: 1 
+          return {
+            stderr: `mv: cannot move '${source}' to '${dest}': ${error.message}`,
+            code: 1
           };
         }
       } else {
@@ -2899,22 +2882,22 @@ function registerBuiltins() {
         const sources = args.slice(0, -1);
         const dest = args[args.length - 1];
         const destPath = path.isAbsolute(dest) ? dest : path.join(basePath, dest);
-        
+
         try {
           const destStat = fs.statSync(destPath);
           if (!destStat.isDirectory()) {
-            return { 
-              stderr: `mv: target '${dest}' is not a directory`, 
-              code: 1 
+            return {
+              stderr: `mv: target '${dest}' is not a directory`,
+              code: 1
             };
           }
         } catch {
-          return { 
-            stderr: `mv: cannot access '${dest}': No such file or directory`, 
-            code: 1 
+          return {
+            stderr: `mv: cannot access '${dest}': No such file or directory`,
+            code: 1
           };
         }
-        
+
         for (const source of sources) {
           try {
             const sourcePath = path.isAbsolute(source) ? source : path.join(basePath, source);
@@ -2922,14 +2905,14 @@ function registerBuiltins() {
             const newDestPath = path.join(destPath, fileName);
             fs.renameSync(sourcePath, newDestPath);
           } catch (error) {
-            return { 
-              stderr: `mv: cannot move '${source}' to '${dest}': ${error.message}`, 
-              code: 1 
+            return {
+              stderr: `mv: cannot move '${source}' to '${dest}': ${error.message}`,
+              code: 1
             };
           }
         }
       }
-      
+
       return { stdout: '', code: 0 };
     } catch (error) {
       return { stderr: `mv: ${error.message}`, code: 1 };
@@ -2940,29 +2923,29 @@ function registerBuiltins() {
   register('cp', async ({ args, stdin, cwd }) => {
     const argError = VirtualUtils.validateArgs(args, 2, 'cp');
     if (argError) return VirtualUtils.invalidArgumentError('cp', 'missing destination file operand');
-    
+
     try {
-      
+
       const flags = args.filter(arg => arg.startsWith('-'));
       const paths = args.filter(arg => !arg.startsWith('-'));
       const recursive = flags.includes('-r') || flags.includes('-R');
-      
+
       const basePath = cwd || process.cwd();
-      
+
       if (paths.length === 2) {
         // Simple copy
         const [source, dest] = paths;
         const sourcePath = path.isAbsolute(source) ? source : path.join(basePath, source);
         const destPath = path.isAbsolute(dest) ? dest : path.join(basePath, dest);
-        
+
         try {
           const sourceStat = fs.statSync(sourcePath);
-          
+
           if (sourceStat.isDirectory()) {
             if (!recursive) {
-              return { 
-                stderr: `cp: -r not specified; omitting directory '${source}'`, 
-                code: 1 
+              return {
+                stderr: `cp: -r not specified; omitting directory '${source}'`,
+                code: 1
               };
             }
             fs.cpSync(sourcePath, destPath, { recursive: true });
@@ -2970,9 +2953,9 @@ function registerBuiltins() {
             fs.copyFileSync(sourcePath, destPath);
           }
         } catch (error) {
-          return { 
-            stderr: `cp: cannot copy '${source}' to '${dest}': ${error.message}`, 
-            code: 1 
+          return {
+            stderr: `cp: cannot copy '${source}' to '${dest}': ${error.message}`,
+            code: 1
           };
         }
       } else {
@@ -2980,34 +2963,34 @@ function registerBuiltins() {
         const sources = paths.slice(0, -1);
         const dest = paths[paths.length - 1];
         const destPath = path.isAbsolute(dest) ? dest : path.join(basePath, dest);
-        
+
         try {
           const destStat = fs.statSync(destPath);
           if (!destStat.isDirectory()) {
-            return { 
-              stderr: `cp: target '${dest}' is not a directory`, 
-              code: 1 
+            return {
+              stderr: `cp: target '${dest}' is not a directory`,
+              code: 1
             };
           }
         } catch {
-          return { 
-            stderr: `cp: cannot access '${dest}': No such file or directory`, 
-            code: 1 
+          return {
+            stderr: `cp: cannot access '${dest}': No such file or directory`,
+            code: 1
           };
         }
-        
+
         for (const source of sources) {
           try {
             const sourcePath = path.isAbsolute(source) ? source : path.join(basePath, source);
             const fileName = path.basename(source);
             const newDestPath = path.join(destPath, fileName);
-            
+
             const sourceStat = fs.statSync(sourcePath);
             if (sourceStat.isDirectory()) {
               if (!recursive) {
-                return { 
-                  stderr: `cp: -r not specified; omitting directory '${source}'`, 
-                  code: 1 
+                return {
+                  stderr: `cp: -r not specified; omitting directory '${source}'`,
+                  code: 1
                 };
               }
               fs.cpSync(sourcePath, newDestPath, { recursive: true });
@@ -3015,14 +2998,14 @@ function registerBuiltins() {
               fs.copyFileSync(sourcePath, newDestPath);
             }
           } catch (error) {
-            return { 
-              stderr: `cp: cannot copy '${source}' to '${dest}': ${error.message}`, 
-              code: 1 
+            return {
+              stderr: `cp: cannot copy '${source}' to '${dest}': ${error.message}`,
+              code: 1
             };
           }
         }
       }
-      
+
       return { stdout: '', code: 0 };
     } catch (error) {
       return { stderr: `cp: ${error.message}`, code: 1 };
@@ -3033,15 +3016,15 @@ function registerBuiltins() {
   register('touch', async ({ args, stdin, cwd }) => {
     const argError = VirtualUtils.validateArgs(args, 1, 'touch');
     if (argError) return VirtualUtils.missingOperandError('touch', 'touch: missing file operand');
-    
+
     try {
-      
+
       const basePath = cwd || process.cwd();
-      
+
       for (const file of args) {
         try {
           const fullPath = path.isAbsolute(file) ? file : path.join(basePath, file);
-          
+
           // Try to update timestamps if file exists
           try {
             const now = new Date();
@@ -3050,13 +3033,13 @@ function registerBuiltins() {
             fs.writeFileSync(fullPath, '', { flag: 'w' });
           }
         } catch (error) {
-          return { 
-            stderr: `touch: cannot touch '${file}': ${error.message}`, 
-            code: 1 
+          return {
+            stderr: `touch: cannot touch '${file}': ${error.message}`,
+            code: 1
           };
         }
       }
-      
+
       return { stdout: '', code: 0 };
     } catch (error) {
       return { stderr: `touch: ${error.message}`, code: 1 };
@@ -3067,19 +3050,19 @@ function registerBuiltins() {
   register('basename', async ({ args }) => {
     const argError = VirtualUtils.validateArgs(args, 1, 'basename');
     if (argError) return argError;
-    
+
     try {
-      
+
       const pathname = args[0];
       const suffix = args[1];
-      
+
       let result = path.basename(pathname);
-      
+
       // Remove suffix if provided
       if (suffix && result.endsWith(suffix)) {
         result = result.slice(0, -suffix.length);
       }
-      
+
       return { stdout: result + '\n', code: 0 };
     } catch (error) {
       return { stderr: `basename: ${error.message}`, code: 1 };
@@ -3090,12 +3073,12 @@ function registerBuiltins() {
   register('dirname', async ({ args }) => {
     const argError = VirtualUtils.validateArgs(args, 1, 'dirname');
     if (argError) return argError;
-    
+
     try {
-      
+
       const pathname = args[0];
       const result = path.dirname(pathname);
-      
+
       return { stdout: result + '\n', code: 0 };
     } catch (error) {
       return { stderr: `dirname: ${error.message}`, code: 1 };
@@ -3106,7 +3089,7 @@ function registerBuiltins() {
   register('yes', async function* ({ args, stdin, isCancelled, signal, ...rest }) {
     const output = args.length > 0 ? args.join(' ') : 'y';
     trace('VirtualCommand', () => `yes: starting infinite generator | ${JSON.stringify({ output }, null, 2)}`);
-    
+
     // Generate infinite stream of the output
     while (true) {
       if (isCancelled && isCancelled()) {
@@ -3117,20 +3100,20 @@ function registerBuiltins() {
         trace('VirtualCommand', () => 'yes: cancelled via abort signal');
         return;
       }
-      
+
       yield output + '\n';
-      
+
       try {
         await new Promise((resolve, reject) => {
           const timeout = setTimeout(resolve, 0);
-          
+
           // Listen for abort signal if available
           if (signal) {
             const abortHandler = () => {
               clearTimeout(timeout);
               reject(new Error('Aborted'));
             };
-            
+
             if (signal.aborted) {
               abortHandler();
             } else {
@@ -3149,10 +3132,10 @@ function registerBuiltins() {
   register('seq', async ({ args }) => {
     const argError = VirtualUtils.validateArgs(args, 1, 'seq');
     if (argError) return argError;
-    
+
     try {
       let start, step, end;
-      
+
       if (args.length === 1) {
         start = 1;
         step = 1;
@@ -3168,11 +3151,11 @@ function registerBuiltins() {
       } else {
         return { stderr: 'seq: too many operands', code: 1 };
       }
-      
+
       if (isNaN(start) || isNaN(step) || isNaN(end)) {
         return { stderr: 'seq: invalid number', code: 1 };
       }
-      
+
       let output = '';
       if (step > 0) {
         for (let i = start; i <= end; i += step) {
@@ -3185,7 +3168,7 @@ function registerBuiltins() {
       } else {
         return { stderr: 'seq: invalid increment', code: 1 };
       }
-      
+
       return { stdout: output, code: 0 };
     } catch (error) {
       return { stderr: `seq: ${error.message}`, code: 1 };
@@ -3197,10 +3180,10 @@ function registerBuiltins() {
     if (args.length === 0) {
       return { stdout: '', code: 1 };
     }
-    
+
     // Very basic test implementation
     const arg = args[0];
-    
+
     try {
       if (arg === '-d' && args[1]) {
         // Test if directory
@@ -3218,13 +3201,89 @@ function registerBuiltins() {
     } catch {
       return { stdout: '', code: 1 };
     }
-    
+
     return { stdout: '', code: 1 };
   });
+}
+
+// ANSI control character utilities
+const AnsiUtils = {
+  stripAnsi(text) {
+    if (typeof text !== 'string') return text;
+    return text.replace(/\x1b\[[0-9;]*[mGKHFJ]/g, '');
+  },
+
+  stripControlChars(text) {
+    if (typeof text !== 'string') return text;
+    return text.replace(/[\x00-\x1F\x7F]/g, '');
+  },
+
+  stripAll(text) {
+    if (typeof text !== 'string') return text;
+    return text.replace(/[\x00-\x1F\x7F]|\x1b\[[0-9;]*[mGKHFJ]/g, '');
+  },
+
+  cleanForProcessing(data) {
+    if (Buffer.isBuffer(data)) {
+      return Buffer.from(this.stripAll(data.toString('utf8')));
+    }
+    return this.stripAll(data);
+  }
+};
+
+let globalAnsiConfig = {
+  preserveAnsi: true,
+  preserveControlChars: true
+};
+
+function configureAnsi(options = {}) {
+  globalAnsiConfig = { ...globalAnsiConfig, ...options };
+  return globalAnsiConfig;
+}
+
+function getAnsiConfig() {
+  return { ...globalAnsiConfig };
+}
+
+function processOutput(data, options = {}) {
+  const config = { ...globalAnsiConfig, ...options };
+  if (!config.preserveAnsi && !config.preserveControlChars) {
+    return AnsiUtils.cleanForProcessing(data);
+  } else if (!config.preserveAnsi) {
+    return Buffer.isBuffer(data)
+      ? Buffer.from(AnsiUtils.stripAnsi(data.toString('utf8')))
+      : AnsiUtils.stripAnsi(data);
+  } else if (!config.preserveControlChars) {
+    return Buffer.isBuffer(data)
+      ? Buffer.from(AnsiUtils.stripControlChars(data.toString('utf8')))
+      : AnsiUtils.stripControlChars(data);
+  }
+  return data;
 }
 
 // Initialize built-in commands
 registerBuiltins();
 
-export { $tagged as $, sh, exec, run, quote, create, raw, ProcessRunner, shell, set, unset, register, unregister, listCommands, enableVirtualCommands, disableVirtualCommands };
+export {
+  $tagged as $,
+  sh,
+  exec,
+  run,
+  quote,
+  create,
+  raw,
+  ProcessRunner,
+  shell,
+  set,
+  unset,
+  register,
+  unregister,
+  listCommands,
+  enableVirtualCommands,
+  disableVirtualCommands,
+  AnsiUtils,
+  configureAnsi,
+  getAnsiConfig,
+  processOutput
+};
 export default $tagged;
