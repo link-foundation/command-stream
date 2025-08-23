@@ -51,10 +51,7 @@ class StreamEmitter {
     }
     this.listeners.get(event).push(listener);
     
-    // Auto-start process when event listeners are attached
-    if (this._autoStart && !this.started && !this.promise) {
-      this.promise = this._start();
-    }
+    // No auto-start - explicit start() or await will start the process
     
     return this;
   }
@@ -146,13 +143,42 @@ class ProcessRunner extends StreamEmitter {
     // Promise for awaiting final result
     this.promise = null;
     
-    // Enable auto-start when event listeners are attached
-    this._autoStart = true;
+    // Track the execution mode
+    this._mode = null; // 'async' or 'sync'
   }
 
-  async _start() {
-    if (this.started) return;
+  // Unified start method that can work in both async and sync modes
+  start(options = {}) {
+    const mode = options.mode || 'async';
+    
+    if (mode === 'sync') {
+      return this._startSync();
+    } else {
+      return this._startAsync();
+    }
+  }
+  
+  // Shortcut for sync mode
+  sync() {
+    return this.start({ mode: 'sync' });
+  }
+  
+  // Shortcut for async mode
+  async() {
+    return this.start({ mode: 'async' });
+  }
+  
+  async _startAsync() {
+    if (this.started) return this.promise;
+    if (this.promise) return this.promise;
+    
+    this.promise = this._doStartAsync();
+    return this.promise;
+  }
+  
+  async _doStartAsync() {
     this.started = true;
+    this._mode = 'async';
 
     const { cwd, env, stdin } = this.options;
     
@@ -1532,7 +1558,7 @@ class ProcessRunner extends StreamEmitter {
   // Async iteration support
   async* stream() {
     if (!this.started) {
-      this._start(); // Start but don't await
+      this._startAsync(); // Start but don't await
     }
     
     let buffer = [];
@@ -1604,30 +1630,33 @@ class ProcessRunner extends StreamEmitter {
   // Promise interface (for await)
   then(onFulfilled, onRejected) {
     if (!this.promise) {
-      this.promise = this._start();
+      this.promise = this._startAsync();
     }
     return this.promise.then(onFulfilled, onRejected);
   }
 
   catch(onRejected) {
     if (!this.promise) {
-      this.promise = this._start();
+      this.promise = this._startAsync();
     }
     return this.promise.catch(onRejected);
   }
 
   finally(onFinally) {
     if (!this.promise) {
-      this.promise = this._start();
+      this.promise = this._startAsync();
     }
     return this.promise.finally(onFinally);
   }
 
-  // Synchronous execution
-  sync() {
+  // Internal sync execution
+  _startSync() {
     if (this.started) {
       throw new Error('Command already started - cannot run sync after async start');
     }
+    
+    this.started = true;
+    this._mode = 'sync';
     
     const { cwd, env, stdin } = this.options;
     const argv = this.spec.mode === 'shell' ? ['sh', '-lc', this.spec.command] : [this.spec.file, ...this.spec.args];
@@ -1748,12 +1777,12 @@ class ProcessRunner extends StreamEmitter {
 // Public APIs
 async function sh(commandString, options = {}) {
   const runner = new ProcessRunner({ mode: 'shell', command: commandString }, options);
-  return runner._start();
+  return runner._startAsync();
 }
 
 async function exec(file, args = [], options = {}) {
   const runner = new ProcessRunner({ mode: 'exec', file, args }, options);
-  return runner._start();
+  return runner._startAsync();
 }
 
 async function run(commandOrTokens, options = {}) {

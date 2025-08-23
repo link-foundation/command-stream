@@ -334,7 +334,7 @@ describe('ProcessRunner - Stream Properties', () => {
     const process = $`echo "stream test"`;
     
     // Start the process to initialize streams
-    process._start();
+    process.start();
     
     // Wait a bit for initialization
     await new Promise(resolve => setTimeout(resolve, 10));
@@ -856,7 +856,7 @@ describe('Coverage for Internal Functions', () => {
     );
     
     // Start the process to initialize it
-    const result = await proc._start();
+    const result = await proc.start();
     
     expect(proc.started).toBe(true);
     expect(proc.finished).toBe(true);
