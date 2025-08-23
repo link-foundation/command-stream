@@ -346,8 +346,16 @@ class ProcessRunner extends StreamEmitter {
     const code = await exited;
     await Promise.all([outPump, errPump, stdinPumpPromise]);
 
-    const resultData = {
+    // Debug: Check the raw exit code
+    trace('ProcessRunner', 'Raw exit code from child', { 
       code,
+      codeType: typeof code,
+      childExitCode: this.child?.exitCode,
+      isBun
+    });
+
+    const resultData = {
+      code: code ?? 0,  // Default to 0 if exit code is null/undefined
       stdout: this.options.capture ? Buffer.concat(this.outChunks).toString('utf8') : undefined,
       stderr: this.options.capture ? Buffer.concat(this.errChunks).toString('utf8') : undefined,
       stdin: this.options.capture && this.inChunks ? Buffer.concat(this.inChunks).toString('utf8') : undefined,
@@ -1692,15 +1700,25 @@ class ProcessRunner extends StreamEmitter {
         return sourceResult;
       }
       
-      // Set the destination's stdin to the source's stdout
-      destination.options = {
+      // Create a new ProcessRunner with the correct stdin for the destination
+      const destWithStdin = new ProcessRunner(destination.spec, {
         ...destination.options,
         stdin: sourceResult.stdout
-      };
+      });
       
       // Execute the destination command
-      const destResult = await destination;
+      const destResult = await destWithStdin;
       
+      // Debug: Log what destResult looks like
+      trace('ProcessRunner', 'destResult debug', { 
+        code: destResult.code, 
+        codeType: typeof destResult.code,
+        hasCode: 'code' in destResult,
+        keys: Object.keys(destResult),
+        resultType: typeof destResult,
+        fullResult: JSON.stringify(destResult, null, 2).slice(0, 200)
+      });
+
       // Return the final result with combined information
       return createResult({
         code: destResult.code,
