@@ -537,6 +537,15 @@ class ProcessRunner extends StreamEmitter {
       captureChunks && captureChunks.push(buf);
       if (bunWriter) await bunWriter.write(buf);
       else if (typeof child.stdin.write === 'function') {
+        // Add error handler to prevent unhandled error events
+        if (child.stdin && typeof child.stdin.on === 'function') {
+          child.stdin.on('error', (error) => {
+            if (error.code !== 'EPIPE') {
+              trace('ProcessRunner', 'child stdin buffer error event', { error: error.message, code: error.code });
+            }
+          });
+        }
+        
         // Safe write to handle EPIPE errors
         if (child.stdin && child.stdin.writable && !child.stdin.destroyed && !child.stdin.closed) {
           try {
@@ -953,6 +962,15 @@ class ProcessRunner extends StreamEmitter {
       
       // Write stdin data if needed for first process
       if (needsManualStdin && stdinData && proc.stdin) {
+        // Add error handler for Bun stdin
+        if (proc.stdin && typeof proc.stdin.on === 'function') {
+          proc.stdin.on('error', (error) => {
+            if (error.code !== 'EPIPE') {
+              trace('ProcessRunner', 'Bun stdin error event', { error: error.message, code: error.code });
+            }
+          });
+        }
+        
         (async () => {
           try {
             // Bun's FileSink has write and end methods
@@ -1122,6 +1140,15 @@ class ProcessRunner extends StreamEmitter {
       
       // Write stdin data if needed for first process
       if (needsManualStdin && stdinData && proc.stdin) {
+        // Add error handler for Node stdin
+        if (proc.stdin && typeof proc.stdin.on === 'function') {
+          proc.stdin.on('error', (error) => {
+            if (error.code !== 'EPIPE') {
+              trace('ProcessRunner', 'Node stdin error event', { error: error.message, code: error.code });
+            }
+          });
+        }
+        
         try {
           if (proc.stdin && proc.stdin.writable && !proc.stdin.destroyed && !proc.stdin.closed) {
             await proc.stdin.write(stdinData);
@@ -1729,6 +1756,23 @@ class ProcessRunner extends StreamEmitter {
               });
               
               proc.on('error', reject);
+              
+              // Add error handler to stdin to prevent unhandled error events
+              if (proc.stdin) {
+                proc.stdin.on('error', (error) => {
+                  trace('ProcessRunner', 'stdin error event', { 
+                    error: error.message, 
+                    code: error.code,
+                    isEPIPE: error.code === 'EPIPE'
+                  });
+                  
+                  // Only reject on non-EPIPE errors
+                  if (error.code !== 'EPIPE') {
+                    reject(error);
+                  }
+                  // EPIPE errors are expected when pipe is closed, so we ignore them
+                });
+              }
               
               if (stdin) {
                 // Use safe write to handle potential EPIPE errors
