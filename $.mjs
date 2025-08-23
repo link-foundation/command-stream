@@ -145,6 +145,11 @@ class ProcessRunner extends StreamEmitter {
     
     // Track the execution mode
     this._mode = null; // 'async' or 'sync'
+    
+    // Cancellation support for virtual commands
+    this._cancelled = false;
+    this._virtualGenerator = null;
+    this._abortController = new AbortController();
   }
 
   // Unified start method that can work in both async and sync modes
@@ -440,18 +445,65 @@ class ProcessRunner extends StreamEmitter {
       
       // Check if handler is async generator (streaming)
       if (handler.constructor.name === 'AsyncGeneratorFunction') {
-        // Handle streaming virtual command
+        // Handle streaming virtual command with cancellation support
         const chunks = [];
-        for await (const chunk of handler(argValues, stdinData, this.options)) {
-          const buf = Buffer.from(chunk);
-          chunks.push(buf);
+        
+        // Create options with cancellation check and abort signal
+        const commandOptions = {
+          ...this.options,
+          isCancelled: () => this._cancelled,
+          signal: this._abortController.signal
+        };
+        
+        const generator = handler(argValues, stdinData, commandOptions);
+        this._virtualGenerator = generator;
+        
+        // Create a promise that resolves when cancelled
+        const cancelPromise = new Promise(resolve => {
+          this._cancelResolve = resolve;
+        });
+        
+        try {
+          const iterator = generator[Symbol.asyncIterator]();
+          let done = false;
           
-          if (this.options.mirror) {
-            process.stdout.write(buf);
+          while (!done && !this._cancelled) {
+            // Race between getting next value and cancellation
+            const result = await Promise.race([
+              iterator.next(),
+              cancelPromise.then(() => ({ done: true, cancelled: true }))
+            ]);
+            
+            if (result.cancelled || this._cancelled) {
+              // Cancelled - close the generator
+              if (iterator.return) {
+                await iterator.return();
+              }
+              break;
+            }
+            
+            done = result.done;
+            
+            if (!done) {
+              const chunk = result.value;
+              const buf = Buffer.from(chunk);
+              chunks.push(buf);
+              
+              // Only output if not cancelled
+              if (!this._cancelled) {
+                if (this.options.mirror) {
+                  process.stdout.write(buf);
+                }
+                
+                this.emit('stdout', buf);
+                this.emit('data', { type: 'stdout', data: buf });
+              }
+            }
           }
-          
-          this.emit('stdout', buf);
-          this.emit('data', { type: 'stdout', data: buf });
+        } finally {
+          // Clean up
+          this._virtualGenerator = null;
+          this._cancelResolve = null;
         }
         
         result = {
@@ -1603,14 +1655,37 @@ class ProcessRunner extends StreamEmitter {
       
       // Kill the process if it's still running when iteration is stopped
       // This happens when breaking from a for-await loop
-      if (this.child && !this.finished) {
+      if (!this.finished) {
         this.kill();
       }
     }
   }
   
-  // Kill the running process
+  // Kill the running process or cancel virtual command
   kill() {
+    // Mark as cancelled for virtual commands
+    this._cancelled = true;
+    
+    // Resolve the cancel promise to break the race in virtual command execution
+    if (this._cancelResolve) {
+      this._cancelResolve();
+    }
+    
+    // Abort any async operations
+    if (this._abortController) {
+      this._abortController.abort();
+    }
+    
+    // If it's a virtual generator, try to close it
+    if (this._virtualGenerator && this._virtualGenerator.return) {
+      try {
+        this._virtualGenerator.return();
+      } catch (err) {
+        // Generator might already be closed
+      }
+    }
+    
+    // Kill child process if it exists
     if (this.child && !this.finished) {
       try {
         // Kill the process group to ensure all child processes are terminated
@@ -1628,6 +1703,9 @@ class ProcessRunner extends StreamEmitter {
         console.error('Error killing process:', err.message);
       }
     }
+    
+    // Mark as finished
+    this.finished = true;
   }
 
   // Programmatic piping support
@@ -2494,14 +2572,46 @@ function registerBuiltins() {
   });
 
   // yes - output a string repeatedly
-  register('yes', async function* (args) {
+  register('yes', async function* (args, stdin, options) {
     const output = args.length > 0 ? args.join(' ') : 'y';
     
     // Generate infinite stream of the output
     while (true) {
+      // Check if cancelled via function or abort signal
+      if (options) {
+        if (options.isCancelled && options.isCancelled()) {
+          return;
+        }
+        if (options.signal && options.signal.aborted) {
+          return;
+        }
+      }
+      
       yield output + '\n';
-      // Small delay to prevent overwhelming the system
-      await new Promise(resolve => setTimeout(resolve, 0));
+      
+      // Small delay with abort signal support
+      try {
+        await new Promise((resolve, reject) => {
+          const timeout = setTimeout(resolve, 0);
+          
+          // Listen for abort signal if available
+          if (options && options.signal) {
+            const abortHandler = () => {
+              clearTimeout(timeout);
+              reject(new Error('Aborted'));
+            };
+            
+            if (options.signal.aborted) {
+              abortHandler();
+            } else {
+              options.signal.addEventListener('abort', abortHandler, { once: true });
+            }
+          }
+        });
+      } catch (err) {
+        // Aborted
+        return;
+      }
     }
   });
 
