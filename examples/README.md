@@ -44,6 +44,24 @@ node examples/example-top.mjs
 ```
 - Non-interactive version for demonstration purposes
 
+### **jq-colors-streaming.mjs**
+Demonstrates jq streaming with ANSI color preservation.
+```bash
+node examples/jq-colors-streaming.mjs
+```
+- Shows how to force colors in jq pipelines with `--color-output`
+- Real-time JSON streaming with color support
+- Filtering and transformation examples
+
+### **test-jq-colors.mjs**  
+Comprehensive jq color testing and analysis.
+```bash
+node examples/test-jq-colors.mjs
+```
+- Tests various jq color scenarios
+- Shows raw ANSI byte inspection
+- Demonstrates pipeline color preservation
+
 ## Stream Cleanup Tests
 
 These examples demonstrate how command-stream properly handles cleanup when breaking from async iteration, especially with infinite streams like the `yes` command:

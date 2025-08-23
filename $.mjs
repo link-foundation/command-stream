@@ -1309,26 +1309,12 @@ class ProcessRunner extends StreamEmitter {
         const [readStream, pipeStream] = proc.stdout.tee();
         currentStream = pipeStream;
 
-        // Read from the tee'd stream for real-time updates
-        // Always read from the first process for best streaming
-        if (i === 0) {
-          (async () => {
-            for await (const chunk of readStream) {
-              // Emit from the first process for real-time updates
-              const buf = Buffer.from(chunk);
-              if (this.options.mirror) {
-                safeWrite(process.stdout, buf);
-              }
-              this._emitProcessedData('stdout', buf);
-            }
-          })();
-        } else {
-          (async () => {
-            for await (const chunk of readStream) {
-              // Just consume to keep flowing
-            }
-          })();
-        }
+        // Read from the tee'd stream to keep it flowing
+        (async () => {
+          for await (const chunk of readStream) {
+            // Just consume to keep flowing - don't emit intermediate output
+          }
+        })();
       } else {
         currentStream = proc.stdout;
       }
@@ -1352,18 +1338,14 @@ class ProcessRunner extends StreamEmitter {
     const lastProc = processes[processes.length - 1];
     let finalOutput = '';
 
-    // If we haven't emitted stdout yet (no tee), emit from last process
-    const shouldEmitFromLast = commands.length === 1;
-
+    // Always emit from the last process for proper pipeline output
     for await (const chunk of lastProc.stdout) {
       const buf = Buffer.from(chunk);
       finalOutput += buf.toString();
-      if (shouldEmitFromLast) {
-        if (this.options.mirror) {
-          safeWrite(process.stdout, buf);
-        }
-        this._emitProcessedData('stdout', buf);
+      if (this.options.mirror) {
+        safeWrite(process.stdout, buf);
       }
+      this._emitProcessedData('stdout', buf);
     }
 
     // Wait for all processes to complete
