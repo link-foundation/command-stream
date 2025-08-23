@@ -2601,12 +2601,12 @@ function registerBuiltins() {
     const paths = (process.env.PATH || '').split(process.platform === 'win32' ? ';' : ':');
     const extensions = process.platform === 'win32' ? ['', '.exe', '.cmd', '.bat'] : [''];
 
-    for (const path of paths) {
+    for (const pathDir of paths) {
       for (const ext of extensions) {
-        const fullPath = path.join(path, cmd + ext);
+        const fullPath = path.join(pathDir, cmd + ext);
         try {
           if (fs.statSync(fullPath).isFile()) {
-            return VirtualUtils.success(fullPath);
+            return VirtualUtils.success(fullPath + '\n');
           }
         } catch { }
       }
