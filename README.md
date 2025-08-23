@@ -4,7 +4,7 @@ $treamable commands executor
 
 A modern $ shell utility library with streaming, async iteration, and EventEmitter support, optimized for Bun runtime.
 
-<img width="2624" height="1320" alt="carbon" src="https://github.com/user-attachments/assets/41cccd6a-f029-4206-b3bc-a85c5dbcf2cf" />
+<img width="2752" height="1344" alt="ray-so-export" src="https://github.com/user-attachments/assets/b1656450-0a2a-43f5-917c-4f15c3ffccaa" />
 
 ## Features
 
