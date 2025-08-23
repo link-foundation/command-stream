@@ -34,9 +34,17 @@ function trace(category, messageOrFunc) {
 function isInteractiveCommand(command) {
   if (!command || typeof command !== 'string') return false;
   
-  // Extract command name from shell command string
-  const commandName = command.trim().split(/\s+/)[0];
+  // Extract command and arguments from shell command string
+  const parts = command.trim().split(/\s+/);
+  const commandName = parts[0];
   const baseName = path.basename(commandName);
+  
+  // Special handling for commands that are only interactive when run without arguments/scripts
+  if (baseName === 'node' || baseName === 'python' || baseName === 'python3') {
+    // These are only interactive when run without a script file
+    // If there are additional arguments (like a script file), they're not interactive
+    return parts.length === 1;
+  }
   
   return INTERACTIVE_COMMANDS.has(baseName);
 }
@@ -704,7 +712,11 @@ class ProcessRunner extends StreamEmitter {
     }
 
     // Detect if this is an interactive command that needs direct TTY access
-    const isInteractive = stdin === 'inherit' && process.stdin.isTTY && 
+    // Only activate for interactive commands when we have a real TTY and the command is likely to need it
+    const isInteractive = stdin === 'inherit' && 
+      process.stdin.isTTY === true && 
+      process.stdout.isTTY === true && 
+      process.stderr.isTTY === true &&
       (this.spec.mode === 'shell' ? isInteractiveCommand(this.spec.command) : isInteractiveCommand(this.spec.file));
 
     const spawnBun = (argv) => {
