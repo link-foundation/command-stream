@@ -536,7 +536,18 @@ class ProcessRunner extends StreamEmitter {
       const buf = asBuffer(chunk);
       captureChunks && captureChunks.push(buf);
       if (bunWriter) await bunWriter.write(buf);
-      else if (typeof child.stdin.write === 'function') child.stdin.write(buf);
+      else if (typeof child.stdin.write === 'function') {
+        // Safe write to handle EPIPE errors
+        if (child.stdin && child.stdin.writable && !child.stdin.destroyed && !child.stdin.closed) {
+          try {
+            child.stdin.write(buf);
+          } catch (error) {
+            if (error.code !== 'EPIPE') {
+              trace('ProcessRunner', 'Error writing stdin buffer', { error: error.message, code: error.code });
+            }
+          }
+        }
+      }
       else if (isBun && typeof Bun.write === 'function') await Bun.write(child.stdin, buf);
     }
     if (bunWriter) await bunWriter.close();
@@ -547,8 +558,14 @@ class ProcessRunner extends StreamEmitter {
     if (isBun && this.child.stdin && typeof this.child.stdin.getWriter === 'function') {
       const w = this.child.stdin.getWriter();
       const bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf.buffer, buf.byteOffset ?? 0, buf.byteLength);
-      await w.write(bytes);
-      await w.close();
+      try {
+        await w.write(bytes);
+        await w.close();
+      } catch (error) {
+        if (error.code !== 'EPIPE') {
+          trace('ProcessRunner', 'Error writing to Bun writer', { error: error.message, code: error.code });
+        }
+      }
     } else if (this.child.stdin && typeof this.child.stdin.write === 'function') {
       this.child.stdin.end(buf);
     } else if (isBun && typeof Bun.write === 'function') {
@@ -939,10 +956,14 @@ class ProcessRunner extends StreamEmitter {
         (async () => {
           try {
             // Bun's FileSink has write and end methods
-            await proc.stdin.write(stdinData);
-            await proc.stdin.end();
+            if (proc.stdin && proc.stdin.writable && !proc.stdin.destroyed && !proc.stdin.closed) {
+              await proc.stdin.write(stdinData);
+              await proc.stdin.end();
+            }
           } catch (e) {
-            console.error('Error writing stdin:', e);
+            if (e.code !== 'EPIPE') {
+              trace('ProcessRunner', 'Error writing stdin (Bun)', { error: e.message, code: e.code });
+            }
           }
         })();
       }
@@ -1102,10 +1123,14 @@ class ProcessRunner extends StreamEmitter {
       // Write stdin data if needed for first process
       if (needsManualStdin && stdinData && proc.stdin) {
         try {
-          await proc.stdin.write(stdinData);
-          await proc.stdin.end();
+          if (proc.stdin && proc.stdin.writable && !proc.stdin.destroyed && !proc.stdin.closed) {
+            await proc.stdin.write(stdinData);
+            await proc.stdin.end();
+          }
         } catch (e) {
-          // Ignore stdin errors
+          if (e.code !== 'EPIPE') {
+            trace('ProcessRunner', 'Error writing stdin (Node stream)', { error: e.message, code: e.code });
+          }
         }
       }
       
@@ -1373,11 +1398,25 @@ class ProcessRunner extends StreamEmitter {
                 const { done, value } = await reader.read();
                 if (done) break;
                 if (writer.write) {
-                  await writer.write(value);
+                  try {
+                    await writer.write(value);
+                  } catch (error) {
+                    if (error.code !== 'EPIPE') {
+                      trace('ProcessRunner', 'Error writing to stream writer', { error: error.message, code: error.code });
+                    }
+                    break; // Stop streaming if write fails
+                  }
                 } else if (writer.getWriter) {
-                  const w = writer.getWriter();
-                  await w.write(value);
-                  w.releaseLock();
+                  try {
+                    const w = writer.getWriter();
+                    await w.write(value);
+                    w.releaseLock();
+                  } catch (error) {
+                    if (error.code !== 'EPIPE') {
+                      trace('ProcessRunner', 'Error writing to stream writer (getWriter)', { error: error.message, code: error.code });
+                    }
+                    break; // Stop streaming if write fails
+                  }
                 }
               }
             } finally {
@@ -1692,9 +1731,50 @@ class ProcessRunner extends StreamEmitter {
               proc.on('error', reject);
               
               if (stdin) {
-                proc.stdin.write(stdin);
+                // Use safe write to handle potential EPIPE errors
+                trace('ProcessRunner', 'Attempting to write stdin', { 
+                  hasStdin: !!proc.stdin,
+                  writable: proc.stdin?.writable,
+                  destroyed: proc.stdin?.destroyed,
+                  closed: proc.stdin?.closed,
+                  stdinLength: stdin.length
+                });
+                
+                if (proc.stdin && proc.stdin.writable && !proc.stdin.destroyed && !proc.stdin.closed) {
+                  try {
+                    proc.stdin.write(stdin);
+                    trace('ProcessRunner', 'Successfully wrote to stdin', { stdinLength: stdin.length });
+                  } catch (error) {
+                    trace('ProcessRunner', 'Error writing to stdin', { 
+                      error: error.message, 
+                      code: error.code,
+                      isEPIPE: error.code === 'EPIPE'
+                    });
+                    if (error.code !== 'EPIPE') {
+                      throw error; // Re-throw non-EPIPE errors
+                    }
+                  }
+                } else {
+                  trace('ProcessRunner', 'Skipped writing to stdin - stream not writable', {
+                    hasStdin: !!proc.stdin,
+                    writable: proc.stdin?.writable,
+                    destroyed: proc.stdin?.destroyed,
+                    closed: proc.stdin?.closed
+                  });
+                }
               }
-              proc.stdin.end();
+              
+              // Safely end the stdin stream
+              if (proc.stdin && typeof proc.stdin.end === 'function' && 
+                  proc.stdin.writable && !proc.stdin.destroyed && !proc.stdin.closed) {
+                try {
+                  proc.stdin.end();
+                } catch (error) {
+                  if (error.code !== 'EPIPE') {
+                    trace('ProcessRunner', 'Error ending stdin', { error: error.message });
+                  }
+                }
+              }
             });
           };
           
