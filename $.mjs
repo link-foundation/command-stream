@@ -1564,6 +1564,7 @@ class ProcessRunner extends StreamEmitter {
     let buffer = [];
     let resolve, reject;
     let ended = false;
+    let cleanedUp = false;
 
     const onData = (chunk) => {
       buffer.push(chunk);
@@ -1596,8 +1597,36 @@ class ProcessRunner extends StreamEmitter {
         }
       }
     } finally {
+      cleanedUp = true;
       this.off('data', onData);
       this.off('end', onEnd);
+      
+      // Kill the process if it's still running when iteration is stopped
+      // This happens when breaking from a for-await loop
+      if (this.child && !this.finished) {
+        this.kill();
+      }
+    }
+  }
+  
+  // Kill the running process
+  kill() {
+    if (this.child && !this.finished) {
+      try {
+        // Kill the process group to ensure all child processes are terminated
+        if (this.child.pid) {
+          if (isBun) {
+            this.child.kill();
+          } else {
+            // In Node.js, kill the process group
+            process.kill(-this.child.pid, 'SIGTERM');
+          }
+        }
+        this.finished = true;
+      } catch (err) {
+        // Process might already be dead
+        console.error('Error killing process:', err.message);
+      }
     }
   }
 
