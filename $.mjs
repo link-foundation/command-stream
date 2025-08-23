@@ -36,8 +36,38 @@ function traceFunc(category, funcName, phase, data = {}) {
   trace(category, `${funcName} ${phase}`, data);
 }
 
-// Safe write function that checks stream state before writing
-function safeWrite(stream, data) {
+// Track parent stream state for graceful shutdown
+let parentStreamsMonitored = false;
+const activeProcessRunners = new Set();
+
+function monitorParentStreams() {
+  if (parentStreamsMonitored) return;
+  parentStreamsMonitored = true;
+  
+  // Monitor parent stdout/stderr for closure
+  const checkParentStream = (stream, name) => {
+    if (stream && typeof stream.on === 'function') {
+      stream.on('close', () => {
+        trace('ProcessRunner', `Parent ${name} closed - triggering graceful shutdown`, {
+          activeProcesses: activeProcessRunners.size
+        });
+        // Signal all active ProcessRunners to gracefully shutdown
+        for (const runner of activeProcessRunners) {
+          runner._handleParentStreamClosure();
+        }
+      });
+    }
+  };
+  
+  checkParentStream(process.stdout, 'stdout');
+  checkParentStream(process.stderr, 'stderr');
+}
+
+// Safe write function that checks stream state and handles parent closure
+function safeWrite(stream, data, processRunner = null) {
+  // Ensure parent stream monitoring is active
+  monitorParentStreams();
+  
   // Check if stream is writable and not destroyed/closed
   if (!stream || !stream.writable || stream.destroyed || stream.closed) {
     trace('ProcessRunner', 'safeWrite skipped - stream not writable', { 
@@ -46,6 +76,12 @@ function safeWrite(stream, data) {
       destroyed: stream?.destroyed,
       closed: stream?.closed
     });
+    
+    // If this is a parent stream closure, signal graceful shutdown
+    if (processRunner && (stream === process.stdout || stream === process.stderr)) {
+      processRunner._handleParentStreamClosure();
+    }
+    
     return false;
   }
   
@@ -58,6 +94,13 @@ function safeWrite(stream, data) {
       writable: stream.writable,
       destroyed: stream.destroyed
     });
+    
+    // If this is an EPIPE on parent streams, signal graceful shutdown
+    if (error.code === 'EPIPE' && processRunner && 
+        (stream === process.stdout || stream === process.stderr)) {
+      processRunner._handleParentStreamClosure();
+    }
+    
     return false;
   }
 }
@@ -218,6 +261,79 @@ class ProcessRunner extends StreamEmitter {
     this._cancelled = false;
     this._virtualGenerator = null;
     this._abortController = new AbortController();
+    
+    // Register this ProcessRunner for parent stream monitoring
+    activeProcessRunners.add(this);
+    
+    // Track finished state changes to trigger cleanup
+    this._finished = false;
+  }
+  
+  // Override finished property to trigger cleanup when set to true
+  get finished() {
+    return this._finished;
+  }
+  
+  set finished(value) {
+    if (value === true && this._finished === false) {
+      this._finished = true;
+      this._cleanup(); // Trigger cleanup when process finishes
+    } else {
+      this._finished = value;
+    }
+  }
+
+  // Handle parent stream closure by gracefully shutting down child processes
+  _handleParentStreamClosure() {
+    if (this.finished || this._cancelled) return;
+    
+    trace('ProcessRunner', 'Handling parent stream closure', {
+      started: this.started,
+      hasChild: !!this.child,
+      command: this.spec.command?.slice(0, 50) || this.spec.file
+    });
+    
+    // Mark as cancelled to prevent further operations
+    this._cancelled = true;
+    
+    // Cancel abort controller for virtual commands
+    if (this._abortController) {
+      this._abortController.abort();
+    }
+    
+    // Gracefully close child process if it exists
+    if (this.child) {
+      try {
+        // Close stdin first to signal completion
+        if (this.child.stdin && typeof this.child.stdin.end === 'function') {
+          this.child.stdin.end();
+        } else if (isBun && this.child.stdin && typeof this.child.stdin.getWriter === 'function') {
+          const writer = this.child.stdin.getWriter();
+          writer.close().catch(() => {}); // Ignore close errors
+        }
+        
+        // Give the process a moment to exit gracefully, then terminate
+        setTimeout(() => {
+          if (this.child && !this.finished) {
+            trace('ProcessRunner', 'Terminating child process after parent stream closure', {});
+            if (typeof this.child.kill === 'function') {
+              this.child.kill('SIGTERM');
+            }
+          }
+        }, 100);
+        
+      } catch (error) {
+        trace('ProcessRunner', 'Error during graceful shutdown', { error: error.message });
+      }
+    }
+    
+    // Remove from active set
+    activeProcessRunners.delete(this);
+  }
+
+  // Cleanup method to remove from active set when process completes normally
+  _cleanup() {
+    activeProcessRunners.delete(this);
   }
 
   // Unified start method that can work in both async and sync modes
