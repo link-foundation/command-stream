@@ -21,19 +21,6 @@ function trace(category, messageOrFunc) {
   console.error(`[TRACE ${timestamp}] [${category}] ${message}`);
 }
 
-// Trace decision branches
-function traceBranch(category, condition, branch, data = {}) {
-  if (!VERBOSE) return;
-  
-  trace(category, `BRANCH: ${condition} => ${branch}`, data);
-}
-
-// Trace function entry/exit
-function traceFunc(category, funcName, phase, data = {}) {
-  if (!VERBOSE) return;
-  
-  trace(category, `${funcName} ${phase}`, data);
-}
 
 // Track parent stream state for graceful shutdown
 let parentStreamsMonitored = false;
@@ -47,7 +34,7 @@ function monitorParentStreams() {
   const checkParentStream = (stream, name) => {
     if (stream && typeof stream.on === 'function') {
       stream.on('close', () => {
-        trace('ProcessRunner', () => `Parent ${name} closed - triggering graceful shutdown | ${JSON.stringify({ activeProcesses: activeProcessRunners.size })}`);
+        trace('ProcessRunner', () => `Parent ${name} closed - triggering graceful shutdown | ${JSON.stringify({ activeProcesses: activeProcessRunners.size }, null, 2)}`);
         // Signal all active ProcessRunners to gracefully shutdown
         for (const runner of activeProcessRunners) {
           runner._handleParentStreamClosure();
@@ -72,7 +59,7 @@ function safeWrite(stream, data, processRunner = null) {
       writable: stream?.writable,
       destroyed: stream?.destroyed,
       closed: stream?.closed
-    })}`);
+    }, null, 2)}`);
     
     // If this is a parent stream closure, signal graceful shutdown
     if (processRunner && (stream === process.stdout || stream === process.stderr)) {
@@ -90,7 +77,7 @@ function safeWrite(stream, data, processRunner = null) {
       code: error.code,
       writable: stream.writable,
       destroyed: stream.destroyed
-    })}`);
+    }, null, 2)}`);
     
     // If this is an EPIPE on parent streams, signal graceful shutdown
     if (error.code === 'EPIPE' && processRunner && 
@@ -135,7 +122,7 @@ const StreamUtils = {
         writable: stream?.writable,
         destroyed: stream?.destroyed,
         closed: stream?.closed
-      })}`);
+      }, null, 2)}`);
       return false;
     }
 
@@ -143,7 +130,7 @@ const StreamUtils = {
       const result = stream.write(data);
       trace('ProcessRunner', () => `${contextName} write successful | ${JSON.stringify({ 
         dataLength: data?.length || 0
-      })}`);
+      }, null, 2)}`);
       return result;
     } catch (error) {
       if (error.code !== 'EPIPE') {
@@ -151,14 +138,14 @@ const StreamUtils = {
           error: error.message, 
           code: error.code,
           isEPIPE: false
-        })}`);
+        }, null, 2)}`);
         throw error; // Re-throw non-EPIPE errors
       } else {
         trace('ProcessRunner', () => `${contextName} EPIPE error (ignored) | ${JSON.stringify({ 
           error: error.message, 
           code: error.code,
           isEPIPE: true
-        })}`);
+        }, null, 2)}`);
       }
       return false;
     }
@@ -173,7 +160,7 @@ const StreamUtils = {
         hasStream: !!stream,
         hasEnd: stream && typeof stream.end === 'function',
         writable: stream?.writable
-      })}`);
+      }, null, 2)}`);
       return false;
     }
 
@@ -186,12 +173,12 @@ const StreamUtils = {
         trace('ProcessRunner', () => `${contextName} end error | ${JSON.stringify({ 
           error: error.message, 
           code: error.code
-        })}`);
+        }, null, 2)}`);
       } else {
         trace('ProcessRunner', () => `${contextName} EPIPE on end (ignored) | ${JSON.stringify({ 
           error: error.message, 
           code: error.code
-        })}`);
+        }, null, 2)}`);
       }
       return false;
     }
@@ -219,7 +206,7 @@ const StreamUtils = {
         error: error.message, 
         code: error.code,
         isEPIPE: false
-      })}`);
+      }, null, 2)}`);
       if (shouldThrow) throw error;
       return false;
     } else {
@@ -227,7 +214,7 @@ const StreamUtils = {
         error: error.message, 
         code: error.code,
         isEPIPE: true
-      })}`);
+      }, null, 2)}`);
       return true; // EPIPE handled gracefully
     }
   },
@@ -421,10 +408,10 @@ function quote(value) {
 }
 
 function buildShellCommand(strings, values) {
-  traceFunc('Utils', 'buildShellCommand', 'ENTER', { 
+  trace('Utils', () => `buildShellCommand ENTER | ${JSON.stringify({ 
     stringsLength: strings.length,
     valuesLength: values.length
-  });
+  }, null, 2)}`);
   
   let out = '';
   for (let i = 0; i < strings.length; i++) {
@@ -432,17 +419,17 @@ function buildShellCommand(strings, values) {
     if (i < values.length) {
       const v = values[i];
       if (v && typeof v === 'object' && Object.prototype.hasOwnProperty.call(v, 'raw')) {
-        traceBranch('Utils', 'buildShellCommand', 'RAW_VALUE', { value: String(v.raw) });
+        trace('Utils', () => `BRANCH: buildShellCommand => RAW_VALUE | ${JSON.stringify({ value: String(v.raw) }, null, 2)}`);
         out += String(v.raw);
       } else {
         const quoted = quote(v);
-        traceBranch('Utils', 'buildShellCommand', 'QUOTED_VALUE', { original: v, quoted });
+        trace('Utils', () => `BRANCH: buildShellCommand => QUOTED_VALUE | ${JSON.stringify({ original: v, quoted }, null, 2)}`);
         out += quoted;
       }
     }
   }
   
-  traceFunc('Utils', 'buildShellCommand', 'EXIT', { command: out });
+  trace('Utils', () => `buildShellCommand EXIT | ${JSON.stringify({ command: out }, null, 2)}`);
   return out;
 }
 
@@ -464,10 +451,10 @@ class ProcessRunner extends StreamEmitter {
   constructor(spec, options = {}) {
     super();
     
-    traceFunc('ProcessRunner', 'constructor', 'ENTER', { 
+    trace('ProcessRunner', () => `constructor ENTER | ${JSON.stringify({ 
       spec: typeof spec === 'object' ? { ...spec, command: spec.command?.slice(0, 100) } : spec,
       options 
-    });
+    }, null, 2)}`);
     
     this.spec = spec;
     this.options = {
@@ -530,7 +517,7 @@ class ProcessRunner extends StreamEmitter {
       started: this.started,
       hasChild: !!this.child,
       command: this.spec.command?.slice(0, 50) || this.spec.file
-    })}`);
+    }, null, 2)}`);
     
     // Mark as cancelled to prevent further operations
     this._cancelled = true;
@@ -562,7 +549,7 @@ class ProcessRunner extends StreamEmitter {
         }, 100);
         
       } catch (error) {
-        trace('ProcessRunner', () => `Error during graceful shutdown | ${JSON.stringify({ error: error.message })}`);
+        trace('ProcessRunner', () => `Error during graceful shutdown | ${JSON.stringify({ error: error.message }, null, 2)}`);
       }
     }
     
@@ -579,13 +566,13 @@ class ProcessRunner extends StreamEmitter {
   start(options = {}) {
     const mode = options.mode || 'async';
     
-    traceFunc('ProcessRunner', 'start', 'ENTER', { mode, options });
+    trace('ProcessRunner', () => `start ENTER | ${JSON.stringify({ mode, options }, null, 2)}`);
     
     if (mode === 'sync') {
-      traceBranch('ProcessRunner', 'mode', 'sync', {});
+      trace('ProcessRunner', () => `BRANCH: mode => sync | ${JSON.stringify({}, null, 2)}`);
       return this._startSync();
     } else {
-      traceBranch('ProcessRunner', 'mode', 'async', {});
+      trace('ProcessRunner', () => `BRANCH: mode => async | ${JSON.stringify({}, null, 2)}`);
       return this._startAsync();
     }
   }
@@ -609,10 +596,10 @@ class ProcessRunner extends StreamEmitter {
   }
   
   async _doStartAsync() {
-    traceFunc('ProcessRunner', '_doStartAsync', 'ENTER', { 
+    trace('ProcessRunner', () => `_doStartAsync ENTER | ${JSON.stringify({ 
       mode: this.spec.mode,
       command: this.spec.command?.slice(0, 100)
-    });
+    }, null, 2)}`);
     
     this.started = true;
     this._mode = 'async';
@@ -621,16 +608,16 @@ class ProcessRunner extends StreamEmitter {
     
     // Handle programmatic pipeline mode
     if (this.spec.mode === 'pipeline') {
-      traceBranch('ProcessRunner', 'spec.mode', 'pipeline', { 
+      trace('ProcessRunner', () => `BRANCH: spec.mode => pipeline | ${JSON.stringify({ 
         hasSource: !!this.spec.source,
         hasDestination: !!this.spec.destination
-      });
+      }, null, 2)}`);
       return await this._runProgrammaticPipeline(this.spec.source, this.spec.destination);
     }
     
     // Check if this is a virtual command first
     if (this.spec.mode === 'shell') {
-      traceBranch('ProcessRunner', 'spec.mode', 'shell', {});
+      trace('ProcessRunner', () => `BRANCH: spec.mode => shell | ${JSON.stringify({}, null, 2)}`);
       
       // Parse the command to check for virtual commands or pipelines
       const parsed = this._parseCommand(this.spec.command);
@@ -638,19 +625,19 @@ class ProcessRunner extends StreamEmitter {
         type: parsed?.type,
         cmd: parsed?.cmd,
         argsCount: parsed?.args?.length
-      })}`);
+      }, null, 2)}`);
       
       if (parsed) {
         if (parsed.type === 'pipeline') {
-          traceBranch('ProcessRunner', 'parsed.type', 'pipeline', { 
+          trace('ProcessRunner', () => `BRANCH: parsed.type => pipeline | ${JSON.stringify({ 
             commandCount: parsed.commands?.length 
-          });
+          }, null, 2)}`);
           return await this._runPipeline(parsed.commands);
         } else if (parsed.type === 'simple' && virtualCommandsEnabled && virtualCommands.has(parsed.cmd)) {
-          traceBranch('ProcessRunner', 'virtualCommand', parsed.cmd, { 
+          trace('ProcessRunner', () => `BRANCH: virtualCommand => ${parsed.cmd} | ${JSON.stringify({ 
             isVirtual: true,
             args: parsed.args 
-          });
+          }, null, 2)}`);
           return await this._runVirtual(parsed.cmd, parsed.args);
         }
       }
@@ -733,7 +720,7 @@ class ProcessRunner extends StreamEmitter {
       codeType: typeof code,
       childExitCode: this.child?.exitCode,
       isBun
-    })}`);
+    }, null, 2)}`);
 
     const resultData = {
       code: code ?? 0,  // Default to 0 if exit code is null/undefined
@@ -879,18 +866,18 @@ class ProcessRunner extends StreamEmitter {
   }
 
   async _runVirtual(cmd, args) {
-    traceFunc('ProcessRunner', '_runVirtual', 'ENTER', { cmd, args });
+    trace('ProcessRunner', () => `_runVirtual ENTER | ${JSON.stringify({ cmd, args }, null, 2)}`);
     
     const handler = virtualCommands.get(cmd);
     if (!handler) {
-      trace('ProcessRunner', () => `Virtual command not found | ${JSON.stringify({ cmd })}`);
+      trace('ProcessRunner', () => `Virtual command not found | ${JSON.stringify({ cmd }, null, 2)}`);
       throw new Error(`Virtual command not found: ${cmd}`);
     }
 
     trace('ProcessRunner', () => `Found virtual command handler | ${JSON.stringify({ 
       cmd,
       isGenerator: handler.constructor.name === 'AsyncGeneratorFunction'
-    })}`);
+    }, null, 2)}`);
 
     try {
       // Prepare stdin
@@ -1069,9 +1056,9 @@ class ProcessRunner extends StreamEmitter {
   }
 
   async _runStreamingPipelineBun(commands) {
-    traceFunc('ProcessRunner', '_runStreamingPipelineBun', 'ENTER', { 
+    trace('ProcessRunner', () => `_runStreamingPipelineBun ENTER | ${JSON.stringify({ 
       commandsCount: commands.length 
-    });
+    }, null, 2)}`);
     
     // For true streaming, we need to handle virtual and real commands differently
     // but make them work together seamlessly
@@ -1086,11 +1073,11 @@ class ProcessRunner extends StreamEmitter {
     trace('ProcessRunner', () => `Pipeline analysis | ${JSON.stringify({ 
       virtualCount: pipelineInfo.filter(p => p.isVirtual).length,
       realCount: pipelineInfo.filter(p => !p.isVirtual).length 
-    })}`);
+    }, null, 2)}`);
     
     // If pipeline contains virtual commands, use advanced streaming
     if (pipelineInfo.some(info => info.isVirtual)) {
-      traceBranch('ProcessRunner', '_runStreamingPipelineBun', 'MIXED_PIPELINE', {});
+      trace('ProcessRunner', () => `BRANCH: _runStreamingPipelineBun => MIXED_PIPELINE | ${JSON.stringify({}, null, 2)}`);
       return this._runMixedStreamingPipeline(commands);
     }
     
@@ -1099,11 +1086,11 @@ class ProcessRunner extends StreamEmitter {
       c.cmd === 'jq' || c.cmd === 'grep' || c.cmd === 'sed' || c.cmd === 'cat' || c.cmd === 'awk'
     );
     if (needsStreamingWorkaround) {
-      traceBranch('ProcessRunner', '_runStreamingPipelineBun', 'TEE_STREAMING', { 
+      trace('ProcessRunner', () => `BRANCH: _runStreamingPipelineBun => TEE_STREAMING | ${JSON.stringify({ 
         bufferedCommands: commands.filter(c => 
           ['jq', 'grep', 'sed', 'cat', 'awk'].includes(c.cmd)
         ).map(c => c.cmd)
-      });
+      }, null, 2)}`);
       return this._runTeeStreamingPipeline(commands);
     }
     
@@ -1191,7 +1178,7 @@ class ProcessRunner extends StreamEmitter {
             }
           } catch (e) {
             if (e.code !== 'EPIPE') {
-              trace('ProcessRunner', () => `Error with Bun stdin async operations | ${JSON.stringify({ error: e.message, code: e.code })}`);
+              trace('ProcessRunner', () => `Error with Bun stdin async operations | ${JSON.stringify({ error: e.message, code: e.code }, null, 2)}`);
             }
           }
         })();
@@ -1272,9 +1259,9 @@ class ProcessRunner extends StreamEmitter {
   }
 
   async _runTeeStreamingPipeline(commands) {
-    traceFunc('ProcessRunner', '_runTeeStreamingPipeline', 'ENTER', { 
+    trace('ProcessRunner', () => `_runTeeStreamingPipeline ENTER | ${JSON.stringify({ 
       commandsCount: commands.length 
-    });
+    }, null, 2)}`);
     
     // Use tee() to split streams for real-time reading
     // This works around jq and similar commands that buffer when piped
@@ -1361,7 +1348,7 @@ class ProcessRunner extends StreamEmitter {
           }
         } catch (e) {
           if (e.code !== 'EPIPE') {
-            trace('ProcessRunner', () => `Error with Node stdin async operations | ${JSON.stringify({ error: e.message, code: e.code })}`);
+            trace('ProcessRunner', () => `Error with Node stdin async operations | ${JSON.stringify({ error: e.message, code: e.code }, null, 2)}`);
           }
         }
       }
@@ -1476,9 +1463,9 @@ class ProcessRunner extends StreamEmitter {
 
 
   async _runMixedStreamingPipeline(commands) {
-    traceFunc('ProcessRunner', '_runMixedStreamingPipeline', 'ENTER', { 
+    trace('ProcessRunner', () => `_runMixedStreamingPipeline ENTER | ${JSON.stringify({ 
       commandsCount: commands.length 
-    });
+    }, null, 2)}`);
     
     // Handle pipelines with both virtual and real commands
     // Each stage reads from previous stage's output stream
@@ -1509,10 +1496,10 @@ class ProcessRunner extends StreamEmitter {
       
       if (virtualCommandsEnabled && virtualCommands.has(cmd)) {
         // Handle virtual command with streaming
-        traceBranch('ProcessRunner', '_runMixedStreamingPipeline', 'VIRTUAL_COMMAND', { 
+        trace('ProcessRunner', () => `BRANCH: _runMixedStreamingPipeline => VIRTUAL_COMMAND | ${JSON.stringify({ 
           cmd,
           commandIndex: i 
-        });
+        }, null, 2)}`);
         const handler = virtualCommands.get(cmd);
         const argValues = args.map(arg => arg.value !== undefined ? arg.value : arg);
         
@@ -1709,9 +1696,9 @@ class ProcessRunner extends StreamEmitter {
   }
 
   async _runPipelineNonStreaming(commands) {
-    traceFunc('ProcessRunner', '_runPipelineNonStreaming', 'ENTER', { 
+    trace('ProcessRunner', () => `_runPipelineNonStreaming ENTER | ${JSON.stringify({ 
       commandsCount: commands.length 
-    });
+    }, null, 2)}`);
     
     // Original non-streaming implementation for fallback (e.g., virtual commands)
     let currentOutput = '';
@@ -1731,10 +1718,10 @@ class ProcessRunner extends StreamEmitter {
       
       // Check if this is a virtual command (only if virtual commands are enabled)
       if (virtualCommandsEnabled && virtualCommands.has(cmd)) {
-        traceBranch('ProcessRunner', '_runPipelineNonStreaming', 'VIRTUAL_COMMAND', { 
+        trace('ProcessRunner', () => `BRANCH: _runPipelineNonStreaming => VIRTUAL_COMMAND | ${JSON.stringify({ 
           cmd,
           argsCount: args.length 
-        });
+        }, null, 2)}`);
         
         // Run virtual command with current input
         const handler = virtualCommands.get(cmd);
@@ -1755,7 +1742,7 @@ class ProcessRunner extends StreamEmitter {
           
           // Check if handler is async generator (streaming)
           if (handler.constructor.name === 'AsyncGeneratorFunction') {
-            traceBranch('ProcessRunner', '_runPipelineNonStreaming', 'ASYNC_GENERATOR', { cmd });
+            trace('ProcessRunner', () => `BRANCH: _runPipelineNonStreaming => ASYNC_GENERATOR | ${JSON.stringify({ cmd }, null, 2)}`);
             const chunks = [];
             for await (const chunk of handler({ args: argValues, stdin: currentInput, ...this.options })) {
               chunks.push(Buffer.from(chunk));
@@ -1970,7 +1957,7 @@ class ProcessRunner extends StreamEmitter {
                   destroyed: proc.stdin?.destroyed,
                   closed: proc.stdin?.closed,
                   stdinLength: stdin.length
-                })}`);
+                }, null, 2)}`);
                 
                 StreamUtils.safeStreamWrite(proc.stdin, stdin, 'spawnNodeAsync stdin');
               }
@@ -2087,30 +2074,30 @@ class ProcessRunner extends StreamEmitter {
   }
 
   async _runPipeline(commands) {
-    traceFunc('ProcessRunner', '_runPipeline', 'ENTER', { 
+    trace('ProcessRunner', () => `_runPipeline ENTER | ${JSON.stringify({ 
       commandsCount: commands.length 
-    });
+    }, null, 2)}`);
     
     if (commands.length === 0) {
-      traceBranch('ProcessRunner', '_runPipeline', 'NO_COMMANDS', {});
+      trace('ProcessRunner', () => `BRANCH: _runPipeline => NO_COMMANDS | ${JSON.stringify({}, null, 2)}`);
       return createResult({ code: 1, stdout: '', stderr: 'No commands in pipeline', stdin: '' });
     }
 
 
     // For true streaming, we need to connect processes via pipes
     if (isBun) {
-      traceBranch('ProcessRunner', '_runPipeline', 'BUN_STREAMING', {});
+      trace('ProcessRunner', () => `BRANCH: _runPipeline => BUN_STREAMING | ${JSON.stringify({}, null, 2)}`);
       return this._runStreamingPipelineBun(commands);
     }
     
     // For Node.js, fall back to non-streaming implementation for now
-    traceBranch('ProcessRunner', '_runPipeline', 'NODE_NON_STREAMING', {});
+    trace('ProcessRunner', () => `BRANCH: _runPipeline => NODE_NON_STREAMING | ${JSON.stringify({}, null, 2)}`);
     return this._runPipelineNonStreaming(commands);
   }
 
   // Run programmatic pipeline (.pipe() method)
   async _runProgrammaticPipeline(source, destination) {
-    traceFunc('ProcessRunner', '_runProgrammaticPipeline', 'ENTER', {});
+    trace('ProcessRunner', () => `_runProgrammaticPipeline ENTER | ${JSON.stringify({}, null, 2)}`);
     
     try {
       // Execute the source command first
@@ -2119,10 +2106,10 @@ class ProcessRunner extends StreamEmitter {
       
       if (sourceResult.code !== 0) {
         // If source failed, return its result
-        traceBranch('ProcessRunner', '_runProgrammaticPipeline', 'SOURCE_FAILED', { 
+        trace('ProcessRunner', () => `BRANCH: _runProgrammaticPipeline => SOURCE_FAILED | ${JSON.stringify({ 
           code: sourceResult.code,
           stderr: sourceResult.stderr 
-        });
+        }, null, 2)}`);
         return sourceResult;
       }
       
@@ -2143,7 +2130,7 @@ class ProcessRunner extends StreamEmitter {
         keys: Object.keys(destResult),
         resultType: typeof destResult,
         fullResult: JSON.stringify(destResult, null, 2).slice(0, 200)
-      })}`);
+      }, null, 2)}`);
 
       // Return the final result with combined information
       return createResult({
@@ -2181,10 +2168,10 @@ class ProcessRunner extends StreamEmitter {
 
   // Async iteration support
   async* stream() {
-    traceFunc('ProcessRunner', 'stream', 'ENTER', { 
+    trace('ProcessRunner', () => `stream ENTER | ${JSON.stringify({ 
       started: this.started,
       finished: this.finished 
-    });
+    }, null, 2)}`);
     
     if (!this.started) {
       trace('ProcessRunner', () => 'Auto-starting async process from stream()');
@@ -2241,12 +2228,12 @@ class ProcessRunner extends StreamEmitter {
   
   // Kill the running process or cancel virtual command
   kill() {
-    traceFunc('ProcessRunner', 'kill', 'ENTER', { 
+    trace('ProcessRunner', () => `kill ENTER | ${JSON.stringify({ 
       cancelled: this._cancelled,
       finished: this.finished,
       hasChild: !!this.child,
       hasVirtualGenerator: !!this._virtualGenerator
-    });
+    }, null, 2)}`);
     
     // Mark as cancelled for virtual commands
     this._cancelled = true;
@@ -2269,29 +2256,29 @@ class ProcessRunner extends StreamEmitter {
       try {
         this._virtualGenerator.return();
       } catch (err) {
-        trace('ProcessRunner', () => `Error closing generator | ${JSON.stringify({ error: err.message })}`);
+        trace('ProcessRunner', () => `Error closing generator | ${JSON.stringify({ error: err.message }, null, 2)}`);
       }
     }
     
     // Kill child process if it exists
     if (this.child && !this.finished) {
-      traceBranch('ProcessRunner', 'hasChild', 'killing', { pid: this.child.pid });
+      trace('ProcessRunner', () => `BRANCH: hasChild => killing | ${JSON.stringify({ pid: this.child.pid }, null, 2)}`);
       try {
         // Kill the process group to ensure all child processes are terminated
         if (this.child.pid) {
           if (isBun) {
-            trace('ProcessRunner', () => `Killing Bun process | ${JSON.stringify({ pid: this.child.pid })}`);
+            trace('ProcessRunner', () => `Killing Bun process | ${JSON.stringify({ pid: this.child.pid }, null, 2)}`);
             this.child.kill();
           } else {
             // In Node.js, kill the process group
-            trace('ProcessRunner', () => `Killing Node process group | ${JSON.stringify({ pid: this.child.pid })}`);
+            trace('ProcessRunner', () => `Killing Node process group | ${JSON.stringify({ pid: this.child.pid }, null, 2)}`);
             process.kill(-this.child.pid, 'SIGTERM');
           }
         }
         this.finished = true;
       } catch (err) {
         // Process might already be dead
-        trace('ProcessRunner', () => `Error killing process | ${JSON.stringify({ error: err.message })}`);
+        trace('ProcessRunner', () => `Error killing process | ${JSON.stringify({ error: err.message }, null, 2)}`);
         console.error('Error killing process:', err.message);
       }
     }
@@ -2299,22 +2286,22 @@ class ProcessRunner extends StreamEmitter {
     // Mark as finished
     this.finished = true;
     
-    traceFunc('ProcessRunner', 'kill', 'EXIT', { 
+    trace('ProcessRunner', () => `kill EXIT | ${JSON.stringify({ 
       cancelled: this._cancelled,
       finished: this.finished 
-    });
+    }, null, 2)}`);
   }
 
   // Programmatic piping support
   pipe(destination) {
-    traceFunc('ProcessRunner', 'pipe', 'ENTER', { 
+    trace('ProcessRunner', () => `pipe ENTER | ${JSON.stringify({ 
       hasDestination: !!destination,
       destinationType: destination?.constructor?.name 
-    });
+    }, null, 2)}`);
     
     // If destination is a ProcessRunner, create a pipeline
     if (destination instanceof ProcessRunner) {
-      traceBranch('ProcessRunner', 'pipe', 'PROCESS_RUNNER_DEST', {});
+      trace('ProcessRunner', () => `BRANCH: pipe => PROCESS_RUNNER_DEST | ${JSON.stringify({}, null, 2)}`);
       // Create a new ProcessRunner that represents the piped operation
       const pipeSpec = {
         mode: 'pipeline',
@@ -2327,18 +2314,18 @@ class ProcessRunner extends StreamEmitter {
         capture: destination.options.capture ?? true
       });
       
-      traceFunc('ProcessRunner', 'pipe', 'EXIT', { mode: 'pipeline' });
+      trace('ProcessRunner', () => `pipe EXIT | ${JSON.stringify({ mode: 'pipeline' }, null, 2)}`);
       return pipeRunner;
     }
     
     // If destination is a template literal result (from $`command`), use its spec
     if (destination && destination.spec) {
-      traceBranch('ProcessRunner', 'pipe', 'TEMPLATE_LITERAL_DEST', {});
+      trace('ProcessRunner', () => `BRANCH: pipe => TEMPLATE_LITERAL_DEST | ${JSON.stringify({}, null, 2)}`);
       const destRunner = new ProcessRunner(destination.spec, destination.options);
       return this.pipe(destRunner);
     }
     
-    traceBranch('ProcessRunner', 'pipe', 'INVALID_DEST', {});
+    trace('ProcessRunner', () => `BRANCH: pipe => INVALID_DEST | ${JSON.stringify({}, null, 2)}`);
     throw new Error('pipe() destination must be a ProcessRunner or $`command` result');
   }
 
@@ -2366,19 +2353,19 @@ class ProcessRunner extends StreamEmitter {
 
   // Internal sync execution
   _startSync() {
-    traceFunc('ProcessRunner', '_startSync', 'ENTER', { 
+    trace('ProcessRunner', () => `_startSync ENTER | ${JSON.stringify({ 
       started: this.started,
       spec: this.spec 
-    });
+    }, null, 2)}`);
     
     if (this.started) {
-      traceBranch('ProcessRunner', '_startSync', 'ALREADY_STARTED', {});
+      trace('ProcessRunner', () => `BRANCH: _startSync => ALREADY_STARTED | ${JSON.stringify({}, null, 2)}`);
       throw new Error('Command already started - cannot run sync after async start');
     }
     
     this.started = true;
     this._mode = 'sync';
-    trace('ProcessRunner', () => `Starting sync execution | ${JSON.stringify({ mode: this._mode })}`);
+    trace('ProcessRunner', () => `Starting sync execution | ${JSON.stringify({ mode: this._mode }, null, 2)}`);
     
     const { cwd, env, stdin } = this.options;
     const argv = this.spec.mode === 'shell' ? ['sh', '-lc', this.spec.command] : [this.spec.file, ...this.spec.args];
@@ -2498,79 +2485,79 @@ class ProcessRunner extends StreamEmitter {
 
 // Public APIs
 async function sh(commandString, options = {}) {
-  traceFunc('API', 'sh', 'ENTER', { 
+  trace('API', () => `sh ENTER | ${JSON.stringify({ 
     command: commandString,
     options 
-  });
+  }, null, 2)}`);
   
   const runner = new ProcessRunner({ mode: 'shell', command: commandString }, options);
   const result = await runner._startAsync();
   
-  traceFunc('API', 'sh', 'EXIT', { code: result.code });
+  trace('API', () => `sh EXIT | ${JSON.stringify({ code: result.code }, null, 2)}`);
   return result;
 }
 
 async function exec(file, args = [], options = {}) {
-  traceFunc('API', 'exec', 'ENTER', { 
+  trace('API', () => `exec ENTER | ${JSON.stringify({ 
     file,
     argsCount: args.length,
     options 
-  });
+  }, null, 2)}`);
   
   const runner = new ProcessRunner({ mode: 'exec', file, args }, options);
   const result = await runner._startAsync();
   
-  traceFunc('API', 'exec', 'EXIT', { code: result.code });
+  trace('API', () => `exec EXIT | ${JSON.stringify({ code: result.code }, null, 2)}`);
   return result;
 }
 
 async function run(commandOrTokens, options = {}) {
-  traceFunc('API', 'run', 'ENTER', { 
+  trace('API', () => `run ENTER | ${JSON.stringify({ 
     type: typeof commandOrTokens,
     options 
-  });
+  }, null, 2)}`);
   
   if (typeof commandOrTokens === 'string') {
-    traceBranch('API', 'run', 'STRING_COMMAND', { command: commandOrTokens });
+    trace('API', () => `BRANCH: run => STRING_COMMAND | ${JSON.stringify({ command: commandOrTokens }, null, 2)}`);
     return sh(commandOrTokens, { ...options, mirror: false, capture: true });
   }
   
   const [file, ...args] = commandOrTokens;
-  traceBranch('API', 'run', 'TOKEN_ARRAY', { file, argsCount: args.length });
+  trace('API', () => `BRANCH: run => TOKEN_ARRAY | ${JSON.stringify({ file, argsCount: args.length }, null, 2)}`);
   return exec(file, args, { ...options, mirror: false, capture: true });
 }
 
 // Enhanced tagged template that returns ProcessRunner
 function $tagged(strings, ...values) {
-  traceFunc('API', '$tagged', 'ENTER', { 
+  trace('API', () => `$tagged ENTER | ${JSON.stringify({ 
     stringsLength: strings.length,
     valuesLength: values.length 
-  });
+  }, null, 2)}`);
   
   const cmd = buildShellCommand(strings, values);
   const runner = new ProcessRunner({ mode: 'shell', command: cmd }, { mirror: true, capture: true });
   
-  traceFunc('API', '$tagged', 'EXIT', { command: cmd });
+  trace('API', () => `$tagged EXIT | ${JSON.stringify({ command: cmd }, null, 2)}`);
   return runner;
 }
 
 function create(defaultOptions = {}) {
-  traceFunc('API', 'create', 'ENTER', { defaultOptions });
+  trace('API', () => `create ENTER | ${JSON.stringify({ defaultOptions }, null, 2)}`);
   
   const tagged = (strings, ...values) => {
-    traceFunc('API', 'create.tagged', 'ENTER', { 
+    trace('API', () => `create.tagged ENTER | ${JSON.stringify({ 
       stringsLength: strings.length,
       valuesLength: values.length 
-    });
+    }, null, 2)}`);
     
     const cmd = buildShellCommand(strings, values);
     const runner = new ProcessRunner({ mode: 'shell', command: cmd }, { mirror: true, capture: true, ...defaultOptions });
     
-    traceFunc('API', 'create.tagged', 'EXIT', { command: cmd });
+    trace('API', () => `create.tagged EXIT | ${JSON.stringify({ command: cmd }, null, 2)}`);
     return runner;
   };
   
-  traceFunc('API', 'create', 'EXIT', {});
+  trace('API', () => `create EXIT | ${JSON.stringify({}, null, 2)}`);
   return tagged;
 }
 
@@ -2641,20 +2628,20 @@ const shell = {
 
 // Virtual command registration API
 function register(name, handler) {
-  traceFunc('VirtualCommands', 'register', 'ENTER', { name });
+  trace('VirtualCommands', () => `register ENTER | ${JSON.stringify({ name }, null, 2)}`);
   
   virtualCommands.set(name, handler);
   
-  traceFunc('VirtualCommands', 'register', 'EXIT', { registered: true });
+  trace('VirtualCommands', () => `register EXIT | ${JSON.stringify({ registered: true }, null, 2)}`);
   return virtualCommands;
 }
 
 function unregister(name) {
-  traceFunc('VirtualCommands', 'unregister', 'ENTER', { name });
+  trace('VirtualCommands', () => `unregister ENTER | ${JSON.stringify({ name }, null, 2)}`);
   
   const deleted = virtualCommands.delete(name);
   
-  traceFunc('VirtualCommands', 'unregister', 'EXIT', { deleted });
+  trace('VirtualCommands', () => `unregister EXIT | ${JSON.stringify({ deleted }, null, 2)}`);
   return deleted;
 }
 
@@ -2677,15 +2664,15 @@ function registerBuiltins() {
   // cd - change directory
   register('cd', async ({ args }) => {
     const target = args[0] || process.env.HOME || process.env.USERPROFILE || '/';
-    trace('VirtualCommand', () => `cd: changing directory | ${JSON.stringify({ target })}`);
+    trace('VirtualCommand', () => `cd: changing directory | ${JSON.stringify({ target }, null, 2)}`);
     
     try {
       process.chdir(target);
       const newDir = process.cwd();
-      trace('VirtualCommand', () => `cd: success | ${JSON.stringify({ newDir })}`);
+      trace('VirtualCommand', () => `cd: success | ${JSON.stringify({ newDir }, null, 2)}`);
       return VirtualUtils.success(newDir);
     } catch (error) {
-      trace('VirtualCommand', () => `cd: failed | ${JSON.stringify({ error: error.message })}`);
+      trace('VirtualCommand', () => `cd: failed | ${JSON.stringify({ error: error.message }, null, 2)}`);
       return { stderr: `cd: ${error.message}`, code: 1 };
     }
   });
@@ -2694,18 +2681,18 @@ function registerBuiltins() {
   register('pwd', async ({ args, stdin, cwd }) => {
     // If cwd option is provided, return that instead of process.cwd()
     const dir = cwd || process.cwd();
-    trace('VirtualCommand', () => `pwd: getting directory | ${JSON.stringify({ dir })}`);
+    trace('VirtualCommand', () => `pwd: getting directory | ${JSON.stringify({ dir }, null, 2)}`);
     return VirtualUtils.success(dir);
   });
 
   // echo - print arguments
   register('echo', async ({ args }) => {
-    trace('VirtualCommand', () => `echo: processing | ${JSON.stringify({ argsCount: args.length })}`);
+    trace('VirtualCommand', () => `echo: processing | ${JSON.stringify({ argsCount: args.length }, null, 2)}`);
     
     let output = args.join(' ');
     if (args.includes('-n')) {
       // Don't add newline
-      traceBranch('VirtualCommand', 'echo', 'NO_NEWLINE', {});
+      trace('VirtualCommand', () => `BRANCH: echo => NO_NEWLINE | ${JSON.stringify({}, null, 2)}`);
       output = args.filter(arg => arg !== '-n').join(' ');
     } else {
       output += '\n';
@@ -2716,15 +2703,15 @@ function registerBuiltins() {
   // sleep - wait for specified time
   register('sleep', async ({ args }) => {
     const seconds = parseFloat(args[0] || 0);
-    trace('VirtualCommand', () => `sleep: starting | ${JSON.stringify({ seconds })}`);
+    trace('VirtualCommand', () => `sleep: starting | ${JSON.stringify({ seconds }, null, 2)}`);
     
     if (isNaN(seconds) || seconds < 0) {
-      trace('VirtualCommand', () => `sleep: invalid interval | ${JSON.stringify({ input: args[0] })}`);
+      trace('VirtualCommand', () => `sleep: invalid interval | ${JSON.stringify({ input: args[0] }, null, 2)}`);
       return { stderr: 'sleep: invalid time interval', code: 1 };
     }
     
     await new Promise(resolve => setTimeout(resolve, seconds * 1000));
-    trace('VirtualCommand', () => `sleep: completed | ${JSON.stringify({ seconds })}`);
+    trace('VirtualCommand', () => `sleep: completed | ${JSON.stringify({ seconds }, null, 2)}`);
     return { stdout: '', code: 0 };
   });
 
@@ -3249,7 +3236,7 @@ function registerBuiltins() {
   // yes - output a string repeatedly
   register('yes', async function* ({ args, stdin, isCancelled, signal, ...rest }) {
     const output = args.length > 0 ? args.join(' ') : 'y';
-    trace('VirtualCommand', () => `yes: starting infinite generator | ${JSON.stringify({ output })}`);
+    trace('VirtualCommand', () => `yes: starting infinite generator | ${JSON.stringify({ output }, null, 2)}`);
     
     // Generate infinite stream of the output
     while (true) {
