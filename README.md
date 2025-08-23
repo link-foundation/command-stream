@@ -137,6 +137,37 @@ console.log(result.stdout);
 console.log(result.code); // exit code
 ```
 
+### Execution Control (NEW!)
+
+```javascript
+import { $ } from 'command-stream';
+
+// Commands don't auto-start when created
+const cmd = $`echo "hello"`;
+
+// Three ways to start execution:
+
+// 1. Explicit start with options
+cmd.start();                    // Default async mode
+cmd.start({ mode: 'async' });   // Explicitly async
+cmd.start({ mode: 'sync' });    // Synchronous execution
+
+// 2. Convenience methods
+cmd.async();  // Same as start({ mode: 'async' })
+cmd.sync();   // Same as start({ mode: 'sync' })
+
+// 3. Auto-start by awaiting (always async)
+await cmd;    // Auto-starts in async mode
+
+// Event handlers can be attached before starting
+const process = $`long-command`
+  .on('data', chunk => console.log('Received:', chunk))
+  .on('end', result => console.log('Done!'));
+
+// Start whenever you're ready
+process.start();
+```
+
 ### Synchronous Execution
 
 ```javascript
@@ -169,6 +200,7 @@ for await (const chunk of $`long-running-command`.stream()) {
 ```javascript
 import { $ } from 'command-stream';
 
+// Attach event handlers then start execution
 $`command`
   .on('data', chunk => {
     if (chunk.type === 'stdout') {
@@ -177,7 +209,13 @@ $`command`
   })
   .on('stderr', chunk => console.log('Stderr:', chunk))
   .on('end', result => console.log('Done:', result))
-  .on('exit', code => console.log('Exit code:', code));
+  .on('exit', code => console.log('Exit code:', code))
+  .start(); // Explicitly start the command
+
+// Or auto-start by awaiting
+const cmd = $`another-command`
+  .on('data', chunk => console.log(chunk));
+await cmd; // Auto-starts in async mode
 ```
 
 ### Mixed Pattern (Best of Both Worlds)
@@ -585,10 +623,13 @@ The enhanced `$` function returns a `ProcessRunner` instance that extends `Event
 
 #### Methods
 
+- `start(options)`: Explicitly start command execution
+  - `options.mode`: `'async'` (default) or `'sync'` - execution mode
+- `async()`: Shortcut for `start({ mode: 'async' })` - start async execution
+- `sync()`: Shortcut for `start({ mode: 'sync' })` - execute synchronously (blocks until completion)
 - `stream()`: Returns an async iterator for real-time chunk processing
-- `sync()`: Execute command synchronously (blocks until completion, events batched)
 - `pipe(destination)`: Programmatically pipe output to another command (returns new ProcessRunner)
-- `then()`, `catch()`, `finally()`: Promise interface for await support
+- `then()`, `catch()`, `finally()`: Promise interface for await support (auto-starts in async mode)
 
 #### Properties
 
