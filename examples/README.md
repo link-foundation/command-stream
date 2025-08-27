@@ -2,6 +2,53 @@
 
 This directory contains examples demonstrating various features of the command-stream library.
 
+## New Features: Start/Run Options (GitHub Issues #16 & #17)
+
+### **test-start-run-options.mjs**
+Comprehensive demonstration of the new `.start()` and `.run()` methods with options.
+```bash
+node examples/test-start-run-options.mjs
+```
+- Shows how to pass `capture`, `mirror`, and `stdin` options
+- Compares old `sh()` function approach vs new template literal syntax
+- Demonstrates performance optimization with `capture: false`
+
+### **test-capture-mirror-combinations.mjs**
+Visual demonstration of all capture/mirror option combinations.
+```bash
+node examples/test-capture-mirror-combinations.mjs
+```
+- Shows all 4 combinations of capture: true/false, mirror: true/false
+- Includes helpful summary table and use case recommendations
+- Great for understanding when to use which options
+
+### **test-run-vs-start.mjs**
+Compares `.run()` and `.start()` methods to show they are identical.
+```bash
+node examples/test-run-vs-start.mjs
+```
+- Performance comparison between the two methods
+- Shows both support identical options
+- Addresses GitHub issue #16 (`.run()` alias requirement)
+
+### **test-new-features.mjs**
+Complete test suite demonstrating the new functionality.
+```bash
+node examples/test-new-features.mjs
+```
+- Tests both virtual commands and real shell commands
+- Shows backward compatibility with direct await
+- Comprehensive option testing
+
+### **test-real-shell.mjs**
+Specifically tests the new options with real shell commands (not virtual commands).
+```bash
+node examples/test-real-shell.mjs
+```
+- Uses actual system commands like `ls`
+- Shows performance differences with different options
+- Demonstrates real-world usage scenarios
+
 ## ANSI Color Handling Examples
 
 ### **interactive-top.mjs** 

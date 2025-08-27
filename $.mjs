@@ -625,7 +625,37 @@ class ProcessRunner extends StreamEmitter {
   start(options = {}) {
     const mode = options.mode || 'async';
 
-    trace('ProcessRunner', () => `start ENTER | ${JSON.stringify({ mode, options }, null, 2)}`);
+    trace('ProcessRunner', () => `start ENTER | ${JSON.stringify({ mode, options, started: this.started }, null, 2)}`);
+
+    // Merge new options with existing options before starting
+    if (Object.keys(options).length > 0 && !this.started) {
+      trace('ProcessRunner', () => `BRANCH: options => MERGE | ${JSON.stringify({ 
+        oldOptions: this.options, 
+        newOptions: options 
+      }, null, 2)}`);
+
+      // Create a new options object merging the current ones with the new ones
+      this.options = { ...this.options, ...options };
+      
+      // Reinitialize chunks based on updated capture option
+      if ('capture' in options) {
+        trace('ProcessRunner', () => `BRANCH: capture => REINIT_CHUNKS | ${JSON.stringify({ 
+          capture: this.options.capture 
+        }, null, 2)}`);
+        
+        this.outChunks = this.options.capture ? [] : null;
+        this.errChunks = this.options.capture ? [] : null;
+        this.inChunks = this.options.capture && this.options.stdin === 'inherit' ? [] :
+          this.options.capture && (typeof this.options.stdin === 'string' || Buffer.isBuffer(this.options.stdin)) ?
+            [Buffer.from(this.options.stdin)] : [];
+      }
+      
+      trace('ProcessRunner', () => `OPTIONS_MERGED | ${JSON.stringify({ 
+        finalOptions: this.options 
+      }, null, 2)}`);
+    } else if (Object.keys(options).length > 0 && this.started) {
+      trace('ProcessRunner', () => `BRANCH: options => IGNORED_ALREADY_STARTED | ${JSON.stringify({}, null, 2)}`);
+    }
 
     if (mode === 'sync') {
       trace('ProcessRunner', () => `BRANCH: mode => sync | ${JSON.stringify({}, null, 2)}`);
@@ -644,6 +674,12 @@ class ProcessRunner extends StreamEmitter {
   // Shortcut for async mode
   async() {
     return this.start({ mode: 'async' });
+  }
+
+  // Alias for start() method
+  run(options = {}) {
+    trace('ProcessRunner', () => `run ENTER | ${JSON.stringify({ options }, null, 2)}`);
+    return this.start(options);
   }
 
   async _startAsync() {
@@ -791,8 +827,8 @@ class ProcessRunner extends StreamEmitter {
 
     const resultData = {
       code: code ?? 0,  // Default to 0 if exit code is null/undefined
-      stdout: this.options.capture ? Buffer.concat(this.outChunks).toString('utf8') : undefined,
-      stderr: this.options.capture ? Buffer.concat(this.errChunks).toString('utf8') : undefined,
+      stdout: this.options.capture ? (this.outChunks && this.outChunks.length > 0 ? Buffer.concat(this.outChunks).toString('utf8') : '') : undefined,
+      stderr: this.options.capture ? (this.errChunks && this.errChunks.length > 0 ? Buffer.concat(this.errChunks).toString('utf8') : '') : undefined,
       stdin: this.options.capture && this.inChunks ? Buffer.concat(this.inChunks).toString('utf8') : undefined,
       child: this.child
     };
@@ -1031,11 +1067,11 @@ class ProcessRunner extends StreamEmitter {
         result = await handler({ args: argValues, stdin: stdinData, ...this.options });
 
         result = {
+          ...result,
           code: result.code ?? 0,
           stdout: this.options.capture ? (result.stdout ?? '') : undefined,
           stderr: this.options.capture ? (result.stderr ?? '') : undefined,
-          stdin: this.options.capture ? stdinData : undefined,
-          ...result
+          stdin: this.options.capture ? stdinData : undefined
         };
 
         // Mirror and emit output
@@ -1758,11 +1794,11 @@ class ProcessRunner extends StreamEmitter {
             // Regular async function
             result = await handler({ args: argValues, stdin: currentInput, ...this.options });
             result = {
+              ...result,
               code: result.code ?? 0,
               stdout: this.options.capture ? (result.stdout ?? '') : undefined,
               stderr: this.options.capture ? (result.stderr ?? '') : undefined,
-              stdin: this.options.capture ? currentInput : undefined,
-              ...result
+              stdin: this.options.capture ? currentInput : undefined
             };
           }
 
