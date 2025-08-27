@@ -1,4 +1,4 @@
-import { test, expect, describe, beforeEach } from 'bun:test';
+import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
 import { $, shell, register, unregister, listCommands, enableVirtualCommands } from '../$.mjs';
 
 // Reset shell settings before each test
@@ -10,6 +10,15 @@ beforeEach(() => {
   shell.nounset(false);
   // Enable virtual commands for these tests since they specifically test virtual commands
   enableVirtualCommands();
+});
+
+// Reset shell settings after each test to prevent interference with other test files
+afterEach(() => {
+  shell.errexit(false);
+  shell.verbose(false);
+  shell.xtrace(false);
+  shell.pipefail(false);
+  shell.nounset(false);
 });
 
 describe('Virtual Commands System', () => {

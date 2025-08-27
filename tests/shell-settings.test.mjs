@@ -82,6 +82,13 @@ describe('Shell Settings (set -e / set +e equivalent)', () => {
     });
 
     test('should print commands when verbose enabled', async () => {
+      // Ensure clean state before intercepting console.log
+      shell.errexit(false);
+      shell.verbose(false);
+      shell.xtrace(false);
+      shell.pipefail(false);
+      shell.nounset(false);
+      
       const originalLog = console.log;
       let capturedLogs = [];
       console.log = (...args) => capturedLogs.push(args.join(' '));
@@ -91,7 +98,7 @@ describe('Shell Settings (set -e / set +e equivalent)', () => {
         await $`echo "verbose test"`;
         
         expect(capturedLogs.length).toBeGreaterThan(0);
-        expect(capturedLogs.some(log => log.includes('echo verbose test'))).toBe(true);
+        expect(capturedLogs.some(log => log.includes('echo "verbose test"'))).toBe(true);
       } finally {
         console.log = originalLog;
       }
@@ -113,6 +120,13 @@ describe('Shell Settings (set -e / set +e equivalent)', () => {
     });
 
     test('should trace commands when xtrace enabled', async () => {
+      // Ensure clean state before intercepting console.log
+      shell.errexit(false);
+      shell.verbose(false);
+      shell.xtrace(false);
+      shell.pipefail(false);
+      shell.nounset(false);
+      
       const originalLog = console.log;
       let capturedLogs = [];
       console.log = (...args) => capturedLogs.push(args.join(' '));
@@ -123,7 +137,7 @@ describe('Shell Settings (set -e / set +e equivalent)', () => {
         
         expect(capturedLogs.length).toBeGreaterThan(0);
         expect(capturedLogs.some(log => log.startsWith('+ '))).toBe(true);
-        expect(capturedLogs.some(log => log.includes('echo trace test'))).toBe(true);
+        expect(capturedLogs.some(log => log.includes('echo "trace test"'))).toBe(true);
       } finally {
         console.log = originalLog;
       }

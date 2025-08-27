@@ -1,8 +1,17 @@
-import { test, expect, describe, beforeEach } from 'bun:test';
+import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
 import { $, shell } from '../$.mjs';
 
 // Reset shell settings before each test
 beforeEach(() => {
+  shell.errexit(false);
+  shell.verbose(false);
+  shell.xtrace(false);
+  shell.pipefail(false);
+  shell.nounset(false);
+});
+
+// Reset shell settings after each test to prevent interference with other test files
+afterEach(() => {
   shell.errexit(false);
   shell.verbose(false);
   shell.xtrace(false);

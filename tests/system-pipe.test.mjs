@@ -1,4 +1,4 @@
-import { test, expect, describe, beforeEach } from 'bun:test';
+import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
 import { $, shell, disableVirtualCommands } from '../$.mjs';
 import { execSync } from 'child_process';
 
@@ -9,6 +9,15 @@ beforeEach(() => {
   shell.pipefail(false);
   shell.nounset(false);
   disableVirtualCommands();
+});
+
+// Reset shell settings after each test to prevent interference with other test files
+afterEach(() => {
+  shell.errexit(false);
+  shell.verbose(false);
+  shell.xtrace(false);
+  shell.pipefail(false);
+  shell.nounset(false);
 });
 
 const hasCommand = (cmd) => {
