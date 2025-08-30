@@ -12,8 +12,8 @@ ls -R /workspace/.persisted-configs/.claude 2>/dev/null || echo "(none)"
 
 # Restore Claude credentials
 cp -r /workspace/.persisted-configs/.claude ~/.claude 2>/dev/null || true
-cp -f /workspace/.persisted-configs/.claude.json ~ 2>/dev/null || true
-cp -f /workspace/.persisted-configs/.claude.json.backup ~ 2>/dev/null || true
+[ -f /workspace/.persisted-configs/.claude.json ] && cp /workspace/.persisted-configs/.claude.json ~/
+[ -f /workspace/.persisted-configs/.claude.json.backup ] && cp /workspace/.persisted-configs/.claude.json.backup ~/
 
 CLAUDE_CRED=~/.claude/.credentials.json
 [ -f "$CLAUDE_CRED" ] && echo "✅ Claude credentials restored" || echo "❌ Claude credentials missing"

@@ -16,16 +16,25 @@ ls -R /workspace/.persisted-configs/gh
 
 # --- Claude backup ---
 # Save Claude auth/config into persisted workspace folder
-mkdir -p /workspace/.persisted-configs
-cp -r ~/.claude /workspace/.persisted-configs/ 2>/dev/null || true
-cp -r ~/.claude.json /workspace/.persisted-configs/ 2>/dev/null || true
-cp -r ~/.claude.json.backup /workspace/.persisted-configs/ 2>/dev/null || true
+mkdir -p /workspace/.persisted-configs/.claude
+mkdir -p /workspace/.persisted-configs/claude-code
+
+# Copy main Claude files
+cp -r ~/.claude/* /workspace/.persisted-configs/.claude/ 2>/dev/null || true
+cp -r ~/.config/claude-code/* /workspace/.persisted-configs/claude-code/ 2>/dev/null || true
+
+# Also copy root-level hidden files if they exist
+[ -f ~/.claude/.credentials.json ] && cp ~/.claude/.credentials.json /workspace/.persisted-configs/.claude/
+[ -f ~/.claude.json ] && cp ~/.claude.json /workspace/.persisted-configs/
+[ -f ~/.claude.json.backup ] && cp ~/.claude.json.backup /workspace/.persisted-configs/
 
 # Verify it's saved & list files
 CLAUDE_CRED_BACKUP=/workspace/.persisted-configs/.claude/.credentials.json
+CLAUDE_CFG_BACKUP=/workspace/.persisted-configs/claude-code/auth.json
 [ -f "$CLAUDE_CRED_BACKUP" ] && echo "✅ Claude credentials saved" || echo "❌ Claude credentials save failed"
-
+[ -f "$CLAUDE_CFG_BACKUP" ] && echo "✅ Claude config saved" || echo "❌ Claude config save failed"
 echo "📂 Claude backup files:"
-ls -R /workspace/.persisted-configs/.claude 2>/dev/null || echo "(no .claude folder)"
+ls -R /workspace/.persisted-configs/.claude
+ls -R /workspace/.persisted-configs/claude-code
 [ -f /workspace/.persisted-configs/.claude.json ] && echo " - .claude.json found"
 [ -f /workspace/.persisted-configs/.claude.json.backup ] && echo " - .claude.json.backup found"
