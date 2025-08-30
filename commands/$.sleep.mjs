@@ -1,4 +1,4 @@
-import { trace } from './$.utils.mjs';
+import { trace } from '../$.utils.mjs';
 
 export default async function sleep({ args }) {
   const seconds = parseFloat(args[0] || 0);

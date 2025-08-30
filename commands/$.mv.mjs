@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { trace, VirtualUtils } from './$.utils.mjs';
+import { trace, VirtualUtils } from '../$.utils.mjs';
 
 export default async function mv({ args, stdin, cwd }) {
   const argError = VirtualUtils.validateArgs(args, 2, 'mv');

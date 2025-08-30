@@ -1,4 +1,4 @@
-import { trace, VirtualUtils } from './$.utils.mjs';
+import { trace, VirtualUtils } from '../$.utils.mjs';
 
 export default async function cd({ args }) {
   const target = args[0] || process.env.HOME || process.env.USERPROFILE || '/';

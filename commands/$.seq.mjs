@@ -1,4 +1,4 @@
-import { VirtualUtils } from './$.utils.mjs';
+import { VirtualUtils } from '../$.utils.mjs';
 
 export default async function seq({ args }) {
   const argError = VirtualUtils.validateArgs(args, 1, 'seq');

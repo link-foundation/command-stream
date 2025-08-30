@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { trace, VirtualUtils } from './$.utils.mjs';
+import { trace, VirtualUtils } from '../$.utils.mjs';
 
 export default async function rm({ args, stdin, cwd }) {
   const argError = VirtualUtils.validateArgs(args, 1, 'rm');

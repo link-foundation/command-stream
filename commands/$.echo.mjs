@@ -1,4 +1,4 @@
-import { trace, VirtualUtils } from './$.utils.mjs';
+import { trace, VirtualUtils } from '../$.utils.mjs';
 
 export default async function echo({ args }) {
   trace('VirtualCommand', () => `echo: processing | ${JSON.stringify({ argsCount: args.length }, null, 2)}`);

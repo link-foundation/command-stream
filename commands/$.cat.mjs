@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { trace, VirtualUtils } from './$.utils.mjs';
+import { trace, VirtualUtils } from '../$.utils.mjs';
 
 export default async function cat({ args, stdin, cwd }) {
   if (args.length === 0) {

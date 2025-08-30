@@ -1,4 +1,4 @@
-import { VirtualUtils } from './$.utils.mjs';
+import { VirtualUtils } from '../$.utils.mjs';
 
 export default async function env({ args, stdin, env }) {
   if (args.length === 0) {

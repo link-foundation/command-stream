@@ -2652,27 +2652,27 @@ function disableVirtualCommands() {
 }
 
 // Import virtual commands
-import cdCommand from './$.cd.mjs';
-import pwdCommand from './$.pwd.mjs';
-import echoCommand from './$.echo.mjs';
-import sleepCommand from './$.sleep.mjs';
-import trueCommand from './$.true.mjs';
-import falseCommand from './$.false.mjs';
-import createWhichCommand from './$.which.mjs';
-import createExitCommand from './$.exit.mjs';
-import envCommand from './$.env.mjs';
-import catCommand from './$.cat.mjs';
-import lsCommand from './$.ls.mjs';
-import mkdirCommand from './$.mkdir.mjs';
-import rmCommand from './$.rm.mjs';
-import mvCommand from './$.mv.mjs';
-import cpCommand from './$.cp.mjs';
-import touchCommand from './$.touch.mjs';
-import basenameCommand from './$.basename.mjs';
-import dirnameCommand from './$.dirname.mjs';
-import yesCommand from './$.yes.mjs';
-import seqCommand from './$.seq.mjs';
-import testCommand from './$.test.mjs';
+import cdCommand from './commands/$.cd.mjs';
+import pwdCommand from './commands/$.pwd.mjs';
+import echoCommand from './commands/$.echo.mjs';
+import sleepCommand from './commands/$.sleep.mjs';
+import trueCommand from './commands/$.true.mjs';
+import falseCommand from './commands/$.false.mjs';
+import createWhichCommand from './commands/$.which.mjs';
+import createExitCommand from './commands/$.exit.mjs';
+import envCommand from './commands/$.env.mjs';
+import catCommand from './commands/$.cat.mjs';
+import lsCommand from './commands/$.ls.mjs';
+import mkdirCommand from './commands/$.mkdir.mjs';
+import rmCommand from './commands/$.rm.mjs';
+import mvCommand from './commands/$.mv.mjs';
+import cpCommand from './commands/$.cp.mjs';
+import touchCommand from './commands/$.touch.mjs';
+import basenameCommand from './commands/$.basename.mjs';
+import dirnameCommand from './commands/$.dirname.mjs';
+import yesCommand from './commands/$.yes.mjs';
+import seqCommand from './commands/$.seq.mjs';
+import testCommand from './commands/$.test.mjs';
 
 // Built-in commands that match Bun.$ functionality
 function registerBuiltins() {

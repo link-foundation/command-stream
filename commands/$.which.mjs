@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { VirtualUtils } from './$.utils.mjs';
+import { VirtualUtils } from '../$.utils.mjs';
 
 export default function createWhichCommand(virtualCommands) {
   return async function which({ args }) {

@@ -1,4 +1,4 @@
-import { trace, VirtualUtils } from './$.utils.mjs';
+import { trace, VirtualUtils } from '../$.utils.mjs';
 
 export default async function pwd({ args, stdin, cwd }) {
   // If cwd option is provided, return that instead of process.cwd()

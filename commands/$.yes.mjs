@@ -1,4 +1,4 @@
-import { trace } from './$.utils.mjs';
+import { trace } from '../$.utils.mjs';
 
 export default async function* yes({ args, stdin, isCancelled, signal, ...rest }) {
   const output = args.length > 0 ? args.join(' ') : 'y';
