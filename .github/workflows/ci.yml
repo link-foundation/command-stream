@@ -5,6 +5,8 @@ on:
     branches: [ main ]
     paths:
       - '$.mjs'
+      - '$.utils.mjs'
+      - 'commands/**'
       - 'tests/**'
       - 'package.json'
       - '.github/workflows/ci.yml'
@@ -12,6 +14,8 @@ on:
     branches: [ main ]
     paths:
       - '$.mjs'
+      - '$.utils.mjs'
+      - 'commands/**'
       - 'tests/**'
       - 'package.json'
       - '.github/workflows/ci.yml'
@@ -40,12 +44,12 @@ jobs:
         run: bun install
       
       - name: Run tests (verbose mode)
-        run: bun test
+        run: bun test tests/
         env:
           COMMAND_STREAM_VERBOSE: true
       
       - name: Run tests with coverage (verbose mode)
-        run: bun test --coverage
+        run: bun test tests/ --coverage
         env:
           COMMAND_STREAM_VERBOSE: true
       
