@@ -1,9 +1,24 @@
 #!/usr/bin/env node
 
-import { test, expect, describe } from 'bun:test';
-import { $ } from '../$.mjs';
+import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
+import { $, shell } from '../$.mjs';
 
 describe('Start/Run Edge Cases and Advanced Usage', () => {
+  beforeEach(() => {
+    shell.errexit(false);
+    shell.verbose(false);
+    shell.xtrace(false);
+    shell.pipefail(false);
+    shell.nounset(false);
+  });
+
+  afterEach(() => {
+    shell.errexit(false);
+    shell.verbose(false);
+    shell.xtrace(false);
+    shell.pipefail(false);
+    shell.nounset(false);
+  });
   test('should handle complex option combinations', async () => {
     const result = await $`echo "complex test"`.start({
       capture: true,
