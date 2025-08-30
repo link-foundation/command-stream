@@ -730,7 +730,7 @@ class ProcessRunner extends StreamEmitter {
             isVirtual: true,
             args: parsed.args
           }, null, 2)}`);
-          return await this._runVirtual(parsed.cmd, parsed.args);
+          return await this._runVirtual(parsed.cmd, parsed.args, this.spec.command);
         }
       }
     }
@@ -963,8 +963,8 @@ class ProcessRunner extends StreamEmitter {
     return { type: 'pipeline', commands };
   }
 
-  async _runVirtual(cmd, args) {
-    trace('ProcessRunner', () => `_runVirtual ENTER | ${JSON.stringify({ cmd, args }, null, 2)}`);
+  async _runVirtual(cmd, args, originalCommand = null) {
+    trace('ProcessRunner', () => `_runVirtual ENTER | ${JSON.stringify({ cmd, args, originalCommand }, null, 2)}`);
 
     const handler = virtualCommands.get(cmd);
     if (!handler) {
@@ -991,10 +991,10 @@ class ProcessRunner extends StreamEmitter {
 
       // Shell tracing for virtual commands
       if (globalShellSettings.xtrace) {
-        console.log(`+ ${cmd} ${argValues.join(' ')}`);
+        console.log(`+ ${originalCommand || `${cmd} ${argValues.join(' ')}`}`);
       }
       if (globalShellSettings.verbose) {
-        console.log(`${cmd} ${argValues.join(' ')}`);
+        console.log(`${originalCommand || `${cmd} ${argValues.join(' ')}`}`);
       }
 
       let result;
@@ -1133,6 +1133,7 @@ class ProcessRunner extends StreamEmitter {
       this.emit('exit', result.code);
 
       if (globalShellSettings.errexit) {
+        error.result = result;
         throw error;
       }
 
@@ -2650,672 +2651,55 @@ function disableVirtualCommands() {
   return virtualCommandsEnabled;
 }
 
+// Import virtual commands
+import cdCommand from './$.cd.mjs';
+import pwdCommand from './$.pwd.mjs';
+import echoCommand from './$.echo.mjs';
+import sleepCommand from './$.sleep.mjs';
+import trueCommand from './$.true.mjs';
+import falseCommand from './$.false.mjs';
+import createWhichCommand from './$.which.mjs';
+import createExitCommand from './$.exit.mjs';
+import envCommand from './$.env.mjs';
+import catCommand from './$.cat.mjs';
+import lsCommand from './$.ls.mjs';
+import mkdirCommand from './$.mkdir.mjs';
+import rmCommand from './$.rm.mjs';
+import mvCommand from './$.mv.mjs';
+import cpCommand from './$.cp.mjs';
+import touchCommand from './$.touch.mjs';
+import basenameCommand from './$.basename.mjs';
+import dirnameCommand from './$.dirname.mjs';
+import yesCommand from './$.yes.mjs';
+import seqCommand from './$.seq.mjs';
+import testCommand from './$.test.mjs';
+
 // Built-in commands that match Bun.$ functionality
 function registerBuiltins() {
-  // cd - change directory
-  register('cd', async ({ args }) => {
-    const target = args[0] || process.env.HOME || process.env.USERPROFILE || '/';
-    trace('VirtualCommand', () => `cd: changing directory | ${JSON.stringify({ target }, null, 2)}`);
-
-    try {
-      process.chdir(target);
-      const newDir = process.cwd();
-      trace('VirtualCommand', () => `cd: success | ${JSON.stringify({ newDir }, null, 2)}`);
-      return VirtualUtils.success(newDir);
-    } catch (error) {
-      trace('VirtualCommand', () => `cd: failed | ${JSON.stringify({ error: error.message }, null, 2)}`);
-      return { stderr: `cd: ${error.message}`, code: 1 };
-    }
-  });
-
-  // pwd - print working directory
-  register('pwd', async ({ args, stdin, cwd }) => {
-    // If cwd option is provided, return that instead of process.cwd()
-    const dir = cwd || process.cwd();
-    trace('VirtualCommand', () => `pwd: getting directory | ${JSON.stringify({ dir }, null, 2)}`);
-    return VirtualUtils.success(dir);
-  });
-
-  // echo - print arguments
-  register('echo', async ({ args }) => {
-    trace('VirtualCommand', () => `echo: processing | ${JSON.stringify({ argsCount: args.length }, null, 2)}`);
-
-    let output = args.join(' ');
-    if (args.includes('-n')) {
-      // Don't add newline
-      trace('VirtualCommand', () => `BRANCH: echo => NO_NEWLINE | ${JSON.stringify({}, null, 2)}`);
-      output = args.filter(arg => arg !== '-n').join(' ');
-    } else {
-      output += '\n';
-    }
-    return VirtualUtils.success(output);
-  });
-
-  // sleep - wait for specified time
-  register('sleep', async ({ args }) => {
-    const seconds = parseFloat(args[0] || 0);
-    trace('VirtualCommand', () => `sleep: starting | ${JSON.stringify({ seconds }, null, 2)}`);
-
-    if (isNaN(seconds) || seconds < 0) {
-      trace('VirtualCommand', () => `sleep: invalid interval | ${JSON.stringify({ input: args[0] }, null, 2)}`);
-      return { stderr: 'sleep: invalid time interval', code: 1 };
-    }
-
-    await new Promise(resolve => setTimeout(resolve, seconds * 1000));
-    trace('VirtualCommand', () => `sleep: completed | ${JSON.stringify({ seconds }, null, 2)}`);
-    return { stdout: '', code: 0 };
-  });
-
-  // true - always succeed
-  register('true', async () => {
-    return VirtualUtils.success();
-  });
-
-  // false - always fail
-  register('false', async () => {
-    return { stdout: '', code: 1 };
-  });
-
-  // which - locate command
-  register('which', async ({ args }) => {
-    const argError = VirtualUtils.validateArgs(args, 1, 'which');
-    if (argError) return argError;
-
-    const cmd = args[0];
-
-    if (virtualCommands.has(cmd)) {
-      return VirtualUtils.success(`${cmd}: shell builtin\n`);
-    }
-
-    const paths = (process.env.PATH || '').split(process.platform === 'win32' ? ';' : ':');
-    const extensions = process.platform === 'win32' ? ['', '.exe', '.cmd', '.bat'] : [''];
-
-    for (const pathDir of paths) {
-      for (const ext of extensions) {
-        const fullPath = path.join(pathDir, cmd + ext);
-        try {
-          if (fs.statSync(fullPath).isFile()) {
-            return VirtualUtils.success(fullPath + '\n');
-          }
-        } catch { }
-      }
-    }
-
-    return VirtualUtils.error(`which: no ${cmd} in PATH`);
-  });
-
-  // exit - exit with code
-  register('exit', async ({ args }) => {
-    const code = parseInt(args[0] || 0);
-    if (globalShellSettings.errexit || code !== 0) {
-      // For virtual commands, we simulate exit by returning the code
-      return { stdout: '', code };
-    }
-    return { stdout: '', code: 0 };
-  });
-
-  // env - print environment variables
-  register('env', async ({ args, stdin, env }) => {
-    if (args.length === 0) {
-      // Use custom env if provided, otherwise use process.env
-      const envVars = env || process.env;
-      const output = Object.entries(envVars)
-        .map(([key, value]) => `${key}=${value}`)
-        .join('\n') + '\n';
-      return { stdout: output, code: 0 };
-    }
-
-    // TODO: Support env VAR=value command syntax
-    return { stderr: 'env: command execution not yet supported', code: 1 };
-  });
-
-  // cat - read and display file contents
-  register('cat', async ({ args, stdin, cwd }) => {
-    if (args.length === 0) {
-      // Read from stdin if no files specified
-      return { stdout: stdin || '', code: 0 };
-    }
-
-    try {
-      let output = '';
-
-      for (const filename of args) {
-        if (filename === '-n') continue; // Line numbering (basic support)
-
-        try {
-          // Resolve path relative to cwd if provided
-          const basePath = cwd || process.cwd();
-          const fullPath = path.isAbsolute(filename) ? filename : path.join(basePath, filename);
-
-          const content = fs.readFileSync(fullPath, 'utf8');
-          output += content;
-        } catch (error) {
-          const errorMsg = error.code === 'ENOENT' ? 'No such file or directory' : error.message;
-          return {
-            stderr: `cat: ${filename}: ${errorMsg}`,
-            stdout: output,
-            code: 1
-          };
-        }
-      }
-
-      return { stdout: output, code: 0 };
-    } catch (error) {
-      return { stderr: `cat: ${error.message}`, code: 1 };
-    }
-  });
-
-  // ls - list directory contents
-  register('ls', async ({ args, stdin, cwd }) => {
-    try {
-
-      const flags = args.filter(arg => arg.startsWith('-'));
-      const paths = args.filter(arg => !arg.startsWith('-'));
-      const isLongFormat = flags.includes('-l');
-      const showAll = flags.includes('-a');
-      const showAlmostAll = flags.includes('-A');
-
-      // Default to current directory if no paths specified
-      const targetPaths = paths.length > 0 ? paths : ['.'];
-
-      let output = '';
-
-      for (const targetPath of targetPaths) {
-        // Resolve path relative to cwd if provided
-        const basePath = cwd || process.cwd();
-        const fullPath = path.isAbsolute(targetPath) ? targetPath : path.join(basePath, targetPath);
-
-        try {
-          const stat = fs.statSync(fullPath);
-
-          if (stat.isFile()) {
-            // Just show the file name if it's a file
-            output += path.basename(targetPath) + '\n';
-          } else if (stat.isDirectory()) {
-            const entries = fs.readdirSync(fullPath);
-
-            // Filter hidden files unless -a or -A is specified
-            let filteredEntries = entries;
-            if (!showAll && !showAlmostAll) {
-              filteredEntries = entries.filter(entry => !entry.startsWith('.'));
-            } else if (showAlmostAll) {
-              filteredEntries = entries.filter(entry => entry !== '.' && entry !== '..');
-            }
-
-            if (isLongFormat) {
-              for (const entry of filteredEntries) {
-                const entryPath = path.join(fullPath, entry);
-                try {
-                  const entryStat = fs.statSync(entryPath);
-                  const isDir = entryStat.isDirectory();
-                  const permissions = isDir ? 'drwxr-xr-x' : '-rw-r--r--';
-                  const size = entryStat.size.toString().padStart(8);
-                  const date = entryStat.mtime.toISOString().slice(0, 16).replace('T', ' ');
-                  output += `${permissions} 1 user group ${size} ${date} ${entry}\n`;
-                } catch {
-                  output += `?????????? 1 user group        ? ??? ?? ??:?? ${entry}\n`;
-                }
-              }
-            } else {
-              output += filteredEntries.join('\n') + (filteredEntries.length > 0 ? '\n' : '');
-            }
-          }
-        } catch (error) {
-          return {
-            stderr: `ls: cannot access '${targetPath}': ${error.message}`,
-            code: 2
-          };
-        }
-      }
-
-      return { stdout: output, code: 0 };
-    } catch (error) {
-      return { stderr: `ls: ${error.message}`, code: 1 };
-    }
-  });
-
-  register('mkdir', async ({ args, stdin, cwd }) => {
-    const argError = VirtualUtils.validateArgs(args, 1, 'mkdir');
-    if (argError) return argError;
-
-    try {
-
-      const flags = args.filter(arg => arg.startsWith('-'));
-      const dirs = args.filter(arg => !arg.startsWith('-'));
-      const recursive = flags.includes('-p');
-
-      for (const dir of dirs) {
-        try {
-          const basePath = cwd || process.cwd();
-          const fullPath = path.isAbsolute(dir) ? dir : path.join(basePath, dir);
-
-          if (recursive) {
-            fs.mkdirSync(fullPath, { recursive: true });
-          } else {
-            fs.mkdirSync(fullPath);
-          }
-        } catch (error) {
-          return {
-            stderr: `mkdir: cannot create directory '${dir}': ${error.message}`,
-            code: 1
-          };
-        }
-      }
-
-      return { stdout: '', code: 0 };
-    } catch (error) {
-      return { stderr: `mkdir: ${error.message}`, code: 1 };
-    }
-  });
-
-  // rm - remove files and directories
-  register('rm', async ({ args, stdin, cwd }) => {
-    const argError = VirtualUtils.validateArgs(args, 1, 'rm');
-    if (argError) return argError;
-
-    try {
-
-      const flags = args.filter(arg => arg.startsWith('-'));
-      const targets = args.filter(arg => !arg.startsWith('-'));
-      const recursive = flags.includes('-r') || flags.includes('-R');
-      const force = flags.includes('-f');
-
-      for (const target of targets) {
-        try {
-          const basePath = cwd || process.cwd();
-          const fullPath = path.isAbsolute(target) ? target : path.join(basePath, target);
-
-          const stat = fs.statSync(fullPath);
-
-          if (stat.isDirectory()) {
-            if (!recursive) {
-              return {
-                stderr: `rm: cannot remove '${target}': Is a directory`,
-                code: 1
-              };
-            }
-            fs.rmSync(fullPath, { recursive: true, force });
-          } else {
-            fs.unlinkSync(fullPath);
-          }
-        } catch (error) {
-          if (!force) {
-            return {
-              stderr: `rm: cannot remove '${target}': ${error.message}`,
-              code: 1
-            };
-          }
-        }
-      }
-
-      return { stdout: '', code: 0 };
-    } catch (error) {
-      return { stderr: `rm: ${error.message}`, code: 1 };
-    }
-  });
-
-  // mv - move/rename files and directories
-  register('mv', async ({ args, stdin, cwd }) => {
-    const argError = VirtualUtils.validateArgs(args, 2, 'mv');
-    if (argError) return VirtualUtils.invalidArgumentError('mv', 'missing destination file operand');
-
-    try {
-
-      const basePath = cwd || process.cwd();
-
-      if (args.length === 2) {
-        // Simple rename/move
-        const [source, dest] = args;
-        const sourcePath = path.isAbsolute(source) ? source : path.join(basePath, source);
-        let destPath = path.isAbsolute(dest) ? dest : path.join(basePath, dest);
-
-        try {
-          try {
-            const destStat = fs.statSync(destPath);
-            if (destStat.isDirectory()) {
-              // Move file into the directory
-              const fileName = path.basename(source);
-              destPath = path.join(destPath, fileName);
-            }
-          } catch {
-            // Destination doesn't exist, proceed with direct rename
-          }
-
-          fs.renameSync(sourcePath, destPath);
-        } catch (error) {
-          return {
-            stderr: `mv: cannot move '${source}' to '${dest}': ${error.message}`,
-            code: 1
-          };
-        }
-      } else {
-        // Multiple sources to directory
-        const sources = args.slice(0, -1);
-        const dest = args[args.length - 1];
-        const destPath = path.isAbsolute(dest) ? dest : path.join(basePath, dest);
-
-        try {
-          const destStat = fs.statSync(destPath);
-          if (!destStat.isDirectory()) {
-            return {
-              stderr: `mv: target '${dest}' is not a directory`,
-              code: 1
-            };
-          }
-        } catch {
-          return {
-            stderr: `mv: cannot access '${dest}': No such file or directory`,
-            code: 1
-          };
-        }
-
-        for (const source of sources) {
-          try {
-            const sourcePath = path.isAbsolute(source) ? source : path.join(basePath, source);
-            const fileName = path.basename(source);
-            const newDestPath = path.join(destPath, fileName);
-            fs.renameSync(sourcePath, newDestPath);
-          } catch (error) {
-            return {
-              stderr: `mv: cannot move '${source}' to '${dest}': ${error.message}`,
-              code: 1
-            };
-          }
-        }
-      }
-
-      return { stdout: '', code: 0 };
-    } catch (error) {
-      return { stderr: `mv: ${error.message}`, code: 1 };
-    }
-  });
-
-  // cp - copy files and directories
-  register('cp', async ({ args, stdin, cwd }) => {
-    const argError = VirtualUtils.validateArgs(args, 2, 'cp');
-    if (argError) return VirtualUtils.invalidArgumentError('cp', 'missing destination file operand');
-
-    try {
-
-      const flags = args.filter(arg => arg.startsWith('-'));
-      const paths = args.filter(arg => !arg.startsWith('-'));
-      const recursive = flags.includes('-r') || flags.includes('-R');
-
-      const basePath = cwd || process.cwd();
-
-      if (paths.length === 2) {
-        // Simple copy
-        const [source, dest] = paths;
-        const sourcePath = path.isAbsolute(source) ? source : path.join(basePath, source);
-        const destPath = path.isAbsolute(dest) ? dest : path.join(basePath, dest);
-
-        try {
-          const sourceStat = fs.statSync(sourcePath);
-
-          if (sourceStat.isDirectory()) {
-            if (!recursive) {
-              return {
-                stderr: `cp: -r not specified; omitting directory '${source}'`,
-                code: 1
-              };
-            }
-            fs.cpSync(sourcePath, destPath, { recursive: true });
-          } else {
-            fs.copyFileSync(sourcePath, destPath);
-          }
-        } catch (error) {
-          return {
-            stderr: `cp: cannot copy '${source}' to '${dest}': ${error.message}`,
-            code: 1
-          };
-        }
-      } else {
-        // Multiple sources to directory
-        const sources = paths.slice(0, -1);
-        const dest = paths[paths.length - 1];
-        const destPath = path.isAbsolute(dest) ? dest : path.join(basePath, dest);
-
-        try {
-          const destStat = fs.statSync(destPath);
-          if (!destStat.isDirectory()) {
-            return {
-              stderr: `cp: target '${dest}' is not a directory`,
-              code: 1
-            };
-          }
-        } catch {
-          return {
-            stderr: `cp: cannot access '${dest}': No such file or directory`,
-            code: 1
-          };
-        }
-
-        for (const source of sources) {
-          try {
-            const sourcePath = path.isAbsolute(source) ? source : path.join(basePath, source);
-            const fileName = path.basename(source);
-            const newDestPath = path.join(destPath, fileName);
-
-            const sourceStat = fs.statSync(sourcePath);
-            if (sourceStat.isDirectory()) {
-              if (!recursive) {
-                return {
-                  stderr: `cp: -r not specified; omitting directory '${source}'`,
-                  code: 1
-                };
-              }
-              fs.cpSync(sourcePath, newDestPath, { recursive: true });
-            } else {
-              fs.copyFileSync(sourcePath, newDestPath);
-            }
-          } catch (error) {
-            return {
-              stderr: `cp: cannot copy '${source}' to '${dest}': ${error.message}`,
-              code: 1
-            };
-          }
-        }
-      }
-
-      return { stdout: '', code: 0 };
-    } catch (error) {
-      return { stderr: `cp: ${error.message}`, code: 1 };
-    }
-  });
-
-  // touch - create or update file timestamps
-  register('touch', async ({ args, stdin, cwd }) => {
-    const argError = VirtualUtils.validateArgs(args, 1, 'touch');
-    if (argError) return VirtualUtils.missingOperandError('touch', 'touch: missing file operand');
-
-    try {
-
-      const basePath = cwd || process.cwd();
-
-      for (const file of args) {
-        try {
-          const fullPath = path.isAbsolute(file) ? file : path.join(basePath, file);
-
-          // Try to update timestamps if file exists
-          try {
-            const now = new Date();
-            fs.utimesSync(fullPath, now, now);
-          } catch {
-            fs.writeFileSync(fullPath, '', { flag: 'w' });
-          }
-        } catch (error) {
-          return {
-            stderr: `touch: cannot touch '${file}': ${error.message}`,
-            code: 1
-          };
-        }
-      }
-
-      return { stdout: '', code: 0 };
-    } catch (error) {
-      return { stderr: `touch: ${error.message}`, code: 1 };
-    }
-  });
-
-  // basename - extract filename from path
-  register('basename', async ({ args }) => {
-    const argError = VirtualUtils.validateArgs(args, 1, 'basename');
-    if (argError) return argError;
-
-    try {
-
-      const pathname = args[0];
-      const suffix = args[1];
-
-      let result = path.basename(pathname);
-
-      // Remove suffix if provided
-      if (suffix && result.endsWith(suffix)) {
-        result = result.slice(0, -suffix.length);
-      }
-
-      return { stdout: result + '\n', code: 0 };
-    } catch (error) {
-      return { stderr: `basename: ${error.message}`, code: 1 };
-    }
-  });
-
-  // dirname - extract directory from path
-  register('dirname', async ({ args }) => {
-    const argError = VirtualUtils.validateArgs(args, 1, 'dirname');
-    if (argError) return argError;
-
-    try {
-
-      const pathname = args[0];
-      const result = path.dirname(pathname);
-
-      return { stdout: result + '\n', code: 0 };
-    } catch (error) {
-      return { stderr: `dirname: ${error.message}`, code: 1 };
-    }
-  });
-
-  // yes - output a string repeatedly
-  register('yes', async function* ({ args, stdin, isCancelled, signal, ...rest }) {
-    const output = args.length > 0 ? args.join(' ') : 'y';
-    trace('VirtualCommand', () => `yes: starting infinite generator | ${JSON.stringify({ output }, null, 2)}`);
-
-    // Generate infinite stream of the output
-    while (true) {
-      if (isCancelled && isCancelled()) {
-        trace('VirtualCommand', () => 'yes: cancelled via function');
-        return;
-      }
-      if (signal && signal.aborted) {
-        trace('VirtualCommand', () => 'yes: cancelled via abort signal');
-        return;
-      }
-
-      yield output + '\n';
-
-      try {
-        await new Promise((resolve, reject) => {
-          const timeout = setTimeout(resolve, 0);
-
-          // Listen for abort signal if available
-          if (signal) {
-            const abortHandler = () => {
-              clearTimeout(timeout);
-              reject(new Error('Aborted'));
-            };
-
-            if (signal.aborted) {
-              abortHandler();
-            } else {
-              signal.addEventListener('abort', abortHandler, { once: true });
-            }
-          }
-        });
-      } catch (err) {
-        // Aborted
-        return;
-      }
-    }
-  });
-
-  // seq - generate sequence of numbers
-  register('seq', async ({ args }) => {
-    const argError = VirtualUtils.validateArgs(args, 1, 'seq');
-    if (argError) return argError;
-
-    try {
-      let start, step, end;
-
-      if (args.length === 1) {
-        start = 1;
-        step = 1;
-        end = parseInt(args[0]);
-      } else if (args.length === 2) {
-        start = parseInt(args[0]);
-        step = 1;
-        end = parseInt(args[1]);
-      } else if (args.length === 3) {
-        start = parseInt(args[0]);
-        step = parseInt(args[1]);
-        end = parseInt(args[2]);
-      } else {
-        return { stderr: 'seq: too many operands', code: 1 };
-      }
-
-      if (isNaN(start) || isNaN(step) || isNaN(end)) {
-        return { stderr: 'seq: invalid number', code: 1 };
-      }
-
-      let output = '';
-      if (step > 0) {
-        for (let i = start; i <= end; i += step) {
-          output += i + '\n';
-        }
-      } else if (step < 0) {
-        for (let i = start; i >= end; i += step) {
-          output += i + '\n';
-        }
-      } else {
-        return { stderr: 'seq: invalid increment', code: 1 };
-      }
-
-      return { stdout: output, code: 0 };
-    } catch (error) {
-      return { stderr: `seq: ${error.message}`, code: 1 };
-    }
-  });
-
-  // test - test file conditions (basic implementation)
-  register('test', async ({ args }) => {
-    if (args.length === 0) {
-      return { stdout: '', code: 1 };
-    }
-
-    // Very basic test implementation
-    const arg = args[0];
-
-    try {
-      if (arg === '-d' && args[1]) {
-        // Test if directory
-        const stat = fs.statSync(args[1]);
-        return { stdout: '', code: stat.isDirectory() ? 0 : 1 };
-      } else if (arg === '-f' && args[1]) {
-        // Test if file
-        const stat = fs.statSync(args[1]);
-        return { stdout: '', code: stat.isFile() ? 0 : 1 };
-      } else if (arg === '-e' && args[1]) {
-        // Test if exists
-        fs.statSync(args[1]);
-        return { stdout: '', code: 0 };
-      }
-    } catch {
-      return { stdout: '', code: 1 };
-    }
-
-    return { stdout: '', code: 1 };
-  });
+  // Register all imported commands
+  register('cd', cdCommand);
+  register('pwd', pwdCommand);
+  register('echo', echoCommand);
+  register('sleep', sleepCommand);
+  register('true', trueCommand);
+  register('false', falseCommand);
+  register('which', createWhichCommand(virtualCommands));
+  register('exit', createExitCommand(globalShellSettings));
+  register('env', envCommand);
+  register('cat', catCommand);
+  register('ls', lsCommand);
+  register('mkdir', mkdirCommand);
+  register('rm', rmCommand);
+  register('mv', mvCommand);
+  register('cp', cpCommand);
+  register('touch', touchCommand);
+  register('basename', basenameCommand);
+  register('dirname', dirnameCommand);
+  register('yes', yesCommand);
+  register('seq', seqCommand);
+  register('test', testCommand);
 }
+
 
 // ANSI control character utilities
 const AnsiUtils = {
