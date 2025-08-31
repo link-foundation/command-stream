@@ -140,6 +140,42 @@ console.log(result.stdout);
 console.log(result.code); // exit code
 ```
 
+### Custom Options with $({ options }) Syntax (NEW!)
+
+```javascript
+import { $ } from 'command-stream';
+
+// Create a $ with custom options
+const $silent = $({ mirror: false, capture: true });
+const result = await $silent`echo "quiet operation"`;
+
+// Options for stdin handling
+const $withInput = $({ stdin: 'input data\n' });
+await $withInput`cat`; // Pipes the input to cat
+
+// Custom environment variables
+const $withEnv = $({ env: { ...process.env, MY_VAR: 'value' } });
+await $withEnv`printenv MY_VAR`; // Prints: value
+
+// Custom working directory
+const $inTmp = $({ cwd: '/tmp' });
+await $inTmp`pwd`; // Prints: /tmp
+
+// Combine multiple options
+const $custom = $({
+  stdin: 'test data',
+  mirror: false,
+  capture: true,
+  cwd: '/tmp'
+});
+await $custom`cat > output.txt`; // Writes to /tmp/output.txt silently
+
+// Reusable configurations
+const $prod = $({ env: { NODE_ENV: 'production' }, capture: true });
+await $prod`npm start`;
+await $prod`npm test`;
+```
+
 ### Execution Control (NEW!)
 
 ```javascript
@@ -660,7 +696,8 @@ The enhanced `$` function returns a `ProcessRunner` instance that extends `Event
 - `env: object` - Environment variables
 
 **Override defaults:**
-- Use `sh(command, options)` for one-off overrides
+- Use `$({ options })` syntax for one-off configurations with template literals
+- Use `sh(command, options)` for one-off overrides with string commands
 - Use `create(defaultOptions)` to create custom `$` with different defaults
 
 ### Shell Settings API
@@ -778,9 +815,10 @@ The library properly handles CTRL+C (SIGINT) signals, ensuring child processes a
 ### How It Works
 
 1. **Automatic Signal Forwarding**: When you press CTRL+C, the signal is automatically forwarded to all child processes
-2. **Process Groups**: Child processes are spawned in their own process groups for proper signal isolation
-3. **TTY Mode Support**: When running interactively, CTRL+C is properly detected even in raw TTY mode
-4. **Graceful Cleanup**: Resources are properly cleaned up when processes are interrupted
+2. **Parent Process Continues**: The parent process doesn't exit - it just forwards the signal and continues running
+3. **Process Groups**: Child processes are spawned in their own process groups for proper signal isolation  
+4. **TTY Mode Support**: When running interactively, CTRL+C is properly detected even in raw TTY mode
+5. **Graceful Cleanup**: Resources are properly cleaned up when processes are interrupted
 
 ### Examples
 

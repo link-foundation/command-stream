@@ -59,18 +59,14 @@ let sigintHandlerInstalled = false;
 
 function installSignalHandlers() {
   if (sigintHandlerInstalled) return;
-  
-  // Don't install signal handlers during tests to avoid interfering with test runners
-  if (process.env.NODE_ENV === 'test' || process.env.BUN_TEST === '1') {
-    return;
-  }
-  
   sigintHandlerInstalled = true;
   
   // Forward SIGINT to all active child processes
-  process.on('SIGINT', () => {
+  // The parent process continues running - it's up to the parent to decide what to do
+  const sigintHandler = () => {
     trace('ProcessRunner', () => `Parent received SIGINT - forwarding to ${activeProcessRunners.size} child processes`);
     
+    // Forward signal to all active child processes
     for (const runner of activeProcessRunners) {
       if (runner.child && runner.child.pid && !runner.finished) {
         try {
@@ -91,12 +87,11 @@ function installSignalHandlers() {
       }
     }
     
-    // Exit the parent process with standard SIGINT exit code
-    // But give child processes a moment to clean up
-    setTimeout(() => {
-      process.exit(130); // Standard exit code for SIGINT
-    }, 100);
-  });
+    // Don't exit or re-emit - let the parent process handle SIGINT as it wishes
+    // The default Node.js/Bun behavior will still apply if there are no other handlers
+  };
+  
+  process.on('SIGINT', sigintHandler);
 }
 
 function monitorParentStreams() {
@@ -589,15 +584,20 @@ class ProcessRunner extends StreamEmitter {
                 // In Node.js, send SIGINT to the process group if detached
                 // or to the process directly if not
                 if (this.child.pid > 0) {
-                  process.kill(this.child.pid, 'SIGINT');
+                  try {
+                    // Try process group first if detached
+                    process.kill(-this.child.pid, 'SIGINT');
+                  } catch (err) {
+                    // Fall back to direct process
+                    process.kill(this.child.pid, 'SIGINT');
+                  }
                 }
               }
             } catch (err) {
               trace('ProcessRunner', () => `Error sending SIGINT: ${err.message}`);
             }
           }
-          // Also emit SIGINT on the parent process to maintain expected behavior
-          process.emit('SIGINT');
+          // Don't forward CTRL+C to stdin, just handle the signal
           return;
         }
         
@@ -1141,8 +1141,33 @@ class ProcessRunner extends StreamEmitter {
           stdin: this.options.capture ? stdinData : undefined
         };
       } else {
-        // Regular async function
-        result = await handler({ args: argValues, stdin: stdinData, ...this.options });
+        // Regular async function - race with abort signal
+        const handlerPromise = handler({ args: argValues, stdin: stdinData, ...this.options });
+        
+        // Create an abort promise that rejects when cancelled
+        const abortPromise = new Promise((_, reject) => {
+          if (this._abortController.signal.aborted) {
+            reject(new Error('Command cancelled'));
+          }
+          this._abortController.signal.addEventListener('abort', () => {
+            reject(new Error('Command cancelled'));
+          });
+        });
+        
+        try {
+          result = await Promise.race([handlerPromise, abortPromise]);
+        } catch (err) {
+          if (err.message === 'Command cancelled') {
+            // Command was cancelled, return SIGTERM exit code
+            result = { 
+              code: 143, // 128 + 15 (SIGTERM)
+              stdout: '',
+              stderr: ''
+            };
+          } else {
+            throw err;
+          }
+        }
 
         result = {
           ...result,
@@ -2610,6 +2635,28 @@ async function run(commandOrTokens, options = {}) {
 }
 
 function $tagged(strings, ...values) {
+  // Check if called as a function with options object: $({ options })
+  if (!Array.isArray(strings) && typeof strings === 'object' && strings !== null) {
+    const options = strings;
+    trace('API', () => `$tagged called with options | ${JSON.stringify({ options }, null, 2)}`);
+    
+    // Return a new tagged template function with those options
+    return (innerStrings, ...innerValues) => {
+      trace('API', () => `$tagged.withOptions ENTER | ${JSON.stringify({
+        stringsLength: innerStrings.length,
+        valuesLength: innerValues.length,
+        options
+      }, null, 2)}`);
+      
+      const cmd = buildShellCommand(innerStrings, innerValues);
+      const runner = new ProcessRunner({ mode: 'shell', command: cmd }, { mirror: true, capture: true, ...options });
+      
+      trace('API', () => `$tagged.withOptions EXIT | ${JSON.stringify({ command: cmd }, null, 2)}`);
+      return runner;
+    };
+  }
+  
+  // Normal tagged template literal usage
   trace('API', () => `$tagged ENTER | ${JSON.stringify({
     stringsLength: strings.length,
     valuesLength: values.length

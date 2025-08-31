@@ -1,0 +1,11 @@
+# Bun configuration file
+
+[test]
+# Only run tests from the tests/ directory
+root = "./tests"
+
+# Optional: specify test file patterns
+# pattern = ["*.test.mjs", "*.spec.mjs"]
+
+# Optional: exclude certain patterns
+# exclude = ["*.skip.test.mjs"]

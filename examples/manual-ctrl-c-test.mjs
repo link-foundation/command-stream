@@ -13,9 +13,17 @@ console.log('----------------------------------------\n');
 
 // Track if we received SIGINT
 let parentGotSigint = false;
+let sigintCount = 0;
 process.on('SIGINT', () => {
-  console.log('\n[PARENT] Received SIGINT signal');
+  sigintCount++;
+  console.log(`\n[PARENT] Received SIGINT signal (count: ${sigintCount})`);
   parentGotSigint = true;
+  
+  // Exit on second CTRL+C (user really wants to quit)
+  if (sigintCount >= 2) {
+    console.log('[PARENT] Exiting after second CTRL+C');
+    process.exit(130);
+  }
 });
 
 // Clean exit handler

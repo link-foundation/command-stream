@@ -1,11 +1,13 @@
 import { describe, it, expect } from 'bun:test';
 import { $ } from '../src/$.mjs';
-import { spawn } from 'child_process';
 
 describe('CTRL+C Basic Handling', () => {
   it('should be able to kill a long-running process', async () => {
     // Start a long-running process
     const runner = $`sleep 10`;
+    
+    // Start it without awaiting completion
+    const promise = runner.start();
     
     // Give it time to start
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -13,16 +15,12 @@ describe('CTRL+C Basic Handling', () => {
     // Kill it manually (simulating what CTRL+C would do)
     runner.kill();
     
-    // It should throw an error
-    let errorThrown = false;
-    try {
-      await runner;
-    } catch (error) {
-      errorThrown = true;
-      expect(error.code).toBeDefined();
-    }
+    // The process should complete with a non-zero exit code
+    const result = await promise;
     
-    expect(errorThrown).toBe(true);
+    // Should have a non-zero exit code (143 for SIGTERM)
+    expect(result.code).toBeGreaterThan(0);
+    expect(result.code).toBe(143); // 128 + 15 (SIGTERM)
   });
 
   it('should spawn processes with detached flag on Unix', async () => {
@@ -31,11 +29,11 @@ describe('CTRL+C Basic Handling', () => {
       return;
     }
     
-    // Create a simple test to verify detached flag is used
-    const runner = $`sleep 1`;
+    // Use /bin/sleep to get a real system process, not virtual command
+    const runner = $`/bin/sleep 1`;
     
     // Start the process
-    runner.start();
+    const promise = runner.start();
     
     // Give it a moment to spawn
     await new Promise(resolve => setTimeout(resolve, 50));
@@ -48,7 +46,7 @@ describe('CTRL+C Basic Handling', () => {
     runner.kill();
     
     try {
-      await runner;
+      await promise;
     } catch (error) {
       // Expected to error
     }
@@ -61,7 +59,7 @@ describe('CTRL+C Basic Handling', () => {
     const runner = $`cat`; // Use cat to read stdin
     
     // Start the process
-    runner.start();
+    const promise = runner.start();
     
     // Give it time to set up
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -72,7 +70,7 @@ describe('CTRL+C Basic Handling', () => {
     // Should complete with an error
     let errorCode = null;
     try {
-      await runner;
+      await promise;
     } catch (error) {
       errorCode = error.code;
     }
