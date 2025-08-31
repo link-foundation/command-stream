@@ -831,7 +831,16 @@ class ProcessRunner extends StreamEmitter {
         // For interactive commands, use inherit to provide direct TTY access
         return Bun.spawn(argv, { cwd, env, stdin: 'inherit', stdout: 'inherit', stderr: 'inherit' });
       }
-      return Bun.spawn(argv, { cwd, env, stdin: 'pipe', stdout: 'pipe', stderr: 'pipe' });
+      // For non-interactive commands, spawn with detached to create process group (for proper signal handling)
+      // This allows us to send signals to the entire process group, killing shell and all its children
+      return Bun.spawn(argv, { 
+        cwd, 
+        env, 
+        stdin: 'pipe', 
+        stdout: 'pipe', 
+        stderr: 'pipe',
+        detached: process.platform !== 'win32' // Create process group on Unix-like systems
+      });
     };
     const spawnNode = async (argv) => {
       if (isInteractive) {
