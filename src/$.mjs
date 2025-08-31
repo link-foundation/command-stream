@@ -2399,7 +2399,60 @@ class ProcessRunner extends StreamEmitter {
         if (this.child.pid) {
           if (isBun) {
             trace('ProcessRunner', () => `Killing Bun process | ${JSON.stringify({ pid: this.child.pid }, null, 2)}`);
-            this.child.kill();
+            
+            // For Bun, use the same enhanced kill logic as Node.js for CI reliability
+            const killOperations = [];
+            
+            // Try SIGTERM first
+            try {
+              process.kill(this.child.pid, 'SIGTERM');
+              trace('ProcessRunner', () => `Sent SIGTERM to Bun process ${this.child.pid}`);
+              killOperations.push('SIGTERM to process');
+            } catch (err) {
+              trace('ProcessRunner', () => `Error sending SIGTERM to Bun process: ${err.message}`);
+            }
+            
+            // Try process group SIGTERM
+            try {
+              process.kill(-this.child.pid, 'SIGTERM');
+              trace('ProcessRunner', () => `Sent SIGTERM to Bun process group -${this.child.pid}`);
+              killOperations.push('SIGTERM to group');
+            } catch (err) {
+              trace('ProcessRunner', () => `Bun process group SIGTERM failed: ${err.message}`);
+            }
+            
+            // Immediately follow with SIGKILL for both process and group
+            try {
+              process.kill(this.child.pid, 'SIGKILL');
+              trace('ProcessRunner', () => `Sent SIGKILL to Bun process ${this.child.pid}`);
+              killOperations.push('SIGKILL to process');
+            } catch (err) {
+              trace('ProcessRunner', () => `Error sending SIGKILL to Bun process: ${err.message}`);
+            }
+            
+            try {
+              process.kill(-this.child.pid, 'SIGKILL');
+              trace('ProcessRunner', () => `Sent SIGKILL to Bun process group -${this.child.pid}`);
+              killOperations.push('SIGKILL to group');
+            } catch (err) {
+              trace('ProcessRunner', () => `Bun process group SIGKILL failed: ${err.message}`);
+            }
+            
+            trace('ProcessRunner', () => `Bun kill operations attempted: ${killOperations.join(', ')}`);
+            
+            // Also call the original Bun kill method as backup
+            try {
+              this.child.kill();
+              trace('ProcessRunner', () => `Called child.kill() for Bun process ${this.child.pid}`);
+            } catch (err) {
+              trace('ProcessRunner', () => `Error calling child.kill(): ${err.message}`);
+            }
+            
+            // Force cleanup of child reference
+            if (this.child) {
+              this.child.removeAllListeners?.();
+              this.child = null;
+            }
           } else {
             // In Node.js, use a more robust approach for CI environments
             trace('ProcessRunner', () => `Killing Node process | ${JSON.stringify({ pid: this.child.pid }, null, 2)}`);
