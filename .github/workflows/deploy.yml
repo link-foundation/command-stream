@@ -42,9 +42,23 @@ jobs:
       - uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
+      
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+      
       - run: bun install
-      - run: bun test
-      - run: bun test --coverage
+      
+      - name: Run tests (verbose mode)
+        run: bun test tests/
+        env:
+          COMMAND_STREAM_VERBOSE: true
+      
+      - name: Run tests with coverage (verbose mode)
+        run: bun test tests/ --coverage
+        env:
+          COMMAND_STREAM_VERBOSE: true
 
   publishToNpm:
     runs-on: ubuntu-latest

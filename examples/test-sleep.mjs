@@ -4,7 +4,10 @@
 import { $ } from '../src/$.mjs';
 
 console.log('STARTING_SLEEP');
-process.stdout.write(''); // Flush output immediately
+// Ensure stdout is flushed immediately for CI environments
+if (process.stdout.isTTY === false) {
+  process.stdout.write('', () => {});
+}
 try {
   await $`sleep 30`; // Long enough to be interrupted, but timeout safe
   console.log('SLEEP_COMPLETED');
