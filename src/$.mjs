@@ -54,6 +54,7 @@ const activeProcessRunners = new Set();
 
 // Track if SIGINT handler has been installed
 let sigintHandlerInstalled = false;
+let previousSigintListeners = [];
 
 function installSignalHandlers() {
   if (sigintHandlerInstalled) return;
@@ -63,76 +64,72 @@ function installSignalHandlers() {
   // The parent process continues running - it's up to the parent to decide what to do
   const sigintHandler = () => {
     trace('ProcessRunner', () => `SIGINT handler triggered - checking active processes`);
-    // Count active child processes
+    // Count active processes (both child processes and virtual commands)
     const activeChildren = [];
     for (const runner of activeProcessRunners) {
-      if (runner.child && runner.child.pid && !runner.finished) {
-        activeChildren.push(runner);
-        trace('ProcessRunner', () => `Found active child: PID ${runner.child.pid}, command: ${runner.command}`);
+      if (!runner.finished) {
+        // Real child process
+        if (runner.child && runner.child.pid) {
+          activeChildren.push(runner);
+          trace('ProcessRunner', () => `Found active child: PID ${runner.child.pid}, command: ${runner.spec?.command || 'unknown'}`);
+        }
+        // Virtual command (no child process but still active)
+        else if (!runner.child) {
+          activeChildren.push(runner);
+          trace('ProcessRunner', () => `Found active virtual command: ${runner.spec?.command || 'unknown'}`);
+        }
       }
     }
     
     trace('ProcessRunner', () => `Parent received SIGINT - ${activeChildren.length} active child processes`);
     
     // Only handle SIGINT if we have active child processes
-    // Otherwise, let the default behavior or user handlers take over
+    // Otherwise, let other handlers or default behavior handle it
     if (activeChildren.length === 0) {
-      trace('ProcessRunner', () => `No active children - allowing default SIGINT behavior`);
-      return; // Let default Node.js/Bun SIGINT behavior handle it
+      trace('ProcessRunner', () => `No active children - skipping SIGINT forwarding`);
+      return; // Let other handlers or default behavior handle it
     }
     
-    // Forward signal to all active child processes
+    // Forward signal to all active processes (child processes and virtual commands)
     for (const runner of activeChildren) {
       try {
-        trace('ProcessRunner', () => `Sending SIGINT to child process ${runner.child.pid}`);
-        if (isBun) {
-          runner.child.kill('SIGINT');
-        } else {
-          // Send to process group if detached, otherwise to process directly
-          try {
-            process.kill(-runner.child.pid, 'SIGINT');
-          } catch (err) {
-            process.kill(runner.child.pid, 'SIGINT');
+        if (runner.child && runner.child.pid) {
+          // Real child process - send SIGINT to it
+          trace('ProcessRunner', () => `Sending SIGINT to child process ${runner.child.pid}`);
+          if (isBun) {
+            runner.child.kill('SIGINT');
+          } else {
+            // Send to process group if detached, otherwise to process directly
+            try {
+              process.kill(-runner.child.pid, 'SIGINT');
+            } catch (err) {
+              process.kill(runner.child.pid, 'SIGINT');
+            }
           }
+        } else {
+          // Virtual command - cancel it using the runner's kill method
+          trace('ProcessRunner', () => `Cancelling virtual command: ${runner.spec?.command || 'unknown'}`);
+          runner.kill('SIGINT');
         }
       } catch (err) {
-        trace('ProcessRunner', () => `Error sending SIGINT to child: ${err.message}`);
+        trace('ProcessRunner', () => `Error sending SIGINT to process: ${err.message}`);
       }
     }
     
-    // After forwarding SIGINT to children, wait for them to finish and then exit with proper signal code
-    // This mimics proper shell behavior where CTRL+C interrupts the entire process tree
-    const waitForChildren = async () => {
-      // Collect all active child processes (re-check as they may have finished)
-      const childPromises = [];
-      for (const runner of activeChildren) {
-        if (runner.child && runner.child.pid && !runner.finished) {
-          // Wait for each child process to exit
-          if (isBun) {
-            childPromises.push(runner.child.exited);
-          } else {
-            childPromises.push(new Promise((resolve) => {
-              runner.child.on('close', resolve);
-              runner.child.on('exit', resolve);
-            }));
-          }
-        }
-      }
-      
-      if (childPromises.length > 0) {
-        // Wait for all children to finish
-        try {
-          await Promise.all(childPromises);
-        } catch (err) {
-          // If waiting fails, proceed anyway
-        }
-      }
-      
-      process.exit(130); // 128 + 2 (SIGINT)
-    };
+    // We've forwarded SIGINT to all active processes/commands
+    // Check if there are other SIGINT handlers - if not, we should exit with 130
+    const currentListeners = process.listeners('SIGINT');
+    const hasOtherHandlers = currentListeners.length > 1; // More than just our handler
     
-    // Run asynchronously to avoid blocking the signal handler
-    waitForChildren().catch(() => process.exit(130));
+    trace('ProcessRunner', () => `SIGINT forwarded to ${activeChildren.length} active processes, other handlers: ${hasOtherHandlers}`);
+    
+    if (!hasOtherHandlers) {
+      // No other handlers - we should exit like a proper shell
+      trace('ProcessRunner', () => `No other SIGINT handlers, exiting with code 130`);
+      process.exit(130); // 128 + 2 (SIGINT)
+    } else {
+      trace('ProcessRunner', () => `Other SIGINT handlers present, letting them handle the exit`);
+    }
   };
   
   process.on('SIGINT', sigintHandler);
@@ -510,6 +507,7 @@ class ProcessRunner extends StreamEmitter {
     this._mode = null; // 'async' or 'sync'
 
     this._cancelled = false;
+    this._cancellationSignal = null; // Track which signal caused cancellation
     this._virtualGenerator = null;
     this._abortController = new AbortController();
 
@@ -1232,9 +1230,11 @@ class ProcessRunner extends StreamEmitter {
           result = await Promise.race([handlerPromise, abortPromise]);
         } catch (err) {
           if (err.message === 'Command cancelled') {
-            // Command was cancelled, return SIGTERM exit code
+            // Command was cancelled, return appropriate exit code based on signal
+            const exitCode = this._cancellationSignal === 'SIGINT' ? 130 : 143; // 130 for SIGINT, 143 for SIGTERM
+            trace('ProcessRunner', () => `Virtual command cancelled with signal ${this._cancellationSignal}, exit code: ${exitCode}`);
             result = { 
-              code: 143, // 128 + 15 (SIGTERM)
+              code: exitCode,
               stdout: '',
               stderr: ''
             };
@@ -2414,16 +2414,18 @@ class ProcessRunner extends StreamEmitter {
     }
   }
 
-  kill() {
+  kill(signal = 'SIGTERM') {
     trace('ProcessRunner', () => `kill ENTER | ${JSON.stringify({
+      signal,
       cancelled: this._cancelled,
       finished: this.finished,
       hasChild: !!this.child,
       hasVirtualGenerator: !!this._virtualGenerator
     }, null, 2)}`);
 
-    // Mark as cancelled for virtual commands
+    // Mark as cancelled for virtual commands and store the signal
     this._cancelled = true;
+    this._cancellationSignal = signal;
 
     if (this._cancelResolve) {
       trace('ProcessRunner', () => 'Resolving cancel promise');

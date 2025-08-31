@@ -1,7 +1,7 @@
 import fs from 'fs';
 import { trace, VirtualUtils } from '../$.utils.mjs';
 
-export default async function cat({ args, stdin, cwd }) {
+export default async function cat({ args, stdin, cwd, isCancelled, signal }) {
   if (args.length === 0) {
     // Read from stdin if no files specified
     if (stdin !== undefined && stdin !== '') {
@@ -13,6 +13,12 @@ export default async function cat({ args, stdin, cwd }) {
   try {
     const outputs = [];
     for (const file of args) {
+      // Check for cancellation before processing each file
+      if (isCancelled?.() || signal?.aborted) {
+        trace('VirtualCommand', () => `cat: cancelled while processing files`);
+        return { code: 130, stdout: '', stderr: '' }; // SIGINT exit code
+      }
+      
       trace('VirtualCommand', () => `cat: reading file | ${JSON.stringify({ file }, null, 2)}`);
       const resolvedPath = VirtualUtils.resolvePath(file, cwd);
       try {

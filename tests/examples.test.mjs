@@ -171,4 +171,29 @@ describe('Examples Execution Tests', () => {
     expect(stdout).toContain('USER_SIGINT_HANDLER_CALLED');
     expect(stdout).not.toContain('TIMEOUT_REACHED');
   }, { timeout: 5000 });
+
+  // REGRESSION TEST: Virtual commands must be interruptible by SIGINT
+  test('virtual commands should be properly cancelled by SIGINT (regression test)', async () => {
+    // This prevents regression where virtual sleep command wasn't cancelled by SIGINT
+    
+    // Start long-running sleep command
+    const runner = $`sleep 10`;
+    const promise = runner.start();
+    
+    // Give it a moment to start
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
+    // Kill it with SIGINT
+    runner.kill('SIGINT');
+    
+    // Wait for the process to complete
+    const result = await promise;
+    
+    // Virtual command should return SIGINT exit code when cancelled with SIGINT
+    expect(result.code).toBe(130); // 128 + 2 (SIGINT)
+    expect(result.code).not.toBe(0); // Should not complete successfully
+    expect(result.code).not.toBe(143); // Should not be SIGTERM
+    
+    console.log('✓ Virtual sleep command properly cancelled with SIGINT exit code:', result.code);
+  }, { timeout: 5000 });
 });

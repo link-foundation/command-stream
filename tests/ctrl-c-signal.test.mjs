@@ -590,4 +590,84 @@ describe('CTRL+C with Different stdin Modes', () => {
     expect(typeof exitCode).toBe('number'); // Platform differences may result in various exit codes
     expect(stdout).toMatch(/RUNTIME: (BUN|NODE)/);
   }, { timeout: 10000 });
+
+  // REGRESSION TEST: Core issue that was fixed
+  it('should properly cancel virtual commands and respect user SIGINT handlers (regression test)', async () => {
+    // This test prevents regression of the core issue where:
+    // 1. Virtual commands (sleep) weren't being cancelled by SIGINT
+    // 2. SIGINT handler was interfering with user-defined handlers
+    // 3. Processes weren't outputting expected logs before interruption
+
+    // Test 1: Virtual command cancellation with proper exit codes
+    console.log('Testing virtual command SIGINT cancellation...');
+    const child1 = spawn('node', ['examples/test-sleep.mjs'], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      detached: true,
+    });
+    
+    let stdout1 = '';
+    child1.stdout.on('data', (data) => {
+      stdout1 += data.toString();
+    });
+    
+    // Wait for command to start, then interrupt
+    await new Promise(resolve => setTimeout(resolve, 500));
+    child1.kill('SIGINT');
+    
+    const exitCode1 = await new Promise((resolve) => {
+      child1.on('close', (code) => resolve(code));
+    });
+    
+    // Should capture startup output and exit with SIGINT code
+    expect(stdout1).toContain('STARTING_SLEEP');
+    expect(stdout1).not.toContain('SLEEP_COMPLETED');
+    expect(exitCode1).toBe(130); // 128 + 2 (SIGINT)
+    console.log('✓ Virtual command properly cancelled with SIGINT');
+
+    // Test 2: User SIGINT handler cooperation  
+    console.log('Testing user SIGINT handler cooperation...');
+    const child2 = spawn('node', ['-e', `
+      import { $ } from './src/$.mjs';
+      
+      // Set up user's SIGINT handler AFTER importing our library
+      process.on('SIGINT', () => {
+        console.log('USER_HANDLER_EXECUTED');
+        process.exit(42);
+      });
+      
+      console.log('PROCESS_READY');
+      
+      // Run a virtual command that will be interrupted
+      try {
+        await \$\`sleep 5\`;
+        console.log('SLEEP_FINISHED');
+      } catch (err) {
+        console.log('SLEEP_ERROR');
+      }
+    `], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      detached: true,
+    });
+    
+    let stdout2 = '';
+    child2.stdout.on('data', (data) => {
+      stdout2 += data.toString();
+    });
+    
+    // Wait for setup, then interrupt
+    await new Promise(resolve => setTimeout(resolve, 500));
+    child2.kill('SIGINT');
+    
+    const exitCode2 = await new Promise((resolve) => {
+      child2.on('close', (code) => resolve(code));
+    });
+    
+    // User's handler should take precedence
+    expect(stdout2).toContain('PROCESS_READY');
+    expect(stdout2).toContain('USER_HANDLER_EXECUTED');
+    expect(exitCode2).toBe(42); // User's custom exit code
+    console.log('✓ User SIGINT handler properly executed');
+
+    console.log('🎉 Regression test passed - core issues remain fixed');
+  }, { timeout: 15000 });
 });

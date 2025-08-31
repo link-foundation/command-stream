@@ -37,7 +37,7 @@ export default async function sleep({ args, signal, isCancelled }) {
     return { stdout: '', code: 0 };
   } catch (err) {
     trace('VirtualCommand', () => `sleep: interrupted | ${JSON.stringify({ seconds, error: err.message }, null, 2)}`);
-    // Return SIGTERM exit code when cancelled
-    return { stdout: '', code: 143 }; // 128 + 15 (SIGTERM)
+    // Let the ProcessRunner determine the appropriate exit code based on the cancellation signal
+    throw err;
   }
 }
