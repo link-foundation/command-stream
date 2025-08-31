@@ -54,6 +54,51 @@ function isInteractiveCommand(command) {
 let parentStreamsMonitored = false;
 const activeProcessRunners = new Set();
 
+// Track if SIGINT handler has been installed
+let sigintHandlerInstalled = false;
+
+function installSignalHandlers() {
+  if (sigintHandlerInstalled) return;
+  
+  // Don't install signal handlers during tests to avoid interfering with test runners
+  if (process.env.NODE_ENV === 'test' || process.env.BUN_TEST === '1') {
+    return;
+  }
+  
+  sigintHandlerInstalled = true;
+  
+  // Forward SIGINT to all active child processes
+  process.on('SIGINT', () => {
+    trace('ProcessRunner', () => `Parent received SIGINT - forwarding to ${activeProcessRunners.size} child processes`);
+    
+    for (const runner of activeProcessRunners) {
+      if (runner.child && runner.child.pid && !runner.finished) {
+        try {
+          trace('ProcessRunner', () => `Sending SIGINT to child process ${runner.child.pid}`);
+          if (isBun) {
+            runner.child.kill('SIGINT');
+          } else {
+            // Send to process group if detached, otherwise to process directly
+            try {
+              process.kill(-runner.child.pid, 'SIGINT');
+            } catch (err) {
+              process.kill(runner.child.pid, 'SIGINT');
+            }
+          }
+        } catch (err) {
+          trace('ProcessRunner', () => `Error sending SIGINT to child: ${err.message}`);
+        }
+      }
+    }
+    
+    // Exit the parent process with standard SIGINT exit code
+    // But give child processes a moment to clean up
+    setTimeout(() => {
+      process.exit(130); // Standard exit code for SIGINT
+    }, 100);
+  });
+}
+
 function monitorParentStreams() {
   if (parentStreamsMonitored) return;
   parentStreamsMonitored = true;
@@ -502,6 +547,7 @@ class ProcessRunner extends StreamEmitter {
     this._abortController = new AbortController();
 
     activeProcessRunners.add(this);
+    installSignalHandlers();
 
     // Track finished state changes to trigger cleanup
     this._finished = false;
@@ -531,6 +577,31 @@ class ProcessRunner extends StreamEmitter {
 
       // Forward stdin data to child process
       const onData = (chunk) => {
+        // Check for CTRL+C (ASCII code 3)
+        if (chunk[0] === 3) {
+          trace('ProcessRunner', () => 'CTRL+C detected, sending SIGINT to child process');
+          // Send SIGINT to the child process
+          if (this.child && this.child.pid) {
+            try {
+              if (isBun) {
+                this.child.kill('SIGINT');
+              } else {
+                // In Node.js, send SIGINT to the process group if detached
+                // or to the process directly if not
+                if (this.child.pid > 0) {
+                  process.kill(this.child.pid, 'SIGINT');
+                }
+              }
+            } catch (err) {
+              trace('ProcessRunner', () => `Error sending SIGINT: ${err.message}`);
+            }
+          }
+          // Also emit SIGINT on the parent process to maintain expected behavior
+          process.emit('SIGINT');
+          return;
+        }
+        
+        // Forward other input to child stdin
         if (this.child.stdin) {
           if (isBun && this.child.stdin.write) {
             this.child.stdin.write(chunk);
@@ -767,7 +838,14 @@ class ProcessRunner extends StreamEmitter {
         // For interactive commands, use inherit to provide direct TTY access
         return cp.spawn(argv[0], argv.slice(1), { cwd, env, stdio: 'inherit' });
       }
-      return cp.spawn(argv[0], argv.slice(1), { cwd, env, stdio: ['pipe', 'pipe', 'pipe'] });
+      // For non-interactive commands, spawn with detached to create process group (for proper signal handling)
+      // This allows us to send signals to the entire process group
+      return cp.spawn(argv[0], argv.slice(1), { 
+        cwd, 
+        env, 
+        stdio: ['pipe', 'pipe', 'pipe'],
+        detached: process.platform !== 'win32' // Create process group on Unix-like systems
+      });
     };
 
     const needsExplicitPipe = stdin !== 'inherit' && stdin !== 'ignore';
@@ -2278,9 +2356,15 @@ class ProcessRunner extends StreamEmitter {
             trace('ProcessRunner', () => `Killing Bun process | ${JSON.stringify({ pid: this.child.pid }, null, 2)}`);
             this.child.kill();
           } else {
-            // In Node.js, kill the process group
-            trace('ProcessRunner', () => `Killing Node process group | ${JSON.stringify({ pid: this.child.pid }, null, 2)}`);
-            process.kill(-this.child.pid, 'SIGTERM');
+            // In Node.js, kill the process group if detached, otherwise kill the process directly
+            trace('ProcessRunner', () => `Killing Node process | ${JSON.stringify({ pid: this.child.pid }, null, 2)}`);
+            try {
+              // Try to kill the process group first (negative PID)
+              process.kill(-this.child.pid, 'SIGTERM');
+            } catch (err) {
+              // If that fails, kill the process directly
+              process.kill(this.child.pid, 'SIGTERM');
+            }
           }
         }
         this.finished = true;

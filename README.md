@@ -771,6 +771,56 @@ const result4 = await $`echo "pipe test"`.pipe($`cat`);
 const text4 = await result4.text(); // "pipe test\n"
 ```
 
+## Signal Handling (CTRL+C Support)
+
+The library properly handles CTRL+C (SIGINT) signals, ensuring child processes are terminated gracefully when you interrupt execution:
+
+### How It Works
+
+1. **Automatic Signal Forwarding**: When you press CTRL+C, the signal is automatically forwarded to all child processes
+2. **Process Groups**: Child processes are spawned in their own process groups for proper signal isolation
+3. **TTY Mode Support**: When running interactively, CTRL+C is properly detected even in raw TTY mode
+4. **Graceful Cleanup**: Resources are properly cleaned up when processes are interrupted
+
+### Examples
+
+```javascript
+// Long-running command that can be interrupted with CTRL+C
+try {
+  await $`ping 8.8.8.8`;  // Press CTRL+C to stop
+} catch (error) {
+  console.log('Command interrupted:', error.code); // Exit code 130 (SIGINT)
+}
+
+// Multiple concurrent processes - CTRL+C stops all
+try {
+  await Promise.all([
+    $`sleep 100`,
+    $`ping google.com`,
+    $`tail -f /var/log/system.log`
+  ]);
+} catch (error) {
+  // All processes are terminated when you press CTRL+C
+}
+
+// Works with streaming patterns too
+try {
+  for await (const chunk of $`ping 8.8.8.8`.stream()) {
+    console.log(chunk);
+    // Press CTRL+C to break the loop and stop the process
+  }
+} catch (error) {
+  console.log('Streaming interrupted');
+}
+```
+
+### Signal Handling Behavior
+
+- **Default**: Inherits stdin and properly forwards CTRL+C to child processes
+- **Interactive Commands**: Commands like `vim`, `less`, `top` work correctly with their own signal handling
+- **Non-Interactive**: Commands like `ping`, `sleep`, `tail -f` can be interrupted with CTRL+C
+- **Exit Codes**: Interrupted processes typically exit with code 130 (128 + SIGINT signal number)
+
 ## Testing
 
 ```bash
