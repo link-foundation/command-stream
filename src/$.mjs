@@ -851,6 +851,17 @@ class ProcessRunner extends StreamEmitter {
     const needsExplicitPipe = stdin !== 'inherit' && stdin !== 'ignore';
     const preferNodeForInput = isBun && needsExplicitPipe;
     this.child = preferNodeForInput ? await spawnNode(argv) : (isBun ? spawnBun(argv) : await spawnNode(argv));
+    
+    // Add detailed logging for CI debugging
+    if (this.child) {
+      trace('ProcessRunner', () => `Child process created | ${JSON.stringify({ 
+        pid: this.child.pid, 
+        detached: this.child.options?.detached,
+        killed: this.child.killed,
+        exitCode: this.child.exitCode,
+        signalCode: this.child.signalCode
+      }, null, 2)}`);
+    }
 
     // For interactive commands with stdio: 'inherit', stdout/stderr will be null
     const outPump = this.child.stdout ? pumpReadable(this.child.stdout, async (buf) => {
@@ -891,7 +902,16 @@ class ProcessRunner extends StreamEmitter {
       stdinPumpPromise = this._writeToStdin(buf);
     }
 
-    const exited = isBun ? this.child.exited : new Promise((resolve) => this.child.on('close', resolve));
+    const exited = isBun ? this.child.exited : new Promise((resolve) => {
+      trace('ProcessRunner', () => `Setting up child process event listeners for PID ${this.child.pid}`);
+      this.child.on('close', (code, signal) => {
+        trace('ProcessRunner', () => `Child process close event | ${JSON.stringify({ pid: this.child.pid, code, signal }, null, 2)}`);
+        resolve(code);
+      });
+      this.child.on('exit', (code, signal) => {
+        trace('ProcessRunner', () => `Child process exit event | ${JSON.stringify({ pid: this.child.pid, code, signal }, null, 2)}`);
+      });
+    });
     const code = await exited;
     await Promise.all([outPump, errPump, stdinPumpPromise]);
 
@@ -2384,43 +2404,51 @@ class ProcessRunner extends StreamEmitter {
             // In Node.js, use a more robust approach for CI environments
             trace('ProcessRunner', () => `Killing Node process | ${JSON.stringify({ pid: this.child.pid }, null, 2)}`);
             
-            // Try multiple termination strategies for robustness in CI environments
+            // Use immediate and aggressive termination for CI environments
+            const killOperations = [];
+            
+            // Try SIGTERM to the process directly
             try {
-              // First, try SIGTERM to the process directly
               process.kill(this.child.pid, 'SIGTERM');
               trace('ProcessRunner', () => `Sent SIGTERM to process ${this.child.pid}`);
+              killOperations.push('SIGTERM to process');
             } catch (err) {
               trace('ProcessRunner', () => `Error sending SIGTERM to process: ${err.message}`);
             }
             
-            // Also try process group if detached (negative PID)
+            // Try process group if detached (negative PID)
             try {
               process.kill(-this.child.pid, 'SIGTERM');
               trace('ProcessRunner', () => `Sent SIGTERM to process group -${this.child.pid}`);
+              killOperations.push('SIGTERM to group');
             } catch (err) {
-              trace('ProcessRunner', () => `Process group kill failed (expected in some environments): ${err.message}`);
+              trace('ProcessRunner', () => `Process group SIGTERM failed: ${err.message}`);
             }
             
-            // Wait a moment, then force kill if still running
-            setTimeout(() => {
-              if (this.child && !this.finished) {
-                try {
-                  // Force kill the process
-                  process.kill(this.child.pid, 'SIGKILL');
-                  trace('ProcessRunner', () => `Force killed process ${this.child.pid} with SIGKILL`);
-                } catch (err) {
-                  trace('ProcessRunner', () => `Error force killing process: ${err.message}`);
-                }
-                
-                try {
-                  // Force kill the process group
-                  process.kill(-this.child.pid, 'SIGKILL');
-                  trace('ProcessRunner', () => `Force killed process group -${this.child.pid} with SIGKILL`);
-                } catch (err) {
-                  trace('ProcessRunner', () => `Process group force kill failed: ${err.message}`);
-                }
-              }
-            }, 100);
+            // Immediately follow up with SIGKILL for CI reliability
+            try {
+              process.kill(this.child.pid, 'SIGKILL');
+              trace('ProcessRunner', () => `Sent SIGKILL to process ${this.child.pid}`);
+              killOperations.push('SIGKILL to process');
+            } catch (err) {
+              trace('ProcessRunner', () => `Error sending SIGKILL to process: ${err.message}`);
+            }
+            
+            try {
+              process.kill(-this.child.pid, 'SIGKILL');
+              trace('ProcessRunner', () => `Sent SIGKILL to process group -${this.child.pid}`);
+              killOperations.push('SIGKILL to group');
+            } catch (err) {
+              trace('ProcessRunner', () => `Process group SIGKILL failed: ${err.message}`);
+            }
+            
+            trace('ProcessRunner', () => `Kill operations attempted: ${killOperations.join(', ')}`);
+            
+            // Force cleanup of child reference to prevent hanging awaits
+            if (this.child) {
+              this.child.removeAllListeners?.();
+              this.child = null;
+            }
           }
         }
         this.finished = true;
