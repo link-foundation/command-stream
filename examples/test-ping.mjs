@@ -3,6 +3,7 @@
 // Test ping example similar to hive-mind/claude-pipe/test-ping.mjs
 import { $ } from '../src/$.mjs';
 
+console.log('STARTING_PING');
 try {
   await $`ping 8.8.8.8`;
 } catch (error) {

@@ -64,11 +64,13 @@ function installSignalHandlers() {
   // Forward SIGINT to all active child processes
   // The parent process continues running - it's up to the parent to decide what to do
   const sigintHandler = () => {
+    trace('ProcessRunner', () => `SIGINT handler triggered - checking active processes`);
     // Count active child processes
     const activeChildren = [];
     for (const runner of activeProcessRunners) {
       if (runner.child && runner.child.pid && !runner.finished) {
         activeChildren.push(runner);
+        trace('ProcessRunner', () => `Found active child: PID ${runner.child.pid}, command: ${runner.command}`);
       }
     }
     
@@ -849,6 +851,13 @@ class ProcessRunner extends StreamEmitter {
 
     const needsExplicitPipe = stdin !== 'inherit' && stdin !== 'ignore';
     const preferNodeForInput = isBun && needsExplicitPipe;
+    trace('ProcessRunner', () => `About to spawn process | ${JSON.stringify({ 
+      needsExplicitPipe, 
+      preferNodeForInput, 
+      runtime: isBun ? 'Bun' : 'Node',
+      command: argv[0],
+      args: argv.slice(1)
+    }, null, 2)}`);
     this.child = preferNodeForInput ? await spawnNode(argv) : (isBun ? spawnBun(argv) : await spawnNode(argv));
     
     // Add detailed logging for CI debugging
@@ -904,11 +913,27 @@ class ProcessRunner extends StreamEmitter {
     const exited = isBun ? this.child.exited : new Promise((resolve) => {
       trace('ProcessRunner', () => `Setting up child process event listeners for PID ${this.child.pid}`);
       this.child.on('close', (code, signal) => {
-        trace('ProcessRunner', () => `Child process close event | ${JSON.stringify({ pid: this.child.pid, code, signal }, null, 2)}`);
+        trace('ProcessRunner', () => `Child process close event | ${JSON.stringify({ 
+          pid: this.child.pid, 
+          code, 
+          signal,
+          killed: this.child.killed,
+          exitCode: this.child.exitCode,
+          signalCode: this.child.signalCode,
+          command: this.command 
+        }, null, 2)}`);
         resolve(code);
       });
       this.child.on('exit', (code, signal) => {
-        trace('ProcessRunner', () => `Child process exit event | ${JSON.stringify({ pid: this.child.pid, code, signal }, null, 2)}`);
+        trace('ProcessRunner', () => `Child process exit event | ${JSON.stringify({ 
+          pid: this.child.pid, 
+          code, 
+          signal,
+          killed: this.child.killed,
+          exitCode: this.child.exitCode,
+          signalCode: this.child.signalCode,
+          command: this.command 
+        }, null, 2)}`);
       });
     });
     const code = await exited;
@@ -925,6 +950,14 @@ class ProcessRunner extends StreamEmitter {
     // When a process is killed, it may not have an exit code
     // If cancelled and no exit code, assume it was killed with SIGTERM
     let finalExitCode = code;
+    trace('ProcessRunner', () => `Processing exit code | ${JSON.stringify({
+      rawCode: code,
+      cancelled: this._cancelled,
+      childKilled: this.child?.killed,
+      childExitCode: this.child?.exitCode,
+      childSignalCode: this.child?.signalCode
+    }, null, 2)}`);
+    
     if (finalExitCode === undefined || finalExitCode === null) {
       if (this._cancelled) {
         // Process was killed, use SIGTERM exit code
@@ -944,6 +977,15 @@ class ProcessRunner extends StreamEmitter {
       stdin: this.options.capture && this.inChunks ? Buffer.concat(this.inChunks).toString('utf8') : undefined,
       child: this.child
     };
+    
+    trace('ProcessRunner', () => `Process completed | ${JSON.stringify({
+      command: this.command,
+      finalExitCode,
+      captured: this.options.capture,
+      hasStdout: !!resultData.stdout,
+      hasStderr: !!resultData.stderr,
+      childPid: this.child?.pid
+    }, null, 2)}`);
 
     this.result = {
       ...resultData,

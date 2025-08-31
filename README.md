@@ -713,6 +713,38 @@ Control shell behavior like bash `set`/`unset` commands:
 - `unset(option)`: Disable shell option
 - `shell.settings()`: Get current settings object
 
+#### Error Handling Modes
+
+```javascript
+import { $, shell } from 'command-stream';
+
+// ✅ Default behavior: Commands don't throw on non-zero exit
+const result = await $`ls nonexistent-file`; // Won't throw
+console.log(result.code); // → 2 (non-zero, but no exception)
+
+// ✅ Enable errexit: Commands throw on non-zero exit
+shell.errexit(true);
+try {
+  await $`ls nonexistent-file`; // Throws error
+} catch (error) {
+  console.log('Command failed:', error.code); // → 2
+}
+
+// ✅ Disable errexit: Back to non-throwing behavior
+shell.errexit(false);
+await $`ls nonexistent-file`; // Won't throw, returns result with code 2
+
+// ✅ One-time override without changing global settings
+try {
+  const result = await $`ls nonexistent-file`;
+  if (result.code !== 0) {
+    throw new Error(`Command failed with code ${result.code}`);
+  }
+} catch (error) {
+  console.log('Manual error handling');
+}
+```
+
 ### Virtual Commands API
 
 Control and extend the command system with custom JavaScript functions:
@@ -726,6 +758,54 @@ Control and extend the command system with custom JavaScript functions:
 - `listCommands()`: Get array of all registered command names  
 - `enableVirtualCommands()`: Enable virtual command processing
 - `disableVirtualCommands()`: Disable virtual commands (use system commands only)
+
+#### Advanced Virtual Command Features
+
+```javascript
+import { $, register } from 'command-stream';
+
+// ✅ Cancellation support with AbortController
+register('cancellable', async function* (args, stdin, options) {
+  for (let i = 0; i < 10; i++) {
+    if (options.signal?.aborted) {
+      break; // Proper cancellation handling
+    }
+    yield `Count: ${i}\n`;
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+});
+
+// ✅ Access to all process options
+register('debug-info', async (args, stdin, options) => {
+  return {
+    stdout: JSON.stringify({
+      args,
+      cwd: options.cwd,
+      env: Object.keys(options.env || {}),
+      stdinLength: stdin.length,
+      mirror: options.mirror,
+      capture: options.capture
+    }, null, 2),
+    code: 0
+  };
+});
+
+// ✅ Error handling and non-zero exit codes
+register('maybe-fail', async (args) => {
+  if (Math.random() > 0.5) {
+    return {
+      stdout: 'Success!\n',
+      code: 0
+    };
+  } else {
+    return {
+      stdout: '',
+      stderr: 'Random failure occurred\n',
+      code: 1
+    };
+  }
+});
+```
 
 #### Handler Function Signature
 
@@ -810,15 +890,39 @@ const text4 = await result4.text(); // "pipe test\n"
 
 ## Signal Handling (CTRL+C Support)
 
-The library properly handles CTRL+C (SIGINT) signals, ensuring child processes are terminated gracefully when you interrupt execution:
+The library provides **advanced CTRL+C handling** that properly manages signals across different scenarios:
 
 ### How It Works
 
-1. **Automatic Signal Forwarding**: When you press CTRL+C, the signal is automatically forwarded to all child processes
-2. **Parent Process Continues**: The parent process doesn't exit - it just forwards the signal and continues running
-3. **Process Groups**: Child processes are spawned in their own process groups for proper signal isolation  
-4. **TTY Mode Support**: When running interactively, CTRL+C is properly detected even in raw TTY mode
-5. **Graceful Cleanup**: Resources are properly cleaned up when processes are interrupted
+1. **Smart Signal Forwarding**: CTRL+C is forwarded **only when child processes are active**
+2. **User Handler Preservation**: When no children are running, your custom SIGINT handlers work normally
+3. **Process Groups**: Child processes use detached spawning for proper signal isolation
+4. **TTY Mode Support**: Raw TTY mode is properly managed and restored on interruption
+5. **Graceful Termination**: Uses SIGTERM → SIGKILL escalation for robust process cleanup
+6. **Exit Code Standards**: Proper signal exit codes (130 for SIGINT, 143 for SIGTERM)
+
+### Advanced Signal Behavior
+
+```javascript
+// ✅ Smart signal handling - only interferes when necessary
+import { $ } from 'command-stream';
+
+// Case 1: No children active - your handlers work normally  
+process.on('SIGINT', () => {
+  console.log('My custom handler runs!');
+  process.exit(42); // Custom exit code
+});
+// Press CTRL+C → Your handler runs, exits with code 42
+
+// Case 2: Children active - automatic forwarding
+await $`ping 8.8.8.8`; // Press CTRL+C → Forwards to ping, exits with code 130
+
+// Case 3: Multiple processes - all interrupted
+await Promise.all([
+  $`sleep 100`,
+  $`ping google.com`  
+]); // Press CTRL+C → All processes terminated, exits with code 130
+```
 
 ### Examples
 
@@ -854,15 +958,102 @@ try {
 
 ### Signal Handling Behavior
 
-- **Default**: Inherits stdin and properly forwards CTRL+C to child processes
-- **Interactive Commands**: Commands like `vim`, `less`, `top` work correctly with their own signal handling
-- **Non-Interactive**: Commands like `ping`, `sleep`, `tail -f` can be interrupted with CTRL+C
-- **Exit Codes**: Interrupted processes typically exit with code 130 (128 + SIGINT signal number)
+- **🎯 Smart Detection**: Only forwards CTRL+C when child processes are active
+- **🛡️ Non-Interference**: Preserves user SIGINT handlers when no children running  
+- **⚡ Interactive Commands**: Commands like `vim`, `less`, `top` work with their own signal handling
+- **🔄 Process Groups**: Detached spawning ensures proper signal isolation
+- **🧹 TTY Cleanup**: Raw terminal mode properly restored on interruption
+- **📊 Standard Exit Codes**: 
+  - `130` - SIGINT interruption (CTRL+C)
+  - `143` - SIGTERM termination (programmatic kill)
+  - `137` - SIGKILL force termination
+
+### Command Resolution Priority
+
+```javascript
+// Understanding how commands are resolved:
+
+// 1. Virtual Commands (highest priority)
+register('echo', () => ({ stdout: 'virtual!\n', code: 0 }));
+await $`echo test`; // → "virtual!"
+
+// 2. Built-in Commands (if no virtual match)  
+unregister('echo');
+await $`echo test`; // → Uses built-in echo
+
+// 3. System Commands (if no built-in/virtual match)
+await $`unknown-command`; // → Uses system PATH lookup
+
+// 4. Virtual Bypass (special case)
+await $({ stdin: 'data' })`sleep 1`; // Bypasses virtual sleep, uses system sleep
+```
+
+## Execution Patterns Deep Dive
+
+### When to Use Different Patterns
+
+```javascript
+import { $ } from 'command-stream';
+
+// ✅ Use await for simple command execution
+const result = await $`ls -la`;
+
+// ✅ Use .sync() when you need blocking execution with events
+const syncCmd = $`build-script`
+  .on('stdout', chunk => updateProgress(chunk))
+  .sync(); // Events fire after completion
+
+// ✅ Use .start() for non-blocking execution with real-time events  
+const asyncCmd = $`long-running-server`
+  .on('stdout', chunk => logOutput(chunk))
+  .start(); // Events fire in real-time
+
+// ✅ Use .stream() for processing large outputs efficiently
+for await (const chunk of $`generate-big-file`.stream()) {
+  processChunkInRealTime(chunk);
+} // Memory efficient - processes chunks as they arrive
+
+// ✅ Use EventEmitter pattern for complex workflows
+$`deployment-script`
+  .on('stdout', chunk => {
+    if (chunk.toString().includes('ERROR')) {
+      handleError(chunk);
+    }
+  })
+  .on('stderr', chunk => logError(chunk))
+  .on('end', result => {
+    if (result.code === 0) {
+      notifySuccess();
+    }
+  })
+  .start();
+```
+
+### Performance Considerations
+
+```javascript
+// 🚀 Memory Efficient: For large outputs, use streaming
+for await (const chunk of $`cat huge-file.log`.stream()) {
+  processChunk(chunk); // Processes incrementally
+}
+
+// 🐌 Memory Inefficient: Buffers entire output in memory
+const result = await $`cat huge-file.log`;
+processFile(result.stdout); // Loads everything into memory
+
+// ⚡ Fastest: Sync execution for small, quick commands
+const quickResult = $`pwd`.sync();
+
+// 🔄 Best for UX: Async with events for long-running commands
+$`npm install`
+  .on('stdout', showProgress)
+  .start();
+```
 
 ## Testing
 
 ```bash
-# Run comprehensive test suite (266 tests)
+# Run comprehensive test suite (270+ tests)
 bun test
 
 # Run tests with coverage report
@@ -870,9 +1061,10 @@ bun test --coverage
 
 # Run specific test categories
 npm run test:features    # Feature comparison tests
-npm run test:builtin     # Built-in commands tests
+npm run test:builtin     # Built-in commands tests  
 npm run test:pipe        # .pipe() method tests
 npm run test:sync        # Synchronous execution tests
+npm run test:signal      # CTRL+C signal handling tests
 ```
 
 ## Requirements
