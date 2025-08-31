@@ -355,4 +355,128 @@ describe('CTRL+C with Different stdin Modes', () => {
     // The important thing is that stdin raw mode should be restored properly
     // This is handled by our signal forwarding cleanup
   }, { timeout: 10000 });
+
+  it('should handle parent stream closure triggering process cleanup', async () => {
+    // Test parent stream closure handling mechanism
+    const child = spawn('node', ['-e', `
+      import { $ } from './src/$.mjs';
+      
+      // Start a long-running command
+      const runner = \$\`ping -c 10 8.8.8.8\`;
+      const promise = runner.start();
+      
+      // Simulate parent stream closure after a delay
+      setTimeout(() => {
+        console.log('SIMULATING_PARENT_STREAM_CLOSURE');
+        process.stdout.destroy(); // This should trigger cleanup
+      }, 1000);
+      
+      try {
+        await promise;
+        console.log('COMMAND_COMPLETED');
+      } catch (error) {
+        console.log('COMMAND_INTERRUPTED');
+      }
+    `], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      detached: true,
+    });
+    
+    childProcesses.push(child);
+    
+    let stdout = '';
+    child.stdout.on('data', (data) => {
+      stdout += data.toString();
+    });
+    
+    // Wait for the process to complete
+    const exitCode = await new Promise((resolve) => {
+      child.on('close', (code) => {
+        resolve(code);
+      });
+    });
+    
+    // Should have detected parent stream closure
+    expect(stdout).toContain('SIMULATING_PARENT_STREAM_CLOSURE');
+  }, { timeout: 10000 });
+
+  it('should bypass virtual commands with custom stdin for proper signal handling', async () => {
+    // Test the bypass logic for built-in commands with custom stdin
+    const child = spawn('node', ['-e', `
+      import { $ } from './src/$.mjs';
+      
+      console.log('STARTING_SLEEP_WITH_CUSTOM_STDIN');
+      
+      try {
+        // This should bypass virtual sleep and use real /usr/bin/sleep
+        const result = await \$({ stdin: 'custom input' })\`sleep 2\`;
+        console.log('SLEEP_COMPLETED:', result.code);
+      } catch (error) {
+        console.log('SLEEP_ERROR:', error.message);
+      }
+    `], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      detached: true,
+    });
+    
+    childProcesses.push(child);
+    
+    let stdout = '';
+    child.stdout.on('data', (data) => {
+      stdout += data.toString();
+    });
+    
+    // Give it time to start then interrupt
+    await new Promise(resolve => setTimeout(resolve, 500));
+    child.kill('SIGINT');
+    
+    const exitCode = await new Promise((resolve) => {
+      child.on('close', (code) => {
+        resolve(code);
+      });
+    });
+    
+    expect(exitCode).toBe(130); // SIGINT exit code
+    expect(stdout).toContain('STARTING_SLEEP_WITH_CUSTOM_STDIN');
+  }, { timeout: 10000 });
+
+  it('should handle Bun vs Node.js signal differences', async () => {
+    // Test platform-specific signal handling
+    const child = spawn('node', ['-e', `
+      import { $ } from './src/$.mjs';
+      
+      const isBun = typeof globalThis.Bun !== 'undefined';
+      console.log('RUNTIME:', isBun ? 'BUN' : 'NODE');
+      
+      try {
+        const result = await \$\`ping -c 3 8.8.8.8\`;
+        console.log('PING_COMPLETED:', result.code);
+      } catch (error) {
+        console.log('PING_ERROR:', error.message);
+      }
+    `], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      detached: true,
+    });
+    
+    childProcesses.push(child);
+    
+    let stdout = '';
+    child.stdout.on('data', (data) => {
+      stdout += data.toString();
+    });
+    
+    // Let it run for a bit then interrupt
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    child.kill('SIGINT');
+    
+    const exitCode = await new Promise((resolve) => {
+      child.on('close', (code) => {
+        resolve(code);
+      });
+    });
+    
+    expect(exitCode).toBe(130);
+    expect(stdout).toMatch(/RUNTIME: (BUN|NODE)/);
+  }, { timeout: 10000 });
 });

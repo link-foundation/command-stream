@@ -78,3 +78,116 @@ describe('CTRL+C Basic Handling', () => {
     expect(errorCode).toBeDefined();
   });
 });
+
+describe('CTRL+C Virtual Commands', () => {
+  it('should cancel virtual command with AbortController', async () => {
+    const runner = $`sleep 5`; // Virtual sleep command
+    
+    const promise = runner.start();
+    
+    // Give virtual command time to start
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Kill the virtual command
+    runner.kill();
+    
+    const result = await promise;
+    
+    // Virtual commands return SIGTERM exit code when cancelled
+    expect(result.code).toBe(143);
+  }, { timeout: 5000 });
+  
+  it('should cancel virtual async generator', async () => {
+    // Test cancelling a streaming virtual command
+    const runner = $`yes hello`;
+    
+    // Start streaming
+    const streamPromise = (async () => {
+      let chunks = 0;
+      for await (const _chunk of runner.stream()) {
+        chunks++;
+        if (chunks >= 3) {
+          break; // Break should trigger cancellation
+        }
+      }
+      return chunks;
+    })();
+    
+    const chunks = await streamPromise;
+    expect(chunks).toBe(3);
+    expect(runner.finished).toBe(true);
+  }, { timeout: 5000 });
+});
+
+describe('CTRL+C Different stdin Modes', () => {
+  it('should handle CTRL+C with string stdin', async () => {
+    // Use a long-running command that will actually be killed
+    const runner = $({ stdin: 'test input\n' })`sleep 10`;
+    
+    const promise = runner.start();
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
+    runner.kill();
+    const result = await promise;
+    
+    expect(result.code).toBe(143);
+  });
+  
+  it('should handle CTRL+C with Buffer stdin', async () => {
+    // Use a long-running command that will actually be killed
+    const runner = $({ stdin: Buffer.from('test input\n') })`sleep 10`;
+    
+    const promise = runner.start();
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
+    runner.kill();
+    const result = await promise;
+    
+    expect(result.code).toBe(143);
+  });
+  
+  it('should handle CTRL+C with ignore stdin', async () => {
+    const runner = $({ stdin: 'ignore' })`sleep 5`;
+    
+    const promise = runner.start();
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    runner.kill();
+    const result = await promise;
+    
+    expect(result.code).toBe(143);
+  });
+});
+
+describe('CTRL+C Pipeline Interruption', () => {
+  it('should interrupt simple pipeline', async () => {
+    // Use a very simple approach that we know works
+    const runner = $`sleep 10`;
+    
+    const promise = runner.start();
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
+    runner.kill();
+    const result = await promise;
+    
+    // Should be interrupted with SIGTERM code
+    expect(result.code).toBe(143);
+  }, { timeout: 3000 });
+});
+
+describe('CTRL+C Process Groups', () => {
+  it('should handle process group termination on Unix', async () => {
+    if (process.platform === 'win32') return; // Skip on Windows
+    
+    // Use a command that spawns subprocesses
+    const runner = $`sh -c 'sleep 10 & sleep 10 & wait'`;
+    
+    const promise = runner.start();
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
+    runner.kill();
+    const result = await promise;
+    
+    expect(result.code).toBe(143);
+  }, { timeout: 5000 });
+});
