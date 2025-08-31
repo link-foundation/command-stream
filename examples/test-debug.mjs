@@ -1,4 +1,4 @@
-import { $ } from '../$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Starting test...');
 

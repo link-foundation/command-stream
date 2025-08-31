@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../$.mjs';
+import { $ } from '../src/$.mjs';
 
 async function debugExecutionPath() {
   console.log('=== Debugging execution path for new options ===');

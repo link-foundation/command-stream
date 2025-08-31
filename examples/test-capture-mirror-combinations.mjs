@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../$.mjs';
+import { $ } from '../src/$.mjs';
 
 async function testCombinations() {
   console.log('=== Testing all capture/mirror option combinations ===');

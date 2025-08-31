@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $, AnsiUtils } from './$.mjs';
+import { $, AnsiUtils } from '../src/$.mjs';
 
 console.log('=== ANSI Color Example with ls command ===\n');
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('=== Event vs Result Comparison ===\n');
 

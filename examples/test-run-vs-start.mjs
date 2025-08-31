@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../$.mjs';
+import { $ } from '../src/$.mjs';
 
 async function compareRunVsStart() {
   console.log('=== Comparing .run() vs .start() methods ===');

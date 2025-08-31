@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $, configureAnsi, AnsiUtils } from './$.mjs';
+import { $, configureAnsi, AnsiUtils } from '../src/$.mjs';
 
 console.log('=== ANSI Color Handling Comparison ===\n');
 

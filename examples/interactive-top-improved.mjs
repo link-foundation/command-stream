@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { ProcessRunner } from '../$.mjs';
+import { ProcessRunner } from '../src/$.mjs';
 import { spawn } from 'child_process';
 
 console.log('=== Improved Interactive top with command-stream ===');

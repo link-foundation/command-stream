@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { $ } from '../$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Test with real commands only (no virtual echo):\n');
 

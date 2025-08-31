@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { test, expect, describe } from 'bun:test';
-import { $ } from '../$.mjs';
+import { $ } from '../src/$.mjs';
 
 describe('Start/Run Options Passing', () => {
   describe('.start() method with options', () => {

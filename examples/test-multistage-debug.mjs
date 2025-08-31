@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { $ } from '../$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('=== Debug Multi-Stage Pipeline ===\n');
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { $ } from '../$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Testing pipeline executed via sh -c:');
 console.log('This should stream in real-time\n');

@@ -1,5 +1,5 @@
 import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
-import { $, shell, disableVirtualCommands } from '../$.mjs';
+import { $, shell, disableVirtualCommands } from '../src/$.mjs';
 import { execSync } from 'child_process';
 
 beforeEach(() => {

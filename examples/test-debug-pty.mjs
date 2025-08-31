@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { $ } from '../$.mjs';
+import { $ } from '../src/$.mjs';
 
 // Add debug logging
 const original_runPipeline = $.prototype._runPipeline;

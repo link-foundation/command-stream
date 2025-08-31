@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('=== Debug Which Pipeline Method is Used ===\n');
 

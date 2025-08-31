@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { test, expect, describe } from 'bun:test';
-import { $ } from '../$.mjs';
+import { $ } from '../src/$.mjs';
 
 describe('Options Examples (Feature Demo)', () => {
   test('example: disable capture for performance', async () => {

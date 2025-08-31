@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test';
-import { $, disableVirtualCommands } from '../$.mjs';
+import { $, disableVirtualCommands } from '../src/$.mjs';
 
 // Disable virtual commands to ensure we're testing system/built-in commands
 disableVirtualCommands();

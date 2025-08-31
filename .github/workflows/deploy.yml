@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]
     paths:
-      - '$.mjs'
+      - 'src/$.mjs'
       - 'tests/**'
       - 'package.json'
       - 'README.md'
@@ -27,7 +27,7 @@ jobs:
       - name: Check for changes
         id: changes
         run: |
-          if git diff --quiet HEAD~1 HEAD -- $.mjs tests/ package.json README.md .github/workflows/deploy.yml; then
+          if git diff --quiet HEAD~1 HEAD -- src/$.mjs tests/ package.json README.md .github/workflows/deploy.yml; then
             echo "changed=false" >> $GITHUB_OUTPUT
           else
             echo "changed=true" >> $GITHUB_OUTPUT

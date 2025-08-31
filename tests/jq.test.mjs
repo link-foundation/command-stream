@@ -1,4 +1,4 @@
-import { $ } from '../$.mjs';
+import { $ } from '../src/$.mjs';
 import { describe, test, expect } from 'bun:test';
 
 describe('jq streaming tests', () => {

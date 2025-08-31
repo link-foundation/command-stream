@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('=== Interactive top command (preserves ANSI colors and interactive controls) ===');
 console.log('This will run top interactively. Press q to quit when ready.\n');

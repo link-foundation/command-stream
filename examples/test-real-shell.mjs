@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../$.mjs';
+import { $ } from '../src/$.mjs';
 
 async function testRealShellCommands() {
   console.log('Testing with real shell commands...');

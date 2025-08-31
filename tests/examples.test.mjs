@@ -1,5 +1,5 @@
 import { test, expect, describe } from 'bun:test';
-import { $ } from '../$.mjs';
+import { $ } from '../src/$.mjs';
 import { readdirSync, statSync, readFileSync } from 'fs';
 import { join } from 'path';
 

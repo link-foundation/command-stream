@@ -1,5 +1,5 @@
 import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
-import { $, register, unregister, enableVirtualCommands } from '../$.mjs';
+import { $, register, unregister, enableVirtualCommands } from '../src/$.mjs';
 import { rmSync, existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
 import { join } from 'path';
 

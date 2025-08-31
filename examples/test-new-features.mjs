@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../$.mjs';
+import { $ } from '../src/$.mjs';
 
 async function testOptionsPassthrough() {
   console.log('Testing options passthrough with .start() and .run()...');

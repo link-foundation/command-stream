@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $, AnsiUtils, configureAnsi } from './$.mjs';
+import { $, AnsiUtils, configureAnsi } from '../src/$.mjs';
 
 console.log('=== ANSI Color Preservation Demo ===\n');
 

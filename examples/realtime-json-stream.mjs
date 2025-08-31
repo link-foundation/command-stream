@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('=== Realtime JSON Streaming Demo ===\n');
 console.log('This demo shows that jq processes and outputs JSON objects immediately');

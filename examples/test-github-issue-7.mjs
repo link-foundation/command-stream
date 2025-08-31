@@ -3,7 +3,7 @@
 // Test for GitHub issue #7: Built-in 'which' command returns non-zero exit code for existing commands
 // https://github.com/link-foundation/command-stream/issues/7
 
-import { $ } from '../$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('=== Testing GitHub Issue #7: which command fix ===\n');
 

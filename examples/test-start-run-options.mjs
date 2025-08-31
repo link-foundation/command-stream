@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../$.mjs';
+import { $ } from '../src/$.mjs';
 
 async function demonstrateStartRunOptions() {
   console.log('=== Demonstrating .start() and .run() with options ===');

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
-import { $, shell } from '../$.mjs';
+import { $, shell } from '../src/$.mjs';
 
 describe('Start/Run Edge Cases and Advanced Usage', () => {
   beforeEach(() => {

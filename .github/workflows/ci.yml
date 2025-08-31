@@ -4,18 +4,18 @@ on:
   pull_request:
     branches: [ main ]
     paths:
-      - '$.mjs'
-      - '$.utils.mjs'
-      - 'commands/**'
+      - 'src/$.mjs'
+      - 'src/$.utils.mjs'
+      - 'src/commands/**'
       - 'tests/**'
       - 'package.json'
       - '.github/workflows/ci.yml'
   push:
     branches: [ main ]
     paths:
-      - '$.mjs'
-      - '$.utils.mjs'
-      - 'commands/**'
+      - 'src/$.mjs'
+      - 'src/$.utils.mjs'
+      - 'src/commands/**'
       - 'tests/**'
       - 'package.json'
       - '.github/workflows/ci.yml'
@@ -61,7 +61,7 @@ jobs:
       
       - name: Check files exist
         run: |
-          test -f $.mjs || (echo "❌ Main file $.mjs not found" && exit 1)
+          test -f src/$.mjs || (echo "❌ Main file src/$.mjs not found" && exit 1)
           test -f README.md || (echo "❌ README.md not found" && exit 1)
           test -f LICENSE || (echo "❌ LICENSE file not found" && exit 1)
           echo "✅ All required files exist"
@@ -97,7 +97,7 @@ jobs:
         run: |
           node -e "
           try {
-            const { $ } = require('./$.mjs');
+            const { $ } = require('./src/$.mjs');
             console.log('✅ Module loads successfully in Node.js ${{ matrix.node-version }}');
           } catch (error) {
             console.error('❌ Module failed to load:', error.message);
