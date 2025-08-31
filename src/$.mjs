@@ -2381,15 +2381,46 @@ class ProcessRunner extends StreamEmitter {
             trace('ProcessRunner', () => `Killing Bun process | ${JSON.stringify({ pid: this.child.pid }, null, 2)}`);
             this.child.kill();
           } else {
-            // In Node.js, kill the process group if detached, otherwise kill the process directly
+            // In Node.js, use a more robust approach for CI environments
             trace('ProcessRunner', () => `Killing Node process | ${JSON.stringify({ pid: this.child.pid }, null, 2)}`);
+            
+            // Try multiple termination strategies for robustness in CI environments
             try {
-              // Try to kill the process group first (negative PID)
-              process.kill(-this.child.pid, 'SIGTERM');
-            } catch (err) {
-              // If that fails, kill the process directly
+              // First, try SIGTERM to the process directly
               process.kill(this.child.pid, 'SIGTERM');
+              trace('ProcessRunner', () => `Sent SIGTERM to process ${this.child.pid}`);
+            } catch (err) {
+              trace('ProcessRunner', () => `Error sending SIGTERM to process: ${err.message}`);
             }
+            
+            // Also try process group if detached (negative PID)
+            try {
+              process.kill(-this.child.pid, 'SIGTERM');
+              trace('ProcessRunner', () => `Sent SIGTERM to process group -${this.child.pid}`);
+            } catch (err) {
+              trace('ProcessRunner', () => `Process group kill failed (expected in some environments): ${err.message}`);
+            }
+            
+            // Wait a moment, then force kill if still running
+            setTimeout(() => {
+              if (this.child && !this.finished) {
+                try {
+                  // Force kill the process
+                  process.kill(this.child.pid, 'SIGKILL');
+                  trace('ProcessRunner', () => `Force killed process ${this.child.pid} with SIGKILL`);
+                } catch (err) {
+                  trace('ProcessRunner', () => `Error force killing process: ${err.message}`);
+                }
+                
+                try {
+                  // Force kill the process group
+                  process.kill(-this.child.pid, 'SIGKILL');
+                  trace('ProcessRunner', () => `Force killed process group -${this.child.pid} with SIGKILL`);
+                } catch (err) {
+                  trace('ProcessRunner', () => `Process group force kill failed: ${err.message}`);
+                }
+              }
+            }, 100);
           }
         }
         this.finished = true;
