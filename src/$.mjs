@@ -54,7 +54,7 @@ const activeProcessRunners = new Set();
 
 // Track if SIGINT handler has been installed
 let sigintHandlerInstalled = false;
-let previousSigintListeners = [];
+let sigintHandler = null; // Store reference to remove it later
 
 function installSignalHandlers() {
   if (sigintHandlerInstalled) return;
@@ -62,7 +62,7 @@ function installSignalHandlers() {
   
   // Forward SIGINT to all active child processes
   // The parent process continues running - it's up to the parent to decide what to do
-  const sigintHandler = () => {
+  sigintHandler = () => {
     trace('ProcessRunner', () => `SIGINT handler triggered - checking active processes`);
     // Count active processes (both child processes and virtual commands)
     const activeChildren = [];
@@ -140,6 +140,15 @@ function installSignalHandlers() {
   };
   
   process.on('SIGINT', sigintHandler);
+}
+
+function uninstallSignalHandlers() {
+  if (!sigintHandlerInstalled || !sigintHandler) return;
+  
+  trace('ProcessRunner', () => 'Removing SIGINT handler - no active ProcessRunners');
+  process.removeListener('SIGINT', sigintHandler);
+  sigintHandlerInstalled = false;
+  sigintHandler = null;
 }
 
 function monitorParentStreams() {
@@ -663,10 +672,20 @@ class ProcessRunner extends StreamEmitter {
     }
 
     activeProcessRunners.delete(this);
+    
+    // If no more active ProcessRunners, remove the SIGINT handler
+    if (activeProcessRunners.size === 0) {
+      uninstallSignalHandlers();
+    }
   }
 
   _cleanup() {
     activeProcessRunners.delete(this);
+    
+    // If no more active ProcessRunners, remove the SIGINT handler
+    if (activeProcessRunners.size === 0) {
+      uninstallSignalHandlers();
+    }
   }
 
   // Unified start method that can work in both async and sync modes
