@@ -797,11 +797,29 @@ class ProcessRunner extends StreamEmitter {
           }, null, 2)}`);
           return await this._runPipeline(parsed.commands);
         } else if (parsed.type === 'simple' && virtualCommandsEnabled && virtualCommands.has(parsed.cmd)) {
-          trace('ProcessRunner', () => `BRANCH: virtualCommand => ${parsed.cmd} | ${JSON.stringify({
-            isVirtual: true,
-            args: parsed.args
-          }, null, 2)}`);
-          return await this._runVirtual(parsed.cmd, parsed.args, this.spec.command);
+          // For built-in virtual commands that have real counterparts (like sleep),
+          // skip the virtual version when custom stdin is provided to ensure proper process handling
+          const hasCustomStdin = this.options.stdin && 
+                                 this.options.stdin !== 'inherit' && 
+                                 this.options.stdin !== 'ignore';
+          
+          // List of built-in virtual commands that should fallback to real commands with custom stdin
+          const builtinCommands = ['sleep', 'echo', 'pwd', 'true', 'false', 'yes', 'cat', 'ls', 'which'];
+          const shouldBypassVirtual = hasCustomStdin && builtinCommands.includes(parsed.cmd);
+          
+          if (shouldBypassVirtual) {
+            trace('ProcessRunner', () => `Bypassing built-in virtual command due to custom stdin | ${JSON.stringify({
+              cmd: parsed.cmd,
+              stdin: typeof this.options.stdin
+            }, null, 2)}`);
+            // Fall through to run as real command
+          } else {
+            trace('ProcessRunner', () => `BRANCH: virtualCommand => ${parsed.cmd} | ${JSON.stringify({
+              isVirtual: true,
+              args: parsed.args
+            }, null, 2)}`);
+            return await this._runVirtual(parsed.cmd, parsed.args, this.spec.command);
+          }
         }
       }
     }
@@ -932,8 +950,23 @@ class ProcessRunner extends StreamEmitter {
       isBun
     }, null, 2)}`);
 
+    // When a process is killed, it may not have an exit code
+    // If cancelled and no exit code, assume it was killed with SIGTERM
+    let finalExitCode = code;
+    if (finalExitCode === undefined || finalExitCode === null) {
+      if (this._cancelled) {
+        // Process was killed, use SIGTERM exit code
+        finalExitCode = 143; // 128 + 15 (SIGTERM)
+        trace('ProcessRunner', () => `Process was killed, using SIGTERM exit code 143`);
+      } else {
+        // Process exited without a code, default to 0
+        finalExitCode = 0;
+        trace('ProcessRunner', () => `Process exited without code, defaulting to 0`);
+      }
+    }
+
     const resultData = {
-      code: code ?? 0,  // Default to 0 if exit code is null/undefined
+      code: finalExitCode,
       stdout: this.options.capture ? (this.outChunks && this.outChunks.length > 0 ? Buffer.concat(this.outChunks).toString('utf8') : '') : undefined,
       stderr: this.options.capture ? (this.errChunks && this.errChunks.length > 0 ? Buffer.concat(this.errChunks).toString('utf8') : '') : undefined,
       stdin: this.options.capture && this.inChunks ? Buffer.concat(this.inChunks).toString('utf8') : undefined,
