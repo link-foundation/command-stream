@@ -505,8 +505,9 @@ describe('CTRL+C with Different stdin Modes', () => {
       });
     });
     
-    // Should have detected parent stream closure
+    // Should have detected parent stream closure and exited
     expect(stdout).toContain('SIMULATING_PARENT_STREAM_CLOSURE');
+    expect(typeof exitCode).toBe('number'); // Should have a valid exit code
   }, { timeout: 10000 });
 
   it('should bypass virtual commands with custom stdin for proper signal handling', async () => {
