@@ -64,35 +64,48 @@ function installSignalHandlers() {
   // Forward SIGINT to all active child processes
   // The parent process continues running - it's up to the parent to decide what to do
   const sigintHandler = () => {
-    trace('ProcessRunner', () => `Parent received SIGINT - forwarding to ${activeProcessRunners.size} child processes`);
-    
-    // Forward signal to all active child processes
+    // Count active child processes
+    const activeChildren = [];
     for (const runner of activeProcessRunners) {
       if (runner.child && runner.child.pid && !runner.finished) {
-        try {
-          trace('ProcessRunner', () => `Sending SIGINT to child process ${runner.child.pid}`);
-          if (isBun) {
-            runner.child.kill('SIGINT');
-          } else {
-            // Send to process group if detached, otherwise to process directly
-            try {
-              process.kill(-runner.child.pid, 'SIGINT');
-            } catch (err) {
-              process.kill(runner.child.pid, 'SIGINT');
-            }
+        activeChildren.push(runner);
+      }
+    }
+    
+    trace('ProcessRunner', () => `Parent received SIGINT - ${activeChildren.length} active child processes`);
+    
+    // Only handle SIGINT if we have active child processes
+    // Otherwise, let the default behavior or user handlers take over
+    if (activeChildren.length === 0) {
+      trace('ProcessRunner', () => `No active children - allowing default SIGINT behavior`);
+      return; // Let default Node.js/Bun SIGINT behavior handle it
+    }
+    
+    // Forward signal to all active child processes
+    for (const runner of activeChildren) {
+      try {
+        trace('ProcessRunner', () => `Sending SIGINT to child process ${runner.child.pid}`);
+        if (isBun) {
+          runner.child.kill('SIGINT');
+        } else {
+          // Send to process group if detached, otherwise to process directly
+          try {
+            process.kill(-runner.child.pid, 'SIGINT');
+          } catch (err) {
+            process.kill(runner.child.pid, 'SIGINT');
           }
-        } catch (err) {
-          trace('ProcessRunner', () => `Error sending SIGINT to child: ${err.message}`);
         }
+      } catch (err) {
+        trace('ProcessRunner', () => `Error sending SIGINT to child: ${err.message}`);
       }
     }
     
     // After forwarding SIGINT to children, wait for them to finish and then exit with proper signal code
     // This mimics proper shell behavior where CTRL+C interrupts the entire process tree
     const waitForChildren = async () => {
-      // Collect all active child processes
+      // Collect all active child processes (re-check as they may have finished)
       const childPromises = [];
-      for (const runner of activeProcessRunners) {
+      for (const runner of activeChildren) {
         if (runner.child && runner.child.pid && !runner.finished) {
           // Wait for each child process to exit
           if (isBun) {

@@ -128,4 +128,44 @@ describe('Examples Execution Tests', () => {
     expect(result.code).toBe(143);
     expect(result.code).not.toBe(0); // Should not have completed successfully
   }, { timeout: 10000 });
+
+  // Test that we don't interfere with user's SIGINT handling when no children are active
+  test('should not interfere with user SIGINT handling when no children active', async () => {
+    const { spawn } = await import('child_process');
+    
+    // Start our debug script that imports $ but doesn't run commands
+    const child = spawn('node', ['examples/debug-user-sigint.mjs'], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      detached: true,
+    });
+    
+    let stdout = '';
+    let stderr = '';
+    
+    child.stdout.on('data', (data) => {
+      stdout += data.toString();
+    });
+    
+    child.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+    
+    // Give the process time to set up its signal handler
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Send SIGINT to the process
+    child.kill('SIGINT');
+    
+    // Wait for the process to exit
+    const exitCode = await new Promise((resolve) => {
+      child.on('close', (code) => {
+        resolve(code);
+      });
+    });
+    
+    // The user's SIGINT handler should have been called with exit code 42
+    expect(exitCode).toBe(42);
+    expect(stdout).toContain('USER_SIGINT_HANDLER_CALLED');
+    expect(stdout).not.toContain('TIMEOUT_REACHED');
+  }, { timeout: 5000 });
 });
