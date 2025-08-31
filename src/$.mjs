@@ -87,8 +87,39 @@ function installSignalHandlers() {
       }
     }
     
-    // Don't exit or re-emit - let the parent process handle SIGINT as it wishes
-    // The default Node.js/Bun behavior will still apply if there are no other handlers
+    // After forwarding SIGINT to children, wait for them to finish and then exit with proper signal code
+    // This mimics proper shell behavior where CTRL+C interrupts the entire process tree
+    const waitForChildren = async () => {
+      // Collect all active child processes
+      const childPromises = [];
+      for (const runner of activeProcessRunners) {
+        if (runner.child && runner.child.pid && !runner.finished) {
+          // Wait for each child process to exit
+          if (isBun) {
+            childPromises.push(runner.child.exited);
+          } else {
+            childPromises.push(new Promise((resolve) => {
+              runner.child.on('close', resolve);
+              runner.child.on('exit', resolve);
+            }));
+          }
+        }
+      }
+      
+      if (childPromises.length > 0) {
+        // Wait for all children to finish
+        try {
+          await Promise.all(childPromises);
+        } catch (err) {
+          // If waiting fails, proceed anyway
+        }
+      }
+      
+      process.exit(130); // 128 + 2 (SIGINT)
+    };
+    
+    // Run asynchronously to avoid blocking the signal handler
+    waitForChildren().catch(() => process.exit(130));
   };
   
   process.on('SIGINT', sigintHandler);

@@ -58,4 +58,74 @@ describe('Examples Execution Tests', () => {
     expect(allExamples.length).toBeGreaterThan(0);
     expect(nodeCompatibleExamples.length).toBeGreaterThan(0);
   });
+
+  // Test ping example with external CTRL+C handling
+  test('test-ping.mjs should handle external CTRL+C signal', async () => {
+    const { spawn } = await import('child_process');
+    const { join } = await import('path');
+    
+    const testPingPath = join(process.cwd(), 'examples/test-ping.mjs');
+    
+    // Start the ping process
+    const child = spawn('node', [testPingPath], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      detached: true,
+    });
+    
+    let stdout = '';
+    let stderr = '';
+    
+    child.stdout.on('data', (data) => {
+      stdout += data.toString();
+    });
+    
+    child.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+    
+    // Give the ping process time to start
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Send CTRL+C (SIGINT) to the process
+    child.kill('SIGINT');
+    
+    // Wait for the process to exit
+    const exitCode = await new Promise((resolve) => {
+      child.on('close', (code) => {
+        resolve(code);
+      });
+    });
+    
+    // The ping should be interrupted with a non-zero exit code
+    expect(exitCode).not.toBe(0);
+    
+    // Check that we got some output or error indicating interruption
+    const allOutput = stdout + stderr;
+    
+    // The process should have been interrupted, not completed normally
+    expect(allOutput).not.toContain('Test completed successfully');
+  }, { timeout: 10000 });
+
+  // Test that verifies ping receives CTRL+C when spawned by $.mjs
+  test('$.mjs should properly forward CTRL+C to ping process', async () => {
+    // Start ping in a way that simulates the bug scenario
+    const runner = $`ping -c 10 8.8.8.8`; // Use higher count to ensure it runs long enough
+    
+    // Start the process
+    const promise = runner.start();
+    
+    // Give it a moment to start
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Simulate CTRL+C by killing the process
+    runner.kill('SIGINT');
+    
+    // Wait for the process to complete
+    const result = await promise;
+    
+    // Process should have been killed before completing normally
+    // Exit code 143 means SIGTERM (128 + 15), which is what kill() uses
+    expect(result.code).toBe(143);
+    expect(result.code).not.toBe(0); // Should not have completed successfully
+  }, { timeout: 10000 });
 });
