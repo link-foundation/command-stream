@@ -5,9 +5,7 @@
 // 3. EventEmitter: $`command`.on('data', chunk => ...).on('end', result => ...)
 // 4. Stream access: $`command`.stdout, $`command`.stderr
 
-import { createRequire } from 'module';
 import cp from 'child_process';
-import fs from 'fs';
 import path from 'path';
 
 const isBun = typeof globalThis.Bun !== 'undefined';

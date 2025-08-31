@@ -23,31 +23,39 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 
 ## Comparison with Other Libraries
 
-| Feature | [command-stream](https://github.com/link-foundation/command-stream) | [Bun.$](https://bun.sh/docs/runtime/shell) | [execa](https://github.com/sindresorhus/execa) | [zx](https://github.com/google/zx) |
-|---------|----------------|-------|-------|-----|
-| **Runtime Support** | ✅ Bun + Node.js | 🟡 Bun only | ✅ Node.js | ✅ Node.js |
-| **Template Literals** | ✅ `` $`cmd` `` | ✅ `` $`cmd` `` | ✅ `` $`cmd` `` | ✅ `` $`cmd` `` |
-| **Real-time Streaming** | ✅ Live output | ❌ Buffer only | 🟡 Limited | ❌ Buffer only |
-| **Synchronous Execution** | ✅ `.sync()` with events | ❌ No | ✅ `execaSync` | ❌ No |
-| **Async Iteration** | ✅ `for await (chunk of $.stream())` | ❌ No | ❌ No | ❌ No |
-| **EventEmitter Pattern** | ✅ `.on('data', ...)` | ❌ No | 🟡 Limited events | ❌ No |
-| **Mixed Patterns** | ✅ Events + await/sync | ❌ No | ❌ No | ❌ No |
-| **Bun.$ Compatibility** | ✅ `.text()` method support | ✅ Native API | ❌ No | ❌ No |
-| **Shell Injection Protection** | ✅ Auto-quoting | ✅ Built-in | ✅ Safe by default | ✅ Safe by default |
-| **Cross-platform** | ✅ macOS/Linux/Windows | ✅ Yes | ✅ Yes | ✅ Yes |
-| **Performance** | ⚡ Fast (Bun optimized) | ⚡ Very fast | 🐌 Moderate | 🐌 Slow |
-| **Memory Efficiency** | ✅ Streaming prevents buildup | 🟡 Buffers in memory | 🟡 Buffers in memory | 🟡 Buffers in memory |
-| **Error Handling** | ✅ Configurable (`set -e`/`set +e`, non-zero OK by default) | ✅ Throws on error | ✅ Throws on error | ✅ Throws on error |
-| **Shell Settings** | ✅ `set -e`/`set +e` equivalent | ❌ No | ❌ No | ❌ No |
-| **Stdout Support** | ✅ Real-time streaming + events | ✅ Shell redirection + buffered | ✅ Node.js streams + interleaved | ✅ Readable streams + `.pipe.stdout` |
-| **Stderr Support** | ✅ Real-time streaming + events | ✅ Redirection + `.quiet()` access | ✅ Streams + interleaved output | ✅ Readable streams + `.pipe.stderr` |
-| **Stdin Support** | ✅ string/Buffer/inherit/ignore | ✅ Pipe operations | ✅ Input/output streams | ✅ Basic stdin |
-| **Built-in Commands** | ✅ **18 commands**: cat, ls, mkdir, rm, mv, cp, touch, basename, dirname, seq, yes + all Bun.$ commands | ✅ echo, cd, etc. | ❌ Uses system | ❌ Uses system |
-| **Virtual Commands Engine** | ✅ **Revolutionary**: Register JavaScript functions as shell commands with full pipeline support | ❌ No extensibility | ❌ No custom commands | ❌ No custom commands |
-| **Pipeline/Piping Support** | ✅ **Advanced**: System + Built-ins + Virtual + Mixed + `.pipe()` method | ✅ Standard shell piping | ✅ Programmatic `.pipe()` + multi-destination | ✅ Shell piping + `.pipe()` method |
-| **Bundle Size** | 📦 ~15KB | 🎯 0KB (built-in) | 📦 ~25KB | 📦 ~50KB |
-| **TypeScript** | 🔄 Coming soon | ✅ Built-in | ✅ Full support | ✅ Full support |
-| **License** | ✅ **Unlicense (Public Domain)** | 🟡 MIT (+ LGPL dependencies) | 🟡 MIT | 🟡 Apache 2.0 |
+| Feature | [command-stream](https://github.com/link-foundation/command-stream) | [Bun.$](https://bun.sh/docs/runtime/shell) | [execa](https://github.com/sindresorhus/execa) | [zx](https://github.com/google/zx) | [ShellJS](https://github.com/shelljs/shelljs) | [cross-spawn](https://github.com/moxystudio/node-cross-spawn) |
+|---------|----------------|-------|-------|-----|-------|-------|
+| **Runtime Support** | ✅ Bun + Node.js | 🟡 Bun only | ✅ Node.js | ✅ Node.js | ✅ Node.js | ✅ Node.js |
+| **Template Literals** | ✅ `` $`cmd` `` | ✅ `` $`cmd` `` | ✅ `` $`cmd` `` | ✅ `` $`cmd` `` | ❌ Function calls | ❌ Function calls |
+| **Real-time Streaming** | ✅ Live output | ❌ Buffer only | 🟡 Limited | ❌ Buffer only | ❌ Buffer only | ❌ Buffer only |
+| **Synchronous Execution** | ✅ `.sync()` with events | ❌ No | ✅ `execaSync` | ❌ No | ✅ Sync by default | ✅ `spawnSync` |
+| **Async Iteration** | ✅ `for await (chunk of $.stream())` | ❌ No | ❌ No | ❌ No | ❌ No | ❌ No |
+| **EventEmitter Pattern** | ✅ `.on('data', ...)` | ❌ No | 🟡 Limited events | ❌ No | ❌ No | 🟡 Child process events |
+| **Mixed Patterns** | ✅ Events + await/sync | ❌ No | ❌ No | ❌ No | ❌ No | ❌ No |
+| **Bun.$ Compatibility** | ✅ `.text()` method support | ✅ Native API | ❌ No | ❌ No | ❌ No | ❌ No |
+| **Shell Injection Protection** | ✅ Auto-quoting | ✅ Built-in | ✅ Safe by default | ✅ Safe by default | 🟡 Manual escaping | ✅ Safe by default |
+| **Cross-platform** | ✅ macOS/Linux/Windows | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes | ✅ **Specialized** cross-platform |
+| **Performance** | ⚡ Fast (Bun optimized) | ⚡ Very fast | 🐌 Moderate | 🐌 Slow | 🐌 Moderate | ⚡ Fast |
+| **Memory Efficiency** | ✅ Streaming prevents buildup | 🟡 Buffers in memory | 🟡 Buffers in memory | 🟡 Buffers in memory | 🟡 Buffers in memory | 🟡 Buffers in memory |
+| **Error Handling** | ✅ Configurable (`set -e`/`set +e`, non-zero OK by default) | ✅ Throws on error | ✅ Throws on error | ✅ Throws on error | ✅ Configurable | ❌ Basic (exit codes) |
+| **Shell Settings** | ✅ `set -e`/`set +e` equivalent | ❌ No | ❌ No | ❌ No | 🟡 Limited (`set()`) | ❌ No |
+| **Stdout Support** | ✅ Real-time streaming + events | ✅ Shell redirection + buffered | ✅ Node.js streams + interleaved | ✅ Readable streams + `.pipe.stdout` | ✅ Direct output | ✅ Inherited/buffered |
+| **Stderr Support** | ✅ Real-time streaming + events | ✅ Redirection + `.quiet()` access | ✅ Streams + interleaved output | ✅ Readable streams + `.pipe.stderr` | ✅ Error output | ✅ Inherited/buffered |
+| **Stdin Support** | ✅ string/Buffer/inherit/ignore | ✅ Pipe operations | ✅ Input/output streams | ✅ Basic stdin | 🟡 Basic | ✅ Full stdio support |
+| **Built-in Commands** | ✅ **18 commands**: cat, ls, mkdir, rm, mv, cp, touch, basename, dirname, seq, yes + all Bun.$ commands | ✅ echo, cd, etc. | ❌ Uses system | ❌ Uses system | ✅ **20+ commands**: cat, ls, mkdir, rm, mv, cp, etc. | ❌ Uses system |
+| **Virtual Commands Engine** | ✅ **Revolutionary**: Register JavaScript functions as shell commands with full pipeline support | ❌ No extensibility | ❌ No custom commands | ❌ No custom commands | ❌ No custom commands | ❌ No custom commands |
+| **Pipeline/Piping Support** | ✅ **Advanced**: System + Built-ins + Virtual + Mixed + `.pipe()` method | ✅ Standard shell piping | ✅ Programmatic `.pipe()` + multi-destination | ✅ Shell piping + `.pipe()` method | ✅ Shell piping + `.to()` method | ❌ No piping |
+| **Bundle Size** | 📦 **~20KB gzipped** | 🎯 0KB (built-in) | 📦 ~400KB+ (packagephobia) | 📦 ~50KB+ (estimated) | 📦 ~15KB gzipped | 📦 ~2KB gzipped |
+| **Signal Handling** | ✅ **Advanced SIGINT/SIGTERM forwarding** with cleanup | 🟡 Basic | 🟡 Basic | 🟡 Basic | 🟡 Basic | ✅ **Excellent** cross-platform |
+| **Process Management** | ✅ **Robust child process lifecycle** with proper termination | ❌ Basic | ✅ Good | 🟡 Limited | 🟡 Limited | ✅ **Excellent** spawn wrapper |
+| **Debug Tracing** | ✅ **Comprehensive VERBOSE logging** for CI/debugging | ❌ No | 🟡 Limited | ❌ No | 🟡 Basic | ❌ No |
+| **Test Coverage** | ✅ **410 tests, 909 assertions** | 🟡 Good coverage | ✅ Excellent | 🟡 Good | ✅ Good | ✅ Good |
+| **CI Reliability** | ✅ **Platform-specific handling** (macOS/Ubuntu) | 🟡 Basic | ✅ Good | 🟡 Basic | ✅ Good | ✅ **Excellent** |
+| **Documentation** | ✅ **Comprehensive examples + guides** | ✅ Good | ✅ Excellent | 🟡 Limited | ✅ Good | 🟡 Basic |
+| **TypeScript** | 🔄 Coming soon | ✅ Built-in | ✅ Full support | ✅ Full support | 🟡 Community types | ✅ Built-in |
+| **License** | ✅ **Unlicense (Public Domain)** | 🟡 MIT (+ LGPL dependencies) | 🟡 MIT | 🟡 Apache 2.0 | 🟡 BSD-3-Clause | 🟡 MIT |
+
+**📊 Popularity (Weekly Downloads 2024):** [cross-spawn](https://www.npmjs.com/package/cross-spawn): 102M+ • [execa](https://www.npmjs.com/package/execa): 98M+ • [ShellJS](https://www.npmjs.com/package/shelljs): 9M+ • [zx](https://www.npmjs.com/package/zx): Growing fast
 
 ### Why Choose command-stream?
 
@@ -60,7 +68,9 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 - **🐚 Shell Replacement**: Dynamic error handling with `set -e`/`set +e` equivalents for .sh file replacement
 - **⚡ Bun Optimized**: Designed for Bun with Node.js fallback compatibility  
 - **💾 Memory Efficient**: Streaming prevents large buffer accumulation
-- **🛡️ Production Ready**: 266+ tests with comprehensive coverage
+- **🛡️ Production Ready**: **410 tests, 909 assertions** with comprehensive coverage including CI reliability
+- **🎯 Advanced Signal Handling**: Robust SIGINT/SIGTERM forwarding with proper child process cleanup
+- **🔍 Debug-Friendly**: Comprehensive VERBOSE tracing for CI debugging and troubleshooting
 
 ## Built-in Commands (🚀 NEW!)
 
