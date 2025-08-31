@@ -126,7 +126,14 @@ function installSignalHandlers() {
     if (!hasOtherHandlers) {
       // No other handlers - we should exit like a proper shell
       trace('ProcessRunner', () => `No other SIGINT handlers, exiting with code 130`);
-      process.exit(130); // 128 + 2 (SIGINT)
+      // Ensure stdout/stderr are flushed before exiting
+      if (process.stdout && typeof process.stdout.write === 'function') {
+        process.stdout.write('', () => {
+          process.exit(130); // 128 + 2 (SIGINT)
+        });
+      } else {
+        process.exit(130); // 128 + 2 (SIGINT)
+      }
     } else {
       trace('ProcessRunner', () => `Other SIGINT handlers present, letting them handle the exit`);
     }
