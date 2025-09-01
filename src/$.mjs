@@ -559,6 +559,11 @@ class ProcessRunner extends StreamEmitter {
   }
 
   _emitProcessedData(type, buf) {
+    // Don't emit data if we've been cancelled
+    if (this._cancelled) {
+      trace('ProcessRunner', () => 'Skipping data emission - process cancelled');
+      return;
+    }
     const processedBuf = processOutput(buf, this.options.ansi);
     this.emit(type, processedBuf);
     this.emit('data', { type, data: processedBuf });
@@ -1272,12 +1277,27 @@ class ProcessRunner extends StreamEmitter {
           let done = false;
 
           while (!done && !this._cancelled) {
+            trace('ProcessRunner', () => `Virtual command iteration starting | ${JSON.stringify({
+              cancelled: this._cancelled,
+              streamBreaking: this._streamBreaking
+            }, null, 2)}`);
+            
             const result = await Promise.race([
               iterator.next(),
               cancelPromise.then(() => ({ done: true, cancelled: true }))
             ]);
 
+            trace('ProcessRunner', () => `Virtual command iteration result | ${JSON.stringify({
+              hasValue: !!result.value,
+              done: result.done,
+              cancelled: result.cancelled || this._cancelled
+            }, null, 2)}`);
+
             if (result.cancelled || this._cancelled) {
+              trace('ProcessRunner', () => `Virtual command cancelled - closing generator | ${JSON.stringify({
+                resultCancelled: result.cancelled,
+                thisCancelled: this._cancelled
+              }, null, 2)}`);
               // Cancelled - close the generator
               if (iterator.return) {
                 await iterator.return();
@@ -1288,18 +1308,35 @@ class ProcessRunner extends StreamEmitter {
             done = result.done;
 
             if (!done) {
+              // Check cancellation again before processing the chunk
+              if (this._cancelled) {
+                trace('ProcessRunner', () => 'Skipping chunk processing - cancelled during iteration');
+                break;
+              }
+              
               const chunk = result.value;
               const buf = Buffer.from(chunk);
+              
+              // Check cancelled flag once more before any output
+              if (this._cancelled || this._streamBreaking) {
+                trace('ProcessRunner', () => `Cancelled or stream breaking before output - skipping | ${JSON.stringify({ 
+                  cancelled: this._cancelled, 
+                  streamBreaking: this._streamBreaking 
+                }, null, 2)}`);
+                break;
+              }
+              
               chunks.push(buf);
 
-              // Only output if not cancelled
-              if (!this._cancelled) {
-                if (this.options.mirror) {
-                  safeWrite(process.stdout, buf);
-                }
-
-                this._emitProcessedData('stdout', buf);
+              // Only output if not cancelled and stream not breaking
+              if (!this._cancelled && !this._streamBreaking && this.options.mirror) {
+                trace('ProcessRunner', () => `Mirroring virtual command output | ${JSON.stringify({ 
+                  chunkSize: buf.length 
+                }, null, 2)}`);
+                safeWrite(process.stdout, buf);
               }
+
+              this._emitProcessedData('stdout', buf);
             }
           }
         } finally {
@@ -2473,12 +2510,16 @@ class ProcessRunner extends StreamEmitter {
     let resolve, reject;
     let ended = false;
     let cleanedUp = false;
+    let killed = false;
 
     const onData = (chunk) => {
-      buffer.push(chunk);
-      if (resolve) {
-        resolve();
-        resolve = reject = null;
+      // Don't buffer more data if we're being killed
+      if (!killed) {
+        buffer.push(chunk);
+        if (resolve) {
+          resolve();
+          resolve = reject = null;
+        }
       }
     };
 
@@ -2495,8 +2536,18 @@ class ProcessRunner extends StreamEmitter {
 
     try {
       while (!ended || buffer.length > 0) {
+        // Check if we've been killed and should stop immediately
+        if (killed) {
+          trace('ProcessRunner', () => 'Stream killed, stopping iteration');
+          break;
+        }
         if (buffer.length > 0) {
-          yield buffer.shift();
+          const chunk = buffer.shift();
+          // Set a flag that we're about to yield - if the consumer breaks,
+          // we'll know not to process any more data
+          this._streamYielding = true;
+          yield chunk;
+          this._streamYielding = false;
         } else if (!ended) {
           await new Promise((res, rej) => {
             resolve = res;
@@ -2511,6 +2562,9 @@ class ProcessRunner extends StreamEmitter {
 
       // This happens when breaking from a for-await loop
       if (!this.finished) {
+        killed = true;
+        buffer = []; // Clear any buffered data
+        this._streamBreaking = true; // Signal that stream is breaking
         this.kill();
       }
     }

@@ -2,12 +2,21 @@ import { trace } from '../$.utils.mjs';
 
 export default async function* yes({ args, stdin, isCancelled, signal, ...rest }) {
   const output = args.length > 0 ? args.join(' ') : 'y';
-  trace('VirtualCommand', () => `yes: starting infinite generator | ${JSON.stringify({ output }, null, 2)}`);
+  trace('VirtualCommand', () => `yes: starting infinite generator | ${JSON.stringify({ 
+    output,
+    hasIsCancelled: !!isCancelled,
+    hasSignal: !!signal
+  }, null, 2)}`);
 
   let iteration = 0;
   const MAX_ITERATIONS = 1000000; // Safety limit
 
   while (!isCancelled?.() && iteration < MAX_ITERATIONS) {
+    trace('VirtualCommand', () => `yes: iteration ${iteration} starting | ${JSON.stringify({
+      isCancelled: isCancelled?.(),
+      signalAborted: signal?.aborted
+    }, null, 2)}`);
+    
     // Check for abort signal
     if (signal?.aborted) {
       trace('VirtualCommand', () => `yes: aborted via signal | ${JSON.stringify({ iteration }, null, 2)}`);
@@ -20,15 +29,20 @@ export default async function* yes({ args, stdin, isCancelled, signal, ...rest }
       break;
     }
 
+    trace('VirtualCommand', () => `yes: yielding output for iteration ${iteration}`);
     yield output + '\n';
 
     iteration++;
 
-    // Yield control periodically to prevent blocking
-    if (iteration % 1000 === 0) {
-      await new Promise(resolve => setImmediate(resolve));
-    }
+    // Yield control after every iteration to allow cancellation
+    // This ensures the consumer can break cleanly
+    trace('VirtualCommand', () => `yes: yielding control after iteration ${iteration - 1}`);
+    await new Promise(resolve => setImmediate(resolve));
   }
 
-  trace('VirtualCommand', () => `yes: generator completed | ${JSON.stringify({ iteration }, null, 2)}`);
+  trace('VirtualCommand', () => `yes: generator completed | ${JSON.stringify({ 
+    iteration,
+    wasCancelled: isCancelled?.(),
+    wasAborted: signal?.aborted
+  }, null, 2)}`);
 }

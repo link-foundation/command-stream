@@ -3,7 +3,7 @@ import { $ } from '../src/$.mjs';
 
 describe('Yes Command Cleanup Tests', () => {
   test('should stop yes command when breaking from async iteration', async () => {
-    const runner = $`yes "test output"`;
+    const runner = $({ mirror: false })`yes "test output"`;
     let iterations = 0;
     const maxIterations = 5;
     
@@ -30,7 +30,7 @@ describe('Yes Command Cleanup Tests', () => {
   });
   
   test('should stop yes command when killed explicitly', async () => {
-    const runner = $`yes`;
+    const runner = $({ mirror: false })`yes`;
     const promise = runner.start();
     
     // Collect some output
@@ -58,7 +58,7 @@ describe('Yes Command Cleanup Tests', () => {
   });
   
   test('should stop yes command on timeout', async () => {
-    const runner = $`yes "timeout test"`;
+    const runner = $({ mirror: false })`yes "timeout test"`;
     const startTime = Date.now();
     
     // Set a timeout
@@ -87,7 +87,7 @@ describe('Yes Command Cleanup Tests', () => {
   });
   
   test('should stop yes when error occurs in handler', async () => {
-    const runner = $`yes "error test"`;
+    const runner = $({ mirror: false })`yes "error test"`;
     let iterations = 0;
     
     try {
@@ -108,9 +108,9 @@ describe('Yes Command Cleanup Tests', () => {
   
   test('should handle multiple yes commands without interference', async () => {
     const runners = [
-      $`yes "first"`,
-      $`yes "second"`,
-      $`yes "third"`
+      $({ mirror: false })`yes "first"`,
+      $({ mirror: false })`yes "second"`,
+      $({ mirror: false })`yes "third"`
     ];
     
     const results = await Promise.all(
@@ -138,7 +138,7 @@ describe('Yes Command Cleanup Tests', () => {
     const script = `
       import { $ } from './src/$.mjs';
       
-      const runner = $\`yes "subprocess test"\`;
+      const runner = $({ mirror: false })\`yes "subprocess test"\`;
       let count = 0;
       
       for await (const chunk of runner.stream()) {
@@ -160,7 +160,7 @@ describe('Yes Command Cleanup Tests', () => {
   });
   
   test('critical: yes must stop within reasonable time when cancelled', async () => {
-    const runner = $`yes`;
+    const runner = $({ mirror: false })`yes`;
     const startTime = Date.now();
     
     // Start collecting output
