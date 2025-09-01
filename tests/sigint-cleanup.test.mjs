@@ -19,6 +19,9 @@ describe('SIGINT Handler Cleanup Tests', () => {
     // Run a command and let it finish
     await $`echo test`;
     
+    // Wait a bit to ensure all cleanup is complete
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
     // Add user's SIGINT handler
     let userHandlerCalled = false;
     const userHandler = () => {

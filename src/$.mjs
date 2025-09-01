@@ -528,6 +528,10 @@ class ProcessRunner extends StreamEmitter {
     this._abortController = new AbortController();
 
     activeProcessRunners.add(this);
+    trace('ProcessRunner', () => `Added to activeProcessRunners | ${JSON.stringify({ 
+      command: this.spec?.command || 'unknown',
+      totalActive: activeProcessRunners.size 
+    }, null, 2)}`);
     installSignalHandlers();
 
     // Track finished state changes to trigger cleanup
@@ -680,11 +684,55 @@ class ProcessRunner extends StreamEmitter {
   }
 
   _cleanup() {
+    const wasActive = activeProcessRunners.has(this);
     activeProcessRunners.delete(this);
+    if (wasActive) {
+      trace('ProcessRunner', () => `Removed from activeProcessRunners | ${JSON.stringify({ 
+        command: this.spec?.command || 'unknown',
+        totalActive: activeProcessRunners.size 
+      }, null, 2)}`);
+    }
     
     // If no more active ProcessRunners, remove the SIGINT handler
     if (activeProcessRunners.size === 0) {
       uninstallSignalHandlers();
+    }
+    
+    // Clean up event listeners from StreamEmitter
+    if (this.listeners) {
+      this.listeners.clear();
+    }
+    
+    // Clean up abort controller
+    if (this._abortController) {
+      try {
+        this._abortController.abort();
+      } catch (e) {
+        // Ignore errors during cleanup
+      }
+      this._abortController = null;
+    }
+    
+    // Clean up child process reference
+    if (this.child) {
+      try {
+        this.child.removeAllListeners?.();
+      } catch (e) {
+        // Ignore errors during cleanup
+      }
+      this.child = null;
+    }
+    
+    // Clean up virtual generator
+    if (this._virtualGenerator) {
+      try {
+        if (this._virtualGenerator.return) {
+          this._virtualGenerator.return();
+        }
+      } catch (e) {
+        // Ignore errors during cleanup
+      }
+      this._virtualGenerator = null;
     }
   }
 
@@ -2656,7 +2704,14 @@ class ProcessRunner extends StreamEmitter {
     if (!this.promise) {
       this.promise = this._startAsync();
     }
-    return this.promise.finally(onFinally);
+    return this.promise.finally(() => {
+      // Ensure cleanup happened
+      if (!this.finished) {
+        trace('ProcessRunner', () => 'Finally handler ensuring cleanup');
+        this.finished = true;
+      }
+      if (onFinally) onFinally();
+    });
   }
 
   // Internal sync execution

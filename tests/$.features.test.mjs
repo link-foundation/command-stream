@@ -111,11 +111,11 @@ describe('command-stream Feature Validation', () => {
 
   describe('EventEmitter Pattern', () => {
     test('should support .on("data", ...) events', async () => {
-      return new Promise((resolve) => {
+      return new Promise(async (resolve) => {
         let dataReceived = false;
         const timeout = setTimeout(() => resolve(), 1000);
         
-        $`echo "event test"`
+        const runner = $`echo "event test"`
           .on('data', (chunk) => {
             dataReceived = true;
             expect(chunk).toHaveProperty('type');
@@ -124,19 +124,24 @@ describe('command-stream Feature Validation', () => {
           .on('end', () => {
             clearTimeout(timeout);
             expect(dataReceived).toBe(true);
-            resolve();
+            // Wait a bit to ensure cleanup completes
+            setTimeout(() => resolve(), 10);
           })
           .on('exit', () => {
             if (dataReceived) {
               clearTimeout(timeout);
-              resolve();
+              // Wait a bit to ensure cleanup completes
+              setTimeout(() => resolve(), 10);
             }
           });
+        
+        // Ensure the command starts
+        await runner.start();
       });
     });
 
     test('should support multiple event types', async () => {
-      return new Promise((resolve, reject) => {
+      return new Promise(async (resolve, reject) => {
         let events = [];
         const timeout = setTimeout(() => {
           // Don't wait forever, just check what we got
@@ -144,7 +149,8 @@ describe('command-stream Feature Validation', () => {
           expect(events).toContain('stdout');
           expect(events).toContain('stderr');
           // Exit event may not be emitted before end in current implementation
-          resolve();
+          // Wait a bit to ensure cleanup completes
+          setTimeout(() => resolve(), 10);
         }, 1000);
         
         const cmd = $`echo "stdout"; echo "stderr" >&2`
@@ -156,7 +162,8 @@ describe('command-stream Feature Validation', () => {
             expect(events).toContain('stdout');
             expect(events).toContain('stderr');
             // Don't require exit event since it may come after end
-            resolve();
+            // Wait a bit to ensure cleanup completes
+            setTimeout(() => resolve(), 10);
           })
           .on('error', (err) => {
             clearTimeout(timeout);
@@ -164,7 +171,7 @@ describe('command-stream Feature Validation', () => {
           });
         
         // Start the command explicitly
-        cmd.start();
+        await cmd.start();
       });
     });
   });
