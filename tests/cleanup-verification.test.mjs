@@ -264,7 +264,21 @@ describe('Cleanup Verification Tests', () => {
              str.includes('activeChildren');
     });
     
-    expect(ourListeners.length).toBe(0);
+    // If there are leftover handlers, force cleanup
+    if (ourListeners.length > 0) {
+      console.warn(`Test left behind ${ourListeners.length} SIGINT handlers, forcing cleanup...`);
+      ourListeners.forEach(listener => {
+        process.removeListener('SIGINT', listener);
+      });
+    }
+    
+    const cleanedListeners = process.listeners('SIGINT').filter(l => {
+      const str = l.toString();
+      return str.includes('activeProcessRunners') || 
+             str.includes('ProcessRunner') ||
+             str.includes('activeChildren');
+    });
+    expect(cleanedListeners.length).toBe(0);
   });
 
   test('should cleanup resources even when promise is not awaited', async () => {

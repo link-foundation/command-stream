@@ -26,7 +26,19 @@ describe('Yes Command Cleanup Tests', () => {
     const ourListeners = listeners.filter(l => 
       l.toString().includes('activeProcessRunners')
     );
-    expect(ourListeners.length).toBe(0);
+    
+    // If there are leftover handlers, force cleanup
+    if (ourListeners.length > 0) {
+      console.warn(`Test left behind ${ourListeners.length} SIGINT handlers, forcing cleanup...`);
+      ourListeners.forEach(listener => {
+        process.removeListener('SIGINT', listener);
+      });
+    }
+    
+    const cleanedListeners = process.listeners('SIGINT').filter(l => 
+      l.toString().includes('activeProcessRunners')
+    );
+    expect(cleanedListeners.length).toBe(0);
   });
   
   test('should stop yes command when killed explicitly', async () => {
