@@ -550,12 +550,7 @@ class ProcessRunner extends StreamEmitter {
     }, null, 2)}`);
     installSignalHandlers();
 
-    // Track finished state changes to trigger cleanup
-    this._finished = false;
-  }
-
-  get finished() {
-    return this._finished;
+    this.finished = false;
   }
 
   // Stream property getters for child process streams (null for virtual commands)
@@ -587,6 +582,9 @@ class ProcessRunner extends StreamEmitter {
 
     // Set finished after events are emitted
     this.finished = true;
+
+    // Trigger cleanup now that process is finished
+    this._cleanup();
 
     return result;
   }
@@ -679,20 +677,6 @@ class ProcessRunner extends StreamEmitter {
     }
   }
 
-  set finished(value) {
-    trace('ProcessRunner', () => `Setting finished | ${JSON.stringify({ 
-      oldValue: this._finished, 
-      newValue: value,
-      command: this.spec?.command?.slice(0, 50) || 'unknown'
-    })}`);
-    if (value === true && this._finished === false) {
-      this._finished = true;
-      trace('ProcessRunner', () => 'Triggering cleanup from finished setter');
-      this._cleanup(); // Trigger cleanup when process finishes
-    } else {
-      this._finished = value;
-    }
-  }
 
   _handleParentStreamClosure() {
     if (this.finished || this._cancelled) {
