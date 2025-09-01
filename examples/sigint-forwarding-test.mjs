@@ -13,11 +13,12 @@ console.log('TEST: Starting long-running command');
 const runner = $`sleep 30`;
 const promise = runner.start();
 
-// Set up a handler to catch SIGINT
+// Set up a handler to catch SIGINT but don't let it kill the process
 let sigintReceived = false;
 process.on('SIGINT', () => {
   console.log('RESULT: parent_received_sigint=true');
   sigintReceived = true;
+  // Don't exit - we want to continue the test
 });
 
 // Wait a bit for command to start
@@ -28,7 +29,7 @@ console.log('TEST: Sending SIGINT');
 process.kill(process.pid, 'SIGINT');
 
 // Wait a bit for signal handling
-await new Promise(resolve => setTimeout(resolve, 100));
+await new Promise(resolve => setTimeout(resolve, 200));
 
 // Check if process was killed
 let exitCode = null;

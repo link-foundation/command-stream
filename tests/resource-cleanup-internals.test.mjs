@@ -63,24 +63,52 @@ describe('Resource Cleanup Internal Verification', () => {
 
   describe('SIGINT Handler Management', () => {
     test('should install SIGINT handler when first command starts', async () => {
+      // Clean up any leftover handlers first
+      const initialListeners = process.listeners('SIGINT');
+      const leftoverHandlers = initialListeners.filter(l => {
+        const str = l.toString();
+        return str.includes('activeProcessRunners') || 
+               str.includes('ProcessRunner') ||
+               str.includes('activeChildren');
+      });
+      
+      leftoverHandlers.forEach(listener => {
+        process.removeListener('SIGINT', listener);
+      });
+      
       const before = getInternalState();
+      expect(before.sigintHandlerCount).toBe(0); // Should be clean now
       
       const runner = $`sleep 0.01`;
       const promise = runner.start();
       
       // Handler should be installed while running
       const during = getInternalState();
-      expect(during.sigintHandlerCount).toBe(before.sigintHandlerCount + 1);
+      expect(during.sigintHandlerCount).toBe(1); // Exactly one handler
       
       await promise;
       
       // Handler should be removed after completion
       const after = getInternalState();
-      expect(after.sigintHandlerCount).toBe(before.sigintHandlerCount);
+      expect(after.sigintHandlerCount).toBe(0); // Back to zero
     });
     
     test('should share single SIGINT handler for multiple concurrent commands', async () => {
+      // Clean up any leftover handlers first
+      const initialListeners = process.listeners('SIGINT');
+      const leftoverHandlers = initialListeners.filter(l => {
+        const str = l.toString();
+        return str.includes('activeProcessRunners') || 
+               str.includes('ProcessRunner') ||
+               str.includes('activeChildren');
+      });
+      
+      leftoverHandlers.forEach(listener => {
+        process.removeListener('SIGINT', listener);
+      });
+      
       const before = getInternalState();
+      expect(before.sigintHandlerCount).toBe(0); // Should be clean now
       
       // Start multiple commands
       const runners = [
@@ -93,13 +121,13 @@ describe('Resource Cleanup Internal Verification', () => {
       
       // Should only add one handler total
       const during = getInternalState();
-      expect(during.sigintHandlerCount).toBe(before.sigintHandlerCount + 1);
+      expect(during.sigintHandlerCount).toBe(1); // Exactly one shared handler
       
       await Promise.all(promises);
       
       // Handler should be removed after all complete
       const after = getInternalState();
-      expect(after.sigintHandlerCount).toBe(before.sigintHandlerCount);
+      expect(after.sigintHandlerCount).toBe(0); // Back to zero
     });
     
     test('should remove SIGINT handler even on error', async () => {
