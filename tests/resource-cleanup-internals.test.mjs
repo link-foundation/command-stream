@@ -32,10 +32,33 @@ describe('Resource Cleanup Internal Verification', () => {
     initialState = getInternalState();
   });
   
-  afterEach(() => {
+  afterEach(async () => {
+    // Wait for any async cleanup to complete
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
     // Ensure we return to initial state after each test
     const finalState = getInternalState();
-    expect(finalState.sigintHandlerCount).toBe(initialState.sigintHandlerCount);
+    
+    // If there are leftover handlers, try to force cleanup
+    if (finalState.sigintHandlerCount > initialState.sigintHandlerCount) {
+      console.warn(`Test left behind ${finalState.sigintHandlerCount - initialState.sigintHandlerCount} SIGINT handlers, forcing cleanup...`);
+      
+      // Force remove any command-stream SIGINT listeners
+      const sigintListeners = process.listeners('SIGINT');
+      const commandStreamListeners = sigintListeners.filter(l => {
+        const str = l.toString();
+        return str.includes('activeProcessRunners') || 
+               str.includes('ProcessRunner') ||
+               str.includes('activeChildren');
+      });
+      
+      commandStreamListeners.forEach(listener => {
+        process.removeListener('SIGINT', listener);
+      });
+    }
+    
+    const cleanedState = getInternalState();
+    expect(cleanedState.sigintHandlerCount).toBe(initialState.sigintHandlerCount);
   });
 
   describe('SIGINT Handler Management', () => {

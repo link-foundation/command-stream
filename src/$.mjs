@@ -1452,7 +1452,6 @@ class ProcessRunner extends StreamEmitter {
       };
 
       this.result = result;
-      this.finished = true;
 
       if (result.stderr) {
         const buf = Buffer.from(result.stderr);
@@ -1462,8 +1461,7 @@ class ProcessRunner extends StreamEmitter {
         this._emitProcessedData('stderr', buf);
       }
 
-      this.emit('end', result);
-      this.emit('exit', result.code);
+      this.finish(result);
 
       if (globalShellSettings.errexit) {
         error.result = result;
@@ -2192,7 +2190,6 @@ class ProcessRunner extends StreamEmitter {
           });
 
           this.result = result;
-          this.finished = true;
 
           if (result.stderr) {
             const buf = Buffer.from(result.stderr);
@@ -2202,8 +2199,7 @@ class ProcessRunner extends StreamEmitter {
             this._emitProcessedData('stderr', buf);
           }
 
-          this.emit('end', result);
-          this.emit('exit', result.code);
+          this.finish(result);
 
           if (globalShellSettings.errexit) {
             throw error;
@@ -2385,7 +2381,6 @@ class ProcessRunner extends StreamEmitter {
           });
 
           this.result = result;
-          this.finished = true;
 
           if (result.stderr) {
             const buf = Buffer.from(result.stderr);
@@ -2395,8 +2390,7 @@ class ProcessRunner extends StreamEmitter {
             this._emitProcessedData('stderr', buf);
           }
 
-          this.emit('end', result);
-          this.emit('exit', result.code);
+          this.finish(result);
 
           if (globalShellSettings.errexit) {
             throw error;
@@ -2480,7 +2474,6 @@ class ProcessRunner extends StreamEmitter {
       });
 
       this.result = result;
-      this.finished = true;
 
       const buf = Buffer.from(result.stderr);
       if (this.options.mirror) {
@@ -2488,8 +2481,7 @@ class ProcessRunner extends StreamEmitter {
       }
       this._emitProcessedData('stderr', buf);
 
-      this.emit('end', result);
-      this.emit('exit', result.code);
+      this.finish(result);
 
       return result;
     }
@@ -2722,7 +2714,7 @@ class ProcessRunner extends StreamEmitter {
             }
           }
         }
-        this.finished = true;
+        // finished will be set by the main cleanup below
       } catch (err) {
         // Process might already be dead
         trace('ProcessRunner', () => `Error killing process | ${JSON.stringify({ error: err.message }, null, 2)}`);
@@ -2730,8 +2722,16 @@ class ProcessRunner extends StreamEmitter {
       }
     }
 
-    // Mark as finished
-    this.finished = true;
+    // Mark as finished and emit completion events
+    if (!this.finished) {
+      const result = createResult({ 
+        code: signal === 'SIGKILL' ? 137 : signal === 'SIGTERM' ? 143 : 130, 
+        stdout: '', 
+        stderr: `Process killed with ${signal}`, 
+        stdin: '' 
+      });
+      this.finish(result);
+    }
 
     trace('ProcessRunner', () => `kill EXIT | ${JSON.stringify({
       cancelled: this._cancelled,
@@ -2897,9 +2897,7 @@ class ProcessRunner extends StreamEmitter {
       this._emitProcessedData('stderr', stderrBuf);
     }
 
-    this.emit('end', result);
-    this.emit('exit', result.code);
-    this.finished = true;
+    this.finish(result);
 
     if (globalShellSettings.errexit && result.code !== 0) {
       const error = new Error(`Command failed with exit code ${result.code}`);
