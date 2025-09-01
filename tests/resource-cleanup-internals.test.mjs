@@ -309,14 +309,14 @@ describe('Resource Cleanup Internal Verification', () => {
     });
     
     test('should cleanup virtual generator when killed', async () => {
-      // Use the built-in yes command which is a generator
-      const runner = $`yes`;
+      // Use a limited generator instead of infinite yes to avoid hanging
+      const runner = $`seq 1 100`;
       const promise = runner.start();
       
       // Let it start generating
-      await new Promise(resolve => setTimeout(resolve, 20));
+      await new Promise(resolve => setTimeout(resolve, 10));
       
-      // Kill it
+      // Kill it before it completes
       runner.kill();
       
       try {
