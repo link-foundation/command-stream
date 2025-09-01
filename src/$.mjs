@@ -1118,7 +1118,7 @@ class ProcessRunner extends StreamEmitter {
       childPid: this.child?.pid
     }, null, 2)}`);
 
-    this.result = {
+    const result = {
       ...resultData,
       async text() {
         return resultData.stdout || '';
@@ -1126,7 +1126,7 @@ class ProcessRunner extends StreamEmitter {
     };
 
     // Finish the process with proper event emission order
-    this.finish(this.result);
+    this.finish(result);
 
     if (globalShellSettings.errexit && this.result.code !== 0) {
       const error = new Error(`Command failed with exit code ${this.result.code}`);
@@ -1455,8 +1455,6 @@ class ProcessRunner extends StreamEmitter {
         stderr: error.stderr ?? error.message,
         stdin: ''
       };
-
-      this.result = result;
 
       if (result.stderr) {
         const buf = Buffer.from(result.stderr);
@@ -2194,8 +2192,6 @@ class ProcessRunner extends StreamEmitter {
               this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
           });
 
-          this.result = result;
-
           if (result.stderr) {
             const buf = Buffer.from(result.stderr);
             if (this.options.mirror) {
@@ -2385,8 +2381,6 @@ class ProcessRunner extends StreamEmitter {
               this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
           });
 
-          this.result = result;
-
           if (result.stderr) {
             const buf = Buffer.from(result.stderr);
             if (this.options.mirror) {
@@ -2477,8 +2471,6 @@ class ProcessRunner extends StreamEmitter {
         stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin :
           this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
       });
-
-      this.result = result;
 
       const buf = Buffer.from(result.stderr);
       if (this.options.mirror) {
@@ -2799,7 +2791,13 @@ class ProcessRunner extends StreamEmitter {
       // Ensure cleanup happened
       if (!this.finished) {
         trace('ProcessRunner', () => 'Finally handler ensuring cleanup');
-        this.finished = true;
+        const fallbackResult = createResult({ 
+          code: 1, 
+          stdout: '', 
+          stderr: 'Process terminated unexpectedly', 
+          stdin: '' 
+        });
+        this.finish(fallbackResult);
       }
       if (onFinally) onFinally();
     });
@@ -2886,8 +2884,6 @@ class ProcessRunner extends StreamEmitter {
     // Store chunks for events (batched after completion)
     this.outChunks = result.stdout ? [Buffer.from(result.stdout)] : [];
     this.errChunks = result.stderr ? [Buffer.from(result.stderr)] : [];
-
-    this.result = result;
 
     // Emit batched events after completion
     if (result.stdout) {
