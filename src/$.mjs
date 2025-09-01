@@ -57,7 +57,11 @@ let sigintHandlerInstalled = false;
 let sigintHandler = null; // Store reference to remove it later
 
 function installSignalHandlers() {
-  if (sigintHandlerInstalled) return;
+  if (sigintHandlerInstalled) {
+    trace('SignalHandler', () => 'SIGINT handler already installed, skipping');
+    return;
+  }
+  trace('SignalHandler', () => `Installing SIGINT handler | ${JSON.stringify({ activeRunners: activeProcessRunners.size })}`);
   sigintHandlerInstalled = true;
   
   // Forward SIGINT to all active child processes
@@ -143,16 +147,23 @@ function installSignalHandlers() {
 }
 
 function uninstallSignalHandlers() {
-  if (!sigintHandlerInstalled || !sigintHandler) return;
+  if (!sigintHandlerInstalled || !sigintHandler) {
+    trace('SignalHandler', () => 'SIGINT handler not installed or missing, skipping removal');
+    return;
+  }
   
-  trace('ProcessRunner', () => 'Removing SIGINT handler - no active ProcessRunners');
+  trace('SignalHandler', () => `Removing SIGINT handler | ${JSON.stringify({ activeRunners: activeProcessRunners.size })}`);
   process.removeListener('SIGINT', sigintHandler);
   sigintHandlerInstalled = false;
   sigintHandler = null;
 }
 
 function monitorParentStreams() {
-  if (parentStreamsMonitored) return;
+  if (parentStreamsMonitored) {
+    trace('StreamMonitor', () => 'Parent streams already monitored, skipping');
+    return;
+  }
+  trace('StreamMonitor', () => 'Setting up parent stream monitoring');
   parentStreamsMonitored = true;
 
   const checkParentStream = (stream, name) => {
@@ -419,6 +430,11 @@ class StreamEmitter {
 
   emit(event, ...args) {
     const eventListeners = this.listeners.get(event);
+    trace('StreamEmitter', () => `Emitting event | ${JSON.stringify({ 
+      event, 
+      hasListeners: !!eventListeners,
+      listenerCount: eventListeners?.length || 0 
+    })}`);
     if (eventListeners) {
       for (const listener of eventListeners) {
         listener(...args);
@@ -626,8 +642,14 @@ class ProcessRunner extends StreamEmitter {
   }
 
   set finished(value) {
+    trace('ProcessRunner', () => `Setting finished | ${JSON.stringify({ 
+      oldValue: this._finished, 
+      newValue: value,
+      command: this.spec?.command?.slice(0, 50) || 'unknown'
+    })}`);
     if (value === true && this._finished === false) {
       this._finished = true;
+      trace('ProcessRunner', () => 'Triggering cleanup from finished setter');
       this._cleanup(); // Trigger cleanup when process finishes
     } else {
       this._finished = value;
@@ -635,7 +657,13 @@ class ProcessRunner extends StreamEmitter {
   }
 
   _handleParentStreamClosure() {
-    if (this.finished || this._cancelled) return;
+    if (this.finished || this._cancelled) {
+      trace('ProcessRunner', () => `Parent stream closure ignored | ${JSON.stringify({
+        finished: this.finished,
+        cancelled: this._cancelled
+      })}`);
+      return;
+    }
 
     trace('ProcessRunner', () => `Handling parent stream closure | ${JSON.stringify({
       started: this.started,
@@ -2494,8 +2522,14 @@ class ProcessRunner extends StreamEmitter {
       cancelled: this._cancelled,
       finished: this.finished,
       hasChild: !!this.child,
-      hasVirtualGenerator: !!this._virtualGenerator
+      hasVirtualGenerator: !!this._virtualGenerator,
+      command: this.spec?.command?.slice(0, 50) || 'unknown'
     }, null, 2)}`);
+
+    if (this.finished) {
+      trace('ProcessRunner', () => 'Already finished, skipping kill');
+      return;
+    }
 
     // Mark as cancelled for virtual commands and store the signal
     this._cancelled = true;
