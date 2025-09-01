@@ -573,6 +573,11 @@ class ProcessRunner extends StreamEmitter {
 
   // Centralized method to properly finish a process with correct event emission order
   finish(result) {
+    // Make finish() idempotent - safe to call multiple times
+    if (this.finished) {
+      return this.result || result;
+    }
+
     // Store result
     this.result = result;
 
@@ -2723,15 +2728,13 @@ class ProcessRunner extends StreamEmitter {
     }
 
     // Mark as finished and emit completion events
-    if (!this.finished) {
-      const result = createResult({ 
-        code: signal === 'SIGKILL' ? 137 : signal === 'SIGTERM' ? 143 : 130, 
-        stdout: '', 
-        stderr: `Process killed with ${signal}`, 
-        stdin: '' 
-      });
-      this.finish(result);
-    }
+    const result = createResult({ 
+      code: signal === 'SIGKILL' ? 137 : signal === 'SIGTERM' ? 143 : 130, 
+      stdout: '', 
+      stderr: `Process killed with ${signal}`, 
+      stdin: '' 
+    });
+    this.finish(result);
 
     trace('ProcessRunner', () => `kill EXIT | ${JSON.stringify({
       cancelled: this._cancelled,
