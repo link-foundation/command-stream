@@ -45,6 +45,10 @@ describe('SIGINT Handler Cleanup Tests', () => {
   });
 
   test('should maintain SIGINT handler while commands are active', async () => {
+    // Import forceCleanupAll to ensure clean state
+    const { forceCleanupAll } = await import('../src/$.mjs');
+    forceCleanupAll();
+    
     const initialListeners = process.listeners('SIGINT').length;
     
     // Start a long-running command
@@ -57,7 +61,13 @@ describe('SIGINT Handler Cleanup Tests', () => {
     
     // Kill the command
     runner.kill();
-    await promise;
+    
+    try {
+      await promise;
+    } catch (error) {
+      // Expected error when process is killed with SIGTERM
+      expect(error.code).toBe(143);
+    }
     
     // After command finishes, handler should be removed
     const afterListeners = process.listeners('SIGINT').length;

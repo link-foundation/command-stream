@@ -1,51 +1,64 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
+// Debug script to test pipeline cleanup issues
 
 import { $ } from '../src/$.mjs';
 
-function getSigintHandlerCount() {
-  const sigintListeners = process.listeners('SIGINT');
-  const commandStreamListeners = sigintListeners.filter(l => {
-    const str = l.toString();
-    return str.includes('activeProcessRunners') || 
-           str.includes('ProcessRunner') ||
-           str.includes('activeChildren');
-  });
-  return commandStreamListeners.length;
-}
+// Enable verbose mode
+process.env.COMMAND_STREAM_VERBOSE = 'true';
 
-console.log('=== Pipeline Cleanup Debug ===');
-
-console.log('Initial SIGINT handlers:', getSigintHandlerCount());
-
-console.log('Running pipeline that should fail...');
-try {
-  await $`echo "test" | exit 1 | cat`;
-} catch (e) {
-  console.log('Expected error:', e.message);
-}
-
-console.log('Immediately after error:', getSigintHandlerCount(), 'handlers');
-
-// Wait for cleanup to complete like the test does
-await new Promise(resolve => setTimeout(resolve, 50));
-
-console.log('After 50ms wait:', getSigintHandlerCount(), 'handlers');
-
-// Try another longer wait
-await new Promise(resolve => setTimeout(resolve, 200));
-
-console.log('After 250ms total wait:', getSigintHandlerCount(), 'handlers');
-
-// Show what handlers are still there
-const listeners = process.listeners('SIGINT');
-listeners.forEach((listener, i) => {
-  const str = listener.toString();
-  const isCommandStream = str.includes('activeProcessRunners') || 
-                         str.includes('ProcessRunner') ||
-                         str.includes('activeChildren');
-  if (isCommandStream) {
-    console.log(`Handler ${i} (COMMAND-STREAM):`, str.substring(0, 100) + '...');
+async function testPipelineCleanup() {
+  console.log('=== Pipeline Cleanup Debug ===');
+  
+  console.log('\n1. Testing basic pipeline...');
+  try {
+    const result1 = await $`echo "test"`.pipe($`cat`);
+    console.log('Basic pipeline result:', result1.stdout);
+  } catch (error) {
+    console.log('Basic pipeline error:', error.message);
   }
-});
+  
+  console.log('\n2. Testing pipeline with virtual commands...');
+  try {
+    const result2 = await $`ls`.pipe($`cat`);
+    console.log('Virtual pipeline result length:', result2.stdout.length);
+  } catch (error) {
+    console.log('Virtual pipeline error:', error.message);
+  }
+  
+  console.log('\n3. Testing multi-stage pipeline...');
+  try {
+    const result3 = await $`echo "line1\\nline2\\nline3"`.pipe($`grep "line"`).pipe($`wc -l`);
+    console.log('Multi-stage pipeline result:', result3.stdout.trim());
+  } catch (error) {
+    console.log('Multi-stage pipeline error:', error.message);
+  }
+  
+  console.log('\n4. Testing pipeline with error...');
+  try {
+    const result4 = await $`echo "test"`.pipe($`nonexistent-command`);
+    console.log('Error pipeline result:', result4.stdout);
+  } catch (error) {
+    console.log('Expected error pipeline error:', error.message);
+  }
+  
+  console.log('\n5. Testing pipeline interruption...');
+  const longPipeline = $`yes`.pipe($`head -1000`);
+  const pipelinePromise = longPipeline.start();
+  
+  // Interrupt after a short delay
+  setTimeout(() => {
+    console.log('Interrupting pipeline...');
+    longPipeline.kill('SIGINT');
+  }, 50);
+  
+  try {
+    const result5 = await pipelinePromise;
+    console.log('Interrupted pipeline result length:', result5.stdout.length);
+  } catch (error) {
+    console.log('Interrupted pipeline error:', error.message, 'code:', error.code);
+  }
+  
+  console.log('\nPipeline tests completed');
+}
 
-console.log('Test completed.');
+testPipelineCleanup().catch(console.error);

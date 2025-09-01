@@ -57,18 +57,41 @@ let sigintHandlerInstalled = false;
 let sigintHandler = null; // Store reference to remove it later
 
 function installSignalHandlers() {
-  if (sigintHandlerInstalled) {
+  // Check if our handler is actually installed (not just the flag)
+  // This is more robust against test cleanup that manually removes listeners
+  const currentListeners = process.listeners('SIGINT');
+  const hasOurHandler = currentListeners.some(l => {
+    const str = l.toString();
+    return str.includes('activeProcessRunners') && 
+           str.includes('ProcessRunner') && 
+           str.includes('activeChildren');
+  });
+  
+  if (sigintHandlerInstalled && hasOurHandler) {
     trace('SignalHandler', () => 'SIGINT handler already installed, skipping');
     return;
   }
+  
+  // Reset flag if handler was removed externally
+  if (sigintHandlerInstalled && !hasOurHandler) {
+    trace('SignalHandler', () => 'SIGINT handler flag was set but handler missing, resetting');
+    sigintHandlerInstalled = false;
+    sigintHandler = null;
+  }
+  
   trace('SignalHandler', () => `Installing SIGINT handler | ${JSON.stringify({ activeRunners: activeProcessRunners.size })}`);
   sigintHandlerInstalled = true;
   
   // Forward SIGINT to all active child processes
   // The parent process continues running - it's up to the parent to decide what to do
   sigintHandler = () => {
+    // Check for other handlers immediately at the start, before doing any processing
+    const currentListeners = process.listeners('SIGINT');
+    const hasOtherHandlers = currentListeners.length > 1;
+    
     trace('ProcessRunner', () => `SIGINT handler triggered - checking active processes`);
-    // Count active processes (both child processes and virtual commands)
+    
+    // Count active processes (both child processes and virtual commands)  
     const activeChildren = [];
     for (const runner of activeProcessRunners) {
       if (!runner.finished) {
@@ -121,10 +144,7 @@ function installSignalHandlers() {
     }
     
     // We've forwarded SIGINT to all active processes/commands
-    // Check if there are other SIGINT handlers - if not, we should exit with 130
-    const currentListeners = process.listeners('SIGINT');
-    const hasOtherHandlers = currentListeners.length > 1; // More than just our handler
-    
+    // Use the hasOtherHandlers flag we calculated at the start (before any processing)
     trace('ProcessRunner', () => `SIGINT forwarded to ${activeChildren.length} active processes, other handlers: ${hasOtherHandlers}`);
     
     if (!hasOtherHandlers) {
@@ -139,7 +159,9 @@ function installSignalHandlers() {
         process.exit(130); // 128 + 2 (SIGINT)
       }
     } else {
-      trace('ProcessRunner', () => `Other SIGINT handlers present, letting them handle the exit`);
+      // Other handlers exist - let them handle the exit completely
+      // Do NOT call process.exit() ourselves when other handlers are present
+      trace('ProcessRunner', () => `Other SIGINT handlers present, letting them handle the exit completely`);
     }
   };
   
@@ -156,6 +178,31 @@ function uninstallSignalHandlers() {
   process.removeListener('SIGINT', sigintHandler);
   sigintHandlerInstalled = false;
   sigintHandler = null;
+}
+
+// Force cleanup of all command-stream SIGINT handlers and state - for testing
+function forceCleanupAll() {
+  // Remove all command-stream SIGINT handlers
+  const sigintListeners = process.listeners('SIGINT');
+  const commandStreamListeners = sigintListeners.filter(l => {
+    const str = l.toString();
+    return str.includes('activeProcessRunners') || 
+           str.includes('ProcessRunner') ||
+           str.includes('activeChildren');
+  });
+  
+  commandStreamListeners.forEach(listener => {
+    process.removeListener('SIGINT', listener);
+  });
+  
+  // Clear activeProcessRunners
+  activeProcessRunners.clear();
+  
+  // Reset flags
+  sigintHandlerInstalled = false;
+  sigintHandler = null;
+  
+  trace('SignalHandler', () => `Force cleanup completed - removed ${commandStreamListeners.length} handlers`);
 }
 
 function monitorParentStreams() {
@@ -738,6 +785,17 @@ class ProcessRunner extends StreamEmitter {
       }, null, 2)}`);
     }
     
+    // If this is a pipeline runner, also clean up the source and destination
+    if (this.spec?.mode === 'pipeline') {
+      trace('ProcessRunner', () => 'Cleaning up pipeline components');
+      if (this.spec.source && typeof this.spec.source._cleanup === 'function') {
+        this.spec.source._cleanup();
+      }
+      if (this.spec.destination && typeof this.spec.destination._cleanup === 'function') {
+        this.spec.destination._cleanup();
+      }
+    }
+    
     // If no more active ProcessRunners, remove the SIGINT handler
     if (activeProcessRunners.size === 0) {
       uninstallSignalHandlers();
@@ -858,6 +916,9 @@ class ProcessRunner extends StreamEmitter {
 
     this.started = true;
     this._mode = 'async';
+
+    // Ensure cleanup happens even if execution fails
+    try {
 
     const { cwd, env, stdin } = this.options;
 
@@ -1122,6 +1183,26 @@ class ProcessRunner extends StreamEmitter {
     }
 
     return this.result;
+    } catch (error) {
+      // Ensure cleanup happens even if execution fails
+      trace('ProcessRunner', () => `_doStartAsync caught error: ${error.message}`);
+      
+      if (!this.finished) {
+        // Create a result from the error
+        const errorResult = createResult({
+          code: error.code ?? 1,
+          stdout: error.stdout ?? '',
+          stderr: error.stderr ?? error.message ?? '',
+          stdin: ''
+        });
+        
+        // Finish to trigger cleanup
+        this.finish(errorResult);
+      }
+      
+      // Re-throw the error after cleanup
+      throw error;
+    }
   }
 
   async _pumpStdinTo(child, captureChunks) {
@@ -2562,6 +2643,17 @@ class ProcessRunner extends StreamEmitter {
     this._cancelled = true;
     this._cancellationSignal = signal;
 
+    // If this is a pipeline runner, also kill the source and destination
+    if (this.spec?.mode === 'pipeline') {
+      trace('ProcessRunner', () => 'Killing pipeline components');
+      if (this.spec.source && typeof this.spec.source.kill === 'function') {
+        this.spec.source.kill(signal);
+      }
+      if (this.spec.destination && typeof this.spec.destination.kill === 'function') {
+        this.spec.destination.kill(signal);
+      }
+    }
+
     if (this._cancelResolve) {
       trace('ProcessRunner', () => 'Resolving cancel promise');
       this._cancelResolve();
@@ -3216,6 +3308,7 @@ export {
   AnsiUtils,
   configureAnsi,
   getAnsiConfig,
-  processOutput
+  processOutput,
+  forceCleanupAll
 };
 export default $tagged;

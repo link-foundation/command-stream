@@ -44,7 +44,7 @@ console.log(`RESULT: kill_finished=${k1.finished}`);
 
 // Test 5: Pipeline cleanup
 console.log('TEST: Pipeline cleanup');
-const p1 = await $`echo "test" | cat | cat`;
+const p1 = await $`echo "test" | /bin/cat | /bin/cat`;
 console.log(`RESULT: pipeline_output=${p1.stdout ? p1.stdout.trim() : 'no_output'}`);
 
 // Test 6: Event listener cleanup

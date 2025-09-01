@@ -1,5 +1,5 @@
 import { test, expect, describe } from 'bun:test';
-import { $ } from '../src/$.mjs';
+import { $, forceCleanupAll } from '../src/$.mjs';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -282,6 +282,8 @@ describe('Cleanup Verification Tests', () => {
   });
 
   test('should cleanup resources even when promise is not awaited', async () => {
+    // Force cleanup to ensure clean state at start
+    forceCleanupAll();
     const initialListeners = process.listeners('SIGINT').length;
     
     // Start commands but don't await them
