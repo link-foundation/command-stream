@@ -736,12 +736,7 @@ class ProcessRunner extends StreamEmitter {
       }
     }
 
-    activeProcessRunners.delete(this);
-    
-    // If no more active ProcessRunners, remove the SIGINT handler
-    if (activeProcessRunners.size === 0) {
-      uninstallSignalHandlers();
-    }
+    this._cleanup();
   }
 
   _cleanup() {
@@ -2890,7 +2885,6 @@ class ProcessRunner extends StreamEmitter {
     this.errChunks = result.stderr ? [Buffer.from(result.stderr)] : [];
 
     this.result = result;
-    this.finished = true;
 
     // Emit batched events after completion
     if (result.stdout) {
@@ -2905,6 +2899,7 @@ class ProcessRunner extends StreamEmitter {
 
     this.emit('end', result);
     this.emit('exit', result.code);
+    this.finished = true;
 
     if (globalShellSettings.errexit && result.code !== 0) {
       const error = new Error(`Command failed with exit code ${result.code}`);
@@ -2918,18 +2913,6 @@ class ProcessRunner extends StreamEmitter {
     return result;
   }
 
-  // Stream properties
-  get stdout() {
-    return this.child?.stdout;
-  }
-
-  get stderr() {
-    return this.child?.stderr;
-  }
-
-  get stdin() {
-    return this.child?.stdin;
-  }
 }
 
 // Public APIs
