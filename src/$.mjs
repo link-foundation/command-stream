@@ -558,6 +558,34 @@ class ProcessRunner extends StreamEmitter {
     return this._finished;
   }
 
+  // Stream property getters for child process streams (null for virtual commands)
+  get stdout() {
+    return this.child ? this.child.stdout : null;
+  }
+
+  get stderr() {
+    return this.child ? this.child.stderr : null;
+  }
+
+  get stdin() {
+    return this.child ? this.child.stdin : null;
+  }
+
+  // Centralized method to properly finish a process with correct event emission order
+  finish(result) {
+    // Store result
+    this.result = result;
+
+    // Emit completion events BEFORE setting finished to prevent _cleanup() from clearing listeners
+    this.emit('end', result);
+    this.emit('exit', result.code);
+
+    // Set finished after events are emitted
+    this.finished = true;
+
+    return result;
+  }
+
   _emitProcessedData(type, buf) {
     // Don't emit data if we've been cancelled
     if (this._cancelled) {
@@ -1097,9 +1125,8 @@ class ProcessRunner extends StreamEmitter {
       }
     };
 
-    this.finished = true;
-    this.emit('end', this.result);
-    this.emit('exit', this.result.code);
+    // Finish the process with proper event emission order
+    this.finish(this.result);
 
     if (globalShellSettings.errexit && this.result.code !== 0) {
       const error = new Error(`Command failed with exit code ${this.result.code}`);
@@ -1408,13 +1435,8 @@ class ProcessRunner extends StreamEmitter {
         }
       }
 
-      // Store result
-      this.result = result;
-      this.finished = true;
-
-      // Emit completion events
-      this.emit('end', result);
-      this.emit('exit', result.code);
+      // Finish the process with proper event emission order
+      this.finish(result);
 
       if (globalShellSettings.errexit && result.code !== 0) {
         const error = new Error(`Command failed with exit code ${result.code}`);
@@ -1637,11 +1659,8 @@ class ProcessRunner extends StreamEmitter {
         this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
     });
 
-    this.result = result;
-    this.finished = true;
-
-    this.emit('end', result);
-    this.emit('exit', result.code);
+    // Finish the process with proper event emission order
+    this.finish(result);
 
     if (globalShellSettings.errexit && result.code !== 0) {
       const error = new Error(`Pipeline failed with exit code ${result.code}`);
@@ -1815,11 +1834,8 @@ class ProcessRunner extends StreamEmitter {
         this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
     });
 
-    this.result = result;
-    this.finished = true;
-
-    this.emit('end', result);
-    this.emit('exit', result.code);
+    // Finish the process with proper event emission order
+    this.finish(result);
 
     if (globalShellSettings.errexit && result.code !== 0) {
       const error = new Error(`Pipeline failed with exit code ${result.code}`);
@@ -2044,11 +2060,8 @@ class ProcessRunner extends StreamEmitter {
         this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
     });
 
-    this.result = result;
-    this.finished = true;
-
-    this.emit('end', result);
-    this.emit('exit', result.code);
+    // Finish the process with proper event emission order
+    this.finish(result);
 
     return result;
   }
@@ -2151,12 +2164,8 @@ class ProcessRunner extends StreamEmitter {
                 this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
             });
 
-            this.result = finalResult;
-            this.finished = true;
-
-            // Emit completion events
-            this.emit('end', finalResult);
-            this.emit('exit', finalResult.code);
+            // Finish the process with proper event emission order
+            this.finish(finalResult);
 
             if (globalShellSettings.errexit && finalResult.code !== 0) {
               const error = new Error(`Pipeline failed with exit code ${finalResult.code}`);
@@ -2356,12 +2365,8 @@ class ProcessRunner extends StreamEmitter {
                 this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
             });
 
-            this.result = finalResult;
-            this.finished = true;
-
-            // Emit completion events
-            this.emit('end', finalResult);
-            this.emit('exit', finalResult.code);
+            // Finish the process with proper event emission order
+            this.finish(finalResult);
 
             if (globalShellSettings.errexit && finalResult.code !== 0) {
               const error = new Error(`Pipeline failed with exit code ${finalResult.code}`);
