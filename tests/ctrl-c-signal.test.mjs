@@ -3,6 +3,44 @@ import { spawn } from 'child_process';
 
 describe('CTRL+C Signal Handling', () => {
   let childProcesses = [];
+  
+  // Baseline test to verify that shell commands work in CI
+  it('BASELINE: should handle SIGINT with plain shell command', async () => {
+    console.error('[TEST] Starting baseline SIGINT test');
+    
+    const child = spawn('sh', ['-c', 'echo "BASELINE_START" && sleep 30'], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      detached: true,
+    });
+    
+    console.error('[TEST] Baseline child spawned, PID:', child.pid);
+    childProcesses.push(child);
+    
+    let stdout = '';
+    child.stdout.on('data', (data) => {
+      stdout += data.toString();
+      console.error('[TEST] Baseline received stdout:', JSON.stringify(data.toString()));
+    });
+    
+    // Wait for output
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Send SIGINT
+    child.kill('SIGINT');
+    
+    // Wait for exit
+    const exitCode = await new Promise((resolve) => {
+      child.on('exit', (code, signal) => {
+        resolve(code !== null ? code : (signal === 'SIGINT' ? 130 : 1));
+      });
+    });
+    
+    console.error('[TEST] Baseline exit code:', exitCode);
+    console.error('[TEST] Baseline stdout:', stdout);
+    
+    expect(stdout).toContain('BASELINE_START');
+    expect(exitCode).toBe(130);
+  });
 
   afterEach(() => {
     // Clean up any remaining child processes
@@ -16,11 +54,20 @@ describe('CTRL+C Signal Handling', () => {
 
   it('should forward SIGINT to child process when external CTRL+C is sent', async () => {
     console.error('[TEST] Starting SIGINT forwarding test');
+    console.error('[TEST] Current working directory:', process.cwd());
     
-    // Use a simple shell command that outputs and sleeps (more reliable in CI)
-    const child = spawn('sh', ['-c', 'echo "STARTING_SLEEP" && sleep 30'], {
+    // Check if file exists first
+    const fs = await import('fs');
+    const path = await import('path');
+    const scriptPath = path.join(process.cwd(), 'examples', 'test-sleep.mjs');
+    console.error('[TEST] Script path:', scriptPath);
+    console.error('[TEST] Script exists:', fs.existsSync(scriptPath));
+    
+    // Use the test-sleep.mjs which tests our actual library
+    const child = spawn('node', [scriptPath], {
       stdio: ['pipe', 'pipe', 'pipe'],
       detached: true,
+      cwd: process.cwd() // Explicitly set working directory
     });
     
     console.error('[TEST] Child process spawned, PID:', child.pid);
@@ -46,7 +93,12 @@ describe('CTRL+C Signal Handling', () => {
     });
     
     child.on('error', (error) => {
-      console.error('[TEST] Child process error:', error);
+      console.error('[TEST] Child process error:', error.message);
+      console.error('[TEST] Error stack:', error.stack);
+    });
+    
+    child.on('spawn', () => {
+      console.error('[TEST] Child process spawned successfully');
     });
     
     // Wait for the process to start and output data

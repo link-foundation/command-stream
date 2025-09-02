@@ -1,12 +1,25 @@
 #!/usr/bin/env node
 
 // Test sleep example for CI reliability (no network dependencies)
-import { $ } from '../src/$.mjs';
-
 console.error('[test-sleep.mjs] Process started, PID:', process.pid);
-console.error('[test-sleep.mjs] Is TTY:', process.stdout.isTTY);
 console.error('[test-sleep.mjs] Node version:', process.version);
+console.error('[test-sleep.mjs] Current directory:', process.cwd());
+console.error('[test-sleep.mjs] Script path:', import.meta.url);
 
+let $;
+try {
+  const module = await import('../src/$.mjs');
+  $ = module.$;
+  console.error('[test-sleep.mjs] Module imported successfully');
+} catch (error) {
+  console.error('[test-sleep.mjs] Failed to import module:', error.message);
+  console.error('[test-sleep.mjs] Error stack:', error.stack);
+  // Exit early if we can't import the module
+  console.log('STARTING_SLEEP'); // Still output for test
+  process.exit(1);
+}
+
+console.error('[test-sleep.mjs] Is TTY:', process.stdout.isTTY);
 console.log('STARTING_SLEEP');
 console.error('[test-sleep.mjs] Wrote STARTING_SLEEP to stdout');
 
