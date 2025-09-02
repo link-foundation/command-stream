@@ -1068,18 +1068,36 @@ class ProcessRunner extends StreamEmitter {
       });
     };
     const spawnNode = async (argv) => {
+      trace('ProcessRunner', () => `spawnNode: Creating process | ${JSON.stringify({
+        command: argv[0],
+        args: argv.slice(1),
+        isInteractive,
+        cwd,
+        platform: process.platform
+      })}`);
+      
       if (isInteractive) {
         // For interactive commands, use inherit to provide direct TTY access
         return cp.spawn(argv[0], argv.slice(1), { cwd, env, stdio: 'inherit' });
       }
       // For non-interactive commands, spawn with detached to create process group (for proper signal handling)
       // This allows us to send signals to the entire process group
-      return cp.spawn(argv[0], argv.slice(1), { 
+      const child = cp.spawn(argv[0], argv.slice(1), { 
         cwd, 
         env, 
         stdio: ['pipe', 'pipe', 'pipe'],
         detached: process.platform !== 'win32' // Create process group on Unix-like systems
       });
+      
+      trace('ProcessRunner', () => `spawnNode: Process created | ${JSON.stringify({
+        pid: child.pid,
+        killed: child.killed,
+        hasStdout: !!child.stdout,
+        hasStderr: !!child.stderr,
+        hasStdin: !!child.stdin
+      })}`);
+      
+      return child;
     };
 
     const needsExplicitPipe = stdin !== 'inherit' && stdin !== 'ignore';
@@ -1106,6 +1124,14 @@ class ProcessRunner extends StreamEmitter {
 
     // For interactive commands with stdio: 'inherit', stdout/stderr will be null
     const outPump = this.child.stdout ? pumpReadable(this.child.stdout, async (buf) => {
+      trace('ProcessRunner', () => `stdout data received | ${JSON.stringify({
+        pid: this.child.pid,
+        bufferLength: buf.length,
+        capture: this.options.capture,
+        mirror: this.options.mirror,
+        preview: buf.toString().slice(0, 100)
+      })}`);
+      
       if (this.options.capture) this.outChunks.push(buf);
       if (this.options.mirror) safeWrite(process.stdout, buf);
 
@@ -1114,6 +1140,14 @@ class ProcessRunner extends StreamEmitter {
     }) : Promise.resolve();
 
     const errPump = this.child.stderr ? pumpReadable(this.child.stderr, async (buf) => {
+      trace('ProcessRunner', () => `stderr data received | ${JSON.stringify({
+        pid: this.child.pid,
+        bufferLength: buf.length,
+        capture: this.options.capture,
+        mirror: this.options.mirror,
+        preview: buf.toString().slice(0, 100)
+      })}`);
+      
       if (this.options.capture) this.errChunks.push(buf);
       if (this.options.mirror) safeWrite(process.stderr, buf);
 
@@ -2393,17 +2427,45 @@ class ProcessRunner extends StreamEmitter {
           const spawnNodeAsync = async (argv, stdin, isLastCommand = false) => {
 
             return new Promise((resolve, reject) => {
+              trace('ProcessRunner', () => `spawnNodeAsync: Creating child process | ${JSON.stringify({
+                command: argv[0],
+                args: argv.slice(1),
+                cwd: this.options.cwd,
+                isLastCommand
+              })}`);
+              
               const proc = cp.spawn(argv[0], argv.slice(1), {
                 cwd: this.options.cwd,
                 env: this.options.env,
                 stdio: ['pipe', 'pipe', 'pipe']
               });
 
+              trace('ProcessRunner', () => `spawnNodeAsync: Child process created | ${JSON.stringify({
+                pid: proc.pid,
+                killed: proc.killed,
+                hasStdout: !!proc.stdout,
+                hasStderr: !!proc.stderr
+              })}`);
+
               let stdout = '';
               let stderr = '';
+              let stdoutChunks = 0;
+              let stderrChunks = 0;
 
               proc.stdout.on('data', (chunk) => {
-                stdout += chunk.toString();
+                const chunkStr = chunk.toString();
+                stdout += chunkStr;
+                stdoutChunks++;
+                
+                trace('ProcessRunner', () => `spawnNodeAsync: stdout chunk received | ${JSON.stringify({
+                  pid: proc.pid,
+                  chunkNumber: stdoutChunks,
+                  chunkLength: chunk.length,
+                  totalStdoutLength: stdout.length,
+                  isLastCommand,
+                  preview: chunkStr.slice(0, 100)
+                })}`);
+                
                 // If this is the last command, emit streaming data
                 if (isLastCommand) {
                   if (this.options.mirror) {
@@ -2414,7 +2476,19 @@ class ProcessRunner extends StreamEmitter {
               });
 
               proc.stderr.on('data', (chunk) => {
-                stderr += chunk.toString();
+                const chunkStr = chunk.toString();
+                stderr += chunkStr;
+                stderrChunks++;
+                
+                trace('ProcessRunner', () => `spawnNodeAsync: stderr chunk received | ${JSON.stringify({
+                  pid: proc.pid,
+                  chunkNumber: stderrChunks,
+                  chunkLength: chunk.length,
+                  totalStderrLength: stderr.length,
+                  isLastCommand,
+                  preview: chunkStr.slice(0, 100)
+                })}`);
+                
                 // If this is the last command, emit streaming data
                 if (isLastCommand) {
                   if (this.options.mirror) {
@@ -2425,6 +2499,15 @@ class ProcessRunner extends StreamEmitter {
               });
 
               proc.on('close', (code) => {
+                trace('ProcessRunner', () => `spawnNodeAsync: Process closed | ${JSON.stringify({
+                  pid: proc.pid,
+                  code,
+                  stdoutLength: stdout.length,
+                  stderrLength: stderr.length,
+                  stdoutChunks,
+                  stderrChunks
+                })}`);
+                
                 resolve({
                   status: code,
                   stdout,
