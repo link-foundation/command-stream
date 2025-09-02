@@ -108,38 +108,76 @@ function installSignalHandlers() {
       }
     }
     
-    trace('ProcessRunner', () => `Parent received SIGINT - ${activeChildren.length} active child processes`);
+    trace('ProcessRunner', () => `Parent received SIGINT | ${JSON.stringify({
+      activeChildrenCount: activeChildren.length,
+      hasOtherHandlers,
+      platform: process.platform,
+      pid: process.pid,
+      ppid: process.ppid,
+      activeCommands: activeChildren.map(r => ({
+        hasChild: !!r.child,
+        childPid: r.child?.pid,
+        hasVirtualGenerator: !!r._virtualGenerator,
+        finished: r.finished,
+        command: r.spec?.command?.slice(0, 30)
+      }))
+    }, null, 2)}`);
     
     // Only handle SIGINT if we have active child processes
     // Otherwise, let other handlers or default behavior handle it
     if (activeChildren.length === 0) {
-      trace('ProcessRunner', () => `No active children - skipping SIGINT forwarding`);
+      trace('ProcessRunner', () => `No active children - skipping SIGINT forwarding, letting other handlers handle it`);
       return; // Let other handlers or default behavior handle it
     }
+    
+    trace('ProcessRunner', () => `Beginning SIGINT forwarding to ${activeChildren.length} active processes`);
     
     // Forward signal to all active processes (child processes and virtual commands)
     for (const runner of activeChildren) {
       try {
         if (runner.child && runner.child.pid) {
           // Real child process - send SIGINT to it
-          trace('ProcessRunner', () => `Sending SIGINT to child process ${runner.child.pid}`);
+          trace('ProcessRunner', () => `Sending SIGINT to child process | ${JSON.stringify({
+            pid: runner.child.pid,
+            killed: runner.child.killed,
+            runtime: isBun ? 'Bun' : 'Node.js',
+            command: runner.spec?.command?.slice(0, 50)
+          }, null, 2)}`);
+          
           if (isBun) {
             runner.child.kill('SIGINT');
+            trace('ProcessRunner', () => `Bun: SIGINT sent to PID ${runner.child.pid}`);
           } else {
             // Send to process group if detached, otherwise to process directly
             try {
               process.kill(-runner.child.pid, 'SIGINT');
+              trace('ProcessRunner', () => `Node.js: SIGINT sent to process group -${runner.child.pid}`);
             } catch (err) {
+              trace('ProcessRunner', () => `Node.js: Process group kill failed, trying direct: ${err.message}`);
               process.kill(runner.child.pid, 'SIGINT');
+              trace('ProcessRunner', () => `Node.js: SIGINT sent directly to PID ${runner.child.pid}`);
             }
           }
         } else {
           // Virtual command - cancel it using the runner's kill method
-          trace('ProcessRunner', () => `Cancelling virtual command: ${runner.spec?.command || 'unknown'}`);
+          trace('ProcessRunner', () => `Cancelling virtual command | ${JSON.stringify({
+            hasChild: !!runner.child,
+            hasVirtualGenerator: !!runner._virtualGenerator,
+            finished: runner.finished,
+            cancelled: runner._cancelled,
+            command: runner.spec?.command?.slice(0, 50)
+          }, null, 2)}`);
           runner.kill('SIGINT');
+          trace('ProcessRunner', () => `Virtual command kill() called`);
         }
       } catch (err) {
-        trace('ProcessRunner', () => `Error sending SIGINT to process: ${err.message}`);
+        trace('ProcessRunner', () => `Error in SIGINT handler for runner | ${JSON.stringify({
+          error: err.message,
+          stack: err.stack?.slice(0, 300),
+          hasPid: !!(runner.child && runner.child.pid),
+          pid: runner.child?.pid,
+          command: runner.spec?.command?.slice(0, 50)
+        }, null, 2)}`);
       }
     }
     
@@ -619,23 +657,37 @@ class ProcessRunner extends StreamEmitter {
 
   // Centralized method to properly finish a process with correct event emission order
   finish(result) {
+    trace('ProcessRunner', () => `finish() called | ${JSON.stringify({
+      alreadyFinished: this.finished,
+      resultCode: result?.code,
+      hasStdout: !!result?.stdout,
+      hasStderr: !!result?.stderr,
+      command: this.spec?.command?.slice(0, 50)
+    }, null, 2)}`);
+    
     // Make finish() idempotent - safe to call multiple times
     if (this.finished) {
+      trace('ProcessRunner', () => `Already finished, returning existing result`);
       return this.result || result;
     }
 
     // Store result
     this.result = result;
+    trace('ProcessRunner', () => `Result stored, about to emit events`);
 
     // Emit completion events BEFORE setting finished to prevent _cleanup() from clearing listeners
     this.emit('end', result);
+    trace('ProcessRunner', () => `'end' event emitted`);
     this.emit('exit', result.code);
+    trace('ProcessRunner', () => `'exit' event emitted with code ${result.code}`);
 
     // Set finished after events are emitted
     this.finished = true;
+    trace('ProcessRunner', () => `Marked as finished, calling cleanup`);
 
     // Trigger cleanup now that process is finished
     this._cleanup();
+    trace('ProcessRunner', () => `Cleanup completed`);
 
     return result;
   }
@@ -780,13 +832,25 @@ class ProcessRunner extends StreamEmitter {
   }
 
   _cleanup() {
+    trace('ProcessRunner', () => `_cleanup() called | ${JSON.stringify({
+      wasActiveBeforeCleanup: activeProcessRunners.has(this),
+      totalActiveBefore: activeProcessRunners.size,
+      finished: this.finished,
+      hasChild: !!this.child,
+      command: this.spec?.command?.slice(0, 50)
+    }, null, 2)}`);
+    
     const wasActive = activeProcessRunners.has(this);
     activeProcessRunners.delete(this);
+    
     if (wasActive) {
       trace('ProcessRunner', () => `Removed from activeProcessRunners | ${JSON.stringify({ 
         command: this.spec?.command || 'unknown',
-        totalActive: activeProcessRunners.size 
+        totalActiveAfter: activeProcessRunners.size,
+        remainingCommands: Array.from(activeProcessRunners).map(r => r.spec?.command?.slice(0, 30))
       }, null, 2)}`);
+    } else {
+      trace('ProcessRunner', () => `Was not in activeProcessRunners (already cleaned up)`);
     }
     
     // If this is a pipeline runner, also clean up the source and destination
@@ -812,35 +876,63 @@ class ProcessRunner extends StreamEmitter {
     
     // Clean up abort controller
     if (this._abortController) {
+      trace('ProcessRunner', () => `Cleaning up abort controller during cleanup | ${JSON.stringify({
+        wasAborted: this._abortController?.signal?.aborted
+      }, null, 2)}`);
       try {
         this._abortController.abort();
+        trace('ProcessRunner', () => `Abort controller aborted successfully during cleanup`);
       } catch (e) {
-        // Ignore errors during cleanup
+        trace('ProcessRunner', () => `Error aborting controller during cleanup: ${e.message}`);
       }
       this._abortController = null;
+      trace('ProcessRunner', () => `Abort controller reference cleared during cleanup`);
+    } else {
+      trace('ProcessRunner', () => `No abort controller to clean up during cleanup`);
     }
     
     // Clean up child process reference
     if (this.child) {
+      trace('ProcessRunner', () => `Cleaning up child process reference | ${JSON.stringify({
+        hasChild: true,
+        childPid: this.child.pid,
+        childKilled: this.child.killed
+      }, null, 2)}`);
       try {
         this.child.removeAllListeners?.();
+        trace('ProcessRunner', () => `Child process listeners removed successfully`);
       } catch (e) {
-        // Ignore errors during cleanup
+        trace('ProcessRunner', () => `Error removing child process listeners: ${e.message}`);
       }
       this.child = null;
+      trace('ProcessRunner', () => `Child process reference cleared`);
+    } else {
+      trace('ProcessRunner', () => `No child process reference to clean up`);
     }
     
     // Clean up virtual generator
     if (this._virtualGenerator) {
+      trace('ProcessRunner', () => `Cleaning up virtual generator | ${JSON.stringify({
+        hasReturn: !!this._virtualGenerator.return
+      }, null, 2)}`);
       try {
         if (this._virtualGenerator.return) {
           this._virtualGenerator.return();
+          trace('ProcessRunner', () => `Virtual generator return() called successfully`);
         }
       } catch (e) {
-        // Ignore errors during cleanup
+        trace('ProcessRunner', () => `Error calling virtual generator return(): ${e.message}`);
       }
       this._virtualGenerator = null;
+      trace('ProcessRunner', () => `Virtual generator reference cleared`);
+    } else {
+      trace('ProcessRunner', () => `No virtual generator to clean up`);
     }
+    
+    trace('ProcessRunner', () => `_cleanup() completed | ${JSON.stringify({
+      totalActiveAfter: activeProcessRunners.size,
+      sigintListenerCount: process.listeners('SIGINT').length
+    }, null, 2)}`);
   }
 
   // Unified start method that can work in both async and sync modes
@@ -877,18 +969,25 @@ class ProcessRunner extends StreamEmitter {
           }, null, 2)}`);
           
           // Kill the process when abort signal is triggered
+          trace('ProcessRunner', () => `External abort signal received - killing process | ${JSON.stringify({
+            hasChild: !!this.child,
+            childPid: this.child?.pid,
+            finished: this.finished,
+            command: this.spec?.command?.slice(0, 50)
+          }, null, 2)}`);
           this.kill('SIGTERM');
+          trace('ProcessRunner', () => 'Process kill initiated due to external abort signal');
           
           if (this._abortController && !this._abortController.signal.aborted) {
             trace('ProcessRunner', () => 'Aborting internal controller due to external signal');
             this._abortController.abort();
             trace('ProcessRunner', () => `Internal controller aborted | ${JSON.stringify({
-              internalAborted: this._abortController.signal.aborted
+              internalAborted: this._abortController?.signal?.aborted
             }, null, 2)}`);
           } else {
             trace('ProcessRunner', () => `Cannot abort internal controller | ${JSON.stringify({
               hasInternalController: !!this._abortController,
-              internalAlreadyAborted: this._abortController?.signal.aborted
+              internalAlreadyAborted: this._abortController?.signal?.aborted
             }, null, 2)}`);
           }
         });
@@ -901,12 +1000,19 @@ class ProcessRunner extends StreamEmitter {
           }, null, 2)}`);
           
           // Kill the process immediately since signal is already aborted
+          trace('ProcessRunner', () => `Signal already aborted - killing process immediately | ${JSON.stringify({
+            hasChild: !!this.child,
+            childPid: this.child?.pid,
+            finished: this.finished,
+            command: this.spec?.command?.slice(0, 50)
+          }, null, 2)}`);
           this.kill('SIGTERM');
+          trace('ProcessRunner', () => 'Process kill initiated due to pre-aborted signal');
           
           if (this._abortController && !this._abortController.signal.aborted) {
             this._abortController.abort();
             trace('ProcessRunner', () => `Internal controller aborted immediately | ${JSON.stringify({
-              internalAborted: this._abortController.signal.aborted
+              internalAborted: this._abortController?.signal?.aborted
             }, null, 2)}`);
           }
         }
@@ -1031,6 +1137,11 @@ class ProcessRunner extends StreamEmitter {
               isVirtual: true,
               args: parsed.args
             }, null, 2)}`);
+            trace('ProcessRunner', () => `Executing virtual command | ${JSON.stringify({
+              cmd: parsed.cmd,
+              argsLength: parsed.args.length,
+              command: this.spec.command
+            }, null, 2)}`);
             return await this._runVirtual(parsed.cmd, parsed.args, this.spec.command);
           }
         }
@@ -1038,15 +1149,22 @@ class ProcessRunner extends StreamEmitter {
     }
 
     const argv = this.spec.mode === 'shell' ? ['sh', '-lc', this.spec.command] : [this.spec.file, ...this.spec.args];
+    trace('ProcessRunner', () => `Constructed argv | ${JSON.stringify({
+      mode: this.spec.mode,
+      argv: argv,
+      originalCommand: this.spec.command
+    }, null, 2)}`);
 
     if (globalShellSettings.xtrace) {
       const traceCmd = this.spec.mode === 'shell' ? this.spec.command : argv.join(' ');
       console.log(`+ ${traceCmd}`);
+      trace('ProcessRunner', () => `xtrace output displayed: + ${traceCmd}`);
     }
 
     if (globalShellSettings.verbose) {
       const verboseCmd = this.spec.mode === 'shell' ? this.spec.command : argv.join(' ');
       console.log(verboseCmd);
+      trace('ProcessRunner', () => `verbose output displayed: ${verboseCmd}`);
     }
 
     // Detect if this is an interactive command that needs direct TTY access
@@ -1056,15 +1174,39 @@ class ProcessRunner extends StreamEmitter {
       process.stdout.isTTY === true && 
       process.stderr.isTTY === true &&
       (this.spec.mode === 'shell' ? isInteractiveCommand(this.spec.command) : isInteractiveCommand(this.spec.file));
+    
+    trace('ProcessRunner', () => `Interactive command detection | ${JSON.stringify({
+      isInteractive,
+      stdinInherit: stdin === 'inherit',
+      stdinTTY: process.stdin.isTTY,
+      stdoutTTY: process.stdout.isTTY,
+      stderrTTY: process.stderr.isTTY,
+      commandCheck: this.spec.mode === 'shell' ? isInteractiveCommand(this.spec.command) : isInteractiveCommand(this.spec.file)
+    }, null, 2)}`);
 
     const spawnBun = (argv) => {
+      trace('ProcessRunner', () => `spawnBun: Creating process | ${JSON.stringify({
+        command: argv[0],
+        args: argv.slice(1),
+        isInteractive,
+        cwd,
+        platform: process.platform
+      }, null, 2)}`);
+      
       if (isInteractive) {
         // For interactive commands, use inherit to provide direct TTY access
-        return Bun.spawn(argv, { cwd, env, stdin: 'inherit', stdout: 'inherit', stderr: 'inherit' });
+        trace('ProcessRunner', () => `spawnBun: Using interactive mode with inherited stdio`);
+        const child = Bun.spawn(argv, { cwd, env, stdin: 'inherit', stdout: 'inherit', stderr: 'inherit' });
+        trace('ProcessRunner', () => `spawnBun: Interactive process created | ${JSON.stringify({
+          pid: child.pid,
+          killed: child.killed
+        }, null, 2)}`);
+        return child;
       }
       // For non-interactive commands, spawn with detached to create process group (for proper signal handling)
       // This allows us to send signals to the entire process group, killing shell and all its children
-      return Bun.spawn(argv, { 
+      trace('ProcessRunner', () => `spawnBun: Using non-interactive mode with pipes and detached=${process.platform !== 'win32'}`);
+      const child = Bun.spawn(argv, { 
         cwd, 
         env, 
         stdin: 'pipe', 
@@ -1072,6 +1214,14 @@ class ProcessRunner extends StreamEmitter {
         stderr: 'pipe',
         detached: process.platform !== 'win32' // Create process group on Unix-like systems
       });
+      trace('ProcessRunner', () => `spawnBun: Non-interactive process created | ${JSON.stringify({
+        pid: child.pid,
+        killed: child.killed,
+        hasStdout: !!child.stdout,
+        hasStderr: !!child.stderr,
+        hasStdin: !!child.stdin
+      }, null, 2)}`);
+      return child;
     };
     const spawnNode = async (argv) => {
       trace('ProcessRunner', () => `spawnNode: Creating process | ${JSON.stringify({
@@ -1124,7 +1274,40 @@ class ProcessRunner extends StreamEmitter {
         detached: this.child.options?.detached,
         killed: this.child.killed,
         exitCode: this.child.exitCode,
-        signalCode: this.child.signalCode
+        signalCode: this.child.signalCode,
+        hasStdout: !!this.child.stdout,
+        hasStderr: !!this.child.stderr,
+        hasStdin: !!this.child.stdin,
+        platform: process.platform,
+        command: this.spec?.command?.slice(0, 100)
+      }, null, 2)}`);
+      
+      // Add event listeners with detailed tracing (only for Node.js child processes)
+      if (this.child && typeof this.child.on === 'function') {
+        this.child.on('spawn', () => {
+          trace('ProcessRunner', () => `Child process spawned successfully | ${JSON.stringify({
+            pid: this.child.pid,
+            command: this.spec?.command?.slice(0, 50)
+          }, null, 2)}`);
+        });
+        
+        this.child.on('error', (error) => {
+          trace('ProcessRunner', () => `Child process error event | ${JSON.stringify({
+            pid: this.child?.pid,
+            error: error.message,
+            code: error.code,
+            errno: error.errno,
+            syscall: error.syscall,
+            command: this.spec?.command?.slice(0, 50)
+          }, null, 2)}`);
+        });
+      } else {
+        trace('ProcessRunner', () => `Skipping event listeners - child does not support .on() method (likely Bun process)`);
+      }
+    } else {
+      trace('ProcessRunner', () => `No child process created | ${JSON.stringify({
+        spec: this.spec,
+        hasVirtualGenerator: !!this._virtualGenerator
       }, null, 2)}`);
     }
 
@@ -1163,25 +1346,50 @@ class ProcessRunner extends StreamEmitter {
     }) : Promise.resolve();
 
     let stdinPumpPromise = Promise.resolve();
+    trace('ProcessRunner', () => `Setting up stdin handling | ${JSON.stringify({
+      stdinType: typeof stdin,
+      stdin: stdin === 'inherit' ? 'inherit' : stdin === 'ignore' ? 'ignore' : (typeof stdin === 'string' ? `string(${stdin.length})` : 'other'),
+      isInteractive,
+      hasChildStdin: !!this.child?.stdin,
+      processTTY: process.stdin.isTTY
+    }, null, 2)}`);
+    
     if (stdin === 'inherit') {
       if (isInteractive) {
         // For interactive commands with stdio: 'inherit', stdin is handled automatically
+        trace('ProcessRunner', () => `stdin: Using inherit mode for interactive command`);
         stdinPumpPromise = Promise.resolve();
       } else {
         const isPipedIn = process.stdin && process.stdin.isTTY === false;
+        trace('ProcessRunner', () => `stdin: Non-interactive inherit mode | ${JSON.stringify({
+          isPipedIn,
+          stdinTTY: process.stdin.isTTY
+        }, null, 2)}`);
         if (isPipedIn) {
+          trace('ProcessRunner', () => `stdin: Pumping piped input to child process`);
           stdinPumpPromise = this._pumpStdinTo(this.child, this.options.capture ? this.inChunks : null);
         } else {
           // For TTY (interactive terminal), forward stdin directly for non-interactive commands
+          trace('ProcessRunner', () => `stdin: Forwarding TTY stdin for non-interactive command`);
           stdinPumpPromise = this._forwardTTYStdin();
         }
       }
     } else if (stdin === 'ignore') {
-      if (this.child.stdin && typeof this.child.stdin.end === 'function') this.child.stdin.end();
+      trace('ProcessRunner', () => `stdin: Ignoring and closing stdin`);
+      if (this.child.stdin && typeof this.child.stdin.end === 'function') {
+        this.child.stdin.end();
+        trace('ProcessRunner', () => `stdin: Child stdin closed successfully`);
+      }
     } else if (typeof stdin === 'string' || Buffer.isBuffer(stdin)) {
       const buf = Buffer.isBuffer(stdin) ? stdin : Buffer.from(stdin);
+      trace('ProcessRunner', () => `stdin: Writing buffer to child | ${JSON.stringify({
+        bufferLength: buf.length,
+        willCapture: this.options.capture && !!this.inChunks
+      }, null, 2)}`);
       if (this.options.capture && this.inChunks) this.inChunks.push(Buffer.from(buf));
       stdinPumpPromise = this._writeToStdin(buf);
+    } else {
+      trace('ProcessRunner', () => `stdin: Unhandled stdin type: ${typeof stdin}`);
     }
 
     const exited = isBun ? this.child.exited : new Promise((resolve) => {
@@ -1258,7 +1466,15 @@ class ProcessRunner extends StreamEmitter {
       captured: this.options.capture,
       hasStdout: !!resultData.stdout,
       hasStderr: !!resultData.stderr,
-      childPid: this.child?.pid
+      stdoutLength: resultData.stdout?.length || 0,
+      stderrLength: resultData.stderr?.length || 0,
+      stdoutPreview: resultData.stdout?.slice(0, 100),
+      stderrPreview: resultData.stderr?.slice(0, 100),
+      childPid: this.child?.pid,
+      cancelled: this._cancelled,
+      cancellationSignal: this._cancellationSignal,
+      platform: process.platform,
+      runtime: isBun ? 'Bun' : 'Node.js'
     }, null, 2)}`);
 
     const result = {
@@ -1268,20 +1484,52 @@ class ProcessRunner extends StreamEmitter {
       }
     };
 
+    trace('ProcessRunner', () => `About to finish process with result | ${JSON.stringify({
+      exitCode: result.code,
+      finished: this.finished
+    }, null, 2)}`);
+    
     // Finish the process with proper event emission order
     this.finish(result);
+    
+    trace('ProcessRunner', () => `Process finished, result set | ${JSON.stringify({
+      finished: this.finished,
+      resultCode: this.result?.code
+    }, null, 2)}`);
 
     if (globalShellSettings.errexit && this.result.code !== 0) {
+      trace('ProcessRunner', () => `Errexit mode: throwing error for non-zero exit code | ${JSON.stringify({
+        exitCode: this.result.code,
+        errexit: globalShellSettings.errexit,
+        hasStdout: !!this.result.stdout,
+        hasStderr: !!this.result.stderr
+      }, null, 2)}`);
+      
       const error = new Error(`Command failed with exit code ${this.result.code}`);
       error.code = this.result.code;
       error.stdout = this.result.stdout;
       error.stderr = this.result.stderr;
       error.result = this.result;
+      
+      trace('ProcessRunner', () => `About to throw errexit error`);
       throw error;
     }
+    
+    trace('ProcessRunner', () => `Returning result successfully | ${JSON.stringify({
+      exitCode: this.result.code,
+      errexit: globalShellSettings.errexit
+    }, null, 2)}`);
 
     return this.result;
     } catch (error) {
+      trace('ProcessRunner', () => `Caught error in _doStartAsync | ${JSON.stringify({
+        errorMessage: error.message,
+        errorCode: error.code,
+        isCommandError: error.isCommandError,
+        hasResult: !!error.result,
+        command: this.spec?.command?.slice(0, 100)
+      }, null, 2)}`);
+      
       // Ensure cleanup happens even if execution fails
       trace('ProcessRunner', () => `_doStartAsync caught error: ${error.message}`);
       
@@ -1452,7 +1700,7 @@ class ProcessRunner extends StreamEmitter {
         const commandOptions = {
           ...this.options,
           isCancelled: () => this._cancelled,
-          signal: this._abortController.signal
+          signal: this._abortController?.signal
         };
         
         trace('ProcessRunner', () => `_runVirtual signal details | ${JSON.stringify({
@@ -1556,7 +1804,7 @@ class ProcessRunner extends StreamEmitter {
         const commandOptions = {
           ...this.options,
           isCancelled: () => this._cancelled,
-          signal: this._abortController.signal
+          signal: this._abortController?.signal
         };
         
         trace('ProcessRunner', () => `_runVirtual signal details (non-generator) | ${JSON.stringify({
@@ -2817,6 +3065,11 @@ class ProcessRunner extends StreamEmitter {
     }
 
     // Mark as cancelled for virtual commands and store the signal
+    trace('ProcessRunner', () => `Marking as cancelled | ${JSON.stringify({
+      signal,
+      previouslyCancelled: this._cancelled,
+      previousSignal: this._cancellationSignal
+    }, null, 2)}`);
     this._cancelled = true;
     this._cancellationSignal = signal;
 
@@ -2834,22 +3087,51 @@ class ProcessRunner extends StreamEmitter {
     if (this._cancelResolve) {
       trace('ProcessRunner', () => 'Resolving cancel promise');
       this._cancelResolve();
+      trace('ProcessRunner', () => 'Cancel promise resolved');
+    } else {
+      trace('ProcessRunner', () => 'No cancel promise to resolve');
     }
 
     // Abort any async operations
     if (this._abortController) {
-      trace('ProcessRunner', () => 'Aborting controller');
+      trace('ProcessRunner', () => `Aborting internal controller | ${JSON.stringify({
+        wasAborted: this._abortController?.signal?.aborted
+      }, null, 2)}`);
       this._abortController.abort();
+      trace('ProcessRunner', () => `Internal controller aborted | ${JSON.stringify({
+        nowAborted: this._abortController?.signal?.aborted
+      }, null, 2)}`);
+    } else {
+      trace('ProcessRunner', () => 'No abort controller to abort');
     }
 
     // If it's a virtual generator, try to close it
-    if (this._virtualGenerator && this._virtualGenerator.return) {
-      trace('ProcessRunner', () => 'Closing virtual generator');
-      try {
-        this._virtualGenerator.return();
-      } catch (err) {
-        trace('ProcessRunner', () => `Error closing generator | ${JSON.stringify({ error: err.message }, null, 2)}`);
+    if (this._virtualGenerator) {
+      trace('ProcessRunner', () => `Virtual generator found for cleanup | ${JSON.stringify({
+        hasReturn: typeof this._virtualGenerator.return === 'function',
+        hasThrow: typeof this._virtualGenerator.throw === 'function',
+        cancelled: this._cancelled,
+        signal
+      }, null, 2)}`);
+      
+      if (this._virtualGenerator.return) {
+        trace('ProcessRunner', () => 'Closing virtual generator with return()');
+        try {
+          this._virtualGenerator.return();
+          trace('ProcessRunner', () => 'Virtual generator closed successfully');
+        } catch (err) {
+          trace('ProcessRunner', () => `Error closing generator | ${JSON.stringify({ 
+            error: err.message,
+            stack: err.stack?.slice(0, 200)
+          }, null, 2)}`);
+        }
+      } else {
+        trace('ProcessRunner', () => 'Virtual generator has no return() method');
       }
+    } else {
+      trace('ProcessRunner', () => `No virtual generator to cleanup | ${JSON.stringify({
+        hasVirtualGenerator: !!this._virtualGenerator
+      }, null, 2)}`);
     }
 
     // Kill child process if it exists
