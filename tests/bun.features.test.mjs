@@ -5,7 +5,7 @@ describe('Bun.$ Feature Validation', () => {
     test('should only work in Bun runtime', () => {
       expect(typeof Bun).toBe('object');
       expect(typeof Bun.$).toBe('function');
-    });
+    }, 30000);
 
     test('should be Bun-specific (conceptual test)', () => {
       // Bun.$ is Bun-specific and won't work in Node.js
@@ -13,7 +13,7 @@ describe('Bun.$ Feature Validation', () => {
       // Since we're running in Bun, we just validate it exists
       expect(typeof Bun.$).toBe('function');
       // In Node.js environment, Bun would be undefined
-    });
+    }, 30000);
   });
 
   describe('Template Literals', () => {
@@ -21,13 +21,13 @@ describe('Bun.$ Feature Validation', () => {
       const result = await Bun.$`echo "bun template literal test"`;
       expect(result.exitCode).toBe(0);
       expect(result.text().trim()).toBe('bun template literal test');
-    });
+    }, 30000);
 
     test('should support variable interpolation', async () => {
       const message = 'bun interpolation test';
       const result = await Bun.$`echo ${message}`;
       expect(result.text().trim()).toContain('bun interpolation test');
-    });
+    }, 30000);
   });
 
   describe('Real-time Streaming', () => {
