@@ -15,36 +15,68 @@ describe('CTRL+C Signal Handling', () => {
   });
 
   it('should forward SIGINT to child process when external CTRL+C is sent', async () => {
+    console.error('[TEST] Starting SIGINT forwarding test');
+    
     // Use the existing test-sleep.mjs which runs for long time and should handle SIGINT
     const child = spawn('node', ['examples/test-sleep.mjs'], {
       stdio: ['pipe', 'pipe', 'pipe'],
       detached: true,
     });
     
+    console.error('[TEST] Child process spawned, PID:', child.pid);
     childProcesses.push(child);
     
     let stdout = '';
     let stderr = '';
+    let dataReceived = false;
+    let stdoutChunks = [];
     
     child.stdout.on('data', (data) => {
-      stdout += data.toString();
+      const chunk = data.toString();
+      stdout += chunk;
+      stdoutChunks.push({ time: Date.now(), data: chunk });
+      dataReceived = true;
+      console.error('[TEST] Received stdout chunk:', JSON.stringify(chunk));
     });
     
     child.stderr.on('data', (data) => {
-      stderr += data.toString();
+      const chunk = data.toString();
+      stderr += chunk;
+      console.error('[TEST] Child stderr:', chunk.trim());
     });
     
-    // Give the sleep process time to start
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    child.on('error', (error) => {
+      console.error('[TEST] Child process error:', error);
+    });
+    
+    // Wait for the process to start and output data
+    let attempts = 0;
+    while (!dataReceived && attempts < 20) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      attempts++;
+      if (attempts % 5 === 0) {
+        console.error('[TEST] Waiting for stdout, attempt:', attempts);
+      }
+    }
+    
+    console.error('[TEST] Data received:', dataReceived, 'after attempts:', attempts);
+    console.error('[TEST] Current stdout length:', stdout.length);
+    console.error('[TEST] Current stderr length:', stderr.length);
+    
+    // Additional wait to ensure process is fully running
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     // Send SIGINT to the child process (simulating CTRL+C)
-    child.kill('SIGINT');
+    console.error('[TEST] Sending SIGINT to child process');
+    const killResult = child.kill('SIGINT');
+    console.error('[TEST] Kill result:', killResult);
     
     // Wait for the process to exit with robust handling
     const exitCode = await new Promise((resolve) => {
       let resolved = false;
       
       child.on('close', (code, signal) => {
+        console.error('[TEST] Child closed with code:', code, 'signal:', signal);
         if (!resolved) {
           resolved = true;
           resolve(code !== null ? code : (signal === 'SIGINT' ? 130 : 1));
@@ -52,6 +84,7 @@ describe('CTRL+C Signal Handling', () => {
       });
       
       child.on('exit', (code, signal) => {
+        console.error('[TEST] Child exited with code:', code, 'signal:', signal);
         if (!resolved) {
           resolved = true;
           resolve(code !== null ? code : (signal === 'SIGINT' ? 130 : 1));
@@ -61,6 +94,7 @@ describe('CTRL+C Signal Handling', () => {
       // Fallback timeout
       setTimeout(() => {
         if (!resolved) {
+          console.error('[TEST] Timeout reached, force killing child');
           resolved = true;
           child.kill('SIGKILL');
           resolve(137);
@@ -70,6 +104,15 @@ describe('CTRL+C Signal Handling', () => {
     
     // Should exit with SIGINT code (130) due to our signal handling
     console.log('First test exit code:', exitCode);
+    console.log('First test stdout length:', stdout.length);
+    if (stdout.length === 0) {
+      console.error('[TEST] WARNING: No stdout captured!');
+      console.error('[TEST] stderr content:', stderr);
+      console.error('[TEST] stdout chunks received:', stdoutChunks);
+    } else {
+      console.error('[TEST] stdout content:', JSON.stringify(stdout));
+    }
+    
     expect([130, 143, 137].includes(exitCode) || exitCode > 0).toBe(true);
     
     // Should have started sleep successfully before being interrupted
