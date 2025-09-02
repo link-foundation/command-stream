@@ -655,6 +655,135 @@ class ProcessRunner extends StreamEmitter {
     return this.child ? this.child.stdin : null;
   }
 
+  // Issue #33: New streaming interfaces
+  _autoStartIfNeeded(reason) {
+    if (!this.started && !this.finished) {
+      trace('ProcessRunner', () => `Auto-starting process due to ${reason}`);
+      this.start({ mode: 'async', stdin: 'pipe', stdout: 'pipe', stderr: 'pipe' });
+    }
+  }
+
+  get streams() {
+    const self = this;
+    return {
+      get stdin() {
+        self._autoStartIfNeeded('streams.stdin access');
+        if (self.child && self.child.stdin) {
+          return self.child.stdin;
+        }
+        // Return promise that resolves when child process is available
+        return new Promise((resolve) => {
+          const checkChild = () => {
+            if (self.child && self.child.stdin) {
+              resolve(self.child.stdin);
+            } else if (self.finished) {
+              resolve(null); // Process finished without stdin available
+            } else {
+              setTimeout(checkChild, 10);
+            }
+          };
+          checkChild();
+        });
+      },
+      get stdout() {
+        self._autoStartIfNeeded('streams.stdout access');
+        if (self.child && self.child.stdout) {
+          return self.child.stdout;
+        }
+        return new Promise((resolve) => {
+          const checkChild = () => {
+            if (self.child && self.child.stdout) {
+              resolve(self.child.stdout);
+            } else if (self.finished) {
+              resolve(null);
+            } else {
+              setTimeout(checkChild, 10);
+            }
+          };
+          checkChild();
+        });
+      },
+      get stderr() {
+        self._autoStartIfNeeded('streams.stderr access');
+        if (self.child && self.child.stderr) {
+          return self.child.stderr;
+        }
+        return new Promise((resolve) => {
+          const checkChild = () => {
+            if (self.child && self.child.stderr) {
+              resolve(self.child.stderr);
+            } else if (self.finished) {
+              resolve(null);
+            } else {
+              setTimeout(checkChild, 10);
+            }
+          };
+          checkChild();
+        });
+      }
+    };
+  }
+
+  get buffers() {
+    const self = this;
+    return {
+      get stdin() {
+        self._autoStartIfNeeded('buffers.stdin access');
+        if (self.finished && self.result) {
+          return Buffer.from(self.result.stdin || '', 'utf8');
+        }
+        // Return promise if not finished
+        return self.then ? self.then(result => Buffer.from(result.stdin || '', 'utf8')) : Promise.resolve(Buffer.alloc(0));
+      },
+      get stdout() {
+        self._autoStartIfNeeded('buffers.stdout access');
+        if (self.finished && self.result) {
+          return Buffer.from(self.result.stdout || '', 'utf8');
+        }
+        // Return promise if not finished
+        return self.then ? self.then(result => Buffer.from(result.stdout || '', 'utf8')) : Promise.resolve(Buffer.alloc(0));
+      },
+      get stderr() {
+        self._autoStartIfNeeded('buffers.stderr access');
+        if (self.finished && self.result) {
+          return Buffer.from(self.result.stderr || '', 'utf8');
+        }
+        // Return promise if not finished
+        return self.then ? self.then(result => Buffer.from(result.stderr || '', 'utf8')) : Promise.resolve(Buffer.alloc(0));
+      }
+    };
+  }
+
+  get strings() {
+    const self = this;
+    return {
+      get stdin() {
+        self._autoStartIfNeeded('strings.stdin access');
+        if (self.finished && self.result) {
+          return self.result.stdin || '';
+        }
+        // Return promise if not finished
+        return self.then ? self.then(result => result.stdin || '') : Promise.resolve('');
+      },
+      get stdout() {
+        self._autoStartIfNeeded('strings.stdout access');
+        if (self.finished && self.result) {
+          return self.result.stdout || '';
+        }
+        // Return promise if not finished
+        return self.then ? self.then(result => result.stdout || '') : Promise.resolve('');
+      },
+      get stderr() {
+        self._autoStartIfNeeded('strings.stderr access');
+        if (self.finished && self.result) {
+          return self.result.stderr || '';
+        }
+        // Return promise if not finished  
+        return self.then ? self.then(result => result.stderr || '') : Promise.resolve('');
+      }
+    };
+  }
+
   // Centralized method to properly finish a process with correct event emission order
   finish(result) {
     trace('ProcessRunner', () => `finish() called | ${JSON.stringify({
