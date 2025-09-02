@@ -876,6 +876,9 @@ class ProcessRunner extends StreamEmitter {
             command: this.spec?.command?.slice(0, 50)
           }, null, 2)}`);
           
+          // Kill the process when abort signal is triggered
+          this.kill('SIGTERM');
+          
           if (this._abortController && !this._abortController.signal.aborted) {
             trace('ProcessRunner', () => 'Aborting internal controller due to external signal');
             this._abortController.abort();
@@ -892,10 +895,13 @@ class ProcessRunner extends StreamEmitter {
         
         // If the external signal is already aborted, abort immediately
         if (this.options.signal.aborted) {
-          trace('ProcessRunner', () => `External signal already aborted, aborting internal controller | ${JSON.stringify({
+          trace('ProcessRunner', () => `External signal already aborted, killing process and aborting internal controller | ${JSON.stringify({
             hasInternalController: !!this._abortController,
             internalAborted: this._abortController?.signal.aborted
           }, null, 2)}`);
+          
+          // Kill the process immediately since signal is already aborted
+          this.kill('SIGTERM');
           
           if (this._abortController && !this._abortController.signal.aborted) {
             this._abortController.abort();
