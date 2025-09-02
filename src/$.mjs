@@ -1409,6 +1409,16 @@ class ProcessRunner extends StreamEmitter {
           isCancelled: () => this._cancelled,
           signal: this._abortController.signal
         };
+        
+        trace('ProcessRunner', () => `_runVirtual signal details | ${JSON.stringify({
+          cmd,
+          hasAbortController: !!this._abortController,
+          signalAborted: this._abortController?.signal?.aborted,
+          signalExists: !!commandOptions.signal,
+          commandOptionsSignalAborted: commandOptions.signal?.aborted,
+          optionsSignalExists: !!this.options.signal,
+          optionsSignalAborted: this.options.signal?.aborted
+        }, null, 2)}`);
 
         const generator = handler({ args: argValues, stdin: stdinData, ...commandOptions });
         this._virtualGenerator = generator;
@@ -1498,7 +1508,23 @@ class ProcessRunner extends StreamEmitter {
         };
       } else {
         // Regular async function - race with abort signal
-        const handlerPromise = handler({ args: argValues, stdin: stdinData, ...this.options });
+        const commandOptions = {
+          ...this.options,
+          isCancelled: () => this._cancelled,
+          signal: this._abortController.signal
+        };
+        
+        trace('ProcessRunner', () => `_runVirtual signal details (non-generator) | ${JSON.stringify({
+          cmd,
+          hasAbortController: !!this._abortController,
+          signalAborted: this._abortController?.signal?.aborted,
+          signalExists: !!commandOptions.signal,
+          commandOptionsSignalAborted: commandOptions.signal?.aborted,
+          optionsSignalExists: !!this.options.signal,
+          optionsSignalAborted: this.options.signal?.aborted
+        }, null, 2)}`);
+        
+        const handlerPromise = handler({ args: argValues, stdin: stdinData, ...commandOptions });
         
         // Create an abort promise that rejects when cancelled
         const abortPromise = new Promise((_, reject) => {
