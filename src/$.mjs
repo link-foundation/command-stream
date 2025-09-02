@@ -855,6 +855,25 @@ class ProcessRunner extends StreamEmitter {
       // Create a new options object merging the current ones with the new ones
       this.options = { ...this.options, ...options };
       
+      // Handle external abort signal
+      if (this.options.signal && typeof this.options.signal.addEventListener === 'function') {
+        trace('ProcessRunner', () => 'Setting up external abort signal listener');
+        this.options.signal.addEventListener('abort', () => {
+          trace('ProcessRunner', () => 'External abort signal triggered');
+          if (this._abortController && !this._abortController.signal.aborted) {
+            this._abortController.abort();
+          }
+        });
+        
+        // If the external signal is already aborted, abort immediately
+        if (this.options.signal.aborted) {
+          trace('ProcessRunner', () => 'External signal already aborted, aborting internal controller');
+          if (this._abortController && !this._abortController.signal.aborted) {
+            this._abortController.abort();
+          }
+        }
+      }
+      
       // Reinitialize chunks based on updated capture option
       if ('capture' in options) {
         trace('ProcessRunner', () => `BRANCH: capture => REINIT_CHUNKS | ${JSON.stringify({ 

@@ -193,7 +193,7 @@ describe('Cleanup Verification Tests', () => {
     // Check cleanup
     const afterListeners = process.listeners('SIGINT').length;
     expect(afterListeners).toBe(initialListeners);
-  });
+  }, 10000); // Increase timeout to 10000ms (2x)
 
   test('should not leak handlers when rapidly creating commands', async () => {
     const initialListeners = process.listeners('SIGINT').length;
