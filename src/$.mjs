@@ -591,6 +591,10 @@ class ProcessRunner extends StreamEmitter {
     this._abortController = new AbortController();
 
     activeProcessRunners.add(this);
+    
+    // Ensure parent stream monitoring is set up for all ProcessRunners
+    monitorParentStreams();
+    
     trace('ProcessRunner', () => `Added to activeProcessRunners | ${JSON.stringify({ 
       command: this.spec?.command || 'unknown',
       totalActive: activeProcessRunners.size 
