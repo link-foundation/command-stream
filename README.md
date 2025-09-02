@@ -1,3 +1,6 @@
+[![npm](https://img.shields.io/npm/v/command-stream.svg)](https://npmjs.com/command-stream)
+[![License](https://img.shields.io/badge/license-Unlicense-blue.svg)](https://github.com/link-foundation/command-stream/blob/main/LICENSE)
+
 [![Open in Gitpod](https://img.shields.io/badge/Gitpod-ready--to--code-f29718?logo=gitpod)](https://gitpod.io/#https://github.com/link-foundation/command-stream)
 [![Open in GitHub Codespaces](https://img.shields.io/badge/GitHub%20Codespaces-Open-181717?logo=github)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=link-foundation/command-stream)
 
