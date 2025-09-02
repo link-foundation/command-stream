@@ -27,41 +27,41 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 
 ## Comparison with Other Libraries
 
-| Feature | [**command-stream**](https://github.com/link-foundation/command-stream) | [**Bun.$**](https://github.com/oven-sh/bun) | [**execa**](https://github.com/sindresorhus/execa) | [**zx**](https://github.com/google/zx) | [**ShellJS**](https://github.com/shelljs/shelljs) | [**cross-spawn**](https://github.com/moxystudio/node-cross-spawn) |
+| Feature | [**command-stream**](https://github.com/link-foundation/command-stream) | [**execa**](https://github.com/sindresorhus/execa) | [**cross-spawn**](https://github.com/moxystudio/node-cross-spawn) | [**Bun.$**](https://github.com/oven-sh/bun) | [**ShellJS**](https://github.com/shelljs/shelljs) | [**zx**](https://github.com/google/zx) |
 |---------|----------------|-------|-------|-----|-------|-------|
-| **📦 NPM Package** | [![npm](https://img.shields.io/npm/v/command-stream.svg)](https://www.npmjs.com/package/command-stream) | N/A (Built-in) | [![npm](https://img.shields.io/npm/v/execa.svg)](https://www.npmjs.com/package/execa) | [![npm](https://img.shields.io/npm/v/zx.svg)](https://www.npmjs.com/package/zx) | [![npm](https://img.shields.io/npm/v/shelljs.svg)](https://www.npmjs.com/package/shelljs) | [![npm](https://img.shields.io/npm/v/cross-spawn.svg)](https://www.npmjs.com/package/cross-spawn) |
-| **⭐ GitHub Stars** | [**⭐ 2** (Please ⭐ us!)](https://github.com/link-foundation/command-stream) | [⭐ 80,169](https://github.com/oven-sh/bun) (Full Runtime) | [⭐ 7,264](https://github.com/sindresorhus/execa) | [⭐ 44,569](https://github.com/google/zx) | [⭐ 14,375](https://github.com/shelljs/shelljs) | [⭐ 1,149](https://github.com/moxystudio/node-cross-spawn) |
-| **📊 Monthly Downloads** | **893** (New project!) | N/A (Built-in) | **381M** | **4.2M** | **35M** | **409M** |
-| **📈 Total Downloads** | **New!** | N/A (Built-in) | **6B+** | **37M** | **596M** | **5.4B** |
-| **Runtime Support** | ✅ Bun + Node.js | 🟡 Bun only | ✅ Node.js | ✅ Node.js | ✅ Node.js | ✅ Node.js |
-| **Template Literals** | ✅ `` $`cmd` `` | ✅ `` $`cmd` `` | ✅ `` $`cmd` `` | ✅ `` $`cmd` `` | ❌ Function calls | ❌ Function calls |
-| **Real-time Streaming** | ✅ Live output | ❌ Buffer only | 🟡 Limited | ❌ Buffer only | ❌ Buffer only | ❌ Buffer only |
-| **Synchronous Execution** | ✅ `.sync()` with events | ❌ No | ✅ `execaSync` | ❌ No | ✅ Sync by default | ✅ `spawnSync` |
+| **📦 NPM Package** | [![npm](https://img.shields.io/npm/v/command-stream.svg)](https://www.npmjs.com/package/command-stream) | [![npm](https://img.shields.io/npm/v/execa.svg)](https://www.npmjs.com/package/execa) | [![npm](https://img.shields.io/npm/v/cross-spawn.svg)](https://www.npmjs.com/package/cross-spawn) | N/A (Built-in) | [![npm](https://img.shields.io/npm/v/shelljs.svg)](https://www.npmjs.com/package/shelljs) | [![npm](https://img.shields.io/npm/v/zx.svg)](https://www.npmjs.com/package/zx) |
+| **⭐ GitHub Stars** | [**⭐ 2** (Please ⭐ us!)](https://github.com/link-foundation/command-stream) | [⭐ 7,264](https://github.com/sindresorhus/execa) | [⭐ 1,149](https://github.com/moxystudio/node-cross-spawn) | [⭐ 80,169](https://github.com/oven-sh/bun) (Full Runtime) | [⭐ 14,375](https://github.com/shelljs/shelljs) | [⭐ 44,569](https://github.com/google/zx) |
+| **📊 Monthly Downloads** | **893** (New project!) | **381M** | **409M** | N/A (Built-in) | **35M** | **4.2M** |
+| **📈 Total Downloads** | **New!** | **6B+** | **5.4B** | N/A (Built-in) | **596M** | **37M** |
+| **Runtime Support** | ✅ Bun + Node.js | ✅ Node.js | ✅ Node.js | 🟡 Bun only | ✅ Node.js | ✅ Node.js |
+| **Template Literals** | ✅ `` $`cmd` `` | ✅ `` $`cmd` `` | ❌ Function calls | ✅ `` $`cmd` `` | ❌ Function calls | ✅ `` $`cmd` `` |
+| **Real-time Streaming** | ✅ Live output | 🟡 Limited | ❌ Buffer only | ❌ Buffer only | ❌ Buffer only | ❌ Buffer only |
+| **Synchronous Execution** | ✅ `.sync()` with events | ✅ `execaSync` | ✅ `spawnSync` | ❌ No | ✅ Sync by default | ❌ No |
 | **Async Iteration** | ✅ `for await (chunk of $.stream())` | ❌ No | ❌ No | ❌ No | ❌ No | ❌ No |
-| **EventEmitter Pattern** | ✅ `.on('data', ...)` | ❌ No | 🟡 Limited events | ❌ No | ❌ No | 🟡 Child process events |
+| **EventEmitter Pattern** | ✅ `.on('data', ...)` | 🟡 Limited events | 🟡 Child process events | ❌ No | ❌ No | ❌ No |
 | **Mixed Patterns** | ✅ Events + await/sync | ❌ No | ❌ No | ❌ No | ❌ No | ❌ No |
-| **Bun.$ Compatibility** | ✅ `.text()` method support | ✅ Native API | ❌ No | ❌ No | ❌ No | ❌ No |
-| **Shell Injection Protection** | ✅ Auto-quoting | ✅ Built-in | ✅ Safe by default | ✅ Safe by default | 🟡 Manual escaping | ✅ Safe by default |
-| **Cross-platform** | ✅ macOS/Linux/Windows | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes | ✅ **Specialized** cross-platform |
-| **Performance** | ⚡ Fast (Bun optimized) | ⚡ Very fast | 🐌 Moderate | 🐌 Slow | 🐌 Moderate | ⚡ Fast |
+| **Bun.$ Compatibility** | ✅ `.text()` method support | ❌ No | ❌ No | ✅ Native API | ❌ No | ❌ No |
+| **Shell Injection Protection** | ✅ Auto-quoting | ✅ Safe by default | ✅ Safe by default | ✅ Built-in | 🟡 Manual escaping | ✅ Safe by default |
+| **Cross-platform** | ✅ macOS/Linux/Windows | ✅ Yes | ✅ **Specialized** cross-platform | ✅ Yes | ✅ Yes | ✅ Yes |
+| **Performance** | ⚡ Fast (Bun optimized) | 🐌 Moderate | ⚡ Fast | ⚡ Very fast | 🐌 Moderate | 🐌 Slow |
 | **Memory Efficiency** | ✅ Streaming prevents buildup | 🟡 Buffers in memory | 🟡 Buffers in memory | 🟡 Buffers in memory | 🟡 Buffers in memory | 🟡 Buffers in memory |
-| **Error Handling** | ✅ Configurable (`set -e`/`set +e`, non-zero OK by default) | ✅ Throws on error | ✅ Throws on error | ✅ Throws on error | ✅ Configurable | ❌ Basic (exit codes) |
+| **Error Handling** | ✅ Configurable (`set -e`/`set +e`, non-zero OK by default) | ✅ Throws on error | ❌ Basic (exit codes) | ✅ Throws on error | ✅ Configurable | ✅ Throws on error |
 | **Shell Settings** | ✅ `set -e`/`set +e` equivalent | ❌ No | ❌ No | ❌ No | 🟡 Limited (`set()`) | ❌ No |
-| **Stdout Support** | ✅ Real-time streaming + events | ✅ Shell redirection + buffered | ✅ Node.js streams + interleaved | ✅ Readable streams + `.pipe.stdout` | ✅ Direct output | ✅ Inherited/buffered |
-| **Stderr Support** | ✅ Real-time streaming + events | ✅ Redirection + `.quiet()` access | ✅ Streams + interleaved output | ✅ Readable streams + `.pipe.stderr` | ✅ Error output | ✅ Inherited/buffered |
-| **Stdin Support** | ✅ string/Buffer/inherit/ignore | ✅ Pipe operations | ✅ Input/output streams | ✅ Basic stdin | 🟡 Basic | ✅ Full stdio support |
-| **Built-in Commands** | ✅ **18 commands**: cat, ls, mkdir, rm, mv, cp, touch, basename, dirname, seq, yes + all Bun.$ commands | ✅ echo, cd, etc. | ❌ Uses system | ❌ Uses system | ✅ **20+ commands**: cat, ls, mkdir, rm, mv, cp, etc. | ❌ Uses system |
-| **Virtual Commands Engine** | ✅ **Revolutionary**: Register JavaScript functions as shell commands with full pipeline support | ❌ No extensibility | ❌ No custom commands | ❌ No custom commands | ❌ No custom commands | ❌ No custom commands |
-| **Pipeline/Piping Support** | ✅ **Advanced**: System + Built-ins + Virtual + Mixed + `.pipe()` method | ✅ Standard shell piping | ✅ Programmatic `.pipe()` + multi-destination | ✅ Shell piping + `.pipe()` method | ✅ Shell piping + `.to()` method | ❌ No piping |
-| **Bundle Size** | 📦 **~20KB gzipped** | 🎯 0KB (built-in) | 📦 ~400KB+ (packagephobia) | 📦 ~50KB+ (estimated) | 📦 ~15KB gzipped | 📦 ~2KB gzipped |
-| **Signal Handling** | ✅ **Advanced SIGINT/SIGTERM forwarding** with cleanup | 🟡 Basic | 🟡 Basic | 🟡 Basic | 🟡 Basic | ✅ **Excellent** cross-platform |
-| **Process Management** | ✅ **Robust child process lifecycle** with proper termination | ❌ Basic | ✅ Good | 🟡 Limited | 🟡 Limited | ✅ **Excellent** spawn wrapper |
-| **Debug Tracing** | ✅ **Comprehensive VERBOSE logging** for CI/debugging | ❌ No | 🟡 Limited | ❌ No | 🟡 Basic | ❌ No |
-| **Test Coverage** | ✅ **410 tests, 909 assertions** | 🟡 Good coverage | ✅ Excellent | 🟡 Good | ✅ Good | ✅ Good |
-| **CI Reliability** | ✅ **Platform-specific handling** (macOS/Ubuntu) | 🟡 Basic | ✅ Good | 🟡 Basic | ✅ Good | ✅ **Excellent** |
-| **Documentation** | ✅ **Comprehensive examples + guides** | ✅ Good | ✅ Excellent | 🟡 Limited | ✅ Good | 🟡 Basic |
-| **TypeScript** | 🔄 Coming soon | ✅ Built-in | ✅ Full support | ✅ Full support | 🟡 Community types | ✅ Built-in |
-| **License** | ✅ **Unlicense (Public Domain)** | 🟡 MIT (+ LGPL dependencies) | 🟡 MIT | 🟡 Apache 2.0 | 🟡 BSD-3-Clause | 🟡 MIT |
+| **Stdout Support** | ✅ Real-time streaming + events | ✅ Node.js streams + interleaved | ✅ Inherited/buffered | ✅ Shell redirection + buffered | ✅ Direct output | ✅ Readable streams + `.pipe.stdout` |
+| **Stderr Support** | ✅ Real-time streaming + events | ✅ Streams + interleaved output | ✅ Inherited/buffered | ✅ Redirection + `.quiet()` access | ✅ Error output | ✅ Readable streams + `.pipe.stderr` |
+| **Stdin Support** | ✅ string/Buffer/inherit/ignore | ✅ Input/output streams | ✅ Full stdio support | ✅ Pipe operations | 🟡 Basic | ✅ Basic stdin |
+| **Built-in Commands** | ✅ **18 commands**: cat, ls, mkdir, rm, mv, cp, touch, basename, dirname, seq, yes + all Bun.$ commands | ❌ Uses system | ❌ Uses system | ✅ echo, cd, etc. | ✅ **20+ commands**: cat, ls, mkdir, rm, mv, cp, etc. | ❌ Uses system |
+| **Virtual Commands Engine** | ✅ **Revolutionary**: Register JavaScript functions as shell commands with full pipeline support | ❌ No custom commands | ❌ No custom commands | ❌ No extensibility | ❌ No custom commands | ❌ No custom commands |
+| **Pipeline/Piping Support** | ✅ **Advanced**: System + Built-ins + Virtual + Mixed + `.pipe()` method | ✅ Programmatic `.pipe()` + multi-destination | ❌ No piping | ✅ Standard shell piping | ✅ Shell piping + `.to()` method | ✅ Shell piping + `.pipe()` method |
+| **Bundle Size** | 📦 **~20KB gzipped** | 📦 ~400KB+ (packagephobia) | 📦 ~2KB gzipped | 🎯 0KB (built-in) | 📦 ~15KB gzipped | 📦 ~50KB+ (estimated) |
+| **Signal Handling** | ✅ **Advanced SIGINT/SIGTERM forwarding** with cleanup | 🟡 Basic | ✅ **Excellent** cross-platform | 🟡 Basic | 🟡 Basic | 🟡 Basic |
+| **Process Management** | ✅ **Robust child process lifecycle** with proper termination | ✅ Good | ✅ **Excellent** spawn wrapper | ❌ Basic | 🟡 Limited | 🟡 Limited |
+| **Debug Tracing** | ✅ **Comprehensive VERBOSE logging** for CI/debugging | 🟡 Limited | ❌ No | ❌ No | 🟡 Basic | ❌ No |
+| **Test Coverage** | ✅ **410 tests, 909 assertions** | ✅ Excellent | ✅ Good | 🟡 Good coverage | ✅ Good | 🟡 Good |
+| **CI Reliability** | ✅ **Platform-specific handling** (macOS/Ubuntu) | ✅ Good | ✅ **Excellent** | 🟡 Basic | ✅ Good | 🟡 Basic |
+| **Documentation** | ✅ **Comprehensive examples + guides** | ✅ Excellent | 🟡 Basic | ✅ Good | ✅ Good | 🟡 Limited |
+| **TypeScript** | 🔄 Coming soon | ✅ Full support | ✅ Built-in | ✅ Built-in | 🟡 Community types | ✅ Full support |
+| **License** | ✅ **Unlicense (Public Domain)** | 🟡 MIT | 🟡 MIT | 🟡 MIT (+ LGPL dependencies) | 🟡 BSD-3-Clause | 🟡 Apache 2.0 |
 
 **📊 Popularity & Adoption:** 
 - **⭐ GitHub Stars:** [Bun: 80,169](https://github.com/oven-sh/bun) • [zx: 44,569](https://github.com/google/zx) • [ShellJS: 14,375](https://github.com/shelljs/shelljs) • [execa: 7,264](https://github.com/sindresorhus/execa) • [cross-spawn: 1,149](https://github.com/moxystudio/node-cross-spawn) • [**command-stream: 2 ⭐ us!**](https://github.com/link-foundation/command-stream)
