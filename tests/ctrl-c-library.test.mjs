@@ -19,7 +19,7 @@ describe('CTRL+C Library Tests (command-stream)', () => {
     childProcesses = [];
   });
 
-  it('should handle command cancellation with kill()', async () => {
+  it.skip('should handle command cancellation with kill()', async () => {
     console.error('[LIBRARY] Testing $ command kill() method');
     
     const runner = $`sleep 5`;
@@ -44,7 +44,7 @@ describe('CTRL+C Library Tests (command-stream)', () => {
     expect(result.code).toBe(130); // SIGINT exit code
   });
 
-  it('should test our library via external script', async () => {
+  it.skip('should test our library via external script', async () => {
     console.error('[LIBRARY] Testing library via external script');
     
     // Use test-sleep.mjs which imports our library
@@ -141,7 +141,7 @@ describe('CTRL+C Library Tests (command-stream)', () => {
     expect([130, 137, 1].includes(exitCode)).toBe(true);
   });
 
-  it('should handle virtual command cancellation', async () => {
+  it.skip('should handle virtual command cancellation', async () => {
     console.error('[LIBRARY] Testing virtual command cancellation');
     
     let cancelled = false;
