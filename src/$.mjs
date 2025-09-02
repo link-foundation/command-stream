@@ -857,21 +857,55 @@ class ProcessRunner extends StreamEmitter {
       
       // Handle external abort signal
       if (this.options.signal && typeof this.options.signal.addEventListener === 'function') {
-        trace('ProcessRunner', () => 'Setting up external abort signal listener');
+        trace('ProcessRunner', () => `Setting up external abort signal listener | ${JSON.stringify({
+          hasSignal: !!this.options.signal,
+          signalAborted: this.options.signal.aborted,
+          hasInternalController: !!this._abortController,
+          internalAborted: this._abortController?.signal.aborted
+        }, null, 2)}`);
+        
         this.options.signal.addEventListener('abort', () => {
-          trace('ProcessRunner', () => 'External abort signal triggered');
+          trace('ProcessRunner', () => `External abort signal triggered | ${JSON.stringify({
+            externalSignalAborted: this.options.signal.aborted,
+            hasInternalController: !!this._abortController,
+            internalAborted: this._abortController?.signal.aborted,
+            command: this.spec?.command?.slice(0, 50)
+          }, null, 2)}`);
+          
           if (this._abortController && !this._abortController.signal.aborted) {
+            trace('ProcessRunner', () => 'Aborting internal controller due to external signal');
             this._abortController.abort();
+            trace('ProcessRunner', () => `Internal controller aborted | ${JSON.stringify({
+              internalAborted: this._abortController.signal.aborted
+            }, null, 2)}`);
+          } else {
+            trace('ProcessRunner', () => `Cannot abort internal controller | ${JSON.stringify({
+              hasInternalController: !!this._abortController,
+              internalAlreadyAborted: this._abortController?.signal.aborted
+            }, null, 2)}`);
           }
         });
         
         // If the external signal is already aborted, abort immediately
         if (this.options.signal.aborted) {
-          trace('ProcessRunner', () => 'External signal already aborted, aborting internal controller');
+          trace('ProcessRunner', () => `External signal already aborted, aborting internal controller | ${JSON.stringify({
+            hasInternalController: !!this._abortController,
+            internalAborted: this._abortController?.signal.aborted
+          }, null, 2)}`);
+          
           if (this._abortController && !this._abortController.signal.aborted) {
             this._abortController.abort();
+            trace('ProcessRunner', () => `Internal controller aborted immediately | ${JSON.stringify({
+              internalAborted: this._abortController.signal.aborted
+            }, null, 2)}`);
           }
         }
+      } else {
+        trace('ProcessRunner', () => `No external signal to handle | ${JSON.stringify({
+          hasSignal: !!this.options.signal,
+          signalType: typeof this.options.signal,
+          hasAddEventListener: !!(this.options.signal && typeof this.options.signal.addEventListener === 'function')
+        }, null, 2)}`);
       }
       
       // Reinitialize chunks based on updated capture option

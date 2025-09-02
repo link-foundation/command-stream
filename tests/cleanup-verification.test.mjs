@@ -174,25 +174,37 @@ describe('Cleanup Verification Tests', () => {
   });
 
   test('should cleanup when using abort controller', async () => {
+    console.log('TEST: Starting abort controller test');
     const initialListeners = process.listeners('SIGINT').length;
+    console.log('TEST: Initial SIGINT listeners:', initialListeners);
     
     const controller = new AbortController();
+    console.log('TEST: Created AbortController, aborted:', controller.signal.aborted);
     
     // Start a command with abort controller
+    console.log('TEST: Starting sleep command with external signal');
     const promise = $`sleep 10`.start({ signal: controller.signal });
+    console.log('TEST: Sleep command started, signal aborted:', controller.signal.aborted);
     
     // Abort immediately
+    console.log('TEST: Aborting controller');
     controller.abort();
+    console.log('TEST: Controller aborted, signal aborted:', controller.signal.aborted);
     
     try {
-      await promise;
+      console.log('TEST: Awaiting promise');
+      const result = await promise;
+      console.log('TEST: Promise resolved with result:', result);
     } catch (error) {
+      console.log('TEST: Promise rejected with error:', error.message);
       // Expected abort error
     }
     
     // Check cleanup
     const afterListeners = process.listeners('SIGINT').length;
+    console.log('TEST: Final SIGINT listeners:', afterListeners);
     expect(afterListeners).toBe(initialListeners);
+    console.log('TEST: Test completed successfully');
   }, 10000); // Increase timeout to 10000ms (2x)
 
   test('should not leak handlers when rapidly creating commands', async () => {
