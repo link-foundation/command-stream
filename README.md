@@ -1,5 +1,6 @@
 [![npm](https://img.shields.io/npm/v/command-stream.svg)](https://npmjs.com/command-stream)
 [![License](https://img.shields.io/badge/license-Unlicense-blue.svg)](https://github.com/link-foundation/command-stream/blob/main/LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/link-foundation/command-stream?style=social)](https://github.com/link-foundation/command-stream/stargazers)
 
 [![Open in Gitpod](https://img.shields.io/badge/Gitpod-ready--to--code-f29718?logo=gitpod)](https://gitpod.io/#https://github.com/link-foundation/command-stream)
 [![Open in GitHub Codespaces](https://img.shields.io/badge/GitHub%20Codespaces-Open-181717?logo=github)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=link-foundation/command-stream)
@@ -26,8 +27,12 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 
 ## Comparison with Other Libraries
 
-| Feature | [command-stream](https://github.com/link-foundation/command-stream) | [Bun.$](https://bun.sh/docs/runtime/shell) | [execa](https://github.com/sindresorhus/execa) | [zx](https://github.com/google/zx) | [ShellJS](https://github.com/shelljs/shelljs) | [cross-spawn](https://github.com/moxystudio/node-cross-spawn) |
+| Feature | [**command-stream**](https://github.com/link-foundation/command-stream) | [**Bun.$**](https://github.com/oven-sh/bun) | [**execa**](https://github.com/sindresorhus/execa) | [**zx**](https://github.com/google/zx) | [**ShellJS**](https://github.com/shelljs/shelljs) | [**cross-spawn**](https://github.com/moxystudio/node-cross-spawn) |
 |---------|----------------|-------|-------|-----|-------|-------|
+| **📦 NPM Package** | [![npm](https://img.shields.io/npm/v/command-stream.svg)](https://www.npmjs.com/package/command-stream) | N/A (Built-in) | [![npm](https://img.shields.io/npm/v/execa.svg)](https://www.npmjs.com/package/execa) | [![npm](https://img.shields.io/npm/v/zx.svg)](https://www.npmjs.com/package/zx) | [![npm](https://img.shields.io/npm/v/shelljs.svg)](https://www.npmjs.com/package/shelljs) | [![npm](https://img.shields.io/npm/v/cross-spawn.svg)](https://www.npmjs.com/package/cross-spawn) |
+| **⭐ GitHub Stars** | [**⭐ 2** (Please ⭐ us!)](https://github.com/link-foundation/command-stream) | N/A (Built-in) | [⭐ 7,264](https://github.com/sindresorhus/execa) | [⭐ 44,569](https://github.com/google/zx) | [⭐ 14,375](https://github.com/shelljs/shelljs) | [⭐ 1,149](https://github.com/moxystudio/node-cross-spawn) |
+| **📊 Monthly Downloads** | **893** (New project!) | N/A (Built-in) | **381M** | **4.2M** | **35M** | **409M** |
+| **📈 Total Downloads** | **New!** | N/A (Built-in) | **6B+** | **37M** | **596M** | **5.4B** |
 | **Runtime Support** | ✅ Bun + Node.js | 🟡 Bun only | ✅ Node.js | ✅ Node.js | ✅ Node.js | ✅ Node.js |
 | **Template Literals** | ✅ `` $`cmd` `` | ✅ `` $`cmd` `` | ✅ `` $`cmd` `` | ✅ `` $`cmd` `` | ❌ Function calls | ❌ Function calls |
 | **Real-time Streaming** | ✅ Live output | ❌ Buffer only | 🟡 Limited | ❌ Buffer only | ❌ Buffer only | ❌ Buffer only |
@@ -58,7 +63,12 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 | **TypeScript** | 🔄 Coming soon | ✅ Built-in | ✅ Full support | ✅ Full support | 🟡 Community types | ✅ Built-in |
 | **License** | ✅ **Unlicense (Public Domain)** | 🟡 MIT (+ LGPL dependencies) | 🟡 MIT | 🟡 Apache 2.0 | 🟡 BSD-3-Clause | 🟡 MIT |
 
-**📊 Popularity (Weekly Downloads 2024):** [cross-spawn](https://www.npmjs.com/package/cross-spawn): 102M+ • [execa](https://www.npmjs.com/package/execa): 98M+ • [ShellJS](https://www.npmjs.com/package/shelljs): 9M+ • [zx](https://www.npmjs.com/package/zx): Growing fast
+**📊 Popularity & Adoption:** 
+- **⭐ GitHub Stars:** [zx: 44,569](https://github.com/google/zx) • [ShellJS: 14,375](https://github.com/shelljs/shelljs) • [execa: 7,264](https://github.com/sindresorhus/execa) • [cross-spawn: 1,149](https://github.com/moxystudio/node-cross-spawn) • [**command-stream: 2 ⭐ us!**](https://github.com/link-foundation/command-stream)
+- **📈 Total Downloads:** [execa: 6B+](https://www.npmjs.com/package/execa) • [cross-spawn: 5.4B](https://www.npmjs.com/package/cross-spawn) • [ShellJS: 596M](https://www.npmjs.com/package/shelljs) • [zx: 37M](https://www.npmjs.com/package/zx) • [command-stream: New!](https://www.npmjs.com/package/command-stream)
+- **📊 Monthly Downloads:** [cross-spawn: 409M](https://www.npmjs.com/package/cross-spawn) • [execa: 381M](https://www.npmjs.com/package/execa) • [ShellJS: 35M](https://www.npmjs.com/package/shelljs) • [zx: 4.2M](https://www.npmjs.com/package/zx) • [command-stream: 893 (growing!)](https://www.npmjs.com/package/command-stream)
+
+**⭐ Help Us Grow!** If command-stream's **revolutionary virtual commands** and **advanced streaming capabilities** help your project, [**please star us on GitHub**](https://github.com/link-foundation/command-stream) to help the project grow!
 
 ### Why Choose command-stream?
 
