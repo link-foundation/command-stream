@@ -1123,9 +1123,10 @@ class ProcessRunner extends StreamEmitter {
     }
 
     // For interactive commands with stdio: 'inherit', stdout/stderr will be null
+    const childPid = this.child?.pid; // Capture PID once at the start
     const outPump = this.child.stdout ? pumpReadable(this.child.stdout, async (buf) => {
       trace('ProcessRunner', () => `stdout data received | ${JSON.stringify({
-        pid: this.child.pid,
+        pid: childPid,
         bufferLength: buf.length,
         capture: this.options.capture,
         mirror: this.options.mirror,
@@ -1141,7 +1142,7 @@ class ProcessRunner extends StreamEmitter {
 
     const errPump = this.child.stderr ? pumpReadable(this.child.stderr, async (buf) => {
       trace('ProcessRunner', () => `stderr data received | ${JSON.stringify({
-        pid: this.child.pid,
+        pid: childPid,
         bufferLength: buf.length,
         capture: this.options.capture,
         mirror: this.options.mirror,
@@ -2452,13 +2453,15 @@ class ProcessRunner extends StreamEmitter {
               let stdoutChunks = 0;
               let stderrChunks = 0;
 
+              const procPid = proc.pid; // Capture PID once to avoid null reference
+              
               proc.stdout.on('data', (chunk) => {
                 const chunkStr = chunk.toString();
                 stdout += chunkStr;
                 stdoutChunks++;
                 
                 trace('ProcessRunner', () => `spawnNodeAsync: stdout chunk received | ${JSON.stringify({
-                  pid: proc.pid,
+                  pid: procPid,
                   chunkNumber: stdoutChunks,
                   chunkLength: chunk.length,
                   totalStdoutLength: stdout.length,
@@ -2481,7 +2484,7 @@ class ProcessRunner extends StreamEmitter {
                 stderrChunks++;
                 
                 trace('ProcessRunner', () => `spawnNodeAsync: stderr chunk received | ${JSON.stringify({
-                  pid: proc.pid,
+                  pid: procPid,
                   chunkNumber: stderrChunks,
                   chunkLength: chunk.length,
                   totalStderrLength: stderr.length,
@@ -2500,7 +2503,7 @@ class ProcessRunner extends StreamEmitter {
 
               proc.on('close', (code) => {
                 trace('ProcessRunner', () => `spawnNodeAsync: Process closed | ${JSON.stringify({
-                  pid: proc.pid,
+                  pid: procPid,
                   code,
                   stdoutLength: stdout.length,
                   stderrLength: stderr.length,
