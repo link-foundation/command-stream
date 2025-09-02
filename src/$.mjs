@@ -1573,12 +1573,14 @@ class ProcessRunner extends StreamEmitter {
         
         // Create an abort promise that rejects when cancelled
         const abortPromise = new Promise((_, reject) => {
-          if (this._abortController.signal.aborted) {
+          if (this._abortController && this._abortController.signal.aborted) {
             reject(new Error('Command cancelled'));
           }
-          this._abortController.signal.addEventListener('abort', () => {
-            reject(new Error('Command cancelled'));
-          });
+          if (this._abortController) {
+            this._abortController.signal.addEventListener('abort', () => {
+              reject(new Error('Command cancelled'));
+            });
+          }
         });
         
         try {
