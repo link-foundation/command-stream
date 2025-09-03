@@ -4437,12 +4437,14 @@ const AnsiUtils = {
 
   stripControlChars(text) {
     if (typeof text !== 'string') return text;
-    return text.replace(/[\x00-\x1F\x7F]/g, '');
+    // Preserve newlines (\n = \x0A), carriage returns (\r = \x0D), and tabs (\t = \x09)
+    return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
   },
 
   stripAll(text) {
     if (typeof text !== 'string') return text;
-    return text.replace(/[\x00-\x1F\x7F]|\x1b\[[0-9;]*[mGKHFJ]/g, '');
+    // Preserve newlines (\n = \x0A), carriage returns (\r = \x0D), and tabs (\t = \x09)
+    return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]|\x1b\[[0-9;]*[mGKHFJ]/g, '');
   },
 
   cleanForProcessing(data) {
