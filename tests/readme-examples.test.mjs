@@ -310,4 +310,70 @@ describe('README Examples and Use Cases', () => {
       expect(cmd.options.stdin).toBe('inherit');
     });
   });
+
+  describe('Smart Quoting & Security (from README)', () => {
+    test('safe strings are NOT quoted', () => {
+      const name = "hello";
+      const cmd = "/usr/bin/node";
+      
+      const testCmd1 = $({ mirror: false })`echo ${name}`;
+      expect(testCmd1.spec.command).toBe('echo hello');
+      
+      const testCmd2 = $({ mirror: false })`${cmd} --version`;
+      expect(testCmd2.spec.command).toBe('/usr/bin/node --version');
+    });
+
+    test('dangerous strings are automatically quoted', () => {
+      const userInput = "test; rm -rf /";
+      const pathWithSpaces = "/my path/file";
+      
+      const testCmd1 = $({ mirror: false })`echo ${userInput}`;
+      expect(testCmd1.spec.command).toBe("echo 'test; rm -rf /'");
+      
+      const testCmd2 = $({ mirror: false })`echo ${pathWithSpaces}`;
+      expect(testCmd2.spec.command).toBe("echo '/my path/file'");
+    });
+
+    test('user-provided quotes are preserved', () => {
+      const quotedPath = "'/path with spaces/file'";
+      const doubleQuoted = '"/path with spaces/file"';
+      
+      const testCmd1 = $({ mirror: false })`cat ${quotedPath}`;
+      expect(testCmd1.spec.command).toBe("cat '/path with spaces/file'");
+      
+      const testCmd2 = $({ mirror: false })`cat ${doubleQuoted}`;
+      expect(testCmd2.spec.command).toBe('cat \'"/path with spaces/file"\'');
+    });
+
+    test('shell injection attempts are neutralized', () => {
+      const dangerous = "'; rm -rf /; echo '";
+      const cmdSubstitution = "$(whoami)";
+      const varExpansion = "$HOME";
+      const complex = "`cat /etc/passwd`";
+      
+      const testCmd1 = $({ mirror: false })`echo ${dangerous}`;
+      expect(testCmd1.spec.command).toContain("rm -rf");
+      expect(testCmd1.spec.command).toMatch(/^echo '/);
+      
+      const testCmd2 = $({ mirror: false })`echo ${cmdSubstitution}`;
+      expect(testCmd2.spec.command).toBe("echo '$(whoami)'");
+      
+      const testCmd3 = $({ mirror: false })`echo ${varExpansion}`;
+      expect(testCmd3.spec.command).toBe("echo '$HOME'");
+      
+      const testCmd4 = $({ mirror: false })`echo ${complex}`;
+      expect(testCmd4.spec.command).toBe("echo '`cat /etc/passwd`'");
+    });
+
+    test('actual execution prevents injection', async () => {
+      const varExpansion = "$HOME";
+      const cmdSubstitution = "$(echo INJECTED)";
+      
+      const result1 = await $`echo ${varExpansion}`;
+      expect(result1.stdout.trim()).toBe('$HOME'); // Literal, not expanded
+      
+      const result2 = await $`echo ${cmdSubstitution}`;
+      expect(result2.stdout.trim()).toBe('$(echo INJECTED)'); // Literal, not executed
+    });
+  });
 });

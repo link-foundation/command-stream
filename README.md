@@ -41,7 +41,7 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 | **EventEmitter Pattern** | ✅ `.on('data', ...)` | 🟡 Limited events | 🟡 Child process events | ❌ No | ❌ No | ❌ No |
 | **Mixed Patterns** | ✅ Events + await/sync | ❌ No | ❌ No | ❌ No | ❌ No | ❌ No |
 | **Bun.$ Compatibility** | ✅ `.text()` method support | ❌ No | ❌ No | ✅ Native API | ❌ No | ❌ No |
-| **Shell Injection Protection** | ✅ Auto-quoting | ✅ Safe by default | ✅ Safe by default | ✅ Built-in | 🟡 Manual escaping | ✅ Safe by default |
+| **Shell Injection Protection** | ✅ Smart auto-quoting | ✅ Safe by default | ✅ Safe by default | ✅ Built-in | 🟡 Manual escaping | ✅ Safe by default |
 | **Cross-platform** | ✅ macOS/Linux/Windows | ✅ Yes | ✅ **Specialized** cross-platform | ✅ Yes | ✅ Yes | ✅ Yes |
 | **Performance** | ⚡ Fast (Bun optimized) | 🐌 Moderate | ⚡ Fast | ⚡ Very fast | 🐌 Moderate | 🐌 Slow |
 | **Memory Efficiency** | ✅ Streaming prevents buildup | 🟡 Buffers in memory | 🟡 Buffers in memory | 🟡 Buffers in memory | 🟡 Buffers in memory | 🟡 Buffers in memory |
@@ -149,6 +149,54 @@ npm install command-stream
 
 # Using bun
 bun add command-stream
+```
+
+## Smart Quoting & Security
+
+Command-stream provides intelligent auto-quoting to protect against shell injection while avoiding unnecessary quotes for safe strings:
+
+### Smart Quoting Behavior
+
+```javascript
+import { $ } from 'command-stream';
+
+// Safe strings are NOT quoted (performance optimization)
+await $`echo ${name}`;           // name = "hello" → echo hello
+await $`${cmd} --version`;       // cmd = "/usr/bin/node" → /usr/bin/node --version
+
+// Dangerous strings are automatically quoted for safety
+await $`echo ${userInput}`;      // userInput = "test; rm -rf /" → echo 'test; rm -rf /'
+await $`echo ${pathWithSpaces}`; // pathWithSpaces = "/my path/file" → echo '/my path/file'
+
+// Special characters that trigger auto-quoting:
+// Spaces, $, ;, |, &, >, <, `, *, ?, [, ], {, }, (, ), !, #, and others
+
+// User-provided quotes are preserved
+const quotedPath = "'/path with spaces/file'";
+await $`cat ${quotedPath}`;      // → cat '/path with spaces/file' (no double-quoting!)
+
+const doubleQuoted = '"/path with spaces/file"';
+await $`cat ${doubleQuoted}`;    // → cat '"/path with spaces/file"' (preserves intent)
+```
+
+### Shell Injection Protection
+
+All interpolated values are automatically secured:
+
+```javascript
+// ✅ SAFE - All these injection attempts are neutralized
+const dangerous = "'; rm -rf /; echo '";
+await $`echo ${dangerous}`;      // → echo ''\'' rm -rf /; echo '\'''
+
+const cmdSubstitution = "$(whoami)";
+await $`echo ${cmdSubstitution}`; // → echo '$(whoami)' (literal text, not executed)
+
+const varExpansion = "$HOME";
+await $`echo ${varExpansion}`;   // → echo '$HOME' (literal text, not expanded)
+
+// ✅ SAFE - Even complex injection attempts
+const complex = "`cat /etc/passwd`";
+await $`echo ${complex}`;        // → echo '`cat /etc/passwd`' (literal text)
 ```
 
 ## Usage Patterns
