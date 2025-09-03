@@ -530,6 +530,36 @@ function quote(value) {
   if (Array.isArray(value)) return value.map(quote).join(' ');
   if (typeof value !== 'string') value = String(value);
   if (value === '') return "''";
+  
+  // If the value is already properly quoted and doesn't need further escaping,
+  // check if we can use it as-is or with simpler quoting
+  if (value.startsWith("'") && value.endsWith("'") && value.length >= 2) {
+    // If it's already single-quoted and doesn't contain unescaped single quotes in the middle,
+    // we can potentially use it as-is
+    const inner = value.slice(1, -1);
+    if (!inner.includes("'")) {
+      // The inner content has no single quotes, so the original quoting is fine
+      return value;
+    }
+  }
+  
+  if (value.startsWith('"') && value.endsWith('"') && value.length > 2) {
+    // If it's already double-quoted, wrap it in single quotes to preserve it
+    return `'${value}'`;
+  }
+  
+  // Check if the string needs quoting at all
+  // Safe characters: alphanumeric, dash, underscore, dot, slash, colon, equals, comma, plus
+  // This regex matches strings that DON'T need quoting
+  const safePattern = /^[a-zA-Z0-9_\-./=,+@:]+$/;
+  
+  if (safePattern.test(value)) {
+    // The string is safe and doesn't need quoting
+    return value;
+  }
+  
+  // Default behavior: wrap in single quotes and escape any internal single quotes
+  // This handles spaces, special shell characters, etc.
   return `'${value.replace(/'/g, "'\\''")}'`;
 }
 

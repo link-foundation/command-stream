@@ -69,7 +69,7 @@ test('interactive option - works with template literal syntax', async () => {
   const result = await cmd;
   
   expect(result.code).toBe(0);
-  expect(result.stdout.trim()).toBe("hello 'world'"); // Quotes preserved due to interpolation behavior
+  expect(result.stdout.trim()).toBe("hello world"); // Safe string 'world' doesn't need quotes
   expect(cmd.options.interactive).toBe(true); // Check the command object, not the result
 });
 
