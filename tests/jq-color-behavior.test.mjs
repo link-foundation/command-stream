@@ -1,5 +1,6 @@
 import { $ } from '../src/$.mjs';
 import { test, expect } from 'bun:test';
+import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
 
 const testJson = '{"message": "hello", "number": 42, "active": true, "data": null}';
 

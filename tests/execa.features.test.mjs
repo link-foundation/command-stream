@@ -1,4 +1,5 @@
 import { test, expect, describe } from 'bun:test';
+import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
 
 // Note: This file tests execa features conceptually since execa is not installed
 // In a real project, you would: npm install execa

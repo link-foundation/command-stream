@@ -1,7 +1,12 @@
 import { $ } from '../src/$.mjs';
-import { test, expect } from 'bun:test';
+import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
+import { beforeTestCleanup, afterTestCleanup } from './test-cleanup.mjs';
 
-test('interactive option - default behavior', async () => {
+describe('Interactive Option Tests', () => {
+  beforeEach(beforeTestCleanup);
+  afterEach(afterTestCleanup);
+
+  test('interactive option - default behavior', async () => {
   // Test that interactive is false by default
   const $custom = $({ capture: true, mirror: false });
   const cmd = $custom`echo test`;
@@ -84,20 +89,21 @@ test('interactive option - preserved in command chaining', async () => {
   // Note: cmd2 (piped command) might have different options, that's expected
 });
 
-test('interactive option - type checking', async () => {
-  // Test that interactive option accepts boolean values properly
-  const $true = $({ interactive: true, capture: true, mirror: false });
-  const $false = $({ interactive: false, capture: true, mirror: false });
-  const $default = $({ capture: true, mirror: false });
-  
-  expect($true`echo test`.options.interactive).toBe(true);
-  expect($false`echo test`.options.interactive).toBe(false);
-  expect($default`echo test`.options.interactive).toBe(false);
-  
-  // Test with non-boolean values (should still work, JavaScript is flexible)
-  const $truthy = $({ interactive: 1, capture: true, mirror: false });
-  const $falsy = $({ interactive: 0, capture: true, mirror: false });
-  
-  expect(Boolean($truthy`echo test`.options.interactive)).toBe(true);
-  expect(Boolean($falsy`echo test`.options.interactive)).toBe(false);
+  test('interactive option - type checking', async () => {
+    // Test that interactive option accepts boolean values properly
+    const $true = $({ interactive: true, capture: true, mirror: false });
+    const $false = $({ interactive: false, capture: true, mirror: false });
+    const $default = $({ capture: true, mirror: false });
+    
+    expect($true`echo test`.options.interactive).toBe(true);
+    expect($false`echo test`.options.interactive).toBe(false);
+    expect($default`echo test`.options.interactive).toBe(false);
+    
+    // Test with non-boolean values (should still work, JavaScript is flexible)
+    const $truthy = $({ interactive: 1, capture: true, mirror: false });
+    const $falsy = $({ interactive: 0, capture: true, mirror: false });
+    
+    expect(Boolean($truthy`echo test`.options.interactive)).toBe(true);
+    expect(Boolean($falsy`echo test`.options.interactive)).toBe(false);
+  });
 });

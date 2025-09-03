@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { describe, it, expect } from 'bun:test';
+import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
 import { $ } from '../src/$.mjs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -14,9 +15,15 @@ describe('Interactive Streaming', () => {
     const calc = $`node ${calcPath}`;
     
     // Get the streams immediately (process auto-starts)
-    const stdin = await calc.streams.stdin;
-    const stdout = await calc.streams.stdout;
-    const stderr = await calc.streams.stderr;
+    let stdin, stdout, stderr;
+    try {
+      stdin = await calc.streams.stdin;
+      stdout = await calc.streams.stdout;
+      stderr = await calc.streams.stderr;
+    } catch (e) {
+      console.error(`[interactive-streaming test] Error getting streams:`, e);
+      throw e;
+    }
     
     // Verify streams are available
     expect(stdin).toBeTruthy();

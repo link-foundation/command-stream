@@ -1,4 +1,5 @@
 import { test, expect, describe, beforeEach } from 'bun:test';
+import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
 import { $, shell, set, unset } from '../src/$.mjs';
 
 describe('Shell Settings (set -e / set +e equivalent)', () => {

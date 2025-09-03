@@ -1,4 +1,5 @@
 import { describe, it, expect, afterEach } from 'bun:test';
+import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
 import { spawn } from 'child_process';
 import { trace } from '../src/$.utils.mjs';
 

@@ -1,4 +1,5 @@
 import { test, expect, describe } from 'bun:test';
+import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
 
 describe('Bun.$ Feature Validation', () => {
   describe('Runtime Support', () => {

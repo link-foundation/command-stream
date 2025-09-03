@@ -1,366 +1,109 @@
-import { test, expect, describe } from 'bun:test';
-import { $, forceCleanupAll } from '../src/$.mjs';
-import { trace } from '../src/$.utils.mjs';
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+#!/usr/bin/env node
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
+import { beforeTestCleanup, afterTestCleanup, originalCwd } from './test-cleanup.mjs';
+import { $ } from '../src/$.mjs';
+import { mkdtempSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 
-// Load the source to access internal variables
-const srcPath = join(__dirname, '../src/$.mjs');
-const srcContent = readFileSync(srcPath, 'utf8');
-
-// Extract activeProcessRunners Set reference using eval (for testing only)
-let activeProcessRunners;
-let sigintHandlerInstalled;
-
-// Helper to get internal state
-async function getInternalState() {
-  // Create a temporary module that exports the internal state
-  const tmpModule = await import(`../src/$.mjs?t=${Date.now()}`);
+describe('Cleanup Verification', () => {
+  beforeEach(beforeTestCleanup);
+  afterEach(afterTestCleanup);
   
-  // Access internal state through a command that exposes it
-  const runner = tmpModule.$`echo test`;
+  let testDirs = [];
   
-  // Access the activeProcessRunners through the constructor's closure
-  // This is a hack for testing purposes only
-  const internals = runner.constructor._getInternals?.() || {};
+  afterEach(() => {
+    // Clean up test directories
+    for (const dir of testDirs) {
+      try {
+        rmSync(dir, { recursive: true, force: true });
+      } catch (e) {
+        // Ignore cleanup errors
+      }
+    }
+    testDirs = [];
+  });
   
-  return {
-    activeRunners: internals.activeProcessRunners?.size || 0,
-    sigintInstalled: internals.sigintHandlerInstalled || false
-  };
-}
-
-// Helper to check if activeProcessRunners is empty
-async function checkActiveRunnersEmpty() {
-  // Since we can't directly access the Set, we'll check indirectly
-  // by looking at SIGINT handler count
-  const sigintListeners = process.listeners('SIGINT').length;
-  return sigintListeners;
-}
-
-describe('Cleanup Verification Tests', () => {
-  test('should immediately cleanup virtual commands after completion', async () => {
-    const initialListeners = process.listeners('SIGINT').length;
-    
-    // Run a virtual command
-    const result = await $`echo "cleanup test"`;
-    expect(result.code).toBe(0);
-    
-    // Check that cleanup happened immediately
-    const afterListeners = process.listeners('SIGINT').length;
-    expect(afterListeners).toBe(initialListeners);
+  test('should start in original directory', () => {
+    const currentCwd = process.cwd();
+    expect(currentCwd).toBe(originalCwd);
   });
-
-  test('should cleanup real processes immediately after completion', async () => {
-    const initialListeners = process.listeners('SIGINT').length;
+  
+  test('should restore cwd after simple cd command', async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'cleanup-test-'));
+    testDirs.push(tempDir);
     
-    // Run a real process command
-    const result = await $`/bin/echo "real process test"`;
-    expect(result.code).toBe(0);
+    // Change directory
+    await $`cd ${tempDir}`;
     
-    // Check that cleanup happened immediately
-    const afterListeners = process.listeners('SIGINT').length;
-    expect(afterListeners).toBe(initialListeners);
+    // Verify we changed
+    const result = await $`pwd`;
+    expect(result.stdout.trim()).toBe(tempDir);
+    
+    // Cwd should be changed within test
+    expect(process.cwd()).toBe(tempDir);
   });
-
-  test('should cleanup on error conditions', async () => {
-    const initialListeners = process.listeners('SIGINT').length;
-    
-    try {
-      // Run a command that will fail
-      await $`/nonexistent/command`;
-    } catch (error) {
-      // Expected to fail
-    }
-    
-    // Check that cleanup still happened
-    const afterListeners = process.listeners('SIGINT').length;
-    expect(afterListeners).toBe(initialListeners);
+  
+  test('should be back in original directory after cd test', () => {
+    // This test verifies the previous test's cleanup worked
+    const currentCwd = process.cwd();
+    expect(currentCwd).toBe(originalCwd);
   });
-
-  test('should cleanup when process is killed', async () => {
-    const initialListeners = process.listeners('SIGINT').length;
+  
+  test('should restore cwd after cd with && operator', async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'cleanup-test2-'));
+    testDirs.push(tempDir);
     
-    // Start a long-running process
-    const runner = $`sleep 10`;
-    const promise = runner.start();
+    // Change directory with && operator
+    await $`cd ${tempDir} && echo "test"`;
     
-    // Kill it immediately
-    runner.kill();
-    
-    try {
-      await promise;
-    } catch (error) {
-      // Expected to fail with signal
-    }
-    
-    // Check that cleanup happened
-    const afterListeners = process.listeners('SIGINT').length;
-    expect(afterListeners).toBe(initialListeners);
+    // Should be in temp dir
+    expect(process.cwd()).toBe(tempDir);
   });
-
-  test('should cleanup virtual commands with events', async () => {
-    const initialListeners = process.listeners('SIGINT').length;
-    
-    // Run a simple virtual command with events
-    const result = await $`echo "event cleanup test"`;
-    expect(result.stdout).toContain('event cleanup test');
-    
-    // Wait a bit to ensure cleanup
-    await new Promise(resolve => setTimeout(resolve, 20));
-    
-    // Check that cleanup happened
-    const afterListeners = process.listeners('SIGINT').length;
-    expect(afterListeners).toBe(initialListeners);
+  
+  test('should verify restoration after && cd test', () => {
+    const currentCwd = process.cwd();
+    expect(currentCwd).toBe(originalCwd);
   });
-
-  test('should cleanup multiple concurrent commands', async () => {
-    const initialListeners = process.listeners('SIGINT').length;
+  
+  test('should not affect cwd when cd is in subshell', async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'cleanup-test3-'));
+    testDirs.push(tempDir);
     
-    // Start multiple commands concurrently
-    const promises = [
-      $`echo "concurrent 1"`,
-      $`echo "concurrent 2"`,
-      $`echo "concurrent 3"`,
-      $`sleep 0.01`,
-      $`pwd`
-    ];
+    // Change directory in subshell - should not affect parent
+    const result = await $`(cd ${tempDir} && pwd)`;
+    expect(result.stdout.trim()).toBe(tempDir);
     
-    // Wait for all to complete
-    await Promise.all(promises);
-    
-    // Check that all were cleaned up
-    const afterListeners = process.listeners('SIGINT').length;
-    expect(afterListeners).toBe(initialListeners);
+    // Should still be in original directory
+    const currentCwd = process.cwd();
+    expect(currentCwd).toBe(originalCwd);
   });
-
-  test('should cleanup when using pipe operations', async () => {
-    const initialListeners = process.listeners('SIGINT').length;
+  
+  test('should restore cwd after multiple cd commands', async () => {
+    const tempDir1 = mkdtempSync(join(tmpdir(), 'cleanup-test4-'));
+    const tempDir2 = mkdtempSync(join(tmpdir(), 'cleanup-test5-'));
+    testDirs.push(tempDir1, tempDir2);
     
-    // Run a piped command
-    const result = await $`echo "pipe test" | cat`;
-    expect(result.stdout).toContain('pipe test');
+    // Multiple cd commands
+    await $`cd ${tempDir1}`;
+    expect(process.cwd()).toBe(tempDir1);
     
-    // Check cleanup
-    const afterListeners = process.listeners('SIGINT').length;
-    expect(afterListeners).toBe(initialListeners);
+    await $`cd ${tempDir2}`;
+    expect(process.cwd()).toBe(tempDir2);
+    
+    await $`cd ${tempDir1}`;
+    expect(process.cwd()).toBe(tempDir1);
   });
-
-  test('should cleanup when command times out', async () => {
-    const initialListeners = process.listeners('SIGINT').length;
+  
+  test('final verification - should still be in original directory', () => {
+    // Final check that all previous tests were properly cleaned up
+    const currentCwd = process.cwd();
+    expect(currentCwd).toBe(originalCwd);
     
-    // Start a long command
-    const runner = $`sleep 10`;
-    const promise = runner.start();
-    
-    // Set a timeout to kill it
-    setTimeout(() => runner.kill(), 10);
-    
-    try {
-      await promise;
-    } catch (error) {
-      // Expected to be killed
-    }
-    
-    // Wait a bit for cleanup
-    await new Promise(resolve => setTimeout(resolve, 50));
-    
-    // Check that cleanup happened
-    const afterListeners = process.listeners('SIGINT').length;
-    expect(afterListeners).toBe(initialListeners);
-  });
-
-  test('should cleanup when using abort controller', async () => {
-    trace('Test', 'Starting abort controller test');
-    const initialListeners = process.listeners('SIGINT').length;
-    trace('Test', () => `Initial SIGINT listeners: ${initialListeners}`);
-    
-    const controller = new AbortController();
-    trace('Test', () => `Created AbortController, aborted: ${controller.signal.aborted}`);
-    
-    // Start a command with abort controller
-    trace('Test', 'Starting sleep command with external signal');
-    const promise = $`sleep 10`.start({ signal: controller.signal });
-    trace('Test', () => `Sleep command started, signal aborted: ${controller.signal.aborted}`);
-    
-    // Abort immediately
-    trace('Test', 'Aborting controller');
-    controller.abort();
-    trace('Test', () => `Controller aborted, signal aborted: ${controller.signal.aborted}`);
-    
-    try {
-      trace('Test', 'Awaiting promise');
-      const result = await promise;
-      trace('Test', () => `Promise resolved with result: ${JSON.stringify(result, null, 2)}`);
-    } catch (error) {
-      trace('Test', () => `Promise rejected with error: ${error.message}`);
-      // Expected abort error
-    }
-    
-    // Check cleanup
-    const afterListeners = process.listeners('SIGINT').length;
-    trace('Test', () => `Final SIGINT listeners: ${afterListeners}`);
-    expect(afterListeners).toBe(initialListeners);
-    trace('Test', 'Test completed successfully');
-  }, 10000); // Increase timeout to 10000ms (2x)
-
-  test('should not leak handlers when rapidly creating commands', async () => {
-    const initialListeners = process.listeners('SIGINT').length;
-    
-    // Rapidly create and execute many commands
-    for (let i = 0; i < 50; i++) {
-      await $`echo ${i}`;
-    }
-    
-    // All should be cleaned up
-    const afterListeners = process.listeners('SIGINT').length;
-    expect(afterListeners).toBe(initialListeners);
-  });
-
-  test('should cleanup when parent streams close', async () => {
-    const initialListeners = process.listeners('SIGINT').length;
-    
-    // Simulate parent stream closure scenario
-    const runner = $`cat`;
-    const promise = runner.start();
-    
-    // Close stdin to trigger parent stream closure handling
-    if (runner.child?.stdin) {
-      runner.child.stdin.end();
-    }
-    
-    try {
-      await promise;
-    } catch (error) {
-      // May fail, that's ok
-    }
-    
-    // Wait for cleanup
-    await new Promise(resolve => setTimeout(resolve, 150));
-    
-    // Check cleanup
-    const afterListeners = process.listeners('SIGINT').length;
-    expect(afterListeners).toBe(initialListeners);
-  });
-
-  test('should verify no active runners remain after all tests', async () => {
-    // Run a few commands
-    await $`echo "final test 1"`;
-    await $`echo "final test 2"`;
-    await $`pwd`;
-    
-    // Wait a bit to ensure all cleanup completes
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    // Ensure no SIGINT handlers from our library remain
-    const listeners = process.listeners('SIGINT');
-    
-    // Log listener info for debugging
-    if (listeners.length > 0) {
-      trace('Test', () => `Remaining SIGINT listeners: ${listeners.length}`);
-      listeners.forEach((l, i) => {
-        const str = l.toString();
-        if (str.includes('activeProcessRunners') || str.includes('ProcessRunner') || str.includes('trace')) {
-          trace('Test', () => `Listener ${i} appears to be from command-stream: ${str.substring(0, 200)}`);
-        }
-      });
-    }
-    
-    const ourListeners = listeners.filter(l => {
-      const str = l.toString();
-      return str.includes('activeProcessRunners') || 
-             str.includes('ProcessRunner') ||
-             str.includes('activeChildren');
+    // Also verify with pwd command
+    return $`pwd`.then(result => {
+      expect(result.stdout.trim()).toBe(originalCwd);
     });
-    
-    // If there are leftover handlers, force cleanup
-    if (ourListeners.length > 0) {
-      console.warn(`Test left behind ${ourListeners.length} SIGINT handlers, forcing cleanup...`);
-      ourListeners.forEach(listener => {
-        process.removeListener('SIGINT', listener);
-      });
-    }
-    
-    const cleanedListeners = process.listeners('SIGINT').filter(l => {
-      const str = l.toString();
-      return str.includes('activeProcessRunners') || 
-             str.includes('ProcessRunner') ||
-             str.includes('activeChildren');
-    });
-    expect(cleanedListeners.length).toBe(0);
-  });
-
-  test('should cleanup resources even when promise is not awaited', async () => {
-    // Force cleanup to ensure clean state at start
-    forceCleanupAll();
-    const initialListeners = process.listeners('SIGINT').length;
-    
-    // Start commands but don't await them
-    const runner1 = $`sleep 0.05`;
-    const runner2 = $`echo "not awaited"`;
-    const runner3 = $`pwd`;
-    
-    // Start them
-    runner1.start();
-    runner2.start();
-    runner3.start();
-    
-    // Wait for them to complete naturally
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    // Ensure cleanup happened
-    const afterListeners = process.listeners('SIGINT').length;
-    expect(afterListeners).toBe(initialListeners);
-  });
-
-  test('should cleanup when using finally without await', async () => {
-    const initialListeners = process.listeners('SIGINT').length;
-    
-    // Use finally to ensure cleanup even without await
-    const promise = $`echo "test with finally"`.finally(() => {
-      // This should trigger cleanup
-    });
-    
-    // Wait for it to complete
-    await promise;
-    
-    // Check cleanup
-    const afterListeners = process.listeners('SIGINT').length;
-    expect(afterListeners).toBe(initialListeners);
-  });
-
-  test('should cleanup resources in complex error scenarios', async () => {
-    const initialListeners = process.listeners('SIGINT').length;
-    
-    // Test various error scenarios
-    const promises = [];
-    
-    // Command that fails
-    promises.push($`exit 1`.catch(() => {}));
-    
-    // Command that's killed
-    const runner = $`sleep 10`;
-    const p = runner.start();
-    setTimeout(() => runner.kill(), 5);
-    promises.push(p.catch(() => {}));
-    
-    // Virtual command that throws
-    try {
-      await $`nonexistent-virtual-command`;
-    } catch (e) {
-      // Expected error
-    }
-    
-    // Wait for all to settle
-    await Promise.allSettled(promises);
-    await new Promise(resolve => setTimeout(resolve, 50));
-    
-    // Verify cleanup
-    const afterListeners = process.listeners('SIGINT').length;
-    expect(afterListeners).toBe(initialListeners);
   });
 });

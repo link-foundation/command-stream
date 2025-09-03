@@ -1,0 +1,50 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bun:*)",
+      "Bash(COMMAND_STREAM_VERBOSE=true bun test tests/resource-cleanup-internals.test.mjs --verbose)",
+      "Bash(timeout:*)",
+      "Bash(echo \"Final exit code: $?\")",
+      "Bash(echo \"Exit code: $?\")",
+      "Bash(node:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)",
+      "Bash(COMMAND_STREAM_VERBOSE=true bun test tests/resource-cleanup-internals.test.mjs)",
+      "Bash(COMMAND_STREAM_VERBOSE=true bun test tests/cleanup-verification.test.mjs --test-name-pattern \"abort controller\")",
+      "Bash(git log:*)",
+      "Bash(sed:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(COMMAND_STREAM_VERBOSE=true bun test tests/ctrl-c-signal.test.mjs --test-name-pattern \"should bypass virtual commands with custom stdin\")",
+      "Bash(COMMAND_STREAM_VERBOSE=true bun test tests/ctrl-c-signal.test.mjs --test-name-pattern \"should handle parent stream closure\")",
+      "Bash(COMMAND_STREAM_VERBOSE=true bun test tests/ctrl-c-signal.test.mjs --test-name-pattern \"should handle parent stream closure\" --timeout 5000)",
+      "Bash(COMMAND_STREAM_VERBOSE=true bun test tests/ctrl-c-signal.test.mjs --test-name-pattern \"should handle parent stream closure|should bypass virtual commands with custom stdin\")",
+      "Bash(chmod:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(COMMAND_STREAM_VERBOSE=true bun test tests/streaming-interfaces.test.mjs --test-name-pattern \"basic functionality\")",
+      "Bash(COMMAND_STREAM_VERBOSE=true node examples/debug-interpolation-individual.mjs)",
+      "Bash(echo:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(gh issue view:*)",
+      "Bash(gh api:*)",
+      "Bash(touch:*)",
+      "Bash(for file in examples/test-*-quoting.mjs examples/test-user-*.mjs)",
+      "Bash(done)",
+      "Read(/tmp/**)",
+      "Read(/tmp/**)",
+      "Read(/tmp/**)",
+      "Read(/tmp/**)",
+      "Read(/tmp/**)",
+      "Read(/tmp/**)",
+      "Read(/tmp/**)",
+      "Read(/tmp/**)",
+      "Bash(grep:*)",
+      "Bash(COMMAND_STREAM_VERBOSE=true timeout 10 node examples/test-streaming-timing.mjs)"
+    ],
+    "deny": [],
+    "ask": [],
+    "additionalDirectories": [
+      "/tmp",
+      "/usr/bin"
+    ]
+  }
+}

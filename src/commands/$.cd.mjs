@@ -8,9 +8,10 @@ export default async function cd({ args }) {
     process.chdir(target);
     const newDir = process.cwd();
     trace('VirtualCommand', () => `cd: success | ${JSON.stringify({ newDir }, null, 2)}`);
-    return VirtualUtils.success(newDir);
+    // cd command should not output anything on success, just like real cd
+    return VirtualUtils.success('');
   } catch (error) {
     trace('VirtualCommand', () => `cd: failed | ${JSON.stringify({ error: error.message }, null, 2)}`);
-    return { stderr: `cd: ${error.message}`, code: 1 };
+    return { stderr: `cd: ${error.message}\n`, code: 1 };
   }
 }

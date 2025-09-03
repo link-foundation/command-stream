@@ -1,9 +1,14 @@
-import { describe, it, expect, afterEach } from 'bun:test';
+import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
+import { beforeTestCleanup, afterTestCleanup } from './test-cleanup.mjs';
 import { spawn } from 'child_process';
 import { trace } from '../src/$.utils.mjs';
 
 describe('CTRL+C Signal Handling', () => {
   let childProcesses = [];
+  
+  beforeEach(async () => {
+    await beforeTestCleanup();
+  });
   
   // Log platform information for debugging
   trace('SignalTest', () => `Platform: ${process.platform}`);
@@ -74,7 +79,7 @@ describe('CTRL+C Signal Handling', () => {
     expect(validExit).toBe(true);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     // Clean up any remaining child processes
     childProcesses.forEach(child => {
       if (!child.killed) {
@@ -82,6 +87,9 @@ describe('CTRL+C Signal Handling', () => {
       }
     });
     childProcesses = [];
+    
+    // Run test cleanup
+    await afterTestCleanup();
   });
 
   it('should forward SIGINT to child process when external CTRL+C is sent', async () => {
@@ -472,7 +480,11 @@ describe('CTRL+C Signal Handling', () => {
 describe('CTRL+C with Different stdin Modes', () => {
   let childProcesses = [];
 
-  afterEach(() => {
+  beforeEach(async () => {
+    await beforeTestCleanup();
+  });
+
+  afterEach(async () => {
     // Clean up any remaining child processes
     childProcesses.forEach(child => {
       if (!child.killed) {
@@ -480,6 +492,9 @@ describe('CTRL+C with Different stdin Modes', () => {
       }
     });
     childProcesses = [];
+    
+    // Run test cleanup
+    await afterTestCleanup();
   });
 
   it('should handle kill regardless of stdin mode', async () => {

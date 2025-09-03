@@ -7,6 +7,8 @@
 
 import cp from 'child_process';
 import path from 'path';
+import fs from 'fs';
+import { parseShellCommand, needsRealShell } from './shell-parser.mjs';
 
 const isBun = typeof globalThis.Bun !== 'undefined';
 
@@ -19,6 +21,73 @@ function trace(category, messageOrFunc) {
   const message = typeof messageOrFunc === 'function' ? messageOrFunc() : messageOrFunc;
   const timestamp = new Date().toISOString();
   console.error(`[TRACE ${timestamp}] [${category}] ${message}`);
+}
+
+// Shell detection cache
+let cachedShell = null;
+
+// Save initial working directory for restoration
+const initialWorkingDirectory = process.cwd();
+
+/**
+ * Find an available shell by checking multiple options in order
+ * Returns the shell command and arguments to use
+ */
+function findAvailableShell() {
+  if (cachedShell) {
+    trace('ShellDetection', () => `Using cached shell: ${cachedShell.cmd}`);
+    return cachedShell;
+  }
+
+  const shellsToTry = [
+    // Try absolute paths first (most reliable)
+    { cmd: '/bin/sh', args: ['-l', '-c'], checkPath: true },
+    { cmd: '/usr/bin/sh', args: ['-l', '-c'], checkPath: true },
+    { cmd: '/bin/bash', args: ['-l', '-c'], checkPath: true },
+    { cmd: '/usr/bin/bash', args: ['-l', '-c'], checkPath: true },
+    { cmd: '/bin/zsh', args: ['-l', '-c'], checkPath: true },
+    { cmd: '/usr/bin/zsh', args: ['-l', '-c'], checkPath: true },
+    // macOS specific paths
+    { cmd: '/usr/local/bin/bash', args: ['-l', '-c'], checkPath: true },
+    { cmd: '/usr/local/bin/zsh', args: ['-l', '-c'], checkPath: true },
+    // Linux brew paths
+    { cmd: '/home/linuxbrew/.linuxbrew/bin/bash', args: ['-l', '-c'], checkPath: true },
+    { cmd: '/home/linuxbrew/.linuxbrew/bin/zsh', args: ['-l', '-c'], checkPath: true },
+    // Try shells in PATH as fallback (which might not work in all environments)
+    // Using separate -l and -c flags for better compatibility
+    { cmd: 'sh', args: ['-l', '-c'], checkPath: false },
+    { cmd: 'bash', args: ['-l', '-c'], checkPath: false },
+    { cmd: 'zsh', args: ['-l', '-c'], checkPath: false }
+  ];
+
+  for (const shell of shellsToTry) {
+    try {
+      if (shell.checkPath) {
+        // Check if the absolute path exists
+        if (fs.existsSync(shell.cmd)) {
+          trace('ShellDetection', () => `Found shell at absolute path: ${shell.cmd}`);
+          cachedShell = { cmd: shell.cmd, args: shell.args };
+          return cachedShell;
+        }
+      } else {
+        // Try to execute 'which' to check if command is in PATH
+        const result = cp.spawnSync('which', [shell.cmd], { encoding: 'utf-8' });
+        if (result.status === 0 && result.stdout) {
+          const shellPath = result.stdout.trim();
+          trace('ShellDetection', () => `Found shell in PATH: ${shell.cmd} => ${shellPath}`);
+          cachedShell = { cmd: shell.cmd, args: shell.args };
+          return cachedShell;
+        }
+      }
+    } catch (e) {
+      // Continue to next shell option
+    }
+  }
+
+  // Final fallback - use absolute path to sh
+  trace('ShellDetection', () => 'WARNING: No shell found, using /bin/sh as fallback');
+  cachedShell = { cmd: '/bin/sh', args: ['-l', '-c'] };
+  return cachedShell;
 }
 
 
@@ -211,11 +280,125 @@ function forceCleanupAll() {
   // Clear activeProcessRunners
   activeProcessRunners.clear();
   
-  // Reset flags
+  // Reset signal handler flags
   sigintHandlerInstalled = false;
   sigintHandler = null;
   
   trace('SignalHandler', () => `Force cleanup completed - removed ${commandStreamListeners.length} handlers`);
+}
+
+// Complete global state reset for testing - clears all library state
+function resetGlobalState() {
+  // CRITICAL: Restore working directory first before anything else
+  // This MUST succeed or tests will fail with spawn errors
+  try {
+    // Try to get current directory - this might fail if we're in a deleted directory
+    let currentDir;
+    try {
+      currentDir = process.cwd();
+    } catch (e) {
+      // Can't even get cwd, we're in a deleted directory
+      currentDir = null;
+    }
+    
+    // Always try to restore to initial directory
+    if (!currentDir || currentDir !== initialWorkingDirectory) {
+      // Check if initial directory still exists
+      if (fs.existsSync(initialWorkingDirectory)) {
+        process.chdir(initialWorkingDirectory);
+        trace('GlobalState', () => `Restored working directory from ${currentDir} to ${initialWorkingDirectory}`);
+      } else {
+        // Initial directory is gone, use fallback
+        const fallback = process.env.HOME || '/workspace/command-stream' || '/';
+        if (fs.existsSync(fallback)) {
+          process.chdir(fallback);
+          trace('GlobalState', () => `Initial directory gone, changed to fallback: ${fallback}`);
+        } else {
+          // Last resort - try root
+          process.chdir('/');
+          trace('GlobalState', () => `Emergency fallback to root directory`);
+        }
+      }
+    }
+  } catch (e) {
+    trace('GlobalState', () => `Critical error restoring working directory: ${e.message}`);
+    // This is critical - we MUST have a valid working directory
+    try {
+      // Try home directory
+      if (process.env.HOME && fs.existsSync(process.env.HOME)) {
+        process.chdir(process.env.HOME);
+      } else {
+        // Last resort - root
+        process.chdir('/');
+      }
+    } catch (e2) {
+      console.error('FATAL: Cannot set any working directory!', e2);
+    }
+  }
+  
+  // First, properly clean up all active ProcessRunners
+  for (const runner of activeProcessRunners) {
+    if (runner) {
+      try {
+        // If the runner was never started, clean it up
+        if (!runner.started) {
+          trace('resetGlobalState', () => `Cleaning up unstarted ProcessRunner: ${runner.spec?.command?.slice(0, 50)}`);
+          // Call the cleanup method to properly release resources
+          if (runner._cleanup) {
+            runner._cleanup();
+          }
+        } else if (runner.kill) {
+          // For started runners, kill them
+          runner.kill();
+        }
+      } catch (e) {
+        // Ignore errors
+        trace('resetGlobalState', () => `Error during cleanup: ${e.message}`);
+      }
+    }
+  }
+  
+  // Call existing cleanup
+  forceCleanupAll();
+  
+  // Clear shell cache to force re-detection with our fixed logic
+  cachedShell = null;
+  
+  // Reset parent stream monitoring
+  parentStreamsMonitored = false;
+  
+  // Reset shell settings to defaults
+  globalShellSettings = {
+    xtrace: false,
+    errexit: false,
+    pipefail: false,
+    verbose: false,
+    noglob: false,
+    allexport: false
+  };
+  
+  // Don't clear virtual commands - they should persist across tests
+  // Just make sure they're enabled
+  virtualCommandsEnabled = true;
+  
+  // Reset ANSI config to defaults
+  globalAnsiConfig = {
+    forceColor: false,
+    noColor: false
+  };
+  
+  // Make sure built-in virtual commands are registered
+  if (virtualCommands.size === 0) {
+    // Re-import to re-register commands (synchronously if possible)
+    trace('GlobalState', () => 'Re-registering virtual commands');
+    import('./commands/index.mjs').then(() => {
+      trace('GlobalState', () => `Virtual commands re-registered, count: ${virtualCommands.size}`);
+    }).catch((e) => {
+      trace('GlobalState', () => `Error re-registering virtual commands: ${e.message}`);
+    });
+  }
+  
+  trace('GlobalState', () => 'Global state reset completed');
 }
 
 function monitorParentStreams() {
@@ -620,6 +803,7 @@ class ProcessRunner extends StreamEmitter {
       cwd: undefined,
       env: undefined,
       interactive: false, // Explicitly request TTY forwarding for interactive commands
+      shellOperators: true, // Enable shell operator parsing by default
       ...options
     };
 
@@ -1401,6 +1585,49 @@ class ProcessRunner extends StreamEmitter {
     if (this.spec.mode === 'shell') {
       trace('ProcessRunner', () => `BRANCH: spec.mode => shell | ${JSON.stringify({}, null, 2)}`);
 
+      // Check if shell operator parsing is enabled and command contains operators
+      const hasShellOperators = this.spec.command.includes('&&') || 
+                                this.spec.command.includes('||') || 
+                                this.spec.command.includes('(') ||
+                                this.spec.command.includes(';') ||
+                                (this.spec.command.includes('cd ') && this.spec.command.includes('&&'));
+      
+      // Intelligent detection: disable shell operators for streaming patterns
+      const isStreamingPattern = this.spec.command.includes('sleep') && this.spec.command.includes(';') && 
+                                 (this.spec.command.includes('echo') || this.spec.command.includes('printf'));
+      
+      // Also check if we're in streaming mode (via .stream() method)
+      const shouldUseShellOperators = this.options.shellOperators && hasShellOperators && !isStreamingPattern && !this._isStreaming;
+      
+      trace('ProcessRunner', () => `Shell operator detection | ${JSON.stringify({
+        hasShellOperators,
+        shellOperatorsEnabled: this.options.shellOperators,
+        isStreamingPattern,
+        isStreaming: this._isStreaming,
+        shouldUseShellOperators,
+        command: this.spec.command.slice(0, 100)
+      }, null, 2)}`);
+      
+      // Only use enhanced parser when appropriate
+      if (!this.options._bypassVirtual && shouldUseShellOperators && !needsRealShell(this.spec.command)) {
+        const enhancedParsed = parseShellCommand(this.spec.command);
+        if (enhancedParsed && enhancedParsed.type !== 'simple') {
+          trace('ProcessRunner', () => `Using enhanced parser for shell operators | ${JSON.stringify({
+            type: enhancedParsed.type,
+            command: this.spec.command.slice(0, 50)
+          }, null, 2)}`);
+          
+          if (enhancedParsed.type === 'sequence') {
+            return await this._runSequence(enhancedParsed);
+          } else if (enhancedParsed.type === 'subshell') {
+            return await this._runSubshell(enhancedParsed);
+          } else if (enhancedParsed.type === 'pipeline') {
+            return await this._runPipeline(enhancedParsed.commands);
+          }
+        }
+      }
+
+      // Fallback to original simple parser
       const parsed = this._parseCommand(this.spec.command);
       trace('ProcessRunner', () => `Parsed command | ${JSON.stringify({
         type: parsed?.type,
@@ -1448,7 +1675,8 @@ class ProcessRunner extends StreamEmitter {
       }
     }
 
-    const argv = this.spec.mode === 'shell' ? ['sh', '-lc', this.spec.command] : [this.spec.file, ...this.spec.args];
+    const shell = findAvailableShell();
+    const argv = this.spec.mode === 'shell' ? [shell.cmd, ...shell.args, this.spec.command] : [this.spec.file, ...this.spec.args];
     trace('ProcessRunner', () => `Constructed argv | ${JSON.stringify({
       mode: this.spec.mode,
       argv: argv,
@@ -1506,6 +1734,14 @@ class ProcessRunner extends StreamEmitter {
       // For non-interactive commands, spawn with detached to create process group (for proper signal handling)
       // This allows us to send signals to the entire process group, killing shell and all its children
       trace('ProcessRunner', () => `spawnBun: Using non-interactive mode with pipes and detached=${process.platform !== 'win32'}`);
+      trace('ProcessRunner', () => `spawnBun: About to spawn | ${JSON.stringify({
+        argv,
+        cwd,
+        shellCmd: argv[0],
+        shellArgs: argv.slice(1, -1),
+        command: argv[argv.length - 1]?.slice(0, 50)
+      }, null, 2)}`);
+      
       const child = Bun.spawn(argv, { 
         cwd, 
         env, 
@@ -2342,8 +2578,9 @@ class ProcessRunner extends StreamEmitter {
         commandStr.includes('&&') || commandStr.includes('||') ||
         commandStr.includes(';') || commandStr.includes('`');
 
+      const shell = findAvailableShell();
       const spawnArgs = needsShell
-        ? ['sh', '-c', commandStr]
+        ? [shell.cmd, ...shell.args.filter(arg => arg !== '-l'), commandStr]
         : [cmd, ...args.map(a => a.value !== undefined ? a.value : a)];
 
       const proc = Bun.spawn(spawnArgs, {
@@ -2505,8 +2742,9 @@ class ProcessRunner extends StreamEmitter {
         commandStr.includes('&&') || commandStr.includes('||') ||
         commandStr.includes(';') || commandStr.includes('`');
 
+      const shell = findAvailableShell();
       const spawnArgs = needsShell
-        ? ['sh', '-c', commandStr]
+        ? [shell.cmd, ...shell.args.filter(arg => arg !== '-l'), commandStr]
         : [cmd, ...args.map(a => a.value !== undefined ? a.value : a)];
 
       const proc = Bun.spawn(spawnArgs, {
@@ -2743,7 +2981,8 @@ class ProcessRunner extends StreamEmitter {
         }
         const commandStr = commandParts.join(' ');
 
-        const proc = Bun.spawn(['sh', '-c', commandStr], {
+        const shell = findAvailableShell();
+        const proc = Bun.spawn([shell.cmd, ...shell.args.filter(arg => arg !== '-l'), commandStr], {
           cwd: this.options.cwd,
           env: this.options.env,
           stdin: currentInputStream ? 'pipe' : 'ignore',
@@ -3131,7 +3370,8 @@ class ProcessRunner extends StreamEmitter {
           };
 
           // Execute using shell to handle complex commands
-          const argv = ['sh', '-c', commandStr];
+          const shell = findAvailableShell();
+          const argv = [shell.cmd, ...shell.args.filter(arg => arg !== '-l'), commandStr];
           const isLastCommand = (i === commands.length - 1);
           const proc = await spawnNodeAsync(argv, currentInput, isLastCommand);
 
@@ -3306,14 +3546,180 @@ class ProcessRunner extends StreamEmitter {
     }
   }
 
+  async _runSequence(sequence) {
+    trace('ProcessRunner', () => `_runSequence ENTER | ${JSON.stringify({
+      commandCount: sequence.commands.length,
+      operators: sequence.operators
+    }, null, 2)}`);
+
+    let lastResult = { code: 0, stdout: '', stderr: '' };
+    let combinedStdout = '';
+    let combinedStderr = '';
+    
+    for (let i = 0; i < sequence.commands.length; i++) {
+      const command = sequence.commands[i];
+      const operator = i > 0 ? sequence.operators[i - 1] : null;
+      
+      trace('ProcessRunner', () => `Executing command ${i} | ${JSON.stringify({
+        command: command.type,
+        operator,
+        lastCode: lastResult.code
+      }, null, 2)}`);
+      
+      // Check operator conditions
+      if (operator === '&&' && lastResult.code !== 0) {
+        trace('ProcessRunner', () => `Skipping due to && with exit code ${lastResult.code}`);
+        continue;
+      }
+      if (operator === '||' && lastResult.code === 0) {
+        trace('ProcessRunner', () => `Skipping due to || with exit code ${lastResult.code}`);
+        continue;
+      }
+      
+      // Execute command based on type
+      if (command.type === 'subshell') {
+        lastResult = await this._runSubshell(command);
+      } else if (command.type === 'pipeline') {
+        lastResult = await this._runPipeline(command.commands);
+      } else if (command.type === 'sequence') {
+        lastResult = await this._runSequence(command);
+      } else if (command.type === 'simple') {
+        lastResult = await this._runSimpleCommand(command);
+      }
+      
+      // Accumulate output
+      combinedStdout += lastResult.stdout;
+      combinedStderr += lastResult.stderr;
+    }
+    
+    return {
+      code: lastResult.code,
+      stdout: combinedStdout,
+      stderr: combinedStderr,
+      async text() {
+        return combinedStdout;
+      }
+    };
+  }
+
+  async _runSubshell(subshell) {
+    trace('ProcessRunner', () => `_runSubshell ENTER | ${JSON.stringify({
+      commandType: subshell.command.type
+    }, null, 2)}`);
+    
+    // Save current directory
+    const savedCwd = process.cwd();
+    
+    try {
+      // Execute subshell command
+      let result;
+      if (subshell.command.type === 'sequence') {
+        result = await this._runSequence(subshell.command);
+      } else if (subshell.command.type === 'pipeline') {
+        result = await this._runPipeline(subshell.command.commands);
+      } else if (subshell.command.type === 'simple') {
+        result = await this._runSimpleCommand(subshell.command);
+      } else {
+        result = { code: 0, stdout: '', stderr: '' };
+      }
+      
+      return result;
+    } finally {
+      // Restore directory - check if it still exists first
+      trace('ProcessRunner', () => `Restoring cwd from ${process.cwd()} to ${savedCwd}`);
+      const fs = await import('fs');
+      if (fs.existsSync(savedCwd)) {
+        process.chdir(savedCwd);
+      } else {
+        // If the saved directory was deleted, try to go to a safe location
+        const fallbackDir = process.env.HOME || process.env.USERPROFILE || '/';
+        trace('ProcessRunner', () => `Saved directory ${savedCwd} no longer exists, falling back to ${fallbackDir}`);
+        try {
+          process.chdir(fallbackDir);
+        } catch (e) {
+          // If even fallback fails, just stay where we are
+          trace('ProcessRunner', () => `Failed to restore directory: ${e.message}`);
+        }
+      }
+    }
+  }
+
+  async _runSimpleCommand(command) {
+    trace('ProcessRunner', () => `_runSimpleCommand ENTER | ${JSON.stringify({
+      cmd: command.cmd,
+      argsCount: command.args?.length || 0,
+      hasRedirects: !!command.redirects
+    }, null, 2)}`);
+    
+    const { cmd, args, redirects } = command;
+    
+    // Check for virtual command
+    if (virtualCommandsEnabled && virtualCommands.has(cmd)) {
+      trace('ProcessRunner', () => `Using virtual command: ${cmd}`);
+      const argValues = args.map(a => a.value || a);
+      const result = await this._runVirtual(cmd, argValues);
+      
+      // Handle output redirection for virtual commands
+      if (redirects && redirects.length > 0) {
+        for (const redirect of redirects) {
+          if (redirect.type === '>' || redirect.type === '>>') {
+            const fs = await import('fs');
+            if (redirect.type === '>') {
+              fs.writeFileSync(redirect.target, result.stdout);
+            } else {
+              fs.appendFileSync(redirect.target, result.stdout);
+            }
+            // Clear stdout since it was redirected
+            result.stdout = '';
+          }
+        }
+      }
+      
+      return result;
+    }
+    
+    // Build command string for real execution
+    let commandStr = cmd;
+    for (const arg of args) {
+      if (arg.quoted && arg.quoteChar) {
+        commandStr += ` ${arg.quoteChar}${arg.value}${arg.quoteChar}`;
+      } else if (arg.value !== undefined) {
+        commandStr += ` ${arg.value}`;
+      } else {
+        commandStr += ` ${arg}`;
+      }
+    }
+    
+    // Add redirections
+    if (redirects) {
+      for (const redirect of redirects) {
+        commandStr += ` ${redirect.type} ${redirect.target}`;
+      }
+    }
+    
+    trace('ProcessRunner', () => `Executing real command: ${commandStr}`);
+    
+    // Create a new ProcessRunner for the real command
+    const runner = new ProcessRunner(
+      { mode: 'shell', command: commandStr },
+      { ...this.options, _bypassVirtual: true }
+    );
+    
+    return await runner;
+  }
+
   async* stream() {
     trace('ProcessRunner', () => `stream ENTER | ${JSON.stringify({
       started: this.started,
-      finished: this.finished
+      finished: this.finished,
+      command: this.spec?.command?.slice(0, 100)
     }, null, 2)}`);
 
+    // Mark that we're in streaming mode to bypass shell operator interception
+    this._isStreaming = true;
+
     if (!this.started) {
-      trace('ProcessRunner', () => 'Auto-starting async process from stream()');
+      trace('ProcessRunner', () => 'Auto-starting async process from stream() with streaming mode');
       this._startAsync(); // Start but don't await
     }
 
@@ -3687,7 +4093,8 @@ class ProcessRunner extends StreamEmitter {
     trace('ProcessRunner', () => `Starting sync execution | ${JSON.stringify({ mode: this._mode }, null, 2)}`);
 
     const { cwd, env, stdin } = this.options;
-    const argv = this.spec.mode === 'shell' ? ['sh', '-lc', this.spec.command] : [this.spec.file, ...this.spec.args];
+    const shell = findAvailableShell();
+    const argv = this.spec.mode === 'shell' ? [shell.cmd, ...shell.args, this.spec.command] : [this.spec.file, ...this.spec.args];
 
     if (globalShellSettings.xtrace) {
       const traceCmd = this.spec.mode === 'shell' ? this.spec.command : argv.join(' ');
@@ -4090,6 +4497,7 @@ export {
   ProcessRunner,
   shell,
   set,
+  resetGlobalState,
   unset,
   register,
   unregister,

@@ -1,6 +1,7 @@
 import { $ } from '../src/$.mjs';
 import { trace } from '../src/$.utils.mjs';
 import { describe, test, expect } from 'bun:test';
+import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
 
 describe('jq streaming tests', () => {
   test('stream of JSON objects through jq -c', async () => {
