@@ -1,5 +1,6 @@
 import { test, expect, describe } from 'bun:test';
 import { $ } from '../src/$.mjs';
+import { trace } from '../src/$.utils.mjs';
 
 describe('Yes Command Cleanup Tests', () => {
   test('should stop yes command when breaking from async iteration', async () => {

@@ -1,5 +1,6 @@
 import { test, expect, describe } from 'bun:test';
 import { $, forceCleanupAll } from '../src/$.mjs';
+import { trace } from '../src/$.utils.mjs';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -174,37 +175,37 @@ describe('Cleanup Verification Tests', () => {
   });
 
   test('should cleanup when using abort controller', async () => {
-    console.log('TEST: Starting abort controller test');
+    trace('Test', 'Starting abort controller test');
     const initialListeners = process.listeners('SIGINT').length;
-    console.log('TEST: Initial SIGINT listeners:', initialListeners);
+    trace('Test', () => `Initial SIGINT listeners: ${initialListeners}`);
     
     const controller = new AbortController();
-    console.log('TEST: Created AbortController, aborted:', controller.signal.aborted);
+    trace('Test', () => `Created AbortController, aborted: ${controller.signal.aborted}`);
     
     // Start a command with abort controller
-    console.log('TEST: Starting sleep command with external signal');
+    trace('Test', 'Starting sleep command with external signal');
     const promise = $`sleep 10`.start({ signal: controller.signal });
-    console.log('TEST: Sleep command started, signal aborted:', controller.signal.aborted);
+    trace('Test', () => `Sleep command started, signal aborted: ${controller.signal.aborted}`);
     
     // Abort immediately
-    console.log('TEST: Aborting controller');
+    trace('Test', 'Aborting controller');
     controller.abort();
-    console.log('TEST: Controller aborted, signal aborted:', controller.signal.aborted);
+    trace('Test', () => `Controller aborted, signal aborted: ${controller.signal.aborted}`);
     
     try {
-      console.log('TEST: Awaiting promise');
+      trace('Test', 'Awaiting promise');
       const result = await promise;
-      console.log('TEST: Promise resolved with result:', result);
+      trace('Test', () => `Promise resolved with result: ${JSON.stringify(result, null, 2)}`);
     } catch (error) {
-      console.log('TEST: Promise rejected with error:', error.message);
+      trace('Test', () => `Promise rejected with error: ${error.message}`);
       // Expected abort error
     }
     
     // Check cleanup
     const afterListeners = process.listeners('SIGINT').length;
-    console.log('TEST: Final SIGINT listeners:', afterListeners);
+    trace('Test', () => `Final SIGINT listeners: ${afterListeners}`);
     expect(afterListeners).toBe(initialListeners);
-    console.log('TEST: Test completed successfully');
+    trace('Test', 'Test completed successfully');
   }, 10000); // Increase timeout to 10000ms (2x)
 
   test('should not leak handlers when rapidly creating commands', async () => {
@@ -260,11 +261,11 @@ describe('Cleanup Verification Tests', () => {
     
     // Log listener info for debugging
     if (listeners.length > 0) {
-      console.log('Remaining SIGINT listeners:', listeners.length);
+      trace('Test', () => `Remaining SIGINT listeners: ${listeners.length}`);
       listeners.forEach((l, i) => {
         const str = l.toString();
         if (str.includes('activeProcessRunners') || str.includes('ProcessRunner') || str.includes('trace')) {
-          console.log(`Listener ${i} appears to be from command-stream:`, str.substring(0, 200));
+          trace('Test', () => `Listener ${i} appears to be from command-stream: ${str.substring(0, 200)}`);
         }
       });
     }

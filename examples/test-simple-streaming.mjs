@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
 import { $ } from '../src/$.mjs';
+import { trace } from '../src/$.utils.mjs';
 
 async function testSimpleStreaming() {
-  console.log('🧪 Testing simple streaming after fix');
+  trace('TestExample', '🧪 Testing simple streaming after fix');
   
   // Test 1: Basic stdin control
   const sortCmd = $`sort`;
@@ -14,7 +15,7 @@ async function testSimpleStreaming() {
   stdin.end();
   
   const result = await sortCmd;
-  console.log('✅ Sort result:', result.stdout);
+  trace('TestExample', () => `✅ Sort result: ${result.stdout}`);
   
   // Test 2: Grep filter
   const grepCmd = $`grep "test"`;
@@ -25,7 +26,7 @@ async function testSimpleStreaming() {
   grepStdin.end();
   
   const grepResult = await grepCmd;
-  console.log('✅ Grep result:', grepResult.stdout);
+  trace('TestExample', () => `✅ Grep result: ${grepResult.stdout}`);
 }
 
 testSimpleStreaming();

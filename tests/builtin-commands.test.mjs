@@ -1,5 +1,6 @@
 import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
 import { $, register, unregister, enableVirtualCommands } from '../src/$.mjs';
+import { trace } from '../src/$.utils.mjs';
 import { rmSync, existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
 import { join } from 'path';
 
@@ -299,15 +300,15 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
       
       // Enable verbose mode to see debug info if this test fails
       if (result.code !== 0) {
-        console.log('DEBUG: which gh failed');
-        console.log('Exit code:', result.code);
-        console.log('Stdout:', JSON.stringify(result.stdout));
-        console.log('Stderr:', JSON.stringify(result.stderr));
-        console.log('PATH:', process.env.PATH);
+        trace('BuiltinTest', 'DEBUG: which gh failed');
+        trace('BuiltinTest', () => `Exit code: ${result.code}`);
+        trace('BuiltinTest', () => `Stdout: ${JSON.stringify(result.stdout)}`);
+        trace('BuiltinTest', () => `Stderr: ${JSON.stringify(result.stderr)}`);
+        trace('BuiltinTest', () => `PATH: ${process.env.PATH}`);
         
         // Try to find gh manually to confirm it exists
         const manualCheck = await $`/usr/bin/which gh`.catch(() => ({ code: 1, stdout: '', stderr: 'manual which failed' }));
-        console.log('Manual /usr/bin/which result:', manualCheck);
+        trace('BuiltinTest', () => `Manual /usr/bin/which result: ${manualCheck}`);
       }
       
       // If gh is installed, it should return 0, otherwise skip this test
@@ -315,7 +316,7 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
       if (result.code === 0) {
         expect(result.stdout).toMatch(/.*gh/);
       } else {
-        console.log('Skipping gh test - command not found or which implementation bug');
+        trace('BuiltinTest', 'Skipping gh test - command not found or which implementation bug');
       }
     });
 

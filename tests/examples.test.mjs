@@ -1,5 +1,6 @@
 import { test, expect, describe } from 'bun:test';
 import { $ } from '../src/$.mjs';
+import { trace } from '../src/$.utils.mjs';
 import { readdirSync, statSync, readFileSync } from 'fs';
 import { join } from 'path';
 
@@ -38,10 +39,10 @@ describe('Examples Execution Tests', () => {
 
   // Summary test to report on examples
   test('should have examples available for manual testing', () => {
-    console.log(`\n📊 Examples Summary:`);
-    console.log(`   Total examples: ${allExamples.length}`);
-    console.log(`   Node-compatible: ${nodeCompatibleExamples.length}`);
-    console.log(`   Bun-specific: ${allExamples.length - nodeCompatibleExamples.length}`);
+    trace('ExampleTest', '📊 Examples Summary:');
+    trace('ExampleTest', () => `Total examples: ${allExamples.length}`);
+    trace('ExampleTest', () => `Node-compatible: ${nodeCompatibleExamples.length}`);
+    trace('ExampleTest', () => `Bun-specific: ${allExamples.length - nodeCompatibleExamples.length}`);
     
     // Show a few example files for manual testing
     const manualTestExamples = [
@@ -51,8 +52,8 @@ describe('Examples Execution Tests', () => {
     ].filter(ex => nodeCompatibleExamples.includes(ex));
     
     if (manualTestExamples.length > 0) {
-      console.log(`\n   Recommended for manual testing:`);
-      manualTestExamples.forEach(ex => console.log(`     node examples/${ex}`));
+      trace('ExampleTest', 'Recommended for manual testing:');
+      manualTestExamples.forEach(ex => trace('ExampleTest', () => `node examples/${ex}`));
     }
     
     expect(allExamples.length).toBeGreaterThan(0);
@@ -106,7 +107,7 @@ describe('Examples Execution Tests', () => {
     // Should be interrupted (non-zero exit code)
     expect(exitCode).not.toBe(0);
     // Different platforms may return different codes, be flexible
-    console.log('Actual exit code:', exitCode);
+    trace('ExampleTest', () => `Actual exit code: ${exitCode}`);
     expect(exitCode).toBeGreaterThan(0);
   }, { timeout: 5000 });
 
@@ -196,13 +197,13 @@ describe('Examples Execution Tests', () => {
     expect(result.code > 0).toBe(true); // Should have error exit code
     
     // Log the actual exit code for debugging
-    console.log('✓ Virtual sleep command properly cancelled with exit code:', result.code);
+    trace('ExampleTest', () => `✓ Virtual sleep command properly cancelled with exit code: ${result.code}`);
     
     // In ideal conditions (isolated test), it should be SIGINT exit code
     if (result.code === 130) {
-      console.log('  Perfect! Got expected SIGINT exit code (130)');
+      trace('ExampleTest', 'Perfect! Got expected SIGINT exit code (130)');
     } else {
-      console.log('  Got alternative exit code (may be due to test interference)');
+      trace('ExampleTest', 'Got alternative exit code (may be due to test interference)');
     }
   }, { timeout: 5000 });
 });

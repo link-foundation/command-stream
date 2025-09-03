@@ -1,4 +1,5 @@
 import { $ } from '../src/$.mjs';
+import { trace } from '../src/$.utils.mjs';
 import { describe, test, expect } from 'bun:test';
 
 describe('jq streaming tests', () => {
@@ -245,7 +246,7 @@ describe('realtime JSON streaming with delays', () => {
       }
     } catch (error) {
       // If streaming fails, just skip the test
-      console.log('Streaming test failed, skipping:', error.message);
+      trace('JqTest', () => `Streaming test failed, skipping: ${error.message}`);
       return;
     }
     

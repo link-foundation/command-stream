@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach } from 'bun:test';
 import { spawn } from 'child_process';
 import { $ } from '../src/$.mjs';
+import { trace } from '../src/$.utils.mjs';
 
 /**
  * Tests for CTRL+C signal handling in our command-stream library
@@ -20,7 +21,7 @@ describe('CTRL+C Library Tests (command-stream)', () => {
   });
 
   it('should handle command cancellation with kill()', async () => {
-    console.error('[LIBRARY] Testing $ command kill() method');
+    trace('LibraryTest', 'Testing $ command kill() method');
     
     const runner = $`sleep 5`;
     
@@ -28,24 +29,24 @@ describe('CTRL+C Library Tests (command-stream)', () => {
     await new Promise(resolve => setTimeout(resolve, 500));
     
     // Kill the command
-    console.error('[LIBRARY] Killing the command');
+    trace('LibraryTest', 'Killing the command');
     runner.kill('SIGINT');
     
     try {
       const result = await runner;
-      console.error('[LIBRARY] Result code:', result.code);
+      trace('LibraryTest', () => `Result code: ${result.code}`);
       
       // If it completed normally (which it should after kill), check exit code
       expect(result.code).toBe(130); // SIGINT exit code
     } catch (error) {
-      console.error('[LIBRARY] Command interrupted with error:', error.message);
+      trace('LibraryTest', () => `Command interrupted with error: ${error.message}`);
       // If it threw an error, check the error details
       expect(error.code || 130).toBe(130);
     }
   }, 10000);
 
   it('should test our library via external script', async () => {
-    console.error('[LIBRARY] Testing library via external script');
+    trace('LibraryTest', 'Testing library via external script');
     
     // Use test-sleep.mjs which imports our library
     const child = spawn('node', ['examples/test-sleep.mjs'], {
@@ -54,7 +55,7 @@ describe('CTRL+C Library Tests (command-stream)', () => {
       cwd: process.cwd()
     });
     
-    console.error('[LIBRARY] Library test child spawned, PID:', child.pid);
+    trace('LibraryTest', () => `Library test child spawned, PID: ${child.pid}`);
     childProcesses.push(child);
     
     let stdout = '';
@@ -64,16 +65,16 @@ describe('CTRL+C Library Tests (command-stream)', () => {
     child.stdout.on('data', (data) => {
       stdout += data.toString();
       dataReceived = true;
-      console.error('[LIBRARY] Received stdout:', JSON.stringify(data.toString()));
+      trace('LibraryTest', () => `Received stdout: ${JSON.stringify(data.toString())}`);
     });
     
     child.stderr.on('data', (data) => {
       stderr += data.toString();
-      console.error('[LIBRARY] Received stderr (first 100):', data.toString().substring(0, 100));
+      trace('LibraryTest', () => `Received stderr (first 100): ${data.toString().substring(0, 100)}`);
     });
     
     child.on('error', (error) => {
-      console.error('[LIBRARY] Child process error:', error.message);
+      trace('LibraryTest', () => `Child process error: ${error.message}`);
     });
     
     // Wait for the process to start - with longer timeout for module loading
@@ -82,17 +83,17 @@ describe('CTRL+C Library Tests (command-stream)', () => {
       await new Promise(resolve => setTimeout(resolve, 100));
       attempts++;
       if (attempts % 10 === 0) {
-        console.error('[LIBRARY] Waiting for data, attempt:', attempts);
+        trace('LibraryTest', () => `Waiting for data, attempt: ${attempts}`);
       }
     }
     
     if (!dataReceived) {
-      console.error('[LIBRARY] No data received after 3 seconds');
-      console.error('[LIBRARY] stderr so far:', stderr.substring(0, 500));
+      trace('LibraryTest', 'No data received after 3 seconds');
+      trace('LibraryTest', () => `stderr so far: ${stderr.substring(0, 500)}`);
     }
     
     // Send SIGINT
-    console.error('[LIBRARY] Sending SIGINT to library test');
+    trace('LibraryTest', 'Sending SIGINT to library test');
     child.kill('SIGINT');
     
     // Wait for exit with timeout
@@ -102,7 +103,7 @@ describe('CTRL+C Library Tests (command-stream)', () => {
       child.on('exit', (code, signal) => {
         if (!resolved) {
           resolved = true;
-          console.error('[LIBRARY] Process exited with code:', code, 'signal:', signal);
+          trace('LibraryTest', () => `Process exited with code: ${code} signal: ${signal}`);
           resolve(code !== null ? code : (signal === 'SIGINT' ? 130 : 1));
         }
       });
@@ -111,16 +112,16 @@ describe('CTRL+C Library Tests (command-stream)', () => {
       setTimeout(() => {
         if (!resolved) {
           resolved = true;
-          console.error('[LIBRARY] Timeout, force killing');
+          trace('LibraryTest', 'Timeout, force killing');
           child.kill('SIGKILL');
           resolve(137);
         }
       }, 3000);
     });
     
-    console.error('[LIBRARY] Final stdout:', stdout);
-    console.error('[LIBRARY] Final stderr (first 300):', stderr.substring(0, 300));
-    console.error('[LIBRARY] Exit code:', exitCode);
+    trace('LibraryTest', () => `Final stdout: ${stdout}`);
+    trace('LibraryTest', () => `Final stderr (first 300): ${stderr.substring(0, 300)}`);
+    trace('LibraryTest', () => `Exit code: ${exitCode}`);
     
     // The test should output STARTING_SLEEP
     if (stdout.length > 0) {
@@ -128,7 +129,7 @@ describe('CTRL+C Library Tests (command-stream)', () => {
     } else {
       // If no stdout, check if there was an import error
       if (stderr.includes('Failed to import module')) {
-        console.error('[LIBRARY] Module import failed - this is a known CI issue');
+        trace('LibraryTest', 'Module import failed - this is a known CI issue');
         // Mark as passed but note the issue
         expect(true).toBe(true);
       } else {
@@ -142,7 +143,7 @@ describe('CTRL+C Library Tests (command-stream)', () => {
   }, 15000);
 
   it('should handle virtual command cancellation', async () => {
-    console.error('[LIBRARY] Testing virtual command cancellation');
+    trace('LibraryTest', 'Testing virtual command cancellation');
     
     const controller = new AbortController();
     
@@ -150,19 +151,19 @@ describe('CTRL+C Library Tests (command-stream)', () => {
     
     // Cancel after 500ms
     setTimeout(() => {
-      console.error('[LIBRARY] Aborting controller');
+      trace('LibraryTest', 'Aborting controller');
       controller.abort();
     }, 500);
     
     try {
       const result = await promise;
-      console.error('[LIBRARY] Virtual command result (normal completion):', result.code);
+      trace('LibraryTest', () => `Virtual command result (normal completion): ${result.code}`);
       
       // Virtual sleep command should complete normally when aborted (code 0)
       // because virtual commands don't actually spawn processes
       expect([0, 143].includes(result.code)).toBe(true);
     } catch (error) {
-      console.error('[LIBRARY] Virtual command error:', error.message);
+      trace('LibraryTest', () => `Virtual command error: ${error.message}`);
       // If it throws (old behavior), accept that too
       expect([0, 143].includes(error.code || 0)).toBe(true);
     }
