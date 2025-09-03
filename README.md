@@ -57,7 +57,7 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 | **Signal Handling** | ✅ **Advanced SIGINT/SIGTERM forwarding** with cleanup | 🟡 Basic | ✅ **Excellent** cross-platform | 🟡 Basic | 🟡 Basic | 🟡 Basic |
 | **Process Management** | ✅ **Robust child process lifecycle** with proper termination | ✅ Good | ✅ **Excellent** spawn wrapper | ❌ Basic | 🟡 Limited | 🟡 Limited |
 | **Debug Tracing** | ✅ **Comprehensive VERBOSE logging** for CI/debugging | 🟡 Limited | ❌ No | ❌ No | 🟡 Basic | ❌ No |
-| **Test Coverage** | ✅ **509+ tests, 1133+ assertions** | ✅ Excellent | ✅ Good | 🟡 Good coverage | ✅ Good | 🟡 Good |
+| **Test Coverage** | ✅ **518+ tests, 1165+ assertions** | ✅ Excellent | ✅ Good | 🟡 Good coverage | ✅ Good | 🟡 Good |
 | **CI Reliability** | ✅ **Platform-specific handling** (macOS/Ubuntu) | ✅ Good | ✅ **Excellent** | 🟡 Basic | ✅ Good | 🟡 Basic |
 | **Documentation** | ✅ **Comprehensive examples + guides** | ✅ Excellent | 🟡 Basic | ✅ Good | ✅ Good | 🟡 Limited |
 | **TypeScript** | 🔄 Coming soon | ✅ Full support | ✅ Built-in | ✅ Built-in | 🟡 Community types | ✅ Full support |
@@ -81,7 +81,7 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 - **🐚 Shell Replacement**: Dynamic error handling with `set -e`/`set +e` equivalents for .sh file replacement
 - **⚡ Bun Optimized**: Designed for Bun with Node.js fallback compatibility  
 - **💾 Memory Efficient**: Streaming prevents large buffer accumulation
-- **🛡️ Production Ready**: **509+ tests, 1133+ assertions** with comprehensive coverage including CI reliability
+- **🛡️ Production Ready**: **518+ tests, 1165+ assertions** with comprehensive coverage including CI reliability
 - **🎯 Advanced Signal Handling**: Robust SIGINT/SIGTERM forwarding with proper child process cleanup
 - **🔍 Debug-Friendly**: Comprehensive VERBOSE tracing for CI debugging and troubleshooting
 
@@ -1183,7 +1183,7 @@ $`npm install`
 ## Testing
 
 ```bash
-# Run comprehensive test suite (509+ tests)
+# Run comprehensive test suite (518+ tests)
 bun test
 
 # Run tests with coverage report
@@ -1234,7 +1234,7 @@ bun test  # Run the full test suite
 
 ### 🧪 **Running Tests**
 ```bash
-bun test                    # All 509+ tests
+bun test                    # All 518+ tests
 bun test tests/pipe.test.mjs # Specific test file
 npm run test:builtin        # Built-in commands only
 ```
