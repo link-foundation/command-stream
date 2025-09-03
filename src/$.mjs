@@ -513,6 +513,14 @@ class StreamEmitter {
     return this;
   }
 
+  once(event, listener) {
+    const onceWrapper = (...args) => {
+      this.off(event, onceWrapper);
+      listener(...args);
+    };
+    return this.on(event, onceWrapper);
+  }
+
   emit(event, ...args) {
     const eventListeners = this.listeners.get(event);
     trace('StreamEmitter', () => `Emitting event | ${JSON.stringify({ 
@@ -521,7 +529,9 @@ class StreamEmitter {
       listenerCount: eventListeners?.length || 0 
     })}`);
     if (eventListeners) {
-      for (const listener of eventListeners) {
+      // Create a copy to avoid issues if listeners modify the array
+      const listenersToCall = [...eventListeners];
+      for (const listener of listenersToCall) {
         listener(...args);
       }
     }
@@ -627,10 +637,6 @@ class ProcessRunner extends StreamEmitter {
     this._cancellationSignal = null; // Track which signal caused cancellation
     this._virtualGenerator = null;
     this._abortController = new AbortController();
-    
-    // Promise that resolves when child process is ready
-    this._childReadyPromise = null;
-    this._childReadyResolve = null;
 
     activeProcessRunners.add(this);
     
@@ -671,53 +677,200 @@ class ProcessRunner extends StreamEmitter {
     const self = this;
     return {
       get stdin() {
+        trace('ProcessRunner.streams', () => `stdin access | ${JSON.stringify({
+          hasChild: !!self.child,
+          hasStdin: !!(self.child && self.child.stdin),
+          started: self.started,
+          finished: self.finished,
+          hasPromise: !!self.promise,
+          command: self.spec?.command?.slice(0, 50)
+        }, null, 2)}`);
+        
         self._autoStartIfNeeded('streams.stdin access');
+        
+        // Streams are available immediately after spawn, or null if not piped
+        // Return the stream directly if available, otherwise ensure process starts
         if (self.child && self.child.stdin) {
+          trace('ProcessRunner.streams', () => 'stdin: returning existing stream');
           return self.child.stdin;
         }
-        // Return promise that resolves when child process is available
         if (self.finished) {
-          return Promise.resolve(null);
-        }
-        // Wait for child to be ready using event-driven approach
-        return self._waitForChild().then(() => {
-          if (self.child && self.child.stdin) {
-            return self.child.stdin;
-          }
+          trace('ProcessRunner.streams', () => 'stdin: process finished, returning null');
           return null;
-        });
+        }
+        
+        // For virtual commands, there's no child process
+        if (self._virtualGenerator || (self.spec && self.spec.command && virtualCommands.has(self.spec.command.split(' ')[0]))) {
+          trace('ProcessRunner.streams', () => 'stdin: virtual command, returning null');
+          return null;
+        }
+        
+        // If not started, start it and wait for child to be created (not for completion!)
+        if (!self.started) {
+          trace('ProcessRunner.streams', () => 'stdin: not started, starting and waiting for child');
+          // Start the process
+          self._startAsync();
+          // Wait for child to be created using async iteration
+          return new Promise((resolve) => {
+            const checkForChild = () => {
+              if (self.child && self.child.stdin) {
+                resolve(self.child.stdin);
+              } else if (self.finished || self._virtualGenerator) {
+                resolve(null);
+              } else {
+                // Use setImmediate to check again in next event loop iteration
+                setImmediate(checkForChild);
+              }
+            };
+            setImmediate(checkForChild);
+          });
+        }
+        
+        // Process is starting - wait for child to appear
+        if (self.promise && !self.child) {
+          trace('ProcessRunner.streams', () => 'stdin: process starting, waiting for child');
+          return new Promise((resolve) => {
+            const checkForChild = () => {
+              if (self.child && self.child.stdin) {
+                resolve(self.child.stdin);
+              } else if (self.finished || self._virtualGenerator) {
+                resolve(null);
+              } else {
+                setImmediate(checkForChild);
+              }
+            };
+            setImmediate(checkForChild);
+          });
+        }
+        
+        trace('ProcessRunner.streams', () => 'stdin: returning null (no conditions met)');
+        return null;
       },
       get stdout() {
+        trace('ProcessRunner.streams', () => `stdout access | ${JSON.stringify({
+          hasChild: !!self.child,
+          hasStdout: !!(self.child && self.child.stdout),
+          started: self.started,
+          finished: self.finished,
+          hasPromise: !!self.promise,
+          command: self.spec?.command?.slice(0, 50)
+        }, null, 2)}`);
+        
         self._autoStartIfNeeded('streams.stdout access');
+        
         if (self.child && self.child.stdout) {
+          trace('ProcessRunner.streams', () => 'stdout: returning existing stream');
           return self.child.stdout;
         }
         if (self.finished) {
-          return Promise.resolve(null);
-        }
-        // Wait for child to be ready using event-driven approach
-        return self._waitForChild().then(() => {
-          if (self.child && self.child.stdout) {
-            return self.child.stdout;
-          }
+          trace('ProcessRunner.streams', () => 'stdout: process finished, returning null');
           return null;
-        });
+        }
+        
+        // For virtual commands, there's no child process
+        if (self._virtualGenerator || (self.spec && self.spec.command && virtualCommands.has(self.spec.command.split(' ')[0]))) {
+          trace('ProcessRunner.streams', () => 'stdout: virtual command, returning null');
+          return null;
+        }
+        
+        if (!self.started) {
+          trace('ProcessRunner.streams', () => 'stdout: not started, starting and waiting for child');
+          self._startAsync();
+          return new Promise((resolve) => {
+            const checkForChild = () => {
+              if (self.child && self.child.stdout) {
+                resolve(self.child.stdout);
+              } else if (self.finished || self._virtualGenerator) {
+                resolve(null);
+              } else {
+                setImmediate(checkForChild);
+              }
+            };
+            setImmediate(checkForChild);
+          });
+        }
+        
+        if (self.promise && !self.child) {
+          trace('ProcessRunner.streams', () => 'stdout: process starting, waiting for child');
+          return new Promise((resolve) => {
+            const checkForChild = () => {
+              if (self.child && self.child.stdout) {
+                resolve(self.child.stdout);
+              } else if (self.finished || self._virtualGenerator) {
+                resolve(null);
+              } else {
+                setImmediate(checkForChild);
+              }
+            };
+            setImmediate(checkForChild);
+          });
+        }
+        
+        trace('ProcessRunner.streams', () => 'stdout: returning null (no conditions met)');
+        return null;
       },
       get stderr() {
+        trace('ProcessRunner.streams', () => `stderr access | ${JSON.stringify({
+          hasChild: !!self.child,
+          hasStderr: !!(self.child && self.child.stderr),
+          started: self.started,
+          finished: self.finished,
+          hasPromise: !!self.promise,
+          command: self.spec?.command?.slice(0, 50)
+        }, null, 2)}`);
+        
         self._autoStartIfNeeded('streams.stderr access');
+        
         if (self.child && self.child.stderr) {
+          trace('ProcessRunner.streams', () => 'stderr: returning existing stream');
           return self.child.stderr;
         }
         if (self.finished) {
-          return Promise.resolve(null);
-        }
-        // Wait for child to be ready using event-driven approach
-        return self._waitForChild().then(() => {
-          if (self.child && self.child.stderr) {
-            return self.child.stderr;
-          }
+          trace('ProcessRunner.streams', () => 'stderr: process finished, returning null');
           return null;
-        });
+        }
+        
+        // For virtual commands, there's no child process
+        if (self._virtualGenerator || (self.spec && self.spec.command && virtualCommands.has(self.spec.command.split(' ')[0]))) {
+          trace('ProcessRunner.streams', () => 'stderr: virtual command, returning null');
+          return null;
+        }
+        
+        if (!self.started) {
+          trace('ProcessRunner.streams', () => 'stderr: not started, starting and waiting for child');
+          self._startAsync();
+          return new Promise((resolve) => {
+            const checkForChild = () => {
+              if (self.child && self.child.stderr) {
+                resolve(self.child.stderr);
+              } else if (self.finished || self._virtualGenerator) {
+                resolve(null);
+              } else {
+                setImmediate(checkForChild);
+              }
+            };
+            setImmediate(checkForChild);
+          });
+        }
+        
+        if (self.promise && !self.child) {
+          trace('ProcessRunner.streams', () => 'stderr: process starting, waiting for child');
+          return new Promise((resolve) => {
+            const checkForChild = () => {
+              if (self.child && self.child.stderr) {
+                resolve(self.child.stderr);
+              } else if (self.finished || self._virtualGenerator) {
+                resolve(null);
+              } else {
+                setImmediate(checkForChild);
+              }
+            };
+            setImmediate(checkForChild);
+          });
+        }
+        
+        trace('ProcessRunner.streams', () => 'stderr: returning null (no conditions met)');
+        return null;
       }
     };
   }
@@ -782,30 +935,6 @@ class ProcessRunner extends StreamEmitter {
     };
   }
 
-  // Helper method to wait for child process to be ready
-  _waitForChild() {
-    if (this.child) {
-      return Promise.resolve();
-    }
-    if (this.finished) {
-      return Promise.resolve();
-    }
-    if (!this._childReadyPromise) {
-      this._childReadyPromise = new Promise((resolve) => {
-        this._childReadyResolve = resolve;
-      });
-    }
-    return this._childReadyPromise;
-  }
-  
-  // Signal that child process is ready
-  _signalChildReady() {
-    if (this._childReadyResolve) {
-      this._childReadyResolve();
-      this._childReadyResolve = null;
-      this._childReadyPromise = null;
-    }
-  }
 
   // Centralized method to properly finish a process with correct event emission order
   finish(result) {
@@ -1092,7 +1221,14 @@ class ProcessRunner extends StreamEmitter {
   start(options = {}) {
     const mode = options.mode || 'async';
 
-    trace('ProcessRunner', () => `start ENTER | ${JSON.stringify({ mode, options, started: this.started }, null, 2)}`);
+    trace('ProcessRunner', () => `start ENTER | ${JSON.stringify({ 
+      mode, 
+      options, 
+      started: this.started,
+      hasPromise: !!this.promise,
+      hasChild: !!this.child,
+      command: this.spec?.command?.slice(0, 50)
+    }, null, 2)}`);
 
     // Merge new options with existing options before starting
     if (Object.keys(options).length > 0 && !this.started) {
@@ -1419,9 +1555,6 @@ class ProcessRunner extends StreamEmitter {
       args: argv.slice(1)
     }, null, 2)}`);
     this.child = preferNodeForInput ? await spawnNode(argv) : (isBun ? spawnBun(argv) : await spawnNode(argv));
-    
-    // Signal that child is ready for stream access
-    this._signalChildReady();
     
     // Add detailed logging for CI debugging
     if (this.child) {
