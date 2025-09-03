@@ -76,28 +76,33 @@ test('streaming interfaces - kill method works', async () => {
   expect([130, 143, null]).toContain(result.code); // SIGTERM/SIGINT codes
 }, 5000);
 
-test('streaming interfaces - top with stdin control', async () => {
-  const topCmd = $`top -l 2`; // Limited iterations on macOS
-  const stdin = await topCmd.streams.stdin;
+test('streaming interfaces - stdin control with cross-platform command', async () => {
+  // Use 'cat' which works identically on all platforms and waits for input
+  const catCmd = $`cat`;
+  const stdin = await catCmd.streams.stdin;
   
-  // Try to quit early with 'q'
+  // Send some data and close stdin
   setTimeout(() => {
     if (stdin && !stdin.destroyed) {
-      stdin.write('q');
+      stdin.write('Hello from stdin!\n');
+      stdin.write('Multiple lines work\n');
       setTimeout(() => stdin.end(), 100);
     }
-  }, 500);
+  }, 100);
   
-  // Backup kill
+  // Backup kill (shouldn't be needed since we close stdin)
   setTimeout(() => {
-    if (!topCmd.finished) {
-      topCmd.kill();
+    if (!catCmd.finished) {
+      catCmd.kill();
     }
-  }, 3000);
+  }, 2000);
   
-  const result = await topCmd;
+  const result = await catCmd;
   expect(typeof result.code).toBe('number');
+  expect(result.code).toBe(0); // Should exit cleanly when stdin is closed
   expect(result.stdout.length).toBeGreaterThan(0);
+  expect(result.stdout).toContain('Hello from stdin!');
+  expect(result.stdout).toContain('Multiple lines work');
 }, 5000);
 
 test('streaming interfaces - immediate access after completion', async () => {
