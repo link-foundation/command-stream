@@ -661,6 +661,12 @@ class StreamEmitter {
   }
 
   on(event, listener) {
+    trace('StreamEmitter', () => `on() called | ${JSON.stringify({ 
+      event,
+      hasExistingListeners: this.listeners.has(event),
+      listenerCount: this.listeners.get(event)?.length || 0
+    })}`);
+    
     if (!this.listeners.has(event)) {
       this.listeners.set(event, []);
     }
@@ -672,6 +678,7 @@ class StreamEmitter {
   }
 
   once(event, listener) {
+    trace('StreamEmitter', () => `once() called for event: ${event}`);
     const onceWrapper = (...args) => {
       this.off(event, onceWrapper);
       listener(...args);
@@ -697,11 +704,18 @@ class StreamEmitter {
   }
 
   off(event, listener) {
+    trace('StreamEmitter', () => `off() called | ${JSON.stringify({ 
+      event,
+      hasListeners: !!this.listeners.get(event),
+      listenerCount: this.listeners.get(event)?.length || 0
+    })}`);
+    
     const eventListeners = this.listeners.get(event);
     if (eventListeners) {
       const index = eventListeners.indexOf(listener);
       if (index !== -1) {
         eventListeners.splice(index, 1);
+        trace('StreamEmitter', () => `Removed listener at index ${index}`);
       }
     }
     return this;
@@ -773,16 +787,28 @@ function buildShellCommand(strings, values) {
 }
 
 function asBuffer(chunk) {
-  if (Buffer.isBuffer(chunk)) return chunk;
-  if (typeof chunk === 'string') return Buffer.from(chunk);
+  if (Buffer.isBuffer(chunk)) {
+    trace('Utils', () => `asBuffer: Already a buffer, length: ${chunk.length}`);
+    return chunk;
+  }
+  if (typeof chunk === 'string') {
+    trace('Utils', () => `asBuffer: Converting string to buffer, length: ${chunk.length}`);
+    return Buffer.from(chunk);
+  }
+  trace('Utils', () => 'asBuffer: Converting unknown type to buffer');
   return Buffer.from(chunk);
 }
 
 async function pumpReadable(readable, onChunk) {
-  if (!readable) return;
+  if (!readable) {
+    trace('Utils', () => 'pumpReadable: No readable stream provided');
+    return;
+  }
+  trace('Utils', () => 'pumpReadable: Starting to pump readable stream');
   for await (const chunk of readable) {
     await onChunk(asBuffer(chunk));
   }
+  trace('Utils', () => 'pumpReadable: Finished pumping readable stream');
 }
 
 // Enhanced process runner with streaming capabilities
@@ -844,14 +870,26 @@ class ProcessRunner extends StreamEmitter {
 
   // Stream property getters for child process streams (null for virtual commands)
   get stdout() {
+    trace('ProcessRunner', () => `stdout getter accessed | ${JSON.stringify({
+      hasChild: !!this.child,
+      hasStdout: !!(this.child && this.child.stdout)
+    }, null, 2)}`);
     return this.child ? this.child.stdout : null;
   }
 
   get stderr() {
+    trace('ProcessRunner', () => `stderr getter accessed | ${JSON.stringify({
+      hasChild: !!this.child,
+      hasStderr: !!(this.child && this.child.stderr)
+    }, null, 2)}`);
     return this.child ? this.child.stderr : null;
   }
 
   get stdin() {
+    trace('ProcessRunner', () => `stdin getter accessed | ${JSON.stringify({
+      hasChild: !!this.child,
+      hasStdin: !!(this.child && this.child.stdin)
+    }, null, 2)}`);
     return this.child ? this.child.stdin : null;
   }
 
@@ -1179,7 +1217,13 @@ class ProcessRunner extends StreamEmitter {
   }
 
   async _forwardTTYStdin() {
+    trace('ProcessRunner', () => `_forwardTTYStdin ENTER | ${JSON.stringify({
+      isTTY: process.stdin.isTTY,
+      hasChildStdin: !!this.child?.stdin
+    }, null, 2)}`);
+    
     if (!process.stdin.isTTY || !this.child.stdin) {
+      trace('ProcessRunner', () => 'TTY forwarding skipped - no TTY or no child stdin');
       return;
     }
 
@@ -1232,6 +1276,7 @@ class ProcessRunner extends StreamEmitter {
       };
 
       const cleanup = () => {
+        trace('ProcessRunner', () => 'TTY stdin cleanup - restoring terminal mode');
         process.stdin.removeListener('data', onData);
         if (process.stdin.setRawMode) {
           process.stdin.setRawMode(false);
@@ -2092,7 +2137,16 @@ class ProcessRunner extends StreamEmitter {
   }
 
   async _pumpStdinTo(child, captureChunks) {
-    if (!child.stdin) return;
+    trace('ProcessRunner', () => `_pumpStdinTo ENTER | ${JSON.stringify({
+      hasChildStdin: !!child?.stdin,
+      willCapture: !!captureChunks,
+      isBun
+    }, null, 2)}`);
+    
+    if (!child.stdin) {
+      trace('ProcessRunner', () => 'No child stdin to pump to');
+      return;
+    }
     const bunWriter = isBun && child.stdin && typeof child.stdin.getWriter === 'function' ? child.stdin.getWriter() : null;
     for await (const chunk of process.stdin) {
       const buf = asBuffer(chunk);
@@ -2110,6 +2164,11 @@ class ProcessRunner extends StreamEmitter {
   }
 
   async _writeToStdin(buf) {
+    trace('ProcessRunner', () => `_writeToStdin ENTER | ${JSON.stringify({
+      bufferLength: buf?.length || 0,
+      hasChildStdin: !!this.child?.stdin
+    }, null, 2)}`);
+    
     const bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf.buffer, buf.byteOffset ?? 0, buf.byteLength);
     if (await StreamUtils.writeToStream(this.child.stdin, bytes, 'stdin')) {
       // Successfully wrote to stream
@@ -2124,8 +2183,16 @@ class ProcessRunner extends StreamEmitter {
   }
 
   _parseCommand(command) {
+    trace('ProcessRunner', () => `_parseCommand ENTER | ${JSON.stringify({
+      commandLength: command?.length || 0,
+      preview: command?.slice(0, 50)
+    }, null, 2)}`);
+    
     const trimmed = command.trim();
-    if (!trimmed) return null;
+    if (!trimmed) {
+      trace('ProcessRunner', () => 'Empty command after trimming');
+      return null;
+    }
 
     if (trimmed.includes('|')) {
       return this._parsePipeline(trimmed);
@@ -2149,6 +2216,11 @@ class ProcessRunner extends StreamEmitter {
   }
 
   _parsePipeline(command) {
+    trace('ProcessRunner', () => `_parsePipeline ENTER | ${JSON.stringify({
+      commandLength: command?.length || 0,
+      hasPipe: command?.includes('|')
+    }, null, 2)}`);
+    
     // Split by pipe, respecting quotes
     const segments = [];
     let current = '';
@@ -4044,6 +4116,12 @@ class ProcessRunner extends StreamEmitter {
 
   // Promise interface (for await)
   then(onFulfilled, onRejected) {
+    trace('ProcessRunner', () => `then() called | ${JSON.stringify({
+      hasPromise: !!this.promise,
+      started: this.started,
+      finished: this.finished
+    }, null, 2)}`);
+    
     if (!this.promise) {
       this.promise = this._startAsync();
     }
@@ -4051,6 +4129,12 @@ class ProcessRunner extends StreamEmitter {
   }
 
   catch(onRejected) {
+    trace('ProcessRunner', () => `catch() called | ${JSON.stringify({
+      hasPromise: !!this.promise,
+      started: this.started,
+      finished: this.finished
+    }, null, 2)}`);
+    
     if (!this.promise) {
       this.promise = this._startAsync();
     }
@@ -4058,6 +4142,12 @@ class ProcessRunner extends StreamEmitter {
   }
 
   finally(onFinally) {
+    trace('ProcessRunner', () => `finally() called | ${JSON.stringify({
+      hasPromise: !!this.promise,
+      started: this.started,
+      finished: this.finished
+    }, null, 2)}`);
+    
     if (!this.promise) {
       this.promise = this._startAsync();
     }
@@ -4287,10 +4377,12 @@ function create(defaultOptions = {}) {
 }
 
 function raw(value) {
+  trace('API', () => `raw() called with value: ${String(value).slice(0, 50)}`);
   return { raw: String(value) };
 }
 
 function set(option) {
+  trace('API', () => `set() called with option: ${option}`);
   const mapping = {
     'e': 'errexit',     // set -e: exit on error
     'errexit': 'errexit',
@@ -4314,6 +4406,7 @@ function set(option) {
 }
 
 function unset(option) {
+  trace('API', () => `unset() called with option: ${option}`);
   const mapping = {
     'e': 'errexit',
     'errexit': 'errexit',
@@ -4366,15 +4459,19 @@ function unregister(name) {
 }
 
 function listCommands() {
-  return Array.from(virtualCommands.keys());
+  const commands = Array.from(virtualCommands.keys());
+  trace('VirtualCommands', () => `listCommands() returning ${commands.length} commands`);
+  return commands;
 }
 
 function enableVirtualCommands() {
+  trace('VirtualCommands', () => 'Enabling virtual commands');
   virtualCommandsEnabled = true;
   return virtualCommandsEnabled;
 }
 
 function disableVirtualCommands() {
+  trace('VirtualCommands', () => 'Disabling virtual commands');
   virtualCommandsEnabled = false;
   return virtualCommandsEnabled;
 }
@@ -4404,6 +4501,7 @@ import testCommand from './commands/$.test.mjs';
 
 // Built-in commands that match Bun.$ functionality
 function registerBuiltins() {
+  trace('VirtualCommands', () => 'registerBuiltins() called - registering all built-in commands');
   // Register all imported commands
   register('cd', cdCommand);
   register('pwd', pwdCommand);
@@ -4462,15 +4560,23 @@ let globalAnsiConfig = {
 };
 
 function configureAnsi(options = {}) {
+  trace('AnsiUtils', () => `configureAnsi() called | ${JSON.stringify({ options }, null, 2)}`);
   globalAnsiConfig = { ...globalAnsiConfig, ...options };
+  trace('AnsiUtils', () => `New ANSI config | ${JSON.stringify({ globalAnsiConfig }, null, 2)}`);
   return globalAnsiConfig;
 }
 
 function getAnsiConfig() {
+  trace('AnsiUtils', () => `getAnsiConfig() returning | ${JSON.stringify({ globalAnsiConfig }, null, 2)}`);
   return { ...globalAnsiConfig };
 }
 
 function processOutput(data, options = {}) {
+  trace('AnsiUtils', () => `processOutput() called | ${JSON.stringify({ 
+    dataType: typeof data,
+    dataLength: Buffer.isBuffer(data) ? data.length : data?.length,
+    options 
+  }, null, 2)}`);
   const config = { ...globalAnsiConfig, ...options };
   if (!config.preserveAnsi && !config.preserveControlChars) {
     return AnsiUtils.cleanForProcessing(data);
@@ -4487,7 +4593,9 @@ function processOutput(data, options = {}) {
 }
 
 // Initialize built-in commands
+trace('Initialization', () => 'Registering built-in virtual commands');
 registerBuiltins();
+trace('Initialization', () => `Built-in commands registered: ${listCommands().join(', ')}`);
 
 export {
   $tagged as $,
