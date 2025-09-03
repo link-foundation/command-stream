@@ -865,9 +865,9 @@ Control and extend the command system with custom JavaScript functions:
 import { $, register } from 'command-stream';
 
 // ✅ Cancellation support with AbortController
-register('cancellable', async function* ({ args, stdin, options }) {
+register('cancellable', async function* ({ args, stdin, abortSignal }) {
   for (let i = 0; i < 10; i++) {
-    if (options.signal?.aborted) {
+    if (abortSignal?.aborted) {
       break; // Proper cancellation handling
     }
     yield `Count: ${i}\n`;
@@ -876,15 +876,21 @@ register('cancellable', async function* ({ args, stdin, options }) {
 });
 
 // ✅ Access to all process options
-register('debug-info', async ({ args, stdin, options }) => {
+// All original options (built-in + custom) are available in the 'options' object
+// Common options like cwd, env are also available at top level for convenience
+// Runtime additions: isCancelled function, abortSignal
+register('debug-info', async ({ args, stdin, cwd, env, options, isCancelled }) => {
   return {
     stdout: JSON.stringify({
       args,
-      cwd: options.cwd,
-      env: Object.keys(options.env || {}),
-      stdinLength: stdin.length,
-      mirror: options.mirror,
-      capture: options.capture
+      cwd,  // Available at top level for convenience
+      env: Object.keys(env || {}),  // Available at top level for convenience
+      stdinLength: stdin?.length || 0,
+      allOptions: options,  // All original options (built-in + custom)
+      mirror: options.mirror,  // Built-in option from options object
+      capture: options.capture,  // Built-in option from options object
+      customOption: options.customOption || 'not provided',  // Custom option
+      isCancelledAvailable: typeof isCancelled === 'function'
     }, null, 2),
     code: 0
   };
@@ -905,13 +911,27 @@ register('maybe-fail', async ({ args }) => {
     };
   }
 });
+
+// ✅ Example: User options flow through to virtual commands
+register('show-options', async ({ args, stdin, options, cwd }) => {
+  return {
+    stdout: `Custom: ${options.customValue || 'none'}, CWD: ${cwd || options.cwd || 'default'}\n`,
+    code: 0
+  };
+});
+
+// Usage example showing options passed to virtual command:
+const result = await $({ customValue: 'hello world', cwd: '/tmp' })`show-options`;
+console.log(result.stdout); // Output: Custom: hello world, CWD: /tmp
 ```
 
 #### Handler Function Signature
 
 ```javascript
 // Regular async function
-async function handler({ args, stdin, options }) {
+async function handler({ args, stdin, abortSignal, cwd, env, options, isCancelled }) {
+  // All original options available in 'options': options.mirror, options.capture, options.customValue, etc.
+  // Common options like cwd, env also available at top level for convenience
   return {
     code: 0,           // Exit code (number)
     stdout: "output",  // Standard output (string)
@@ -920,10 +940,13 @@ async function handler({ args, stdin, options }) {
 }
 
 // Async generator for streaming
-async function* streamingHandler({ args, stdin, options }) {
+async function streamingHandler({ args, stdin, abortSignal, cwd, env, options, isCancelled }) {
+  // Access both built-in and custom options from 'options' object
+  if (options.customFlag) {
+    yield "custom behavior\n";
+  }
   yield "chunk1\n";
   yield "chunk2\n";
-  // Each yield sends a chunk in real-time
 }
 ```
 

@@ -1,11 +1,11 @@
 import { trace } from '../$.utils.mjs';
 
-export default async function* yes({ args, stdin, isCancelled, signal, ...rest }) {
+export default async function* yes({ args, stdin, isCancelled, abortSignal, ...rest }) {
   const output = args.length > 0 ? args.join(' ') : 'y';
   trace('VirtualCommand', () => `yes: starting infinite generator | ${JSON.stringify({ 
     output,
     hasIsCancelled: !!isCancelled,
-    hasSignal: !!signal
+    hasAbortSignal: !!abortSignal
   }, null, 2)}`);
 
   let iteration = 0;
@@ -14,12 +14,12 @@ export default async function* yes({ args, stdin, isCancelled, signal, ...rest }
   while (!isCancelled?.() && iteration < MAX_ITERATIONS) {
     trace('VirtualCommand', () => `yes: iteration ${iteration} starting | ${JSON.stringify({
       isCancelled: isCancelled?.(),
-      signalAborted: signal?.aborted
+      abortSignalAborted: abortSignal?.aborted
     }, null, 2)}`);
     
     // Check for abort signal
-    if (signal?.aborted) {
-      trace('VirtualCommand', () => `yes: aborted via signal | ${JSON.stringify({ iteration }, null, 2)}`);
+    if (abortSignal?.aborted) {
+      trace('VirtualCommand', () => `yes: aborted via abort signal | ${JSON.stringify({ iteration }, null, 2)}`);
       break;
     }
 
@@ -43,6 +43,6 @@ export default async function* yes({ args, stdin, isCancelled, signal, ...rest }
   trace('VirtualCommand', () => `yes: generator completed | ${JSON.stringify({ 
     iteration,
     wasCancelled: isCancelled?.(),
-    wasAborted: signal?.aborted
+    wasAborted: abortSignal?.aborted
   }, null, 2)}`);
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from './src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 async function testSimpleStreaming() {
   console.log('🧪 Testing simple streaming after fix');

@@ -1831,22 +1831,28 @@ class ProcessRunner extends StreamEmitter {
         const chunks = [];
 
         const commandOptions = {
-          ...this.options,
-          isCancelled: () => this._cancelled,
-          signal: this._abortController?.signal
+          // Commonly used options at top level for convenience
+          cwd: this.options.cwd,
+          env: this.options.env,
+          // All original options (built-in + custom) in options object
+          options: this.options,
+          isCancelled: () => this._cancelled
         };
         
         trace('ProcessRunner', () => `_runVirtual signal details | ${JSON.stringify({
           cmd,
           hasAbortController: !!this._abortController,
           signalAborted: this._abortController?.signal?.aborted,
-          signalExists: !!commandOptions.signal,
-          commandOptionsSignalAborted: commandOptions.signal?.aborted,
           optionsSignalExists: !!this.options.signal,
           optionsSignalAborted: this.options.signal?.aborted
         }, null, 2)}`);
 
-        const generator = handler({ args: argValues, stdin: stdinData, ...commandOptions });
+        const generator = handler({ 
+          args: argValues, 
+          stdin: stdinData, 
+          abortSignal: this._abortController?.signal,
+          ...commandOptions 
+        });
         this._virtualGenerator = generator;
 
         const cancelPromise = new Promise(resolve => {
@@ -1935,22 +1941,28 @@ class ProcessRunner extends StreamEmitter {
       } else {
         // Regular async function - race with abort signal
         const commandOptions = {
-          ...this.options,
-          isCancelled: () => this._cancelled,
-          signal: this._abortController?.signal
+          // Commonly used options at top level for convenience
+          cwd: this.options.cwd,
+          env: this.options.env,
+          // All original options (built-in + custom) in options object
+          options: this.options,
+          isCancelled: () => this._cancelled
         };
         
         trace('ProcessRunner', () => `_runVirtual signal details (non-generator) | ${JSON.stringify({
           cmd,
           hasAbortController: !!this._abortController,
           signalAborted: this._abortController?.signal?.aborted,
-          signalExists: !!commandOptions.signal,
-          commandOptionsSignalAborted: commandOptions.signal?.aborted,
           optionsSignalExists: !!this.options.signal,
           optionsSignalAborted: this.options.signal?.aborted
         }, null, 2)}`);
         
-        const handlerPromise = handler({ args: argValues, stdin: stdinData, ...commandOptions });
+        const handlerPromise = handler({ 
+          args: argValues, 
+          stdin: stdinData, 
+          abortSignal: this._abortController?.signal,
+          ...commandOptions 
+        });
         
         // Create an abort promise that rejects when cancelled
         const abortPromise = new Promise((_, reject) => {

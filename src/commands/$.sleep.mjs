@@ -1,11 +1,11 @@
 import { trace } from '../$.utils.mjs';
 
-export default async function sleep({ args, signal, isCancelled }) {
+export default async function sleep({ args, abortSignal, isCancelled }) {
   const seconds = parseFloat(args[0] || 0);
   trace('VirtualCommand', () => `sleep: starting | ${JSON.stringify({ 
     seconds,
-    hasSignal: !!signal,
-    signalAborted: signal?.aborted,
+    hasSignal: !!abortSignal,
+    signalAborted: abortSignal?.aborted,
     hasIsCancelled: !!isCancelled
   }, null, 2)}`);
   
@@ -18,30 +18,30 @@ export default async function sleep({ args, signal, isCancelled }) {
     await new Promise((resolve, reject) => {
       const timeoutId = setTimeout(resolve, seconds * 1000);
       
-      // Handle cancellation via signal
-      if (signal) {
+      // Handle cancellation via abort signal
+      if (abortSignal) {
         trace('VirtualCommand', () => `sleep: setting up abort signal listener | ${JSON.stringify({
-          signalAborted: signal.aborted
+          signalAborted: abortSignal.aborted
         }, null, 2)}`);
         
-        signal.addEventListener('abort', () => {
+        abortSignal.addEventListener('abort', () => {
           trace('VirtualCommand', () => `sleep: abort signal received | ${JSON.stringify({
             seconds,
-            signalAborted: signal.aborted
+            signalAborted: abortSignal.aborted
           }, null, 2)}`);
           clearTimeout(timeoutId);
           reject(new Error('Sleep cancelled'));
         });
         
         // Check if already aborted
-        if (signal.aborted) {
+        if (abortSignal.aborted) {
           trace('VirtualCommand', () => `sleep: signal already aborted | ${JSON.stringify({ seconds }, null, 2)}`);
           clearTimeout(timeoutId);
           reject(new Error('Sleep cancelled'));
           return;
         }
       } else {
-        trace('VirtualCommand', () => `sleep: no signal provided | ${JSON.stringify({ seconds }, null, 2)}`);
+        trace('VirtualCommand', () => `sleep: no abort signal provided | ${JSON.stringify({ seconds }, null, 2)}`);
       }
       
       // Also check isCancelled periodically for quicker response
