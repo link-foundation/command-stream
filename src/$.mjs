@@ -1509,6 +1509,10 @@ class ProcessRunner extends StreamEmitter {
         this.child.stdin.end();
         trace('ProcessRunner', () => `stdin: Child stdin closed successfully`);
       }
+    } else if (stdin === 'pipe') {
+      trace('ProcessRunner', () => `stdin: Using pipe mode - leaving stdin open for manual control`);
+      // Leave stdin open for manual writing via streams.stdin
+      stdinPumpPromise = Promise.resolve();
     } else if (typeof stdin === 'string' || Buffer.isBuffer(stdin)) {
       const buf = Buffer.isBuffer(stdin) ? stdin : Buffer.from(stdin);
       trace('ProcessRunner', () => `stdin: Writing buffer to child | ${JSON.stringify({

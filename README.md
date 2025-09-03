@@ -301,6 +301,79 @@ syncCmd.on('end', result => {
 const syncResult = syncCmd.sync();
 ```
 
+### Streaming Interfaces (Issue #33)
+
+**New!** Advanced streaming interfaces for fine-grained process control:
+
+```javascript
+import { $ } from 'command-stream';
+
+// 🎯 STDIN CONTROL: Send data to interactive commands
+const grepCmd = $`grep "important"`;
+const stdin = await grepCmd.streams.stdin;
+
+stdin.write('ignore this line\n');
+stdin.write('important message\n');
+stdin.write('skip this too\n');
+stdin.end();
+
+const result = await grepCmd;
+console.log(result.stdout); // "important message\n"
+
+// 🔧 BINARY DATA: Access raw buffers
+const cmd = $`echo "Hello World"`;
+const buffer = await cmd.buffers.stdout; // Buffer object
+console.log(buffer.length); // 12
+
+// 📝 TEXT DATA: Access as strings  
+const textCmd = $`echo "Hello World"`;
+const text = await textCmd.strings.stdout; // String
+console.log(text.trim()); // "Hello World"
+
+// ⚡ PROCESS CONTROL: Kill commands that ignore stdin
+const pingCmd = $`ping google.com`;
+
+// Some commands ignore stdin input
+const pingStdin = await pingCmd.streams.stdin;
+if (pingStdin) {
+  pingStdin.write('q\n'); // ping ignores this
+}
+
+// Use kill() for forceful termination
+setTimeout(() => pingCmd.kill(), 2000);
+const pingResult = await pingCmd;
+console.log('Ping stopped with code:', pingResult.code); // 143 (SIGTERM)
+
+// 🔄 MIXED STDOUT/STDERR: Handle both streams
+const mixedCmd = $`sh -c 'echo "out" && echo "err" >&2'`;
+const [stdout, stderr] = await Promise.all([
+  mixedCmd.strings.stdout,
+  mixedCmd.strings.stderr
+]);
+console.log('Out:', stdout.trim()); // "out"  
+console.log('Err:', stderr.trim()); // "err"
+
+// 🏃‍♂️ AUTO-START: Streams auto-start processes when accessed
+const cmd = $`echo "test"`;
+console.log('Started?', cmd.started); // false
+
+const output = await cmd.streams.stdout; // Auto-starts here
+console.log('Started?', cmd.started); // true
+
+// 🔙 BACKWARD COMPATIBLE: Traditional await still works
+const traditional = await $`echo "still works"`;
+console.log(traditional.stdout); // "still works\n"
+```
+
+**Key Features:**
+- `command.streams.stdin/stdout/stderr` - Direct access to Node.js streams  
+- `command.buffers.stdin/stdout/stderr` - Binary data as Buffer objects
+- `command.strings.stdin/stdout/stderr` - Text data as strings
+- `command.kill()` - Forceful process termination
+- **Auto-start behavior:** Process starts only when accessing stream properties
+- **Perfect for:** Interactive commands (grep, sort, bc), data processing, real-time control
+- **Network commands (ping, wget) ignore stdin** → Use `kill()` method instead
+
 ### Shell Replacement (.sh → .mjs)
 
 Replace bash scripts with JavaScript while keeping shell semantics:

@@ -1,23 +1,22 @@
 import { test, expect } from 'bun:test';
 import { $ } from '../src/$.mjs';
 
-// TODO: fix later
-// test('streaming interfaces - basic functionality', async () => {
-//   // Test streams.stdin with cat
-//   const catCmd = $`cat`;
-//   const stdin = await catCmd.streams.stdin;
+test('streaming interfaces - basic functionality', async () => {
+  // Test streams.stdin with cat
+  const catCmd = $`cat`;
+  const stdin = await catCmd.streams.stdin;
   
-//   if (stdin) {
-//     stdin.write('Hello from streams.stdin!\n');
-//     stdin.write('Multiple lines work\n');
-//     stdin.end();
-//   }
+  if (stdin) {
+    stdin.write('Hello from streams.stdin!\n');
+    stdin.write('Multiple lines work\n');
+    stdin.end();
+  }
   
-//   const result = await catCmd;
-//   expect(result.code).toBe(0);
-//   expect(result.stdout).toContain('Hello from streams.stdin!');
-//   expect(result.stdout).toContain('Multiple lines work');
-// });
+  const result = await catCmd;
+  expect(result.code).toBe(0);
+  expect(result.stdout).toContain('Hello from streams.stdin!');
+  expect(result.stdout).toContain('Multiple lines work');
+});
 
 test('streaming interfaces - auto-start behavior', async () => {
   const cmd = $`echo "test"`;
@@ -35,14 +34,13 @@ test('streaming interfaces - auto-start behavior', async () => {
   await cmd;
 });
 
-// TODO: fix later
-// test('streaming interfaces - buffers interface', async () => {
-//   const cmd = $`echo -n "Binary test"`;
-//   const buffer = await cmd.buffers.stdout;
+test('streaming interfaces - buffers interface', async () => {
+  const cmd = $`printf "Binary test"`;
+  const buffer = await cmd.buffers.stdout;
   
-//   expect(Buffer.isBuffer(buffer)).toBe(true);
-//   expect(buffer.toString()).toBe('Binary test');
-// });
+  expect(Buffer.isBuffer(buffer)).toBe(true);
+  expect(buffer.toString()).toBe('Binary test');
+});
 
 test('streaming interfaces - strings interface', async () => {
   const cmd = $`echo "String test"`;
@@ -121,4 +119,40 @@ test('streaming interfaces - backward compatibility', async () => {
   const result = await $`echo "backward compatible"`;
   expect(result.code).toBe(0);
   expect(result.stdout.trim()).toBe('backward compatible');
+});
+
+test('streaming interfaces - stdin pipe mode works', async () => {
+  // Test that stdin: 'pipe' is properly handled vs string data
+  const sortCmd = $`sort`;
+  const stdin = await sortCmd.streams.stdin;
+  
+  expect(stdin).not.toBe(null);
+  expect(typeof stdin.write).toBe('function');
+  
+  stdin.write('zebra\n');
+  stdin.write('apple\n');
+  stdin.write('banana\n');
+  stdin.end();
+  
+  const result = await sortCmd;
+  expect(result.code).toBe(0);
+  expect(result.stdout).toBe('apple\nbanana\nzebra\n');
+});
+
+test('streaming interfaces - grep filtering via stdin', async () => {
+  const grepCmd = $`grep "important"`;
+  const stdin = await grepCmd.streams.stdin;
+  
+  stdin.write('ignore this line\n');
+  stdin.write('important message 1\n'); 
+  stdin.write('skip this too\n');
+  stdin.write('another important note\n');
+  stdin.end();
+  
+  const result = await grepCmd;
+  expect(result.code).toBe(0);
+  expect(result.stdout).toContain('important message 1');
+  expect(result.stdout).toContain('another important note');
+  expect(result.stdout).not.toContain('ignore this');
+  expect(result.stdout).not.toContain('skip this');
 });
