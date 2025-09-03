@@ -627,6 +627,10 @@ class ProcessRunner extends StreamEmitter {
     this._cancellationSignal = null; // Track which signal caused cancellation
     this._virtualGenerator = null;
     this._abortController = new AbortController();
+    
+    // Promise that resolves when child process is ready
+    this._childReadyPromise = null;
+    this._childReadyResolve = null;
 
     activeProcessRunners.add(this);
     
@@ -672,17 +676,15 @@ class ProcessRunner extends StreamEmitter {
           return self.child.stdin;
         }
         // Return promise that resolves when child process is available
-        return new Promise((resolve) => {
-          const checkChild = () => {
-            if (self.child && self.child.stdin) {
-              resolve(self.child.stdin);
-            } else if (self.finished) {
-              resolve(null); // Process finished without stdin available
-            } else {
-              setTimeout(checkChild, 10);
-            }
-          };
-          checkChild();
+        if (self.finished) {
+          return Promise.resolve(null);
+        }
+        // Wait for child to be ready using event-driven approach
+        return self._waitForChild().then(() => {
+          if (self.child && self.child.stdin) {
+            return self.child.stdin;
+          }
+          return null;
         });
       },
       get stdout() {
@@ -690,17 +692,15 @@ class ProcessRunner extends StreamEmitter {
         if (self.child && self.child.stdout) {
           return self.child.stdout;
         }
-        return new Promise((resolve) => {
-          const checkChild = () => {
-            if (self.child && self.child.stdout) {
-              resolve(self.child.stdout);
-            } else if (self.finished) {
-              resolve(null);
-            } else {
-              setTimeout(checkChild, 10);
-            }
-          };
-          checkChild();
+        if (self.finished) {
+          return Promise.resolve(null);
+        }
+        // Wait for child to be ready using event-driven approach
+        return self._waitForChild().then(() => {
+          if (self.child && self.child.stdout) {
+            return self.child.stdout;
+          }
+          return null;
         });
       },
       get stderr() {
@@ -708,17 +708,15 @@ class ProcessRunner extends StreamEmitter {
         if (self.child && self.child.stderr) {
           return self.child.stderr;
         }
-        return new Promise((resolve) => {
-          const checkChild = () => {
-            if (self.child && self.child.stderr) {
-              resolve(self.child.stderr);
-            } else if (self.finished) {
-              resolve(null);
-            } else {
-              setTimeout(checkChild, 10);
-            }
-          };
-          checkChild();
+        if (self.finished) {
+          return Promise.resolve(null);
+        }
+        // Wait for child to be ready using event-driven approach
+        return self._waitForChild().then(() => {
+          if (self.child && self.child.stderr) {
+            return self.child.stderr;
+          }
+          return null;
         });
       }
     };
@@ -782,6 +780,31 @@ class ProcessRunner extends StreamEmitter {
         return self.then ? self.then(result => result.stderr || '') : Promise.resolve('');
       }
     };
+  }
+
+  // Helper method to wait for child process to be ready
+  _waitForChild() {
+    if (this.child) {
+      return Promise.resolve();
+    }
+    if (this.finished) {
+      return Promise.resolve();
+    }
+    if (!this._childReadyPromise) {
+      this._childReadyPromise = new Promise((resolve) => {
+        this._childReadyResolve = resolve;
+      });
+    }
+    return this._childReadyPromise;
+  }
+  
+  // Signal that child process is ready
+  _signalChildReady() {
+    if (this._childReadyResolve) {
+      this._childReadyResolve();
+      this._childReadyResolve = null;
+      this._childReadyPromise = null;
+    }
   }
 
   // Centralized method to properly finish a process with correct event emission order
@@ -943,14 +966,15 @@ class ProcessRunner extends StreamEmitter {
           writer.close().catch(() => { }); // Ignore close errors
         }
 
-        setTimeout(() => {
+        // Use setImmediate for deferred termination instead of setTimeout
+        setImmediate(() => {
           if (this.child && !this.finished) {
             trace('ProcessRunner', () => 'Terminating child process after parent stream closure');
             if (typeof this.child.kill === 'function') {
               this.child.kill('SIGTERM');
             }
           }
-        }, 100);
+        });
 
       } catch (error) {
         trace('ProcessRunner', () => `Error during graceful shutdown | ${JSON.stringify({ error: error.message }, null, 2)}`);
@@ -1395,6 +1419,9 @@ class ProcessRunner extends StreamEmitter {
       args: argv.slice(1)
     }, null, 2)}`);
     this.child = preferNodeForInput ? await spawnNode(argv) : (isBun ? spawnBun(argv) : await spawnNode(argv));
+    
+    // Signal that child is ready for stream access
+    this._signalChildReady();
     
     // Add detailed logging for CI debugging
     if (this.child) {
