@@ -12,13 +12,6 @@ const isBun = typeof globalThis.Bun !== 'undefined';
 
 const VERBOSE = process.env.COMMAND_STREAM_VERBOSE === 'true' || process.env.CI === 'true';
 
-// Interactive commands that need TTY forwarding by default
-const INTERACTIVE_COMMANDS = new Set([
-  'top', 'htop', 'btop', 'less', 'more', 'vi', 'vim', 'nano', 'emacs',
-  'man', 'pager', 'watch', 'tmux', 'screen', 'ssh', 'ftp', 'sftp',
-  'mysql', 'psql', 'redis-cli', 'mongo', 'sqlite3', 'irb', 'python',
-  'node', 'repl', 'gdb', 'lldb', 'bc', 'dc', 'ed'
-]);
 
 // Trace function for verbose logging
 function trace(category, messageOrFunc) {
@@ -28,24 +21,6 @@ function trace(category, messageOrFunc) {
   console.error(`[TRACE ${timestamp}] [${category}] ${message}`);
 }
 
-// Check if a command is interactive and needs TTY forwarding
-function isInteractiveCommand(command) {
-  if (!command || typeof command !== 'string') return false;
-  
-  // Extract command and arguments from shell command string
-  const parts = command.trim().split(/\s+/);
-  const commandName = parts[0];
-  const baseName = path.basename(commandName);
-  
-  // Special handling for commands that are only interactive when run without arguments/scripts
-  if (baseName === 'node' || baseName === 'python' || baseName === 'python3') {
-    // These are only interactive when run without a script file
-    // If there are additional arguments (like a script file), they're not interactive
-    return parts.length === 1;
-  }
-  
-  return INTERACTIVE_COMMANDS.has(baseName);
-}
 
 
 // Track parent stream state for graceful shutdown
@@ -614,6 +589,7 @@ class ProcessRunner extends StreamEmitter {
       stdin: 'inherit',
       cwd: undefined,
       env: undefined,
+      interactive: false, // Explicitly request TTY forwarding for interactive commands
       ...options
     };
 
@@ -1462,12 +1438,12 @@ class ProcessRunner extends StreamEmitter {
     }
 
     // Detect if this is an interactive command that needs direct TTY access
-    // Only activate for interactive commands when we have a real TTY and the command is likely to need it
+    // Only activate for interactive commands when we have a real TTY and interactive mode is explicitly requested
     const isInteractive = stdin === 'inherit' && 
       process.stdin.isTTY === true && 
       process.stdout.isTTY === true && 
       process.stderr.isTTY === true &&
-      (this.spec.mode === 'shell' ? isInteractiveCommand(this.spec.command) : isInteractiveCommand(this.spec.file));
+      this.options.interactive === true;
     
     trace('ProcessRunner', () => `Interactive command detection | ${JSON.stringify({
       isInteractive,
@@ -1475,7 +1451,7 @@ class ProcessRunner extends StreamEmitter {
       stdinTTY: process.stdin.isTTY,
       stdoutTTY: process.stdout.isTTY,
       stderrTTY: process.stderr.isTTY,
-      commandCheck: this.spec.mode === 'shell' ? isInteractiveCommand(this.spec.command) : isInteractiveCommand(this.spec.file)
+      interactiveOption: this.options.interactive
     }, null, 2)}`);
 
     const spawnBun = (argv) => {

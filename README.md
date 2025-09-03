@@ -57,7 +57,7 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 | **Signal Handling** | ✅ **Advanced SIGINT/SIGTERM forwarding** with cleanup | 🟡 Basic | ✅ **Excellent** cross-platform | 🟡 Basic | 🟡 Basic | 🟡 Basic |
 | **Process Management** | ✅ **Robust child process lifecycle** with proper termination | ✅ Good | ✅ **Excellent** spawn wrapper | ❌ Basic | 🟡 Limited | 🟡 Limited |
 | **Debug Tracing** | ✅ **Comprehensive VERBOSE logging** for CI/debugging | 🟡 Limited | ❌ No | ❌ No | 🟡 Basic | ❌ No |
-| **Test Coverage** | ✅ **410 tests, 909 assertions** | ✅ Excellent | ✅ Good | 🟡 Good coverage | ✅ Good | 🟡 Good |
+| **Test Coverage** | ✅ **509+ tests, 1133+ assertions** | ✅ Excellent | ✅ Good | 🟡 Good coverage | ✅ Good | 🟡 Good |
 | **CI Reliability** | ✅ **Platform-specific handling** (macOS/Ubuntu) | ✅ Good | ✅ **Excellent** | 🟡 Basic | ✅ Good | 🟡 Basic |
 | **Documentation** | ✅ **Comprehensive examples + guides** | ✅ Excellent | 🟡 Basic | ✅ Good | ✅ Good | 🟡 Limited |
 | **TypeScript** | 🔄 Coming soon | ✅ Full support | ✅ Built-in | ✅ Built-in | 🟡 Community types | ✅ Full support |
@@ -81,7 +81,7 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 - **🐚 Shell Replacement**: Dynamic error handling with `set -e`/`set +e` equivalents for .sh file replacement
 - **⚡ Bun Optimized**: Designed for Bun with Node.js fallback compatibility  
 - **💾 Memory Efficient**: Streaming prevents large buffer accumulation
-- **🛡️ Production Ready**: **410 tests, 909 assertions** with comprehensive coverage including CI reliability
+- **🛡️ Production Ready**: **509+ tests, 1133+ assertions** with comprehensive coverage including CI reliability
 - **🎯 Advanced Signal Handling**: Robust SIGINT/SIGTERM forwarding with proper child process cleanup
 - **🔍 Debug-Friendly**: Comprehensive VERBOSE tracing for CI debugging and troubleshooting
 
@@ -183,6 +183,11 @@ await $withEnv`printenv MY_VAR`; // Prints: value
 // Custom working directory
 const $inTmp = $({ cwd: '/tmp' });
 await $inTmp`pwd`; // Prints: /tmp
+
+// Interactive mode for TTY commands (requires TTY environment)
+const $interactive = $({ interactive: true });
+await $interactive`vim myfile.txt`; // Full TTY access for editor
+await $interactive`less README.md`; // Proper pager interaction
 
 // Combine multiple options
 const $custom = $({
@@ -782,9 +787,10 @@ The enhanced `$` function returns a `ProcessRunner` instance that extends `Event
 
 ```javascript
 {
-  mirror: true,    // Live output to terminal (stdout→stdout, stderr→stderr)
-  capture: true,   // Capture output for programmatic access
-  stdin: 'inherit' // Inherit stdin from parent process
+  mirror: true,        // Live output to terminal (stdout→stdout, stderr→stderr)
+  capture: true,       // Capture output for programmatic access
+  stdin: 'inherit',    // Inherit stdin from parent process
+  interactive: false   // Explicitly request TTY forwarding for interactive commands
 }
 ```
 
@@ -792,6 +798,7 @@ The enhanced `$` function returns a `ProcessRunner` instance that extends `Event
 - `mirror: boolean` - Whether to pipe output to terminal in real-time
 - `capture: boolean` - Whether to capture output in result object
 - `stdin: 'inherit' | 'ignore' | string | Buffer` - How to handle stdin
+- `interactive: boolean` - Enable TTY forwarding for interactive commands (requires `stdin: 'inherit'` and TTY environment)
 - `cwd: string` - Working directory for command
 - `env: object` - Environment variables
 
@@ -1083,7 +1090,7 @@ try {
 
 - **🎯 Smart Detection**: Only forwards CTRL+C when child processes are active
 - **🛡️ Non-Interference**: Preserves user SIGINT handlers when no children running  
-- **⚡ Interactive Commands**: Commands like `vim`, `less`, `top` work with their own signal handling
+- **⚡ Interactive Commands**: Use `interactive: true` option for commands like `vim`, `less`, `top` to enable proper TTY forwarding and signal handling
 - **🔄 Process Groups**: Detached spawning ensures proper signal isolation
 - **🧹 TTY Cleanup**: Raw terminal mode properly restored on interruption
 - **📊 Standard Exit Codes**: 
@@ -1176,7 +1183,7 @@ $`npm install`
 ## Testing
 
 ```bash
-# Run comprehensive test suite (270+ tests)
+# Run comprehensive test suite (509+ tests)
 bun test
 
 # Run tests with coverage report
@@ -1227,7 +1234,7 @@ bun test  # Run the full test suite
 
 ### 🧪 **Running Tests**
 ```bash
-bun test                    # All 266 tests
+bun test                    # All 509+ tests
 bun test tests/pipe.test.mjs # Specific test file
 npm run test:builtin        # Built-in commands only
 ```
