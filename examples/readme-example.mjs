@@ -23,12 +23,12 @@ const result2 = await $`echo "Smith"`.pipe($`greet-formal Mr.`);
 console.log('Result:', result2.stdout.trim());
 
 // Example accessing other options
-register('debug', async ({ args, stdin, mirror, capture }) => {
+register('debug', async ({ args, stdin, options }) => {
   const info = {
     args: args,
     stdinLength: stdin ? stdin.length : 0,
-    mirror: mirror,
-    capture: capture
+    mirror: options.mirror,
+    capture: options.capture
   };
   return { stdout: JSON.stringify(info, null, 2) + '\n', code: 0 };
 });

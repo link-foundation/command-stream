@@ -378,7 +378,7 @@ describe('CTRL+C Signal Handling', () => {
     });
     
     // Should exit with SIGINT code due to our signal handling
-    trace("SignalTest", () => `'Third test exit code:': exitCode);
+    trace('SignalTest', () => `Third test exit code: ${exitCode}`);
     expect([130, 143, 137].includes(exitCode) || exitCode > 0).toBe(true);
     expect(stdout).toContain('STARTING_SLEEP');
     expect(stdout).not.toContain('SLEEP_COMPLETED');
@@ -398,7 +398,7 @@ describe('CTRL+C Signal Handling', () => {
         }, 100);
       });
       
-      trace("SignalTest", () => `'CHILD_READY'`);
+      console.log('CHILD_READY');
       
       // Keep process alive
       setTimeout(() => {
@@ -566,7 +566,7 @@ describe('CTRL+C with Different stdin Modes', () => {
     });
     
     // Should exit with SIGINT code or clean exit (both are acceptable for stdin cleanup tests)
-    trace("SignalTest", () => `'Fifth test exit code:': exitCode);
+    trace('SignalTest', () => `Fifth test exit code: ${exitCode}`);
     expect(typeof exitCode).toBe('number'); // Just ensure we get a valid exit code
     expect(stdout).toContain('RUNNING_COMMAND');
     // The important thing is that the process is properly cleaned up
@@ -579,7 +579,7 @@ describe('CTRL+C with Different stdin Modes', () => {
       import { $ } from './src/$.mjs';
       
       // Start a long-running command
-      const runner = \$\`sleep 5\`;
+      const runner = $\`sleep 5\`;
       const promise = runner.start();
       
       // Simulate parent stream closure after a delay
@@ -623,14 +623,14 @@ describe('CTRL+C with Different stdin Modes', () => {
     const child = spawn('node', ['-e', `
       import { $ } from './src/$.mjs';
       
-      trace("SignalTest", () => `'STARTING_SLEEP_WITH_CUSTOM_STDIN'`);
+      console.log('STARTING_SLEEP_WITH_CUSTOM_STDIN');
       
       try {
         // This should bypass virtual sleep and use real /usr/bin/sleep
         const result = await \$({ stdin: 'custom input' })\`sleep 2\`;
-        trace("SignalTest", () => `'SLEEP_COMPLETED:': result.code);
+        console.log('SLEEP_COMPLETED: ' + result.code);
       } catch (error) {
-        trace("SignalTest", () => `'SLEEP_ERROR:': error.message);
+        console.log('SLEEP_ERROR: ' + error.message);
       }
     `], {
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -654,7 +654,7 @@ describe('CTRL+C with Different stdin Modes', () => {
       });
     });
     
-    trace("SignalTest", () => `'Sixth test exit code:': exitCode);
+    trace('SignalTest', () => `Sixth test exit code: ${exitCode}`);
     expect([130, 143, 137].includes(exitCode) || exitCode > 0).toBe(true); // SIGINT exit code
     expect(stdout).toContain('STARTING_SLEEP_WITH_CUSTOM_STDIN');
   }, { timeout: 10000 });
@@ -665,13 +665,13 @@ describe('CTRL+C with Different stdin Modes', () => {
       import { $ } from './src/$.mjs';
       
       const isBun = typeof globalThis.Bun !== 'undefined';
-      trace("SignalTest", () => `'RUNTIME:': isBun ? 'BUN' : 'NODE');
+      console.log('RUNTIME: ' + (isBun ? 'BUN' : 'NODE'));
       
       try {
-        const result = await \$\`sleep 2\`;
-        trace("SignalTest", () => `'SLEEP_COMPLETED:': result.code);
+        const result = await $\`sleep 2\`;
+        console.log('SLEEP_COMPLETED: ' + result.code);
       } catch (error) {
-        trace("SignalTest", () => `'SLEEP_ERROR:': error.message);
+        console.log('SLEEP_ERROR: ' + error.message);
       }
     `], {
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -695,7 +695,7 @@ describe('CTRL+C with Different stdin Modes', () => {
       });
     });
     
-    trace("SignalTest", () => `'Seventh test exit code:': exitCode);
+    trace('SignalTest', () => `Seventh test exit code: ${exitCode}`);
     expect(typeof exitCode).toBe('number'); // Platform differences may result in various exit codes
     expect(stdout).toMatch(/RUNTIME: (BUN|NODE)/);
   }, { timeout: 10000 });
@@ -708,7 +708,7 @@ describe('CTRL+C with Different stdin Modes', () => {
     // 3. Processes weren't outputting expected logs before interruption
 
     // Test 1: Virtual command cancellation with proper exit codes
-    trace("SignalTest", () => `'Testing virtual command SIGINT cancellation...'`);
+    trace('SignalTest', 'Testing virtual command SIGINT cancellation...');
     const child1 = spawn('node', ['examples/test-sleep.mjs'], {
       stdio: ['pipe', 'pipe', 'pipe'],
       detached: true,
@@ -731,27 +731,27 @@ describe('CTRL+C with Different stdin Modes', () => {
     expect(stdout1).toContain('STARTING_SLEEP');
     expect(stdout1).not.toContain('SLEEP_COMPLETED');
     expect(exitCode1).toBe(130); // 128 + 2 (SIGINT)
-    trace("SignalTest", () => `'✓ Virtual command properly cancelled with SIGINT'`);
+    trace('SignalTest', '✓ Virtual command properly cancelled with SIGINT');
 
     // Test 2: User SIGINT handler cooperation  
-    trace("SignalTest", () => `'Testing user SIGINT handler cooperation...'`);
+    trace('SignalTest', 'Testing user SIGINT handler cooperation...');
     const child2 = spawn('node', ['-e', `
       import { $ } from './src/$.mjs';
       
       // Set up user's SIGINT handler AFTER importing our library
       process.on('SIGINT', () => {
-        trace("SignalTest", () => `'USER_HANDLER_EXECUTED'`);
+        console.log('USER_HANDLER_EXECUTED');
         process.exit(42);
       });
       
-      trace("SignalTest", () => `'PROCESS_READY'`);
+      console.log('PROCESS_READY');
       
       // Run a virtual command that will be interrupted
       try {
         await \$\`sleep 5\`;
-        trace("SignalTest", () => `'SLEEP_FINISHED'`);
+        console.log('SLEEP_FINISHED');
       } catch (err) {
-        trace("SignalTest", () => `'SLEEP_ERROR'`);
+        console.log('SLEEP_ERROR');
       }
     `], {
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -775,8 +775,8 @@ describe('CTRL+C with Different stdin Modes', () => {
     expect(stdout2).toContain('PROCESS_READY');
     expect(stdout2).toContain('USER_HANDLER_EXECUTED');
     expect(exitCode2).toBe(42); // User's custom exit code
-    trace("SignalTest", () => `'✓ User SIGINT handler properly executed'`);
+    trace('SignalTest', '✓ User SIGINT handler properly executed');
 
-    trace("SignalTest", () => `'🎉 Regression test passed - core issues remain fixed'`);
+    trace('SignalTest', '🎉 Regression test passed - core issues remain fixed');
   }, { timeout: 15000 });
 });
