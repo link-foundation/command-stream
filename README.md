@@ -454,7 +454,7 @@ Create custom commands that work seamlessly alongside built-ins:
 import { $, register, unregister, listCommands } from 'command-stream';
 
 // Register a custom command
-register('greet', async (args, stdin) => {
+register('greet', async ({ args, stdin }) => {
   const name = args[0] || 'World';
   return { stdout: `Hello, ${name}!\n`, code: 0 };
 });
@@ -464,7 +464,7 @@ await $`greet Alice`;                    // → "Hello, Alice!"
 await $`echo "Bob" | greet`;             // → "Hello, Bob!"
 
 // Streaming virtual commands with async generators
-register('countdown', async function* (args) {
+register('countdown', async function* ({ args }) {
   const start = parseInt(args[0] || 5);
   for (let i = start; i >= 0; i--) {
     yield `${i}\n`;
@@ -501,7 +501,7 @@ await execa('node', ['script.js']);  // execa: separate processes
 await $`node script.js`;             // zx: shell commands only
 
 // ✅ command-stream: JavaScript functions AS shell commands  
-register('deploy', async (args) => {
+register('deploy', async ({ args }) => {
   const env = args[0] || 'staging';
   await deployToEnvironment(env);
   return { stdout: `Deployed to ${env}!\n`, code: 0 };
@@ -537,11 +537,11 @@ await $`seq 1 5 | cat > numbers.txt`;
 await $`git log --oneline | head -n 5`;
 
 // 🚀 UNIQUE: Virtual command piping
-register('uppercase', async (args, stdin) => {
+register('uppercase', async ({ args, stdin }) => {
   return { stdout: stdin.toUpperCase(), code: 0 };
 });
 
-register('reverse', async (args, stdin) => {
+register('reverse', async ({ args, stdin }) => {
   return { stdout: stdin.split('').reverse().join(''), code: 0 };
 });
 
@@ -569,12 +569,12 @@ import { $, register } from 'command-stream';
 const result = await $`echo "hello"`.pipe($`echo "World: $(cat)"`);
 
 // 🌟 Virtual command chaining
-register('add-prefix', async (args, stdin) => {
+register('add-prefix', async ({ args, stdin }) => {
   const prefix = args[0] || 'PREFIX:';
   return { stdout: `${prefix} ${stdin.trim()}\n`, code: 0 };
 });
 
-register('add-suffix', async (args, stdin) => {
+register('add-suffix', async ({ args, stdin }) => {
   const suffix = args[0] || 'SUFFIX';
   return { stdout: `${stdin.trim()} ${suffix}\n`, code: 0 };
 });
@@ -599,7 +599,7 @@ try {
 }
 
 // ✅ Complex data processing
-register('json-parse', async (args, stdin) => {
+register('json-parse', async ({ args, stdin }) => {
   try {
     const data = JSON.parse(stdin);
     return { stdout: JSON.stringify(data, null, 2), code: 0 };
@@ -608,7 +608,7 @@ register('json-parse', async (args, stdin) => {
   }
 });
 
-register('extract-field', async (args, stdin) => {
+register('extract-field', async ({ args, stdin }) => {
   const field = args[0];
   try {
     const data = JSON.parse(stdin);
@@ -865,7 +865,7 @@ Control and extend the command system with custom JavaScript functions:
 import { $, register } from 'command-stream';
 
 // ✅ Cancellation support with AbortController
-register('cancellable', async function* (args, stdin, options) {
+register('cancellable', async function* ({ args, stdin, options }) {
   for (let i = 0; i < 10; i++) {
     if (options.signal?.aborted) {
       break; // Proper cancellation handling
@@ -876,7 +876,7 @@ register('cancellable', async function* (args, stdin, options) {
 });
 
 // ✅ Access to all process options
-register('debug-info', async (args, stdin, options) => {
+register('debug-info', async ({ args, stdin, options }) => {
   return {
     stdout: JSON.stringify({
       args,
@@ -891,7 +891,7 @@ register('debug-info', async (args, stdin, options) => {
 });
 
 // ✅ Error handling and non-zero exit codes
-register('maybe-fail', async (args) => {
+register('maybe-fail', async ({ args }) => {
   if (Math.random() > 0.5) {
     return {
       stdout: 'Success!\n',
@@ -911,7 +911,7 @@ register('maybe-fail', async (args) => {
 
 ```javascript
 // Regular async function
-async function handler(args, stdin, options) {
+async function handler({ args, stdin, options }) {
   return {
     code: 0,           // Exit code (number)
     stdout: "output",  // Standard output (string)
@@ -920,7 +920,7 @@ async function handler(args, stdin, options) {
 }
 
 // Async generator for streaming
-async function* streamingHandler(args, stdin, options) {
+async function* streamingHandler({ args, stdin, options }) {
   yield "chunk1\n";
   yield "chunk2\n";
   // Each yield sends a chunk in real-time

@@ -86,7 +86,7 @@ await runTest(
 );
 
 // Register a pass-through virtual command
-register('passthrough', async function* (args, stdin) {
+register('passthrough', async function* ({ args, stdin }) {
   if (stdin) {
     yield stdin;
   }

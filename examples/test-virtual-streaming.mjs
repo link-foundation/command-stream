@@ -5,7 +5,7 @@ import { $, register } from '../src/$.mjs';
 console.log('=== Testing Virtual Command Streaming ===\n');
 
 // Register a streaming virtual command that generates data incrementally
-register('stream-numbers', async function* (args, stdin) {
+register('stream-numbers', async function* ({ args, stdin }) {
   const count = parseInt(args[0] || '3');
   const delay = parseInt(args[1] || '500');
   
@@ -18,7 +18,7 @@ register('stream-numbers', async function* (args, stdin) {
 });
 
 // Register a virtual filter command
-register('filter-even', async function* (args, stdin) {
+register('filter-even', async function* ({ args, stdin }) {
   const lines = stdin.trim().split('\n');
   for (const line of lines) {
     try {
@@ -94,7 +94,7 @@ const cmd4 = $`stream-numbers 5 150 | jq -c '{value: .number, double: (.number *
 
 // Note: filter-even will only work on objects with 'number' field, 
 // so let's create a better filter
-register('filter-double-even', async function* (args, stdin) {
+register('filter-double-even', async function* ({ args, stdin }) {
   const lines = stdin.trim().split('\n');
   for (const line of lines) {
     try {
