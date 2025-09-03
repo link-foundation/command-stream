@@ -700,7 +700,11 @@ class ProcessRunner extends StreamEmitter {
         }
         
         // For virtual commands, there's no child process
-        if (self._virtualGenerator || (self.spec && self.spec.command && virtualCommands.has(self.spec.command.split(' ')[0]))) {
+        // Exception: virtual commands with stdin: "pipe" will fallback to real commands
+        const isVirtualCommand = self._virtualGenerator || (self.spec && self.spec.command && virtualCommands.has(self.spec.command.split(' ')[0]));
+        const willFallbackToReal = isVirtualCommand && self.options.stdin === 'pipe';
+        
+        if (isVirtualCommand && !willFallbackToReal) {
           trace('ProcessRunner.streams', () => 'stdin: virtual command, returning null');
           return null;
         }
@@ -1404,16 +1408,17 @@ class ProcessRunner extends StreamEmitter {
             commandCount: parsed.commands?.length
           }, null, 2)}`);
           return await this._runPipeline(parsed.commands);
-        } else if (parsed.type === 'simple' && virtualCommandsEnabled && virtualCommands.has(parsed.cmd)) {
+        } else if (parsed.type === 'simple' && virtualCommandsEnabled && virtualCommands.has(parsed.cmd) && !this.options._bypassVirtual) {
           // For built-in virtual commands that have real counterparts (like sleep),
           // skip the virtual version when custom stdin is provided to ensure proper process handling
           const hasCustomStdin = this.options.stdin && 
                                  this.options.stdin !== 'inherit' && 
                                  this.options.stdin !== 'ignore';
           
-          // List of built-in virtual commands that should fallback to real commands with custom stdin
-          const builtinCommands = ['sleep', 'echo', 'pwd', 'true', 'false', 'yes', 'cat', 'ls', 'which'];
-          const shouldBypassVirtual = hasCustomStdin && builtinCommands.includes(parsed.cmd);
+          // Only bypass for commands that truly need real process behavior with custom stdin
+          // Most commands like 'echo' work fine with virtual implementations even with stdin
+          const commandsThatNeedRealStdin = ['sleep', 'cat']; // Only these really need real processes for stdin
+          const shouldBypassVirtual = hasCustomStdin && commandsThatNeedRealStdin.includes(parsed.cmd);
           
           if (shouldBypassVirtual) {
             trace('ProcessRunner', () => `Bypassing built-in virtual command due to custom stdin | ${JSON.stringify({
@@ -1968,7 +1973,23 @@ class ProcessRunner extends StreamEmitter {
     try {
       // Prepare stdin
       let stdinData = '';
-      if (this.options.stdin && typeof this.options.stdin === 'string') {
+      
+      // Special handling for streaming mode (stdin: "pipe")
+      if (this.options.stdin === 'pipe') {
+        // For streaming interfaces, virtual commands should fallback to real commands
+        // because virtual commands don't support true streaming
+        trace('ProcessRunner', () => `Virtual command fallback for streaming | ${JSON.stringify({ cmd }, null, 2)}`);
+        
+        // Create a new ProcessRunner for the real command with properly merged options
+        // Preserve main options but use appropriate stdin for the real command
+        const modifiedOptions = { 
+          ...this.options, 
+          stdin: 'pipe', // Keep pipe but ensure it doesn't trigger virtual command fallback
+          _bypassVirtual: true // Flag to prevent virtual command recursion
+        };
+        const realRunner = new ProcessRunner({ mode: 'shell', command: originalCommand || cmd }, modifiedOptions);
+        return await realRunner._doStartAsync();
+      } else if (this.options.stdin && typeof this.options.stdin === 'string') {
         stdinData = this.options.stdin;
       } else if (this.options.stdin && Buffer.isBuffer(this.options.stdin)) {
         stdinData = this.options.stdin.toString('utf8');
