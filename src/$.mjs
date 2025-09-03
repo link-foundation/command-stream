@@ -3700,9 +3700,10 @@ class ProcessRunner extends StreamEmitter {
     trace('ProcessRunner', () => `Executing real command: ${commandStr}`);
     
     // Create a new ProcessRunner for the real command
+    // Use current working directory since cd virtual command may have changed it
     const runner = new ProcessRunner(
       { mode: 'shell', command: commandStr },
-      { ...this.options, _bypassVirtual: true }
+      { ...this.options, cwd: process.cwd(), _bypassVirtual: true }
     );
     
     return await runner;
