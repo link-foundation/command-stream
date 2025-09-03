@@ -32,7 +32,7 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 | **📦 NPM Package** | [![npm](https://img.shields.io/npm/v/command-stream.svg)](https://www.npmjs.com/package/command-stream) | [![npm](https://img.shields.io/npm/v/execa.svg)](https://www.npmjs.com/package/execa) | [![npm](https://img.shields.io/npm/v/cross-spawn.svg)](https://www.npmjs.com/package/cross-spawn) | N/A (Built-in) | [![npm](https://img.shields.io/npm/v/shelljs.svg)](https://www.npmjs.com/package/shelljs) | [![npm](https://img.shields.io/npm/v/zx.svg)](https://www.npmjs.com/package/zx) |
 | **⭐ GitHub Stars** | [**⭐ 2** (Please ⭐ us!)](https://github.com/link-foundation/command-stream) | [⭐ 7,264](https://github.com/sindresorhus/execa) | [⭐ 1,149](https://github.com/moxystudio/node-cross-spawn) | [⭐ 80,169](https://github.com/oven-sh/bun) (Full Runtime) | [⭐ 14,375](https://github.com/shelljs/shelljs) | [⭐ 44,569](https://github.com/google/zx) |
 | **📊 Monthly Downloads** | **893** (New project!) | **381M** | **409M** | N/A (Built-in) | **35M** | **4.2M** |
-| **📈 Total Downloads** | **New!** | **6B+** | **5.4B** | N/A (Built-in) | **596M** | **37M** |
+| **📈 Total Downloads** | **Growing** | **6B+** | **5.4B** | N/A (Built-in) | **596M** | **37M** |
 | **Runtime Support** | ✅ Bun + Node.js | ✅ Node.js | ✅ Node.js | 🟡 Bun only | ✅ Node.js | ✅ Node.js |
 | **Template Literals** | ✅ `` $`cmd` `` | ✅ `` $`cmd` `` | ❌ Function calls | ✅ `` $`cmd` `` | ❌ Function calls | ✅ `` $`cmd` `` |
 | **Real-time Streaming** | ✅ Live output | 🟡 Limited | ❌ Buffer only | ❌ Buffer only | ❌ Buffer only | ❌ Buffer only |
@@ -65,7 +65,7 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 
 **📊 Popularity & Adoption:** 
 - **⭐ GitHub Stars:** [Bun: 80,169](https://github.com/oven-sh/bun) • [zx: 44,569](https://github.com/google/zx) • [ShellJS: 14,375](https://github.com/shelljs/shelljs) • [execa: 7,264](https://github.com/sindresorhus/execa) • [cross-spawn: 1,149](https://github.com/moxystudio/node-cross-spawn) • [**command-stream: 2 ⭐ us!**](https://github.com/link-foundation/command-stream)
-- **📈 Total Downloads:** [execa: 6B+](https://www.npmjs.com/package/execa) • [cross-spawn: 5.4B](https://www.npmjs.com/package/cross-spawn) • [ShellJS: 596M](https://www.npmjs.com/package/shelljs) • [zx: 37M](https://www.npmjs.com/package/zx) • [command-stream: New!](https://www.npmjs.com/package/command-stream)
+- **📈 Total Downloads:** [execa: 6B+](https://www.npmjs.com/package/execa) • [cross-spawn: 5.4B](https://www.npmjs.com/package/cross-spawn) • [ShellJS: 596M](https://www.npmjs.com/package/shelljs) • [zx: 37M](https://www.npmjs.com/package/zx) • [command-stream: Growing](https://www.npmjs.com/package/command-stream)
 - **📊 Monthly Downloads:** [cross-spawn: 409M](https://www.npmjs.com/package/cross-spawn) • [execa: 381M](https://www.npmjs.com/package/execa) • [ShellJS: 35M](https://www.npmjs.com/package/shelljs) • [zx: 4.2M](https://www.npmjs.com/package/zx) • [command-stream: 893 (growing!)](https://www.npmjs.com/package/command-stream)
 
 **⭐ Help Us Grow!** If command-stream's **revolutionary virtual commands** and **advanced streaming capabilities** help your project, [**please star us on GitHub**](https://github.com/link-foundation/command-stream) to help the project grow!
@@ -301,16 +301,16 @@ syncCmd.on('end', result => {
 const syncResult = syncCmd.sync();
 ```
 
-### Streaming Interfaces (Issue #33)
+### Streaming Interfaces
 
-**New!** Advanced streaming interfaces for fine-grained process control:
+Advanced streaming interfaces for fine-grained process control:
 
 ```javascript
 import { $ } from 'command-stream';
 
-// 🎯 STDIN CONTROL: Send data to interactive commands
+// 🎯 STDIN CONTROL: Send data to interactive commands (real-time)
 const grepCmd = $`grep "important"`;
-const stdin = await grepCmd.streams.stdin;
+const stdin = await grepCmd.streams.stdin; // Available immediately
 
 stdin.write('ignore this line\n');
 stdin.write('important message\n');
@@ -320,14 +320,14 @@ stdin.end();
 const result = await grepCmd;
 console.log(result.stdout); // "important message\n"
 
-// 🔧 BINARY DATA: Access raw buffers
+// 🔧 BINARY DATA: Access raw buffers (after command finishes)
 const cmd = $`echo "Hello World"`;
-const buffer = await cmd.buffers.stdout; // Buffer object
+const buffer = await cmd.buffers.stdout; // Complete snapshot
 console.log(buffer.length); // 12
 
-// 📝 TEXT DATA: Access as strings  
+// 📝 TEXT DATA: Access as strings (after command finishes)
 const textCmd = $`echo "Hello World"`;
-const text = await textCmd.strings.stdout; // String
+const text = await textCmd.strings.stdout; // Complete snapshot
 console.log(text.trim()); // "Hello World"
 
 // ⚡ PROCESS CONTROL: Kill commands that ignore stdin
@@ -344,11 +344,11 @@ setTimeout(() => pingCmd.kill(), 2000);
 const pingResult = await pingCmd;
 console.log('Ping stopped with code:', pingResult.code); // 143 (SIGTERM)
 
-// 🔄 MIXED STDOUT/STDERR: Handle both streams
+// 🔄 MIXED STDOUT/STDERR: Handle both streams (complete snapshots)
 const mixedCmd = $`sh -c 'echo "out" && echo "err" >&2'`;
 const [stdout, stderr] = await Promise.all([
-  mixedCmd.strings.stdout,
-  mixedCmd.strings.stderr
+  mixedCmd.strings.stdout, // Available after finish
+  mixedCmd.strings.stderr  // Available after finish
 ]);
 console.log('Out:', stdout.trim()); // "out"  
 console.log('Err:', stderr.trim()); // "err"
@@ -357,7 +357,7 @@ console.log('Err:', stderr.trim()); // "err"
 const cmd = $`echo "test"`;
 console.log('Started?', cmd.started); // false
 
-const output = await cmd.streams.stdout; // Auto-starts here
+const output = await cmd.streams.stdout; // Auto-starts, immediate access
 console.log('Started?', cmd.started); // true
 
 // 🔙 BACKWARD COMPATIBLE: Traditional await still works
@@ -373,6 +373,10 @@ console.log(traditional.stdout); // "still works\n"
 - **Auto-start behavior:** Process starts only when accessing stream properties
 - **Perfect for:** Interactive commands (grep, sort, bc), data processing, real-time control
 - **Network commands (ping, wget) ignore stdin** → Use `kill()` method instead
+
+**🚀 Streams vs Buffers/Strings:**
+- **`streams.*`** - Available **immediately** when command starts, for real-time interaction
+- **`buffers.*` & `strings.*`** - Complete **snapshots** available only **after** command finishes
 
 ### Shell Replacement (.sh → .mjs)
 
