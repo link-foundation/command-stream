@@ -103,9 +103,14 @@ done
     
     // Check if we can actually create gists (not just authenticated)
     const testAccess = await $`gh api user/gists --method HEAD 2>&1`.run({ capture: true, mirror: false });
-    if (testAccess.code !== 0 && testAccess.stdout.includes('Resource not accessible by integration')) {
-      console.log('Skipping gh gist test - limited GitHub Actions token (this is OK - we are testing $.mjs, not gh permissions)');
-      return;
+    if (testAccess.code !== 0) {
+      // In CI with GitHub Actions token, we might get 404 or 403 errors
+      if (testAccess.stdout.includes('Resource not accessible by integration') || 
+          testAccess.stdout.includes('HTTP 404') ||
+          testAccess.stdout.includes('HTTP 403')) {
+        console.log('Skipping gh gist test - limited GitHub Actions token or API access (this is OK - we are testing $.mjs, not gh permissions)');
+        return;
+      }
     }
     
     // Create test file
