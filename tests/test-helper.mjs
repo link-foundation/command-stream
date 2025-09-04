@@ -66,6 +66,24 @@ beforeEach(async () => {
     process.chdir(originalCwd);
   }
   
+  // VERIFY: Ensure we actually restored to the original directory
+  const finalCwd = process.cwd();
+  if (finalCwd !== originalCwd && existsSync(originalCwd)) {
+    console.error(`[test-helper] WARNING: Failed to restore cwd! Expected: ${originalCwd}, Got: ${finalCwd}`);
+    // Try one more time
+    try {
+      process.chdir(originalCwd);
+      const verifiedCwd = process.cwd();
+      if (verifiedCwd === originalCwd) {
+        trace('Successfully restored on second attempt');
+      } else {
+        throw new Error(`[test-helper] CRITICAL: Cannot restore to original directory ${originalCwd}, stuck in ${verifiedCwd}`);
+      }
+    } catch (e) {
+      throw new Error(`[test-helper] CRITICAL: Cannot restore to original directory ${originalCwd}, stuck in ${finalCwd}`);
+    }
+  }
+  
   // Give a tiny bit of time for any async cleanup to complete
   await new Promise(resolve => setTimeout(resolve, 1));
 });
@@ -106,6 +124,24 @@ afterEach(async () => {
   } catch (e) {
     // Force to a known good directory
     process.chdir(originalCwd);
+  }
+  
+  // VERIFY: Ensure we actually restored to the original directory
+  const finalCwd = process.cwd();
+  if (finalCwd !== originalCwd && existsSync(originalCwd)) {
+    console.error(`[test-helper] WARNING: Failed to restore cwd! Expected: ${originalCwd}, Got: ${finalCwd}`);
+    // Try one more time
+    try {
+      process.chdir(originalCwd);
+      const verifiedCwd = process.cwd();
+      if (verifiedCwd === originalCwd) {
+        trace('Successfully restored on second attempt');
+      } else {
+        throw new Error(`[test-helper] CRITICAL: Cannot restore to original directory ${originalCwd}, stuck in ${verifiedCwd}`);
+      }
+    } catch (e) {
+      throw new Error(`[test-helper] CRITICAL: Cannot restore to original directory ${originalCwd}, stuck in ${finalCwd}`);
+    }
   }
   
   // Give a tiny bit of time for any async cleanup to complete

@@ -1,11 +1,14 @@
 import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
-import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
+import { beforeTestCleanup, afterTestCleanup } from './test-cleanup.mjs';
 import { $, shell, enableVirtualCommands } from '../src/$.mjs';
-import { mkdtempSync, rmSync } from 'fs';
+import { mkdtempSync, rmSync, existsSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 
-beforeEach(() => {
+beforeEach(async () => {
+  // IMPORTANT: Call cleanup first to restore cwd
+  await beforeTestCleanup();
+  
   shell.errexit(false);
   shell.verbose(false);
   shell.xtrace(false);
@@ -14,7 +17,10 @@ beforeEach(() => {
   enableVirtualCommands();
 });
 
-afterEach(() => {
+afterEach(async () => {
+  // IMPORTANT: Call cleanup to restore cwd
+  await afterTestCleanup();
+  
   shell.errexit(false);
   shell.verbose(false);
   shell.xtrace(false);
@@ -23,6 +29,8 @@ afterEach(() => {
 });
 
 describe('Git and GH commands with cd virtual command', () => {
+  // The test-cleanup functions handle cwd restoration globally
+  
   describe('Git operations in temp directories', () => {
     let tempDir;
     
@@ -31,6 +39,7 @@ describe('Git and GH commands with cd virtual command', () => {
     });
     
     afterEach(() => {
+      // Clean up the temp directory
       try {
         rmSync(tempDir, { recursive: true, force: true });
       } catch (e) {
@@ -379,10 +388,11 @@ describe('Git and GH commands with cd virtual command', () => {
   });
 
   describe('Path resolution and quoting with cd', () => {
+    // Global cleanup handles cwd restoration
+    
     test('should handle paths with spaces in git operations', async () => {
       const baseTempDir = mkdtempSync(join(tmpdir(), 'space-test-'));
       const tempDirWithSpace = join(baseTempDir, 'my test dir');
-      const originalCwd = process.cwd();
       
       try {
         await $`mkdir -p ${tempDirWithSpace}`;
@@ -393,12 +403,11 @@ describe('Git and GH commands with cd virtual command', () => {
         
         // Test git operations in directory with spaces
         await $`cd ${tempDirWithSpace} && git config user.email "test@test.com"`;
+        await $`cd ${tempDirWithSpace} && git config user.name "Test User"`;
         await $`cd ${tempDirWithSpace} && bash -c 'echo "test" > file.txt' && git add . && git commit -m "test"`;
         
         const logResult = await $`cd ${tempDirWithSpace} && git log --oneline`;
         expect(logResult.stdout).toContain('test');
-        
-        await $`cd ${originalCwd}`;
       } finally {
         rmSync(baseTempDir, { recursive: true, force: true });
       }
@@ -407,7 +416,6 @@ describe('Git and GH commands with cd virtual command', () => {
     test('should handle special characters in paths', async () => {
       const tempDir = mkdtempSync(join(tmpdir(), 'special-chars-'));
       const specialDir = join(tempDir, "test-'dir'-$1");
-      const originalCwd = process.cwd();
       
       try {
         await $`mkdir -p ${specialDir}`;
@@ -415,8 +423,6 @@ describe('Git and GH commands with cd virtual command', () => {
         
         const statusResult = await $`cd ${specialDir} && git status`;
         expect(statusResult.code).toBe(0);
-        
-        await $`cd ${originalCwd}`;
       } finally {
         rmSync(tempDir, { recursive: true, force: true });
       }

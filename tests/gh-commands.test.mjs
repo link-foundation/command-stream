@@ -1,7 +1,15 @@
-import { test, expect, describe } from 'bun:test';
+import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
+import { beforeTestCleanup, afterTestCleanup } from './test-cleanup.mjs';
 import { $ } from '../src/$.mjs';
 
 describe('GitHub CLI (gh) commands', () => {
+  beforeEach(async () => {
+    await beforeTestCleanup();
+  });
+  
+  afterEach(async () => {
+    await afterTestCleanup();
+  });
   test('gh auth status returns correct exit code and output structure', async () => {
     // Test with capture to check output
     const result = await $`gh auth status 2>&1`.run({ capture: true, mirror: false });

@@ -1,10 +1,18 @@
-import { test, expect, describe } from 'bun:test';
+import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
+import { beforeTestCleanup, afterTestCleanup } from './test-cleanup.mjs';
 import { $ } from '../src/$.mjs';
 import { promises as fs } from 'fs';
 import path from 'path';
 import os from 'os';
 
 describe('Stderr output handling in $.mjs', () => {
+  beforeEach(async () => {
+    await beforeTestCleanup();
+  });
+  
+  afterEach(async () => {
+    await afterTestCleanup();
+  });
   
   test('commands that output to stderr should not hang when captured', async () => {
     // Test with a command that writes to stderr

@@ -77,6 +77,24 @@ export async function beforeTestCleanup() {
     process.chdir(originalCwd);
   }
   
+  // VERIFY: Ensure we actually restored to the original directory
+  const finalCwd = process.cwd();
+  if (finalCwd !== originalCwd && existsSync(originalCwd)) {
+    console.error(`[test-cleanup] WARNING: Failed to restore cwd! Expected: ${originalCwd}, Got: ${finalCwd}`);
+    // Try one more time
+    try {
+      process.chdir(originalCwd);
+      const verifiedCwd = process.cwd();
+      if (verifiedCwd === originalCwd) {
+        trace('Successfully restored on second attempt');
+      } else {
+        throw new Error(`[test-cleanup] CRITICAL: Cannot restore to original directory ${originalCwd}, stuck in ${verifiedCwd}`);
+      }
+    } catch (e) {
+      throw new Error(`[test-cleanup] CRITICAL: Cannot restore to original directory ${originalCwd}, stuck in ${finalCwd}`);
+    }
+  }
+  
   // Give a tiny bit of time for any async cleanup to complete
   await new Promise(resolve => setTimeout(resolve, 1));
   trace('beforeTestCleanup completed');
@@ -123,6 +141,24 @@ export async function afterTestCleanup() {
   } catch (e) {
     // Force to a known good directory
     process.chdir(originalCwd);
+  }
+  
+  // VERIFY: Ensure we actually restored to the original directory
+  const finalCwd = process.cwd();
+  if (finalCwd !== originalCwd && existsSync(originalCwd)) {
+    console.error(`[test-cleanup] WARNING: Failed to restore cwd in afterEach! Expected: ${originalCwd}, Got: ${finalCwd}`);
+    // Try one more time
+    try {
+      process.chdir(originalCwd);
+      const verifiedCwd = process.cwd();
+      if (verifiedCwd === originalCwd) {
+        trace('Successfully restored on second attempt in afterEach');
+      } else {
+        throw new Error(`[test-cleanup] CRITICAL: Cannot restore to original directory ${originalCwd} in afterEach, stuck in ${verifiedCwd}`);
+      }
+    } catch (e) {
+      throw new Error(`[test-cleanup] CRITICAL: Cannot restore to original directory ${originalCwd} in afterEach, stuck in ${finalCwd}`);
+    }
   }
   
   // Give a tiny bit of time for any async cleanup to complete

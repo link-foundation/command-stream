@@ -1,4 +1,5 @@
-import { test, expect, describe, beforeAll, afterAll } from 'bun:test';
+import { test, expect, describe, beforeAll, afterAll, beforeEach, afterEach } from 'bun:test';
+import { beforeTestCleanup, afterTestCleanup } from './test-cleanup.mjs';
 import { $ } from '../src/$.mjs';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -9,6 +10,14 @@ describe('GitHub Gist Operations with $.mjs', () => {
   let testGistId = null;
   const TEST_DESC = 'test-command-stream-gist';
   const CI_ENVIRONMENT = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
+  
+  beforeEach(async () => {
+    await beforeTestCleanup();
+  });
+  
+  afterEach(async () => {
+    await afterTestCleanup();
+  });
   
   beforeAll(async () => {
     // Skip write operations in CI environment
