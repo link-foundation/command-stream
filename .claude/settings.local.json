@@ -38,7 +38,8 @@
       "Read(/tmp/**)",
       "Read(/tmp/**)",
       "Bash(grep:*)",
-      "Bash(COMMAND_STREAM_VERBOSE=true timeout 10 node examples/test-streaming-timing.mjs)"
+      "Bash(COMMAND_STREAM_VERBOSE=true timeout 10 node examples/test-streaming-timing.mjs)",
+      "Bash(wc:*)"
     ],
     "deny": [],
     "ask": [],
