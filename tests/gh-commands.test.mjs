@@ -45,10 +45,15 @@ describe('GitHub CLI (gh) commands', () => {
   });
   
   test('gh api can be called with parameters', async () => {
-    // Skip if GITHUB_TOKEN is not set or not authenticated
-    if (!process.env.GITHUB_TOKEN) {
-      console.log('Skipping gh api test - GITHUB_TOKEN not set');
+    // Skip if neither GH_TOKEN nor GITHUB_TOKEN is set
+    if (!process.env.GH_TOKEN && !process.env.GITHUB_TOKEN) {
+      console.log('Skipping gh api test - GH_TOKEN/GITHUB_TOKEN not set');
       return;
+    }
+    
+    // Set GH_TOKEN from GITHUB_TOKEN if needed
+    if (!process.env.GH_TOKEN && process.env.GITHUB_TOKEN) {
+      process.env.GH_TOKEN = process.env.GITHUB_TOKEN;
     }
     
     const authCheck = await $`gh auth status 2>&1`.run({ capture: true, mirror: false });
@@ -66,10 +71,15 @@ describe('GitHub CLI (gh) commands', () => {
   });
   
   test('gh gist list works with parameters', async () => {
-    // Skip if GITHUB_TOKEN is not set or not authenticated
-    if (!process.env.GITHUB_TOKEN) {
-      console.log('Skipping gh gist test - GITHUB_TOKEN not set');
+    // Skip if neither GH_TOKEN nor GITHUB_TOKEN is set
+    if (!process.env.GH_TOKEN && !process.env.GITHUB_TOKEN) {
+      console.log('Skipping gh gist test - GH_TOKEN/GITHUB_TOKEN not set');
       return;
+    }
+    
+    // Set GH_TOKEN from GITHUB_TOKEN if needed
+    if (!process.env.GH_TOKEN && process.env.GITHUB_TOKEN) {
+      process.env.GH_TOKEN = process.env.GITHUB_TOKEN;
     }
     
     const authCheck = await $`gh auth status 2>&1`.run({ capture: true, mirror: false });
@@ -88,10 +98,15 @@ describe('GitHub CLI (gh) commands', () => {
   });
   
   test('complex gh command with pipes and jq', async () => {
-    // Skip if GITHUB_TOKEN is not set or not authenticated
-    if (!process.env.GITHUB_TOKEN) {
-      console.log('Skipping complex gh test - GITHUB_TOKEN not set');
+    // Skip if neither GH_TOKEN nor GITHUB_TOKEN is set
+    if (!process.env.GH_TOKEN && !process.env.GITHUB_TOKEN) {
+      console.log('Skipping complex gh test - GH_TOKEN/GITHUB_TOKEN not set');
       return;
+    }
+    
+    // Set GH_TOKEN from GITHUB_TOKEN if needed
+    if (!process.env.GH_TOKEN && process.env.GITHUB_TOKEN) {
+      process.env.GH_TOKEN = process.env.GITHUB_TOKEN;
     }
     
     const authCheck = await $`gh auth status 2>&1`.run({ capture: true, mirror: false });

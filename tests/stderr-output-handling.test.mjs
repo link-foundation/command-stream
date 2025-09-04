@@ -94,10 +94,15 @@ done
   });
   
   test('gh gist create with stderr progress should work correctly', async () => {
-    // Skip if GITHUB_TOKEN is not set
-    if (!process.env.GITHUB_TOKEN) {
-      console.log('Skipping: GITHUB_TOKEN not set');
+    // Skip if neither GH_TOKEN nor GITHUB_TOKEN is set
+    if (!process.env.GH_TOKEN && !process.env.GITHUB_TOKEN) {
+      console.log('Skipping: GH_TOKEN/GITHUB_TOKEN not set');
       return;
+    }
+    
+    // Set GH_TOKEN from GITHUB_TOKEN if needed
+    if (!process.env.GH_TOKEN && process.env.GITHUB_TOKEN) {
+      process.env.GH_TOKEN = process.env.GITHUB_TOKEN;
     }
     
     // Check authentication
