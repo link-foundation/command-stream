@@ -94,26 +94,10 @@ done
   });
   
   test('gh gist create with stderr progress should work correctly', async () => {
-    // Skip if neither GH_TOKEN nor GITHUB_TOKEN is set
-    if (!process.env.GH_TOKEN && !process.env.GITHUB_TOKEN) {
-      console.log('Skipping: GH_TOKEN/GITHUB_TOKEN not set');
-      return;
-    }
-    
-    // Set GH_TOKEN from GITHUB_TOKEN if needed
-    if (!process.env.GH_TOKEN && process.env.GITHUB_TOKEN) {
-      process.env.GH_TOKEN = process.env.GITHUB_TOKEN;
-    }
-    
-    // Check authentication
-    try {
-      const authResult = await $`gh auth status 2>&1`.run({ capture: true, mirror: false });
-      if (authResult.code !== 0) {
-        console.log('Skipping: not authenticated');
-        return;
-      }
-    } catch {
-      console.log('Skipping: gh auth failed');
+    // Check authentication first
+    const authCheck = await $`gh auth status 2>&1`.run({ capture: true, mirror: false });
+    if (authCheck.code !== 0) {
+      console.log('Skipping gh gist test - not authenticated (this is OK - we are testing $.mjs, not gh auth)');
       return;
     }
     
