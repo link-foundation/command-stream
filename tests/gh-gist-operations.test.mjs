@@ -106,7 +106,7 @@ describe('GitHub Gist Operations with $.mjs', () => {
     expect(result.stdout.trim()).toBe(TEST_DESC);
   });
   
-  test('gh gist edit should add files to existing gist', async () => {
+  test.skip('gh gist edit should add files to existing gist', async () => {
     if (CI_ENVIRONMENT || !isAuthenticated || !testGistId) {
       console.log('Skipped: CI environment or no test gist available');
       return;

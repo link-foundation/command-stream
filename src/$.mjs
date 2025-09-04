@@ -2528,8 +2528,17 @@ class ProcessRunner extends StreamEmitter {
 
       return result;
     } catch (error) {
+      // Check if this is a cancellation error
+      let exitCode = error.code ?? 1;
+      if (this._cancelled && this._cancellationSignal) {
+        // Use appropriate exit code based on the signal
+        exitCode = this._cancellationSignal === 'SIGINT' ? 130 : 
+                   this._cancellationSignal === 'SIGTERM' ? 143 : 1;
+        trace('ProcessRunner', () => `Virtual command error during cancellation, using signal-based exit code: ${exitCode}`);
+      }
+      
       const result = {
-        code: error.code ?? 1,
+        code: exitCode,
         stdout: error.stdout ?? '',
         stderr: error.stderr ?? error.message,
         stdin: ''
