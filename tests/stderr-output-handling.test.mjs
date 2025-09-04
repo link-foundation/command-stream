@@ -94,6 +94,12 @@ done
   });
   
   test('gh gist create with stderr progress should work correctly', async () => {
+    // Skip if GITHUB_TOKEN is not set
+    if (!process.env.GITHUB_TOKEN) {
+      console.log('Skipping: GITHUB_TOKEN not set');
+      return;
+    }
+    
     // Check authentication
     try {
       const authResult = await $`gh auth status 2>&1`.run({ capture: true, mirror: false });

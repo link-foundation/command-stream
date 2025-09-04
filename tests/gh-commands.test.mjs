@@ -45,7 +45,12 @@ describe('GitHub CLI (gh) commands', () => {
   });
   
   test('gh api can be called with parameters', async () => {
-    // Skip if not authenticated
+    // Skip if GITHUB_TOKEN is not set or not authenticated
+    if (!process.env.GITHUB_TOKEN) {
+      console.log('Skipping gh api test - GITHUB_TOKEN not set');
+      return;
+    }
+    
     const authCheck = await $`gh auth status 2>&1`.run({ capture: true, mirror: false });
     if (authCheck.code !== 0) {
       console.log('Skipping gh api test - not authenticated');
@@ -61,7 +66,12 @@ describe('GitHub CLI (gh) commands', () => {
   });
   
   test('gh gist list works with parameters', async () => {
-    // Skip if not authenticated
+    // Skip if GITHUB_TOKEN is not set or not authenticated
+    if (!process.env.GITHUB_TOKEN) {
+      console.log('Skipping gh gist test - GITHUB_TOKEN not set');
+      return;
+    }
+    
     const authCheck = await $`gh auth status 2>&1`.run({ capture: true, mirror: false });
     if (authCheck.code !== 0) {
       console.log('Skipping gh gist test - not authenticated');
@@ -78,7 +88,12 @@ describe('GitHub CLI (gh) commands', () => {
   });
   
   test('complex gh command with pipes and jq', async () => {
-    // Skip if not authenticated
+    // Skip if GITHUB_TOKEN is not set or not authenticated
+    if (!process.env.GITHUB_TOKEN) {
+      console.log('Skipping complex gh test - GITHUB_TOKEN not set');
+      return;
+    }
+    
     const authCheck = await $`gh auth status 2>&1`.run({ capture: true, mirror: false });
     if (authCheck.code !== 0) {
       console.log('Skipping complex gh test - not authenticated');
