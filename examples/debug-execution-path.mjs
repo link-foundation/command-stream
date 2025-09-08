@@ -1,44 +1,25 @@
 #!/usr/bin/env node
 
+// Debug execution path to see exactly what's happening
 import { $ } from '../src/$.mjs';
 
+// Enable verbose mode to see detailed tracing
+process.env.COMMAND_STREAM_VERBOSE = 'true';
+
 console.log('=== Execution Path Debug ===');
+console.log(`Runtime: ${typeof globalThis.Bun !== 'undefined' ? 'Bun' : 'Node.js'}`);
 
-// Test 1: Check if echo is virtual
-console.log('Testing if echo is treated as virtual command...');
+console.log('\n--- Testing simple command: echo hello ---');
 
-const cmd1 = $`echo "test1"`;
-console.log('Command spec:', cmd1.spec);
-console.log('Command started:', cmd1.started);
-
-// Override the _runVirtual method to see if it's called
-const originalRunVirtual = cmd1._runVirtual;
-cmd1._runVirtual = function(...args) {
-  console.log('_runVirtual called with:', args);
-  return originalRunVirtual.apply(this, args);
-};
-
-// Override the _doStartAsync to see which path is taken
-const originalDoStartAsync = cmd1._doStartAsync;
-cmd1._doStartAsync = function(...args) {
-  console.log('_doStartAsync called');
-  return originalDoStartAsync.apply(this, args);
-};
-
-await cmd1;
-console.log('Test 1 completed');
-
-// Test 2: Force real command by disabling virtual
-console.log('\nTesting with virtual commands disabled...');
-import { disableVirtualCommands } from '../src/$.mjs';
-disableVirtualCommands();
-
-const cmd2 = $`echo "test2"`;
-const originalDoStartAsync2 = cmd2._doStartAsync;
-cmd2._doStartAsync = function(...args) {
-  console.log('_doStartAsync called for real command');
-  return originalDoStartAsync2.apply(this, args);
-};
-
-await cmd2;
-console.log('Test 2 completed');
+try {
+    const result = await $`echo hello`;
+    console.log(`✓ Success: "${result.stdout.toString().trim()}"`);
+} catch (error) {
+    console.log(`✗ Failed: ${error.message}`);
+    if (error.code) {
+        console.log(`  Code: ${error.code}`);
+    }
+    if (error.stderr) {
+        console.log(`  Stderr: ${error.stderr.toString().trim()}`);
+    }
+}
