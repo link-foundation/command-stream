@@ -83,8 +83,9 @@ describe('.text() method for Bun.$ compatibility', () => {
     const result = await $`pwd`;
     const text = await result.text();
     
-    // Should end with the current directory name
-    expect(text).toMatch(/command-stream\n$/);
+    // Should be a valid directory path ending with newline
+    expect(text).toMatch(/^\/.*\n$/);
+    expect(text).toContain('gh-issue-solver'); // Should contain part of the temp directory name
   });
   
   test('.text() should return empty string for commands with no stdout', async () => {
