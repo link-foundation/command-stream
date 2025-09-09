@@ -140,12 +140,12 @@ function installSignalHandlers() {
     for (const runner of activeProcessRunners) {
       if (!runner.finished) {
         // Real child process
-        if (runner.child && runner.child.pid) {
+        if (runner._child && runner._child.pid) {
           activeChildren.push(runner);
-          trace('ProcessRunner', () => `Found active child: PID ${runner.child.pid}, command: ${runner.spec?.command || 'unknown'}`);
+          trace('ProcessRunner', () => `Found active child: PID ${runner._child.pid}, command: ${runner.spec?.command || 'unknown'}`);
         }
         // Virtual command (no child process but still active)
-        else if (!runner.child) {
+        else if (!runner._child) {
           activeChildren.push(runner);
           trace('ProcessRunner', () => `Found active virtual command: ${runner.spec?.command || 'unknown'}`);
         }
@@ -159,8 +159,8 @@ function installSignalHandlers() {
       pid: process.pid,
       ppid: process.ppid,
       activeCommands: activeChildren.map(r => ({
-        hasChild: !!r.child,
-        childPid: r.child?.pid,
+        hasChild: !!r._child,
+        childPid: r._child?.pid,
         hasVirtualGenerator: !!r._virtualGenerator,
         finished: r.finished,
         command: r.spec?.command?.slice(0, 30)
@@ -179,33 +179,33 @@ function installSignalHandlers() {
     // Forward signal to all active processes (child processes and virtual commands)
     for (const runner of activeChildren) {
       try {
-        if (runner.child && runner.child.pid) {
+        if (runner._child && runner._child.pid) {
           // Real child process - send SIGINT to it
           trace('ProcessRunner', () => `Sending SIGINT to child process | ${JSON.stringify({
-            pid: runner.child.pid,
-            killed: runner.child.killed,
+            pid: runner._child.pid,
+            killed: runner._child.killed,
             runtime: isBun ? 'Bun' : 'Node.js',
             command: runner.spec?.command?.slice(0, 50)
           }, null, 2)}`);
           
           if (isBun) {
-            runner.child.kill('SIGINT');
-            trace('ProcessRunner', () => `Bun: SIGINT sent to PID ${runner.child.pid}`);
+            runner._child.kill('SIGINT');
+            trace('ProcessRunner', () => `Bun: SIGINT sent to PID ${runner._child.pid}`);
           } else {
             // Send to process group if detached, otherwise to process directly
             try {
-              process.kill(-runner.child.pid, 'SIGINT');
-              trace('ProcessRunner', () => `Node.js: SIGINT sent to process group -${runner.child.pid}`);
+              process.kill(-runner._child.pid, 'SIGINT');
+              trace('ProcessRunner', () => `Node.js: SIGINT sent to process group -${runner._child.pid}`);
             } catch (err) {
               trace('ProcessRunner', () => `Node.js: Process group kill failed, trying direct: ${err.message}`);
-              process.kill(runner.child.pid, 'SIGINT');
-              trace('ProcessRunner', () => `Node.js: SIGINT sent directly to PID ${runner.child.pid}`);
+              process.kill(runner._child.pid, 'SIGINT');
+              trace('ProcessRunner', () => `Node.js: SIGINT sent directly to PID ${runner._child.pid}`);
             }
           }
         } else {
           // Virtual command - cancel it using the runner's kill method
           trace('ProcessRunner', () => `Cancelling virtual command | ${JSON.stringify({
-            hasChild: !!runner.child,
+            hasChild: !!runner._child,
             hasVirtualGenerator: !!runner._virtualGenerator,
             finished: runner.finished,
             cancelled: runner._cancelled,
@@ -218,8 +218,8 @@ function installSignalHandlers() {
         trace('ProcessRunner', () => `Error in SIGINT handler for runner | ${JSON.stringify({
           error: err.message,
           stack: err.stack?.slice(0, 300),
-          hasPid: !!(runner.child && runner.child.pid),
-          pid: runner.child?.pid,
+          hasPid: !!(runner._child && runner._child.pid),
+          pid: runner._child?.pid,
           command: runner.spec?.command?.slice(0, 50)
         }, null, 2)}`);
       }
@@ -854,7 +854,7 @@ class ProcessRunner extends StreamEmitter {
         [Buffer.from(this.options.stdin)] : [];
 
     this.result = null;
-    this.child = null;
+    this._child = null;
     this.started = false;
     this.finished = false;
 
@@ -885,26 +885,88 @@ class ProcessRunner extends StreamEmitter {
   // Stream property getters for child process streams (null for virtual commands)
   get stdout() {
     trace('ProcessRunner', () => `stdout getter accessed | ${JSON.stringify({
-      hasChild: !!this.child,
-      hasStdout: !!(this.child && this.child.stdout)
+      hasChild: !!this._child,
+      hasStdout: !!(this._child && this._child.stdout)
     }, null, 2)}`);
-    return this.child ? this.child.stdout : null;
+    return this._child ? this._child.stdout : null;
   }
 
   get stderr() {
     trace('ProcessRunner', () => `stderr getter accessed | ${JSON.stringify({
-      hasChild: !!this.child,
-      hasStderr: !!(this.child && this.child.stderr)
+      hasChild: !!this._child,
+      hasStderr: !!(this._child && this._child.stderr)
     }, null, 2)}`);
-    return this.child ? this.child.stderr : null;
+    return this._child ? this._child.stderr : null;
   }
 
   get stdin() {
     trace('ProcessRunner', () => `stdin getter accessed | ${JSON.stringify({
-      hasChild: !!this.child,
-      hasStdin: !!(this.child && this.child.stdin)
+      hasChild: !!this._child,
+      hasStdin: !!(this._child && this._child.stdin)
     }, null, 2)}`);
-    return this.child ? this.child.stdin : null;
+    return this._child ? this._child.stdin : null;
+  }
+
+  // Issue #20: Provide immediate access to child process for killing
+  get child() {
+    trace('ProcessRunner', () => `child getter accessed | ${JSON.stringify({
+      hasChild: !!this._child,
+      hasPid: !!(this._child && this._child.pid),
+      started: this.started,
+      finished: this.finished,
+      command: this.spec?.command?.slice(0, 50)
+    }, null, 2)}`);
+
+    // If child already exists, return it immediately
+    if (this._child) {
+      trace('ProcessRunner', () => 'child: returning existing child process');
+      return this._child;
+    }
+
+    // If process is finished, return null (child process is cleaned up)
+    if (this.finished) {
+      trace('ProcessRunner', () => 'child: process finished, returning null');
+      return null;
+    }
+
+    // For virtual commands, create a proxy child object that supports kill()
+    if (this._virtualGenerator || (this.spec && this.spec.command && virtualCommands.has(this.spec.command.split(' ')[0]))) {
+      trace('ProcessRunner', () => 'child: virtual command, returning proxy child');
+      
+      // Auto-start the virtual command if not started
+      if (!this.started) {
+        this._autoStartIfNeeded('virtual child access');
+      }
+      
+      // Return a proxy object that supports kill() method
+      return {
+        pid: null, // Virtual commands don't have PIDs
+        stdin: null,
+        stdout: null,
+        stderr: null,
+        killed: this._cancelled,
+        exitCode: null,
+        signalCode: null,
+        
+        // Delegate kill to ProcessRunner's kill method
+        kill: (signal = 'SIGTERM') => {
+          trace('ProcessRunner', () => `Virtual child kill called with signal: ${signal}`);
+          this.kill(signal);
+        },
+        
+        // Mark this as a virtual child for identification
+        _isVirtualChild: true
+      };
+    }
+
+    // Auto-start the process if not started - this will make _child available asynchronously
+    if (!this.started) {
+      trace('ProcessRunner', () => 'child: auto-starting process due to child access');
+      this._autoStartIfNeeded('child access');
+    }
+    
+    trace('ProcessRunner', () => 'child: returning _child (process starting asynchronously)');
+    return this._child; // Will be null initially, but will become available once process starts
   }
 
   // Issue #33: New streaming interfaces
@@ -920,8 +982,8 @@ class ProcessRunner extends StreamEmitter {
     return {
       get stdin() {
         trace('ProcessRunner.streams', () => `stdin access | ${JSON.stringify({
-          hasChild: !!self.child,
-          hasStdin: !!(self.child && self.child.stdin),
+          hasChild: !!self._child,
+          hasStdin: !!(self._child && self._child.stdin),
           started: self.started,
           finished: self.finished,
           hasPromise: !!self.promise,
@@ -932,9 +994,9 @@ class ProcessRunner extends StreamEmitter {
         
         // Streams are available immediately after spawn, or null if not piped
         // Return the stream directly if available, otherwise ensure process starts
-        if (self.child && self.child.stdin) {
+        if (self._child && self._child.stdin) {
           trace('ProcessRunner.streams', () => 'stdin: returning existing stream');
-          return self.child.stdin;
+          return self._child.stdin;
         }
         if (self.finished) {
           trace('ProcessRunner.streams', () => 'stdin: process finished, returning null');
@@ -959,8 +1021,8 @@ class ProcessRunner extends StreamEmitter {
           // Wait for child to be created using async iteration
           return new Promise((resolve) => {
             const checkForChild = () => {
-              if (self.child && self.child.stdin) {
-                resolve(self.child.stdin);
+              if (self._child && self._child.stdin) {
+                resolve(self._child.stdin);
               } else if (self.finished || self._virtualGenerator) {
                 resolve(null);
               } else {
@@ -973,12 +1035,12 @@ class ProcessRunner extends StreamEmitter {
         }
         
         // Process is starting - wait for child to appear
-        if (self.promise && !self.child) {
+        if (self.promise && !self._child) {
           trace('ProcessRunner.streams', () => 'stdin: process starting, waiting for child');
           return new Promise((resolve) => {
             const checkForChild = () => {
-              if (self.child && self.child.stdin) {
-                resolve(self.child.stdin);
+              if (self._child && self._child.stdin) {
+                resolve(self._child.stdin);
               } else if (self.finished || self._virtualGenerator) {
                 resolve(null);
               } else {
@@ -994,8 +1056,8 @@ class ProcessRunner extends StreamEmitter {
       },
       get stdout() {
         trace('ProcessRunner.streams', () => `stdout access | ${JSON.stringify({
-          hasChild: !!self.child,
-          hasStdout: !!(self.child && self.child.stdout),
+          hasChild: !!self._child,
+          hasStdout: !!(self._child && self._child.stdout),
           started: self.started,
           finished: self.finished,
           hasPromise: !!self.promise,
@@ -1004,9 +1066,9 @@ class ProcessRunner extends StreamEmitter {
         
         self._autoStartIfNeeded('streams.stdout access');
         
-        if (self.child && self.child.stdout) {
+        if (self._child && self._child.stdout) {
           trace('ProcessRunner.streams', () => 'stdout: returning existing stream');
-          return self.child.stdout;
+          return self._child.stdout;
         }
         if (self.finished) {
           trace('ProcessRunner.streams', () => 'stdout: process finished, returning null');
@@ -1024,8 +1086,8 @@ class ProcessRunner extends StreamEmitter {
           self._startAsync();
           return new Promise((resolve) => {
             const checkForChild = () => {
-              if (self.child && self.child.stdout) {
-                resolve(self.child.stdout);
+              if (self._child && self._child.stdout) {
+                resolve(self._child.stdout);
               } else if (self.finished || self._virtualGenerator) {
                 resolve(null);
               } else {
@@ -1036,12 +1098,12 @@ class ProcessRunner extends StreamEmitter {
           });
         }
         
-        if (self.promise && !self.child) {
+        if (self.promise && !self._child) {
           trace('ProcessRunner.streams', () => 'stdout: process starting, waiting for child');
           return new Promise((resolve) => {
             const checkForChild = () => {
-              if (self.child && self.child.stdout) {
-                resolve(self.child.stdout);
+              if (self._child && self._child.stdout) {
+                resolve(self._child.stdout);
               } else if (self.finished || self._virtualGenerator) {
                 resolve(null);
               } else {
@@ -1057,8 +1119,8 @@ class ProcessRunner extends StreamEmitter {
       },
       get stderr() {
         trace('ProcessRunner.streams', () => `stderr access | ${JSON.stringify({
-          hasChild: !!self.child,
-          hasStderr: !!(self.child && self.child.stderr),
+          hasChild: !!self._child,
+          hasStderr: !!(self._child && self._child.stderr),
           started: self.started,
           finished: self.finished,
           hasPromise: !!self.promise,
@@ -1067,9 +1129,9 @@ class ProcessRunner extends StreamEmitter {
         
         self._autoStartIfNeeded('streams.stderr access');
         
-        if (self.child && self.child.stderr) {
+        if (self._child && self._child.stderr) {
           trace('ProcessRunner.streams', () => 'stderr: returning existing stream');
-          return self.child.stderr;
+          return self._child.stderr;
         }
         if (self.finished) {
           trace('ProcessRunner.streams', () => 'stderr: process finished, returning null');
@@ -1087,8 +1149,8 @@ class ProcessRunner extends StreamEmitter {
           self._startAsync();
           return new Promise((resolve) => {
             const checkForChild = () => {
-              if (self.child && self.child.stderr) {
-                resolve(self.child.stderr);
+              if (self._child && self._child.stderr) {
+                resolve(self._child.stderr);
               } else if (self.finished || self._virtualGenerator) {
                 resolve(null);
               } else {
@@ -1099,12 +1161,12 @@ class ProcessRunner extends StreamEmitter {
           });
         }
         
-        if (self.promise && !self.child) {
+        if (self.promise && !self._child) {
           trace('ProcessRunner.streams', () => 'stderr: process starting, waiting for child');
           return new Promise((resolve) => {
             const checkForChild = () => {
-              if (self.child && self.child.stderr) {
-                resolve(self.child.stderr);
+              if (self._child && self._child.stderr) {
+                resolve(self._child.stderr);
               } else if (self.finished || self._virtualGenerator) {
                 resolve(null);
               } else {
@@ -1233,10 +1295,10 @@ class ProcessRunner extends StreamEmitter {
   async _forwardTTYStdin() {
     trace('ProcessRunner', () => `_forwardTTYStdin ENTER | ${JSON.stringify({
       isTTY: process.stdin.isTTY,
-      hasChildStdin: !!this.child?.stdin
+      hasChildStdin: !!this._child?.stdin
     }, null, 2)}`);
     
-    if (!process.stdin.isTTY || !this.child.stdin) {
+    if (!process.stdin.isTTY || !this._child.stdin) {
       trace('ProcessRunner', () => 'TTY forwarding skipped - no TTY or no child stdin');
       return;
     }
@@ -1254,20 +1316,20 @@ class ProcessRunner extends StreamEmitter {
         if (chunk[0] === 3) {
           trace('ProcessRunner', () => 'CTRL+C detected, sending SIGINT to child process');
           // Send SIGINT to the child process
-          if (this.child && this.child.pid) {
+          if (this._child && this._child.pid) {
             try {
               if (isBun) {
-                this.child.kill('SIGINT');
+                this._child.kill('SIGINT');
               } else {
                 // In Node.js, send SIGINT to the process group if detached
                 // or to the process directly if not
-                if (this.child.pid > 0) {
+                if (this._child.pid > 0) {
                   try {
                     // Try process group first if detached
-                    process.kill(-this.child.pid, 'SIGINT');
+                    process.kill(-this._child.pid, 'SIGINT');
                   } catch (err) {
                     // Fall back to direct process
-                    process.kill(this.child.pid, 'SIGINT');
+                    process.kill(this._child.pid, 'SIGINT');
                   }
                 }
               }
@@ -1280,11 +1342,11 @@ class ProcessRunner extends StreamEmitter {
         }
         
         // Forward other input to child stdin
-        if (this.child.stdin) {
-          if (isBun && this.child.stdin.write) {
-            this.child.stdin.write(chunk);
-          } else if (this.child.stdin.write) {
-            this.child.stdin.write(chunk);
+        if (this._child.stdin) {
+          if (isBun && this._child.stdin.write) {
+            this._child.stdin.write(chunk);
+          } else if (this._child.stdin.write) {
+            this._child.stdin.write(chunk);
           }
         }
       };
@@ -1301,9 +1363,9 @@ class ProcessRunner extends StreamEmitter {
       process.stdin.on('data', onData);
 
       // Clean up when child process exits
-      const childExit = isBun ? this.child.exited : new Promise((resolve) => {
-        this.child.once('close', resolve);
-        this.child.once('exit', resolve);
+      const childExit = isBun ? this._child.exited : new Promise((resolve) => {
+        this._child.once('close', resolve);
+        this._child.once('exit', resolve);
       });
 
       childExit.then(cleanup).catch(cleanup);
@@ -1326,7 +1388,7 @@ class ProcessRunner extends StreamEmitter {
 
     trace('ProcessRunner', () => `Handling parent stream closure | ${JSON.stringify({
       started: this.started,
-      hasChild: !!this.child,
+      hasChild: !!this._child,
       command: this.spec.command?.slice(0, 50) || this.spec.file
     }, null, 2)}`);
 
@@ -1338,13 +1400,13 @@ class ProcessRunner extends StreamEmitter {
     }
 
     // Gracefully close child process if it exists
-    if (this.child) {
+    if (this._child) {
       try {
         // Close stdin first to signal completion
-        if (this.child.stdin && typeof this.child.stdin.end === 'function') {
-          this.child.stdin.end();
-        } else if (isBun && this.child.stdin && typeof this.child.stdin.getWriter === 'function') {
-          const writer = this.child.stdin.getWriter();
+        if (this._child.stdin && typeof this._child.stdin.end === 'function') {
+          this._child.stdin.end();
+        } else if (isBun && this._child.stdin && typeof this._child.stdin.getWriter === 'function') {
+          const writer = this._child.stdin.getWriter();
           writer.close().catch(() => { }); // Ignore close errors
         }
 
@@ -1352,8 +1414,8 @@ class ProcessRunner extends StreamEmitter {
         setImmediate(() => {
           if (this.child && !this.finished) {
             trace('ProcessRunner', () => 'Terminating child process after parent stream closure');
-            if (typeof this.child.kill === 'function') {
-              this.child.kill('SIGTERM');
+            if (typeof this._child.kill === 'function') {
+              this._child.kill('SIGTERM');
             }
           }
         });
@@ -1371,7 +1433,7 @@ class ProcessRunner extends StreamEmitter {
       wasActiveBeforeCleanup: activeProcessRunners.has(this),
       totalActiveBefore: activeProcessRunners.size,
       finished: this.finished,
-      hasChild: !!this.child,
+      hasChild: !!this._child,
       command: this.spec?.command?.slice(0, 50)
     }, null, 2)}`);
     
@@ -1427,19 +1489,19 @@ class ProcessRunner extends StreamEmitter {
     }
     
     // Clean up child process reference
-    if (this.child) {
+    if (this._child) {
       trace('ProcessRunner', () => `Cleaning up child process reference | ${JSON.stringify({
         hasChild: true,
-        childPid: this.child.pid,
-        childKilled: this.child.killed
+        childPid: this._child.pid,
+        childKilled: this._child.killed
       }, null, 2)}`);
       try {
-        this.child.removeAllListeners?.();
+        this._child.removeAllListeners?.();
         trace('ProcessRunner', () => `Child process listeners removed successfully`);
       } catch (e) {
         trace('ProcessRunner', () => `Error removing child process listeners: ${e.message}`);
       }
-      this.child = null;
+      this._child = null;
       trace('ProcessRunner', () => `Child process reference cleared`);
     } else {
       trace('ProcessRunner', () => `No child process reference to clean up`);
@@ -1479,7 +1541,7 @@ class ProcessRunner extends StreamEmitter {
       options, 
       started: this.started,
       hasPromise: !!this.promise,
-      hasChild: !!this.child,
+      hasChild: !!this._child,
       command: this.spec?.command?.slice(0, 50)
     }, null, 2)}`);
 
@@ -1512,8 +1574,8 @@ class ProcessRunner extends StreamEmitter {
           
           // Kill the process when abort signal is triggered
           trace('ProcessRunner', () => `External abort signal received - killing process | ${JSON.stringify({
-            hasChild: !!this.child,
-            childPid: this.child?.pid,
+            hasChild: !!this._child,
+            childPid: this._child?.pid,
             finished: this.finished,
             command: this.spec?.command?.slice(0, 50)
           }, null, 2)}`);
@@ -1543,8 +1605,8 @@ class ProcessRunner extends StreamEmitter {
           
           // Kill the process immediately since signal is already aborted
           trace('ProcessRunner', () => `Signal already aborted - killing process immediately | ${JSON.stringify({
-            hasChild: !!this.child,
-            childPid: this.child?.pid,
+            hasChild: !!this._child,
+            childPid: this._child?.pid,
             finished: this.finished,
             command: this.spec?.command?.slice(0, 50)
           }, null, 2)}`);
@@ -1860,35 +1922,35 @@ class ProcessRunner extends StreamEmitter {
       command: argv[0],
       args: argv.slice(1)
     }, null, 2)}`);
-    this.child = preferNodeForInput ? await spawnNode(argv) : (isBun ? spawnBun(argv) : await spawnNode(argv));
+    this._child = preferNodeForInput ? await spawnNode(argv) : (isBun ? spawnBun(argv) : await spawnNode(argv));
     
     // Add detailed logging for CI debugging
-    if (this.child) {
+    if (this._child) {
       trace('ProcessRunner', () => `Child process created | ${JSON.stringify({ 
-        pid: this.child.pid, 
-        detached: this.child.options?.detached,
-        killed: this.child.killed,
-        exitCode: this.child.exitCode,
-        signalCode: this.child.signalCode,
-        hasStdout: !!this.child.stdout,
-        hasStderr: !!this.child.stderr,
-        hasStdin: !!this.child.stdin,
+        pid: this._child.pid, 
+        detached: this._child.options?.detached,
+        killed: this._child.killed,
+        exitCode: this._child.exitCode,
+        signalCode: this._child.signalCode,
+        hasStdout: !!this._child.stdout,
+        hasStderr: !!this._child.stderr,
+        hasStdin: !!this._child.stdin,
         platform: process.platform,
         command: this.spec?.command?.slice(0, 100)
       }, null, 2)}`);
       
       // Add event listeners with detailed tracing (only for Node.js child processes)
-      if (this.child && typeof this.child.on === 'function') {
-        this.child.on('spawn', () => {
+      if (this.child && typeof this._child.on === 'function') {
+        this._child.on('spawn', () => {
           trace('ProcessRunner', () => `Child process spawned successfully | ${JSON.stringify({
-            pid: this.child.pid,
+            pid: this._child.pid,
             command: this.spec?.command?.slice(0, 50)
           }, null, 2)}`);
         });
         
-        this.child.on('error', (error) => {
+        this._child.on('error', (error) => {
           trace('ProcessRunner', () => `Child process error event | ${JSON.stringify({
-            pid: this.child?.pid,
+            pid: this._child?.pid,
             error: error.message,
             code: error.code,
             errno: error.errno,
@@ -1907,8 +1969,8 @@ class ProcessRunner extends StreamEmitter {
     }
 
     // For interactive commands with stdio: 'inherit', stdout/stderr will be null
-    const childPid = this.child?.pid; // Capture PID once at the start
-    const outPump = this.child.stdout ? pumpReadable(this.child.stdout, async (buf) => {
+    const childPid = this._child?.pid; // Capture PID once at the start
+    const outPump = this._child.stdout ? pumpReadable(this._child.stdout, async (buf) => {
       trace('ProcessRunner', () => `stdout data received | ${JSON.stringify({
         pid: childPid,
         bufferLength: buf.length,
@@ -1924,7 +1986,7 @@ class ProcessRunner extends StreamEmitter {
       this._emitProcessedData('stdout', buf);
     }) : Promise.resolve();
 
-    const errPump = this.child.stderr ? pumpReadable(this.child.stderr, async (buf) => {
+    const errPump = this._child.stderr ? pumpReadable(this._child.stderr, async (buf) => {
       trace('ProcessRunner', () => `stderr data received | ${JSON.stringify({
         pid: childPid,
         bufferLength: buf.length,
@@ -1945,7 +2007,7 @@ class ProcessRunner extends StreamEmitter {
       stdinType: typeof stdin,
       stdin: stdin === 'inherit' ? 'inherit' : stdin === 'ignore' ? 'ignore' : (typeof stdin === 'string' ? `string(${stdin.length})` : 'other'),
       isInteractive,
-      hasChildStdin: !!this.child?.stdin,
+      hasChildStdin: !!this._child?.stdin,
       processTTY: process.stdin.isTTY
     }, null, 2)}`);
     
@@ -1971,8 +2033,8 @@ class ProcessRunner extends StreamEmitter {
       }
     } else if (stdin === 'ignore') {
       trace('ProcessRunner', () => `stdin: Ignoring and closing stdin`);
-      if (this.child.stdin && typeof this.child.stdin.end === 'function') {
-        this.child.stdin.end();
+      if (this._child.stdin && typeof this._child.stdin.end === 'function') {
+        this._child.stdin.end();
         trace('ProcessRunner', () => `stdin: Child stdin closed successfully`);
       }
     } else if (stdin === 'pipe') {
@@ -1991,28 +2053,28 @@ class ProcessRunner extends StreamEmitter {
       trace('ProcessRunner', () => `stdin: Unhandled stdin type: ${typeof stdin}`);
     }
 
-    const exited = isBun ? this.child.exited : new Promise((resolve) => {
-      trace('ProcessRunner', () => `Setting up child process event listeners for PID ${this.child.pid}`);
-      this.child.on('close', (code, signal) => {
+    const exited = isBun ? this._child.exited : new Promise((resolve) => {
+      trace('ProcessRunner', () => `Setting up child process event listeners for PID ${this._child.pid}`);
+      this._child.on('close', (code, signal) => {
         trace('ProcessRunner', () => `Child process close event | ${JSON.stringify({ 
-          pid: this.child.pid, 
+          pid: this._child.pid, 
           code, 
           signal,
-          killed: this.child.killed,
-          exitCode: this.child.exitCode,
-          signalCode: this.child.signalCode,
+          killed: this._child.killed,
+          exitCode: this._child.exitCode,
+          signalCode: this._child.signalCode,
           command: this.command 
         }, null, 2)}`);
         resolve(code);
       });
-      this.child.on('exit', (code, signal) => {
+      this._child.on('exit', (code, signal) => {
         trace('ProcessRunner', () => `Child process exit event | ${JSON.stringify({ 
-          pid: this.child.pid, 
+          pid: this._child.pid, 
           code, 
           signal,
-          killed: this.child.killed,
-          exitCode: this.child.exitCode,
-          signalCode: this.child.signalCode,
+          killed: this._child.killed,
+          exitCode: this._child.exitCode,
+          signalCode: this._child.signalCode,
           command: this.command 
         }, null, 2)}`);
       });
@@ -2024,7 +2086,7 @@ class ProcessRunner extends StreamEmitter {
     trace('ProcessRunner', () => `Raw exit code from child | ${JSON.stringify({
       code,
       codeType: typeof code,
-      childExitCode: this.child?.exitCode,
+      childExitCode: this._child?.exitCode,
       isBun
     }, null, 2)}`);
 
@@ -2034,9 +2096,9 @@ class ProcessRunner extends StreamEmitter {
     trace('ProcessRunner', () => `Processing exit code | ${JSON.stringify({
       rawCode: code,
       cancelled: this._cancelled,
-      childKilled: this.child?.killed,
-      childExitCode: this.child?.exitCode,
-      childSignalCode: this.child?.signalCode
+      childKilled: this._child?.killed,
+      childExitCode: this._child?.exitCode,
+      childSignalCode: this._child?.signalCode
     }, null, 2)}`);
     
     if (finalExitCode === undefined || finalExitCode === null) {
@@ -2069,7 +2131,7 @@ class ProcessRunner extends StreamEmitter {
       stderrLength: resultData.stderr?.length || 0,
       stdoutPreview: resultData.stdout?.slice(0, 100),
       stderrPreview: resultData.stderr?.slice(0, 100),
-      childPid: this.child?.pid,
+      childPid: this._child?.pid,
       cancelled: this._cancelled,
       cancellationSignal: this._cancellationSignal,
       platform: process.platform,
@@ -2180,19 +2242,19 @@ class ProcessRunner extends StreamEmitter {
   async _writeToStdin(buf) {
     trace('ProcessRunner', () => `_writeToStdin ENTER | ${JSON.stringify({
       bufferLength: buf?.length || 0,
-      hasChildStdin: !!this.child?.stdin
+      hasChildStdin: !!this._child?.stdin
     }, null, 2)}`);
     
     const bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf.buffer, buf.byteOffset ?? 0, buf.byteLength);
-    if (await StreamUtils.writeToStream(this.child.stdin, bytes, 'stdin')) {
+    if (await StreamUtils.writeToStream(this._child.stdin, bytes, 'stdin')) {
       // Successfully wrote to stream
-      if (StreamUtils.isBunStream(this.child.stdin)) {
+      if (StreamUtils.isBunStream(this._child.stdin)) {
         // Stream was already closed by writeToStream utility
-      } else if (StreamUtils.isNodeStream(this.child.stdin)) {
-        try { this.child.stdin.end(); } catch { }
+      } else if (StreamUtils.isNodeStream(this._child.stdin)) {
+        try { this._child.stdin.end(); } catch { }
       }
     } else if (isBun && typeof Bun.write === 'function') {
-      await Bun.write(this.child.stdin, buf);
+      await Bun.write(this._child.stdin, buf);
     }
   }
 
@@ -3888,7 +3950,7 @@ class ProcessRunner extends StreamEmitter {
       signal,
       cancelled: this._cancelled,
       finished: this.finished,
-      hasChild: !!this.child,
+      hasChild: !!this._child,
       hasVirtualGenerator: !!this._virtualGenerator,
       command: this.spec?.command?.slice(0, 50) || 'unknown'
     }, null, 2)}`);
@@ -3969,20 +4031,20 @@ class ProcessRunner extends StreamEmitter {
     }
 
     // Kill child process if it exists
-    if (this.child && !this.finished) {
-      trace('ProcessRunner', () => `BRANCH: hasChild => killing | ${JSON.stringify({ pid: this.child.pid }, null, 2)}`);
+    if (this._child && !this.finished) {
+      trace('ProcessRunner', () => `BRANCH: hasChild => killing | ${JSON.stringify({ pid: this._child.pid }, null, 2)}`);
       try {
-        if (this.child.pid) {
+        if (this._child.pid) {
           if (isBun) {
-            trace('ProcessRunner', () => `Killing Bun process | ${JSON.stringify({ pid: this.child.pid }, null, 2)}`);
+            trace('ProcessRunner', () => `Killing Bun process | ${JSON.stringify({ pid: this._child.pid }, null, 2)}`);
             
             // For Bun, use the same enhanced kill logic as Node.js for CI reliability
             const killOperations = [];
             
             // Try SIGTERM first
             try {
-              process.kill(this.child.pid, 'SIGTERM');
-              trace('ProcessRunner', () => `Sent SIGTERM to Bun process ${this.child.pid}`);
+              process.kill(this._child.pid, 'SIGTERM');
+              trace('ProcessRunner', () => `Sent SIGTERM to Bun process ${this._child.pid}`);
               killOperations.push('SIGTERM to process');
             } catch (err) {
               trace('ProcessRunner', () => `Error sending SIGTERM to Bun process: ${err.message}`);
@@ -3990,8 +4052,8 @@ class ProcessRunner extends StreamEmitter {
             
             // Try process group SIGTERM
             try {
-              process.kill(-this.child.pid, 'SIGTERM');
-              trace('ProcessRunner', () => `Sent SIGTERM to Bun process group -${this.child.pid}`);
+              process.kill(-this._child.pid, 'SIGTERM');
+              trace('ProcessRunner', () => `Sent SIGTERM to Bun process group -${this._child.pid}`);
               killOperations.push('SIGTERM to group');
             } catch (err) {
               trace('ProcessRunner', () => `Bun process group SIGTERM failed: ${err.message}`);
@@ -3999,16 +4061,16 @@ class ProcessRunner extends StreamEmitter {
             
             // Immediately follow with SIGKILL for both process and group
             try {
-              process.kill(this.child.pid, 'SIGKILL');
-              trace('ProcessRunner', () => `Sent SIGKILL to Bun process ${this.child.pid}`);
+              process.kill(this._child.pid, 'SIGKILL');
+              trace('ProcessRunner', () => `Sent SIGKILL to Bun process ${this._child.pid}`);
               killOperations.push('SIGKILL to process');
             } catch (err) {
               trace('ProcessRunner', () => `Error sending SIGKILL to Bun process: ${err.message}`);
             }
             
             try {
-              process.kill(-this.child.pid, 'SIGKILL');
-              trace('ProcessRunner', () => `Sent SIGKILL to Bun process group -${this.child.pid}`);
+              process.kill(-this._child.pid, 'SIGKILL');
+              trace('ProcessRunner', () => `Sent SIGKILL to Bun process group -${this._child.pid}`);
               killOperations.push('SIGKILL to group');
             } catch (err) {
               trace('ProcessRunner', () => `Bun process group SIGKILL failed: ${err.message}`);
@@ -4018,28 +4080,28 @@ class ProcessRunner extends StreamEmitter {
             
             // Also call the original Bun kill method as backup
             try {
-              this.child.kill();
-              trace('ProcessRunner', () => `Called child.kill() for Bun process ${this.child.pid}`);
+              this._child.kill();
+              trace('ProcessRunner', () => `Called child.kill() for Bun process ${this._child.pid}`);
             } catch (err) {
               trace('ProcessRunner', () => `Error calling child.kill(): ${err.message}`);
             }
             
             // Force cleanup of child reference
-            if (this.child) {
-              this.child.removeAllListeners?.();
-              this.child = null;
+            if (this._child) {
+              this._child.removeAllListeners?.();
+              this._child = null;
             }
           } else {
             // In Node.js, use a more robust approach for CI environments
-            trace('ProcessRunner', () => `Killing Node process | ${JSON.stringify({ pid: this.child.pid }, null, 2)}`);
+            trace('ProcessRunner', () => `Killing Node process | ${JSON.stringify({ pid: this._child.pid }, null, 2)}`);
             
             // Use immediate and aggressive termination for CI environments
             const killOperations = [];
             
             // Try SIGTERM to the process directly
             try {
-              process.kill(this.child.pid, 'SIGTERM');
-              trace('ProcessRunner', () => `Sent SIGTERM to process ${this.child.pid}`);
+              process.kill(this._child.pid, 'SIGTERM');
+              trace('ProcessRunner', () => `Sent SIGTERM to process ${this._child.pid}`);
               killOperations.push('SIGTERM to process');
             } catch (err) {
               trace('ProcessRunner', () => `Error sending SIGTERM to process: ${err.message}`);
@@ -4047,8 +4109,8 @@ class ProcessRunner extends StreamEmitter {
             
             // Try process group if detached (negative PID)
             try {
-              process.kill(-this.child.pid, 'SIGTERM');
-              trace('ProcessRunner', () => `Sent SIGTERM to process group -${this.child.pid}`);
+              process.kill(-this._child.pid, 'SIGTERM');
+              trace('ProcessRunner', () => `Sent SIGTERM to process group -${this._child.pid}`);
               killOperations.push('SIGTERM to group');
             } catch (err) {
               trace('ProcessRunner', () => `Process group SIGTERM failed: ${err.message}`);
@@ -4056,16 +4118,16 @@ class ProcessRunner extends StreamEmitter {
             
             // Immediately follow up with SIGKILL for CI reliability
             try {
-              process.kill(this.child.pid, 'SIGKILL');
-              trace('ProcessRunner', () => `Sent SIGKILL to process ${this.child.pid}`);
+              process.kill(this._child.pid, 'SIGKILL');
+              trace('ProcessRunner', () => `Sent SIGKILL to process ${this._child.pid}`);
               killOperations.push('SIGKILL to process');
             } catch (err) {
               trace('ProcessRunner', () => `Error sending SIGKILL to process: ${err.message}`);
             }
             
             try {
-              process.kill(-this.child.pid, 'SIGKILL');
-              trace('ProcessRunner', () => `Sent SIGKILL to process group -${this.child.pid}`);
+              process.kill(-this._child.pid, 'SIGKILL');
+              trace('ProcessRunner', () => `Sent SIGKILL to process group -${this._child.pid}`);
               killOperations.push('SIGKILL to group');
             } catch (err) {
               trace('ProcessRunner', () => `Process group SIGKILL failed: ${err.message}`);
@@ -4074,9 +4136,9 @@ class ProcessRunner extends StreamEmitter {
             trace('ProcessRunner', () => `Kill operations attempted: ${killOperations.join(', ')}`);
             
             // Force cleanup of child reference to prevent hanging awaits
-            if (this.child) {
-              this.child.removeAllListeners?.();
-              this.child = null;
+            if (this._child) {
+              this._child.removeAllListeners?.();
+              this._child = null;
             }
           }
         }
