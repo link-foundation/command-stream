@@ -136,8 +136,8 @@ describe('Utility Functions', () => {
     });
 
     test('should quote strings with spaces', () => {
-      expect(quote('hello world')).toBe("'hello world'");
-      expect(quote('path with spaces')).toBe("'path with spaces'");
+      expect(quote('hello world')).toBe('"hello world"');  // Now uses double quotes for simple spaced strings
+      expect(quote('path with spaces')).toBe('"path with spaces"');  // Now uses double quotes for simple spaced strings
     });
 
     test('should quote strings with special characters', () => {
@@ -162,7 +162,7 @@ describe('Utility Functions', () => {
 
     test('should handle arrays', () => {
       expect(quote(['a', 'b', 'c'])).toBe("a b c");  // Safe strings, no quotes needed
-      expect(quote(['hello world', 'test'])).toBe("'hello world' test");  // Mix of safe and unsafe
+      expect(quote(['hello world', 'test'])).toBe('"hello world" test');  // Mix of safe and unsafe, now uses double quotes
     });
 
     test('should convert non-strings', () => {
