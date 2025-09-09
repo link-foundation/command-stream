@@ -722,9 +722,9 @@ class StreamEmitter {
   }
 }
 
-function quote(value) {
+function quote(value, context = null) {
   if (value == null) return "''";
-  if (Array.isArray(value)) return value.map(quote).join(' ');
+  if (Array.isArray(value)) return value.map(v => quote(v, context)).join(' ');
   if (typeof value !== 'string') value = String(value);
   if (value === '') return "''";
   
@@ -755,9 +755,72 @@ function quote(value) {
     return value;
   }
   
+  // Context-aware quoting for complex shell commands
+  if (context && context.expectsShellCommand && isComplexShellCommand(value)) {
+    // For complex shell commands that need to be interpreted by the shell,
+    // use double-quote escaping instead of single-quote wrapping
+    return escapeForDoubleQuotes(value);
+  }
+  
   // Default behavior: wrap in single quotes and escape any internal single quotes
   // This handles spaces, special shell characters, etc.
   return `'${value.replace(/'/g, "'\\''")}'`;
+}
+
+// Check if a string looks like a complex shell command that should be interpreted
+function isComplexShellCommand(value) {
+  // Look for shell constructs that indicate this should be interpreted as shell code
+  const shellConstructs = [
+    { pattern: /\bfor\s+\w+\s+in\b/, weight: 3, name: 'for_loop' },         // for loops
+    { pattern: /\bif\s*\[\[?/, weight: 3, name: 'conditional' },            // conditionals  
+    { pattern: /\bwhile\s+/, weight: 3, name: 'while_loop' },               // while loops
+    { pattern: /\bcase\s+\w+\s+in\b/, weight: 3, name: 'case_statement' }, // case statements
+    { pattern: /\$\([^)]+\)/, weight: 2, name: 'command_substitution' },    // command substitution
+    { pattern: /`[^`]+`/, weight: 2, name: 'backtick_substitution' },       // backtick command substitution
+    { pattern: /<<\s*['"]?\w+['"]?/, weight: 3, name: 'here_document' },    // here documents (improved)
+    { pattern: /<\([^)]+\)/, weight: 2, name: 'process_substitution' },     // process substitution
+    { pattern: /\|\s*\w/, weight: 1, name: 'pipe' },                        // pipes - must have command after
+    { pattern: /&&|\|\|/, weight: 1, name: 'logical_operators' },           // logical operators
+    { pattern: /;\s+\w/, weight: 1, name: 'command_chaining' },             // command chaining - must have command after
+    { pattern: /\[\[?[^]]+\]\]?/, weight: 1, name: 'test_conditions' },     // test conditions (improved)
+    { pattern: /\$\{[^}]+\}/, weight: 1, name: 'parameter_expansion' },     // parameter expansion
+    { pattern: /\$\w+/, weight: 1, name: 'variable_expansion' },            // simple variable expansion
+  ];
+  
+  let totalWeight = 0;
+  let matchedConstructs = [];
+  
+  for (const construct of shellConstructs) {
+    if (construct.pattern.test(value)) {
+      totalWeight += construct.weight;
+      matchedConstructs.push(construct.name);
+      
+      // High-weight constructs are strong indicators on their own
+      if (construct.weight >= 3) {
+        trace('Utils', () => `Complex shell command detected by ${construct.name}: ${value.slice(0, 50)}`);
+        return true;
+      }
+    }
+  }
+  
+  // If total weight is 2 or more, consider it complex
+  if (totalWeight >= 2) {
+    trace('Utils', () => `Complex shell command detected by weight ${totalWeight} (${matchedConstructs.join(', ')}): ${value.slice(0, 50)}`);
+    return true;
+  }
+  
+  trace('Utils', () => `Simple command (weight ${totalWeight}): ${value.slice(0, 50)}`);
+  return false;
+}
+
+// Escape a string for use inside double quotes
+function escapeForDoubleQuotes(value) {
+  // Escape special characters that have meaning inside double quotes
+  // but preserve shell constructs like $var and $(cmd)
+  // DON'T add surrounding quotes - they'll be added by the template literal context
+  return value.replace(/\\/g, '\\\\')
+               .replace(/"/g, '\\"')
+               .replace(/`/g, '\\`');
 }
 
 function buildShellCommand(strings, values) {
@@ -780,6 +843,28 @@ function buildShellCommand(strings, values) {
     }
   }
 
+  // Detect context for smart quoting
+  let bashCContext = null;
+  
+  // Build the full command first to analyze context
+  let fullCommand = '';
+  for (let i = 0; i < strings.length; i++) {
+    fullCommand += strings[i];
+    if (i < values.length) {
+      fullCommand += `__VALUE_${i}__`; // placeholder for analysis
+    }
+  }
+  
+  // Check if this looks like bash -c "command" pattern
+  const bashCPattern = /bash\s+-c\s+"__VALUE_(\d+)__"/;
+  const bashCMatch = fullCommand.match(bashCPattern);
+  
+  if (bashCMatch) {
+    const valueIndex = parseInt(bashCMatch[1]);
+    bashCContext = { expectsShellCommand: true, valueIndex };
+    trace('Utils', () => `Detected bash -c context for value ${valueIndex}`);
+  }
+
   let out = '';
   for (let i = 0; i < strings.length; i++) {
     out += strings[i];
@@ -789,8 +874,10 @@ function buildShellCommand(strings, values) {
         trace('Utils', () => `BRANCH: buildShellCommand => RAW_VALUE | ${JSON.stringify({ value: String(v.raw) }, null, 2)}`);
         out += String(v.raw);
       } else {
-        const quoted = quote(v);
-        trace('Utils', () => `BRANCH: buildShellCommand => QUOTED_VALUE | ${JSON.stringify({ original: v, quoted }, null, 2)}`);
+        // Pass context if this value is in a bash -c position
+        const context = (bashCContext && bashCContext.valueIndex === i) ? bashCContext : null;
+        const quoted = quote(v, context);
+        trace('Utils', () => `BRANCH: buildShellCommand => QUOTED_VALUE | ${JSON.stringify({ original: v, quoted, context }, null, 2)}`);
         out += quoted;
       }
     }
