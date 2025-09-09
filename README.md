@@ -1066,18 +1066,18 @@ const result4 = await $`echo "pipe test"`.pipe($`cat`);
 const text4 = await result4.text(); // "pipe test\n"
 ```
 
-## Signal Handling (CTRL+C Support)
+## Signal Handling (CTRL+C, SIGTERM, and Other Signals)
 
-The library provides **advanced CTRL+C handling** that properly manages signals across different scenarios:
+The library provides **comprehensive signal handling** that properly manages SIGINT (CTRL+C), SIGTERM, SIGKILL, and other signals across different scenarios:
 
 ### How It Works
 
-1. **Smart Signal Forwarding**: CTRL+C is forwarded **only when child processes are active**
-2. **User Handler Preservation**: When no children are running, your custom SIGINT handlers work normally
+1. **Smart Signal Forwarding**: Signals are forwarded **only when child processes are active**
+2. **User Handler Preservation**: When no children are running, your custom signal handlers work normally
 3. **Process Groups**: Child processes use detached spawning for proper signal isolation
 4. **TTY Mode Support**: Raw TTY mode is properly managed and restored on interruption
 5. **Graceful Termination**: Uses SIGTERM → SIGKILL escalation for robust process cleanup
-6. **Exit Code Standards**: Proper signal exit codes (130 for SIGINT, 143 for SIGTERM)
+6. **Exit Code Standards**: Proper signal exit codes (130 for SIGINT, 143 for SIGTERM, 137 for SIGKILL)
 
 ### Advanced Signal Behavior
 
@@ -1134,17 +1134,248 @@ try {
 }
 ```
 
+### Sending Signals to Commands
+
+#### Programmatic Signal Control
+
+You can send different signals to running commands using the `kill()` method:
+
+```javascript
+import { $ } from 'command-stream';
+
+// Start a long-running command
+const runner = $`sleep 30`;
+const promise = runner.start(); // Non-blocking start
+
+// Send different signals after some time:
+
+// 1. SIGTERM (15) - Polite termination request (default)
+setTimeout(() => {
+  runner.kill();        // Default: SIGTERM
+  // or explicitly:
+  runner.kill('SIGTERM');
+}, 5000);
+
+// 2. SIGINT (2) - Interrupt signal (same as CTRL+C)
+setTimeout(() => {
+  runner.kill('SIGINT');
+}, 3000);
+
+// 3. SIGKILL (9) - Force termination (cannot be caught)
+setTimeout(() => {
+  runner.kill('SIGKILL');
+}, 10000);
+
+// 4. SIGUSR1 (10) - User-defined signal 1
+setTimeout(() => {
+  runner.kill('SIGUSR1');
+}, 7000);
+
+// 5. SIGUSR2 (12) - User-defined signal 2
+setTimeout(() => {
+  runner.kill('SIGUSR2');
+}, 8000);
+
+// Wait for command completion and check exit code
+try {
+  const result = await promise;
+  console.log('Exit code:', result.code);
+} catch (error) {
+  console.log('Command terminated:', error.code);
+}
+```
+
+#### Signal Exit Codes
+
+Different signals produce specific exit codes:
+
+```javascript
+import { $ } from 'command-stream';
+
+// Test different signal exit codes
+async function testSignalExitCodes() {
+  // SIGINT (CTRL+C) → Exit code 130 (128 + 2)
+  const runner1 = $`sleep 5`;
+  const promise1 = runner1.start();
+  setTimeout(() => runner1.kill('SIGINT'), 1000);
+  const result1 = await promise1;
+  console.log('SIGINT exit code:', result1.code); // → 130
+  
+  // SIGTERM → Exit code 143 (128 + 15)  
+  const runner2 = $`sleep 5`;
+  const promise2 = runner2.start();
+  setTimeout(() => runner2.kill('SIGTERM'), 1000);
+  const result2 = await promise2;
+  console.log('SIGTERM exit code:', result2.code); // → 143
+  
+  // SIGKILL → Exit code 137 (128 + 9)
+  const runner3 = $`sleep 5`;
+  const promise3 = runner3.start();
+  setTimeout(() => runner3.kill('SIGKILL'), 1000);
+  const result3 = await promise3;
+  console.log('SIGKILL exit code:', result3.code); // → 137
+}
+```
+
+#### Graceful Shutdown Patterns
+
+Implement graceful shutdown with escalating signals:
+
+```javascript
+import { $ } from 'command-stream';
+
+async function gracefulShutdown(runner, timeoutMs = 5000) {
+  console.log('Requesting graceful shutdown with SIGTERM...');
+  
+  // Step 1: Send SIGTERM (polite request)
+  runner.kill('SIGTERM');
+  
+  // Step 2: Wait for graceful shutdown
+  const shutdownTimeout = setTimeout(() => {
+    console.log('Graceful shutdown timeout, sending SIGKILL...');
+    runner.kill('SIGKILL'); // Force termination
+  }, timeoutMs);
+  
+  try {
+    const result = await runner;
+    clearTimeout(shutdownTimeout);
+    console.log('Process exited gracefully:', result.code);
+    return result;
+  } catch (error) {
+    clearTimeout(shutdownTimeout);
+    console.log('Process terminated:', error.code);
+    throw error;
+  }
+}
+
+// Usage example
+const longRunningProcess = $`node server.js`;
+longRunningProcess.start();
+
+// Later, when you need to shut down:
+await gracefulShutdown(longRunningProcess, 10000); // 10 second timeout
+```
+
+#### Interactive Command Termination
+
+Handle interactive commands that ignore stdin but respond to signals:
+
+```javascript
+import { $ } from 'command-stream';
+
+// Commands like ping ignore stdin but respond to signals
+async function runPingWithTimeout(host, timeoutSeconds = 5) {
+  const pingRunner = $`ping ${host}`;
+  const promise = pingRunner.start();
+  
+  // Set up timeout to send SIGINT after specified time
+  const timeoutId = setTimeout(() => {
+    console.log(`Stopping ping after ${timeoutSeconds} seconds...`);
+    pingRunner.kill('SIGINT'); // Same as pressing CTRL+C
+  }, timeoutSeconds * 1000);
+  
+  try {
+    const result = await promise;
+    clearTimeout(timeoutId);
+    return result;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    console.log('Ping interrupted with exit code:', error.code); // Usually 130
+    return error;
+  }
+}
+
+// Run ping for 3 seconds then automatically stop
+await runPingWithTimeout('8.8.8.8', 3);
+```
+
+#### Multiple Process Signal Management
+
+Send signals to multiple concurrent processes:
+
+```javascript
+import { $ } from 'command-stream';
+
+async function runMultipleWithSignalControl() {
+  // Start multiple long-running processes
+  const processes = [
+    $`tail -f /var/log/system.log`,
+    $`ping google.com`,
+    $`sleep 60`,
+  ];
+  
+  // Start all processes
+  const promises = processes.map(p => p.start());
+  
+  // After 10 seconds, send SIGTERM to all
+  setTimeout(() => {
+    console.log('Sending SIGTERM to all processes...');
+    processes.forEach(p => p.kill('SIGTERM'));
+  }, 10000);
+  
+  // After 15 seconds, send SIGKILL to any survivors
+  setTimeout(() => {
+    console.log('Sending SIGKILL to remaining processes...');
+    processes.forEach(p => p.kill('SIGKILL'));
+  }, 15000);
+  
+  // Wait for all to complete
+  const results = await Promise.allSettled(promises);
+  results.forEach((result, index) => {
+    if (result.status === 'fulfilled') {
+      console.log(`Process ${index} exit code:`, result.value.code);
+    } else {
+      console.log(`Process ${index} error:`, result.reason.code);
+    }
+  });
+}
+```
+
 ### Signal Handling Behavior
 
-- **🎯 Smart Detection**: Only forwards CTRL+C when child processes are active
-- **🛡️ Non-Interference**: Preserves user SIGINT handlers when no children running  
+- **🎯 Smart Detection**: Only forwards signals when child processes are active
+- **🛡️ Non-Interference**: Preserves user signal handlers when no children running  
 - **⚡ Interactive Commands**: Use `interactive: true` option for commands like `vim`, `less`, `top` to enable proper TTY forwarding and signal handling
 - **🔄 Process Groups**: Detached spawning ensures proper signal isolation
 - **🧹 TTY Cleanup**: Raw terminal mode properly restored on interruption
+- **⚖️ Signal Escalation**: Supports SIGTERM → SIGKILL escalation for robust cleanup
+- **🔀 Signal Forwarding**: All standard Unix signals can be forwarded to child processes
 - **📊 Standard Exit Codes**: 
-  - `130` - SIGINT interruption (CTRL+C)
-  - `143` - SIGTERM termination (programmatic kill)
-  - `137` - SIGKILL force termination
+  - `130` - SIGINT interruption (CTRL+C) - Signal number 2
+  - `143` - SIGTERM termination (programmatic kill) - Signal number 15  
+  - `137` - SIGKILL force termination - Signal number 9
+  - `128 + N` - General formula for signal exit codes (where N is signal number)
+
+### Available Signals
+
+The library supports all standard Unix signals:
+
+| Signal | Number | Description | Can be caught? | Common use case |
+|--------|--------|-------------|----------------|-----------------|
+| `SIGINT` | 2 | Interrupt (CTRL+C) | ✅ Yes | User interrupt |
+| `SIGTERM` | 15 | Terminate (default kill) | ✅ Yes | Graceful shutdown |
+| `SIGKILL` | 9 | Kill | ❌ No | Force termination |
+| `SIGQUIT` | 3 | Quit with core dump | ✅ Yes | Debug termination |
+| `SIGHUP` | 1 | Hang up | ✅ Yes | Reload configuration |
+| `SIGUSR1` | 10 | User signal 1 | ✅ Yes | Custom application logic |
+| `SIGUSR2` | 12 | User signal 2 | ✅ Yes | Custom application logic |
+| `SIGPIPE` | 13 | Broken pipe | ✅ Yes | Pipe communication error |
+| `SIGALRM` | 14 | Alarm clock | ✅ Yes | Timer expiration |
+| `SIGSTOP` | 19 | Stop process | ❌ No | Pause execution |
+| `SIGCONT` | 18 | Continue process | ✅ Yes | Resume execution |
+
+**Usage examples:**
+
+```javascript
+// All these signals can be sent to running commands:
+runner.kill('SIGINT');   // Interrupt (same as CTRL+C)
+runner.kill('SIGTERM');  // Graceful termination (default)
+runner.kill('SIGKILL');  // Force kill
+runner.kill('SIGHUP');   // Hang up
+runner.kill('SIGUSR1');  // User-defined signal 1
+runner.kill('SIGUSR2');  // User-defined signal 2
+runner.kill('SIGQUIT');  // Quit with core dump
+```
 
 ### Command Resolution Priority
 
