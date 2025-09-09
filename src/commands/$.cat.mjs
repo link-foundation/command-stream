@@ -2,6 +2,7 @@ import fs from 'fs';
 import { trace, VirtualUtils } from '../$.utils.mjs';
 
 export default async function cat({ args, stdin, cwd, isCancelled, abortSignal }) {
+
   if (args.length === 0) {
     // Read from stdin if no files specified
     if (stdin !== undefined && stdin !== '') {
@@ -13,6 +14,7 @@ export default async function cat({ args, stdin, cwd, isCancelled, abortSignal }
   try {
     const outputs = [];
     for (const file of args) {
+      
       // Check for cancellation before processing each file
       if (isCancelled?.() || abortSignal?.aborted) {
         trace('VirtualCommand', () => `cat: cancelled while processing files`);
