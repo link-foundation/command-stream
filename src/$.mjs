@@ -789,9 +789,22 @@ function buildShellCommand(strings, values) {
         trace('Utils', () => `BRANCH: buildShellCommand => RAW_VALUE | ${JSON.stringify({ value: String(v.raw) }, null, 2)}`);
         out += String(v.raw);
       } else {
-        const quoted = quote(v);
-        trace('Utils', () => `BRANCH: buildShellCommand => QUOTED_VALUE | ${JSON.stringify({ original: v, quoted }, null, 2)}`);
-        out += quoted;
+        // Check if this interpolation position is already surrounded by quotes
+        const prevString = strings[i] || '';
+        const nextString = strings[i + 1] || '';
+        const endsWithQuote = prevString.endsWith('"') || prevString.endsWith("'");
+        const startsWithQuote = nextString.startsWith('"') || nextString.startsWith("'");
+        
+        if (endsWithQuote && startsWithQuote) {
+          // Already surrounded by quotes in template, don't add additional quoting
+          trace('Utils', () => `BRANCH: buildShellCommand => TEMPLATE_QUOTED_VALUE | ${JSON.stringify({ original: v, value: String(v) }, null, 2)}`);
+          out += String(v);
+        } else {
+          // Apply normal quoting logic
+          const quoted = quote(v);
+          trace('Utils', () => `BRANCH: buildShellCommand => QUOTED_VALUE | ${JSON.stringify({ original: v, quoted }, null, 2)}`);
+          out += quoted;
+        }
       }
     }
   }
