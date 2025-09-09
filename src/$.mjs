@@ -4379,6 +4379,10 @@ function $tagged(strings, ...values) {
   return runner;
 }
 
+// Import and add dev functionality
+import { dev } from './dev.mjs';
+$tagged.dev = dev;
+
 function create(defaultOptions = {}) {
   trace('API', () => `create ENTER | ${JSON.stringify({ defaultOptions }, null, 2)}`);
 
