@@ -728,6 +728,7 @@ function quote(value) {
   if (typeof value !== 'string') value = String(value);
   if (value === '') return "''";
   
+  
   // If the value is already properly quoted and doesn't need further escaping,
   // check if we can use it as-is or with simpler quoting
   if (value.startsWith("'") && value.endsWith("'") && value.length >= 2) {
@@ -1649,6 +1650,14 @@ class ProcessRunner extends StreamEmitter {
                                 this.spec.command.includes('||') || 
                                 this.spec.command.includes('(') ||
                                 this.spec.command.includes(';') ||
+                                this.spec.command.includes(' > ') ||
+                                this.spec.command.includes(' >> ') ||
+                                this.spec.command.includes(' < ') ||
+                                this.spec.command.includes(' 2> ') ||
+                                this.spec.command.includes(' 2>> ') ||
+                                this.spec.command.includes(' &> ') ||
+                                /\s>\s*[^\s]/.test(this.spec.command) ||  // Handle >file without spaces
+                                /\s>>\s*[^\s]/.test(this.spec.command) || // Handle >>file without spaces  
                                 (this.spec.command.includes('cd ') && this.spec.command.includes('&&'));
       
       // Intelligent detection: disable shell operators for streaming patterns
@@ -1700,7 +1709,7 @@ class ProcessRunner extends StreamEmitter {
             commandCount: parsed.commands?.length
           }, null, 2)}`);
           return await this._runPipeline(parsed.commands);
-        } else if (parsed.type === 'simple' && virtualCommandsEnabled && virtualCommands.has(parsed.cmd) && !this.options._bypassVirtual) {
+        } else if (parsed.type === 'simple' && virtualCommandsEnabled && virtualCommands.has(parsed.cmd) && !this.options._bypassVirtual && !needsRealShell(this.spec.command)) {
           // For built-in virtual commands that have real counterparts (like sleep),
           // skip the virtual version when custom stdin is provided to ensure proper process handling
           const hasCustomStdin = this.options.stdin && 
