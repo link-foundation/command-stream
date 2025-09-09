@@ -1,12 +1,16 @@
 {
   "name": "command-stream",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "description": "Modern $ shell utility library with streaming, async iteration, and EventEmitter support, optimized for Bun runtime",
   "type": "module",
   "main": "src/$.mjs",
   "exports": {
-    ".": "./src/$.mjs"
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./src/$.mjs"
+    }
   },
+  "types": "index.d.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/link-foundation/command-stream.git"
@@ -34,7 +38,9 @@
     "eventemitter",
     "bun",
     "node",
-    "cross-runtime"
+    "cross-runtime",
+    "typescript",
+    "types"
   ],
   "author": "link-foundation",
   "license": "Unlicense",
@@ -44,6 +50,8 @@
   },
   "files": [
     "src/",
+    "index.d.ts",
+    "types/",
     "README.md",
     "LICENSE"
   ]
