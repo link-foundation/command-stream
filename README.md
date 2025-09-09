@@ -151,6 +151,53 @@ npm install command-stream
 bun add command-stream
 ```
 
+## CLI Tool
+
+Command-stream now includes a `$` CLI tool that brings virtual commands support to your terminal:
+
+```bash
+# Install globally to use the $ command anywhere
+npm install -g command-stream
+
+# Or run locally
+npx command-stream -c 'echo "Hello World"'
+```
+
+### CLI Usage
+
+```bash
+# Basic syntax
+$ -c 'your command here'
+
+# Examples with virtual commands
+$ -c 'echo "Hello from CLI"'      # Virtual echo command
+$ -c 'seq 1 5'                    # Generate sequence  
+$ -c 'pwd'                        # Show current directory
+$ -c 'ls'                         # List files
+$ -c 'cd .. && pwd'               # Change directory and show path
+$ -c 'which node'                 # Find command location
+$ -c 'sleep 2'                    # Pause execution
+
+# Real system commands also work
+$ -c 'whoami'                     # System command
+$ -c 'date'                       # System command
+
+# Command options
+$ --help                          # Show help
+$ --version                       # Show version
+$ --command 'echo test'           # Alternative to -c flag
+```
+
+### Virtual Commands in CLI
+
+The CLI tool supports all 18+ built-in virtual commands that work identically across platforms:
+
+- **File operations**: `cat`, `cp`, `mv`, `rm`, `touch`, `mkdir`
+- **Directory operations**: `cd`, `pwd`, `ls` 
+- **Utilities**: `echo`, `seq`, `sleep`, `which`, `basename`, `dirname`
+- **Control flow**: `true`, `false`, `exit`, `test`
+- **Environment**: `env`
+
 ## Smart Quoting & Security
 
 Command-stream provides intelligent auto-quoting to protect against shell injection while avoiding unnecessary quotes for safe strings:

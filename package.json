@@ -7,6 +7,9 @@
   "exports": {
     ".": "./src/$.mjs"
   },
+  "bin": {
+    "$": "./src/cli.mjs"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/link-foundation/command-stream.git"
