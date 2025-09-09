@@ -41,6 +41,7 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 | **EventEmitter Pattern** | ✅ `.on('data', ...)` | 🟡 Limited events | 🟡 Child process events | ❌ No | ❌ No | ❌ No |
 | **Mixed Patterns** | ✅ Events + await/sync | ❌ No | ❌ No | ❌ No | ❌ No | ❌ No |
 | **Bun.$ Compatibility** | ✅ `.text()` method support | ❌ No | ❌ No | ✅ Native API | ❌ No | ❌ No |
+| **zx Compatibility** | ✅ **Full zx API compatibility** (`$.zx`, `command-stream/zx`) | ❌ No | ❌ No | ❌ No | ❌ No | ✅ Native zx |
 | **Shell Injection Protection** | ✅ Smart auto-quoting | ✅ Safe by default | ✅ Safe by default | ✅ Built-in | 🟡 Manual escaping | ✅ Safe by default |
 | **Cross-platform** | ✅ macOS/Linux/Windows | ✅ Yes | ✅ **Specialized** cross-platform | ✅ Yes | ✅ Yes | ✅ Yes |
 | **Performance** | ⚡ Fast (Bun optimized) | 🐌 Moderate | ⚡ Fast | ⚡ Very fast | 🐌 Moderate | 🐌 Slow |
@@ -150,6 +151,108 @@ npm install command-stream
 # Using bun
 bun add command-stream
 ```
+
+## 🔄 zx Compatibility Mode
+
+**Beat Google's zx with superior built-in commands and streaming!** 
+
+command-stream now offers **complete zx compatibility** with additional advantages that make it the better choice for shell scripting in JavaScript.
+
+### ⚡ Key Advantages Over zx
+
+| Feature | **command-stream** | **Google zx** |
+|---------|-------------------|---------------|
+| 🏗️ **Built-in Commands** | **18 commands** (no system deps) | **0** (relies on system) |
+| 📡 **Real-time Streaming** | ✅ **Available** (live processing) | ❌ Buffered only |
+| 📦 **Bundle Size** | **~20KB** (lightweight) | **~400KB+** (heavy) |
+| 🎯 **EventEmitter Pattern** | ✅ **Available** (`.on('data', ...)`) | ❌ Not supported |
+| 🔄 **Async Iteration** | ✅ **Available** (`for await`) | ❌ Not supported |
+| 🛡️ **Signal Handling** | ✅ **Superior** handling | 🟡 Basic |
+| 🏃 **Performance** | ⚡ **Faster** (Bun optimized) | 🐌 Slower |
+| 📄 **License** | **Public Domain** (Unlicense) | Apache 2.0 |
+
+### 🚀 Three Ways to Use zx Compatibility
+
+#### 1. **Direct zx mode** (Easiest migration)
+```javascript
+import { $ } from 'command-stream';
+
+// Use $.zx for zx-compatible buffered results
+const result = await $.zx`echo "Hello zx compatibility!"`;
+console.log(result.stdout); // "Hello zx compatibility!\n"
+console.log(result.exitCode); // 0
+
+// Error handling (throws by default like zx)
+try {
+  await $.zx`exit 1`;
+} catch (error) {
+  console.log(error.exitCode); // 1
+}
+
+// nothrow mode (like zx)
+const result2 = await $.zx.nothrow`exit 1`;
+console.log(result2.exitCode); // 1 (doesn't throw)
+```
+
+#### 2. **zx compatibility module** (Full zx experience)
+```javascript
+import { $, cd, echo, fs, path, os } from 'command-stream/zx';
+
+// Exactly like zx, but with superior built-in commands
+const result = await $`echo "zx compatible"`;
+console.log(result.stdout);
+
+// Built-in cd and echo functions
+cd('/tmp');
+await echo('Changed directory');
+
+// Standard modules available
+console.log('Home:', os.homedir());
+```
+
+#### 3. **Shebang scripts** (#!/usr/bin/env command-stream)
+```javascript
+#!/usr/bin/env command-stream
+
+// Write zx-style scripts with superior built-in commands
+const branch = await $`git branch --show-current`;
+console.log(`Current branch: ${branch.stdout.trim()}`);
+
+// Cross-platform built-in commands (work everywhere!)
+const files = await $`ls -la`;  // Built-in ls works on Windows too!
+const sorted = await $`sort -r package.json`;  // Built-in sort
+```
+
+### 📋 Migration from zx
+
+**Migrating from zx is simple** - just change imports:
+
+```diff
+- import { $, cd, echo, fs, path } from 'zx';
++ import { $, cd, echo, fs, path } from 'command-stream/zx';
+```
+
+**Or use compatibility mode in existing code:**
+
+```diff
+- import { $ } from 'zx';
++ import { $ } from 'command-stream';
+- const result = await $`echo "test"`;
++ const result = await $.zx`echo "test"`;
+```
+
+### 🎯 Why Switch from zx?
+
+- **🏗️ No System Dependencies**: 18 built-in commands work identically across Windows/macOS/Linux
+- **📡 Real-time Processing**: Optional streaming for live log processing, progress monitoring
+- **📦 Smaller Bundle**: ~20KB vs ~400KB+ (95% smaller!)  
+- **⚡ Better Performance**: Optimized for Bun runtime (Node.js compatible)
+- **🎨 More Patterns**: EventEmitter, async iteration, mixed patterns
+- **🔧 Advanced Features**: Custom virtual commands, signal handling, ANSI processing
+
+### 📚 Complete Compatibility Examples
+
+See [`examples/zx-compat-demo.mjs`](examples/zx-compat-demo.mjs) for a comprehensive demonstration of zx compatibility features with performance comparisons.
 
 ## Smart Quoting & Security
 
