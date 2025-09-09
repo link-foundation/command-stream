@@ -722,9 +722,9 @@ class StreamEmitter {
   }
 }
 
-function quote(value) {
+function quote(value, options = {}) {
   if (value == null) return "''";
-  if (Array.isArray(value)) return value.map(quote).join(' ');
+  if (Array.isArray(value)) return value.map(v => quote(v, options)).join(' ');
   if (typeof value !== 'string') value = String(value);
   if (value === '') return "''";
   
@@ -753,6 +753,25 @@ function quote(value) {
   if (safePattern.test(value)) {
     // The string is safe and doesn't need quoting
     return value;
+  }
+  
+  // Smart quote choice based on content and context
+  const hasSingleQuotes = value.includes("'");
+  const hasDoubleQuotes = value.includes('"');
+  
+  // If the value contains only spaces and alphanumeric characters (like "help wanted"),
+  // and it has no quotes, prefer double quotes to avoid nesting issues in template literals
+  const isSimpleSpacedString = /^[a-zA-Z0-9\s_-]+$/.test(value) && value.includes(' ');
+  
+  if (isSimpleSpacedString && !hasDoubleQuotes && !hasSingleQuotes) {
+    // Use double quotes for simple strings with spaces only
+    return `"${value}"`;
+  }
+  
+  
+  // If it has double quotes but not single quotes, use single quotes
+  if (hasDoubleQuotes && !hasSingleQuotes) {
+    return `'${value}'`;
   }
   
   // Default behavior: wrap in single quotes and escape any internal single quotes

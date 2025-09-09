@@ -377,7 +377,7 @@ test('double-quoting prevention - mixed scenarios', () => {
 
 test('strings requiring quotes - proper quoting applied', () => {
   const testCases = [
-    { input: 'hello world', expected: "echo 'hello world'" },
+    { input: 'hello world', expected: 'echo "hello world"' },  // Now uses double quotes for simple spaced strings
     { input: 'test$var', expected: "echo 'test$var'" },
     { input: 'cmd;ls', expected: "echo 'cmd;ls'" },
     { input: 'a|b', expected: "echo 'a|b'" },
