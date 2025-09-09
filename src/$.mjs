@@ -4615,6 +4615,140 @@ function processOutput(data, options = {}) {
   return data;
 }
 
+/**
+ * GitHub CLI helper functions for handling complex markdown content
+ * Addresses issue #40: GitHub CLI with complex markdown body
+ */
+const githubCli = {
+  /**
+   * Safely creates a GitHub issue with complex markdown content using a temporary file
+   * @param {string} repo - Repository in format "owner/repo"
+   * @param {string} title - Issue title
+   * @param {string} body - Issue body (markdown content)
+   * @param {Object} options - Additional options
+   * @returns {Promise<Object>} - Command result
+   */
+  async createIssue(repo, title, body, options = {}) {
+    const fs = await import('fs/promises');
+    const tempFile = `/tmp/gh-issue-body-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.md`;
+    
+    try {
+      // Write body content to temporary file
+      await fs.writeFile(tempFile, body, 'utf8');
+      
+      // Build GitHub CLI command using body-file parameter
+      const args = ['issue', 'create', '--repo', repo, '--title', title, '--body-file', tempFile];
+      
+      // Add additional options
+      if (options.assignee) args.push('--assignee', options.assignee);
+      if (options.labels) args.push('--label', Array.isArray(options.labels) ? options.labels.join(',') : options.labels);
+      if (options.milestone) args.push('--milestone', options.milestone);
+      if (options.project) args.push('--project', options.project);
+      
+      // Execute GitHub CLI command
+      const command = $tagged`gh ${args.map(arg => arg.toString())}`;
+      const result = await command;
+      
+      return result;
+    } finally {
+      // Clean up temporary file
+      try {
+        await fs.unlink(tempFile);
+      } catch (cleanupError) {
+        trace('GitHubCli', () => `Warning: Failed to cleanup temp file ${tempFile}: ${cleanupError.message}`);
+      }
+    }
+  },
+
+  /**
+   * Safely creates a GitHub pull request with complex markdown content using a temporary file
+   * @param {string} repo - Repository in format "owner/repo"
+   * @param {string} title - PR title
+   * @param {string} body - PR body (markdown content)
+   * @param {Object} options - Additional options
+   * @returns {Promise<Object>} - Command result
+   */
+  async createPullRequest(repo, title, body, options = {}) {
+    const fs = await import('fs/promises');
+    const tempFile = `/tmp/gh-pr-body-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.md`;
+    
+    try {
+      // Write body content to temporary file
+      await fs.writeFile(tempFile, body, 'utf8');
+      
+      // Build GitHub CLI command using body-file parameter
+      const args = ['pr', 'create', '--repo', repo, '--title', title, '--body-file', tempFile];
+      
+      // Add additional options
+      if (options.base) args.push('--base', options.base);
+      if (options.head) args.push('--head', options.head);
+      if (options.assignee) args.push('--assignee', options.assignee);
+      if (options.reviewer) args.push('--reviewer', options.reviewer);
+      if (options.labels) args.push('--label', Array.isArray(options.labels) ? options.labels.join(',') : options.labels);
+      if (options.milestone) args.push('--milestone', options.milestone);
+      if (options.project) args.push('--project', options.project);
+      if (options.draft) args.push('--draft');
+      
+      // Execute GitHub CLI command
+      const command = $tagged`gh ${args.map(arg => arg.toString())}`;
+      const result = await command;
+      
+      return result;
+    } finally {
+      // Clean up temporary file
+      try {
+        await fs.unlink(tempFile);
+      } catch (cleanupError) {
+        trace('GitHubCli', () => `Warning: Failed to cleanup temp file ${tempFile}: ${cleanupError.message}`);
+      }
+    }
+  },
+
+  /**
+   * Generic helper to safely pass complex content to any GitHub CLI command using body-file
+   * @param {Array<string>} baseArgs - Base arguments for gh command (e.g., ['issue', 'create'])
+   * @param {string} bodyContent - Complex content to pass via temporary file
+   * @param {Object} additionalArgs - Additional command arguments as key-value pairs
+   * @returns {Promise<Object>} - Command result
+   */
+  async withBodyFile(baseArgs, bodyContent, additionalArgs = {}) {
+    const fs = await import('fs/promises');
+    const tempFile = `/tmp/gh-body-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.md`;
+    
+    try {
+      // Write content to temporary file
+      await fs.writeFile(tempFile, bodyContent, 'utf8');
+      
+      // Build command arguments
+      const args = [...baseArgs, '--body-file', tempFile];
+      
+      // Add additional arguments
+      for (const [key, value] of Object.entries(additionalArgs)) {
+        if (key.startsWith('--')) {
+          args.push(key);
+          if (value !== true) args.push(value.toString());
+        } else {
+          args.push(`--${key}`);
+          if (value !== true) args.push(value.toString());
+        }
+      }
+      
+      // Execute command
+      const command = $tagged`gh ${args.map(arg => arg.toString())}`;
+      const result = await command;
+      
+      return result;
+    } finally {
+      // Clean up temporary file
+      try {
+        await fs.unlink(tempFile);
+      } catch (cleanupError) {
+        trace('GitHubCli', () => `Warning: Failed to cleanup temp file ${tempFile}: ${cleanupError.message}`);
+      }
+    }
+  }
+};
+
 // Initialize built-in commands
 trace('Initialization', () => 'Registering built-in virtual commands');
 registerBuiltins();
@@ -4642,6 +4776,7 @@ export {
   configureAnsi,
   getAnsiConfig,
   processOutput,
-  forceCleanupAll
+  forceCleanupAll,
+  githubCli
 };
 export default $tagged;
