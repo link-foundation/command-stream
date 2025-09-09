@@ -4615,6 +4615,338 @@ function processOutput(data, options = {}) {
   return data;
 }
 
+// ===== EXECA COMPATIBILITY LAYER =====
+// Provides full execa API compatibility with superior streaming and virtual commands
+
+class ExecaResult {
+  constructor(stdout, stderr, all, exitCode, originalError, command, escapedCommand, options) {
+    this.stdout = stdout;
+    this.stderr = stderr;
+    this.all = all;
+    this.exitCode = exitCode;
+    this.originalError = originalError;
+    this.command = command;
+    this.escapedCommand = escapedCommand;
+    this.options = options;
+    this.failed = exitCode !== 0;
+    this.killed = false;
+    this.signal = undefined;
+    this.signalDescription = undefined;
+  }
+}
+
+// Main execa function - async execution
+function execa(file, ...rest) {
+  trace('ExecaCompat', () => `execa(${file}, ${JSON.stringify(rest)})`);
+  
+  // Handle template literal usage: execa`command ${arg}`
+  if (Array.isArray(file)) {
+    // When called as template literal, 'file' is the strings array 
+    // and 'rest' contains all the interpolated values
+    const strings = file;
+    const values = rest.slice(0, -1); // All but last (which might be options)
+    const lastArg = rest[rest.length - 1];
+    
+    // Check if last argument is options object
+    const options = (typeof lastArg === 'object' && lastArg !== null && !Array.isArray(lastArg)) 
+      ? lastArg : {};
+    
+    // If last arg was options, don't include it in values
+    const finalValues = (typeof lastArg === 'object' && lastArg !== null && !Array.isArray(lastArg))
+      ? values : [...values, lastArg];
+    
+    const cmd = buildShellCommand(strings, finalValues);
+    return execaInternal(cmd, [], options);
+  }
+  
+  // Normal function call: execa(file, args, options)
+  const [args = [], options = {}] = rest;
+  return execaInternal(file, args, options);
+}
+
+// Internal execa implementation
+async function execaInternal(file, args = [], options = {}) {
+  const {
+    input,
+    stdin = 'pipe',
+    stdout = 'pipe',
+    stderr = 'pipe',
+    all = false,
+    reject = true,
+    stripFinalNewline = true,
+    preferLocal = false,
+    localDir = process.cwd(),
+    execPath = process.execPath,
+    buffer = true,
+    lines = false,
+    ...execOptions
+  } = options;
+
+  // Build command string
+  let command;
+  if (args.length === 0) {
+    command = file;
+  } else {
+    command = [file, ...args].map(arg => 
+      typeof arg === 'string' && /\s/.test(arg) ? `"${arg}"` : String(arg)
+    ).join(' ');
+  }
+
+  trace('ExecaCompat', () => `Executing command: ${command}`);
+
+  try {
+    // Create ProcessRunner with execa-compatible options
+    const runnerOptions = {
+      mirror: false,
+      capture: true,
+      ...execOptions
+    };
+    
+    // Only add input if it's actually provided
+    if (input !== undefined) {
+      runnerOptions.input = input;
+    }
+
+    const runner = new ProcessRunner({ mode: 'shell', command }, runnerOptions);
+    const result = await runner;
+
+    let stdout = result.stdout || '';
+    let stderr = result.stderr || '';
+    let allOutput = all ? (result.all || stdout + stderr) : undefined;
+
+    // Handle stripFinalNewline (execa default behavior)
+    if (stripFinalNewline) {
+      stdout = stdout.replace(/\n$/, '');
+      stderr = stderr.replace(/\n$/, '');
+      if (allOutput) allOutput = allOutput.replace(/\n$/, '');
+    }
+
+    // Handle lines option
+    if (lines) {
+      stdout = stdout ? stdout.split('\n') : [];
+      stderr = stderr ? stderr.split('\n') : [];
+      if (allOutput) allOutput = allOutput.split('\n');
+    }
+
+    const execaResult = new ExecaResult(
+      stdout,
+      stderr,
+      allOutput,
+      result.code,
+      result.error,
+      command,
+      command,
+      options
+    );
+
+    // Handle rejection behavior
+    if (reject && result.code !== 0) {
+      const error = new Error(`Command failed with exit code ${result.code}: ${command}`);
+      error.shortMessage = error.message;
+      error.command = command;
+      error.escapedCommand = command;
+      error.exitCode = result.code;
+      error.stdout = stdout;
+      error.stderr = stderr;
+      error.all = allOutput;
+      error.failed = true;
+      error.killed = false;
+      error.signal = undefined;
+      error.signalDescription = undefined;
+      throw error;
+    }
+
+    return execaResult;
+  } catch (error) {
+    if (reject) {
+      // Enhance error with execa-compatible properties
+      error.command = command;
+      error.escapedCommand = command;
+      error.stdout = error.stdout || '';
+      error.stderr = error.stderr || '';
+      error.all = all ? (error.all || error.stdout + error.stderr) : undefined;
+      error.failed = true;
+      error.killed = false;
+      error.signal = undefined;
+      error.signalDescription = undefined;
+      throw error;
+    }
+    
+    return new ExecaResult('', '', all ? '' : undefined, 1, error, command, command, options);
+  }
+}
+
+// Synchronous execa function
+function execaSync(file, ...rest) {
+  trace('ExecaCompat', () => `execaSync(${file}, ${JSON.stringify(rest)})`);
+  
+  // Handle template literal usage
+  if (Array.isArray(file)) {
+    const strings = file;
+    const values = rest.slice(0, -1);
+    const lastArg = rest[rest.length - 1];
+    
+    const options = (typeof lastArg === 'object' && lastArg !== null && !Array.isArray(lastArg)) 
+      ? lastArg : {};
+    
+    const finalValues = (typeof lastArg === 'object' && lastArg !== null && !Array.isArray(lastArg))
+      ? values : [...values, lastArg];
+    
+    const cmd = buildShellCommand(strings, finalValues);
+    return execaSyncInternal(cmd, [], options);
+  }
+  
+  const [args = [], options = {}] = rest;
+  return execaSyncInternal(file, args, options);
+}
+
+// Internal sync implementation
+function execaSyncInternal(file, args = [], options = {}) {
+  const {
+    input,
+    reject = true,
+    stripFinalNewline = true,
+    lines = false,
+    ...execOptions
+  } = options;
+
+  // Build command string
+  let command;
+  if (args.length === 0) {
+    command = file;
+  } else {
+    command = [file, ...args].map(arg => 
+      typeof arg === 'string' && /\s/.test(arg) ? `"${arg}"` : String(arg)
+    ).join(' ');
+  }
+
+  try {
+    // Use spawnSync for synchronous execution
+    const result = cp.spawnSync('sh', ['-c', command], {
+      encoding: 'utf8',
+      input,
+      ...execOptions
+    });
+
+    let stdout = result.stdout || '';
+    let stderr = result.stderr || '';
+
+    // Handle stripFinalNewline
+    if (stripFinalNewline) {
+      stdout = stdout.replace(/\n$/, '');
+      stderr = stderr.replace(/\n$/, '');
+    }
+
+    // Handle lines option
+    if (lines) {
+      stdout = stdout ? stdout.split('\n') : [];
+      stderr = stderr ? stderr.split('\n') : [];
+    }
+
+    const execaResult = new ExecaResult(
+      stdout,
+      stderr,
+      undefined, // sync doesn't support 'all'
+      result.status || 0,
+      result.error,
+      command,
+      command,
+      options
+    );
+
+    if (reject && result.status !== 0) {
+      const error = new Error(`Command failed with exit code ${result.status}: ${command}`);
+      error.shortMessage = error.message;
+      error.command = command;
+      error.escapedCommand = command;
+      error.exitCode = result.status;
+      error.stdout = stdout;
+      error.stderr = stderr;
+      error.failed = true;
+      throw error;
+    }
+
+    return execaResult;
+  } catch (error) {
+    if (reject) {
+      error.command = command;
+      error.escapedCommand = command;
+      error.stdout = error.stdout || '';
+      error.stderr = error.stderr || '';
+      error.failed = true;
+      throw error;
+    }
+    
+    return new ExecaResult('', '', undefined, 1, error, command, command, options);
+  }
+}
+
+// Node.js script execution with IPC support
+function execaNode(file, args = [], options = {}) {
+  trace('ExecaCompat', () => `execaNode(${file}, ${JSON.stringify(args)}, ${JSON.stringify(options)})`);
+  
+  const nodeOptions = {
+    ...options,
+    execPath: options.execPath || process.execPath
+  };
+  
+  // For Node.js scripts, prepend node executable
+  return execa(nodeOptions.execPath, [file, ...args], nodeOptions);
+}
+
+// Create execa-compatible $ function with chaining
+function createExecaChain(options = {}) {
+  const chain = (strings, ...values) => {
+    if (Array.isArray(strings)) {
+      // Template literal usage
+      return execa(strings, values, options);
+    } else {
+      // Function call usage
+      return execa(strings, values, options);
+    }
+  };
+  
+  // Add chaining methods
+  chain.pipe = (...commands) => {
+    trace('ExecaCompat', () => `$.pipe with ${commands.length} commands`);
+    // For now, implement basic piping - could be enhanced later
+    return chain;
+  };
+  
+  return chain;
+}
+
+// Main compatibility API with all execa features
+function execaCompat() {
+  const api = {
+    // Core functions
+    execa,
+    execaSync,
+    execaNode,
+    
+    // $ shorthand with chaining
+    $: createExecaChain(),
+    
+    // Utility functions
+    isExecaChildProcess: (obj) => !!(obj && typeof obj.pid === 'number'),
+    
+    // Create new instance with default options
+    create: (defaultOptions = {}) => {
+      return {
+        execa: (file, args, options) => execa(file, args, { ...defaultOptions, ...options }),
+        execaSync: (file, args, options) => execaSync(file, args, { ...defaultOptions, ...options }),
+        execaNode: (file, args, options) => execaNode(file, args, { ...defaultOptions, ...options }),
+        $: createExecaChain(defaultOptions)
+      };
+    }
+  };
+  
+  trace('ExecaCompat', () => 'execaCompat() API created');
+  return api;
+}
+
+// ===== END EXECA COMPATIBILITY LAYER =====
+
 // Initialize built-in commands
 trace('Initialization', () => 'Registering built-in virtual commands');
 registerBuiltins();
@@ -4642,6 +4974,12 @@ export {
   configureAnsi,
   getAnsiConfig,
   processOutput,
-  forceCleanupAll
+  forceCleanupAll,
+  // Execa compatibility layer
+  execaCompat,
+  execa,
+  execaSync,
+  execaNode,
+  ExecaResult
 };
 export default $tagged;

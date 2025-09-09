@@ -1,7 +1,7 @@
 {
   "name": "command-stream",
-  "version": "0.7.1",
-  "description": "Modern $ shell utility library with streaming, async iteration, and EventEmitter support, optimized for Bun runtime",
+  "version": "0.8.0",
+  "description": "Modern $ shell utility library with streaming, async iteration, EventEmitter support, and full execa compatibility",
   "type": "module",
   "main": "src/$.mjs",
   "exports": {
@@ -34,7 +34,12 @@
     "eventemitter",
     "bun",
     "node",
-    "cross-runtime"
+    "cross-runtime",
+    "execa",
+    "execa-compatible",
+    "virtual-commands",
+    "process-execution",
+    "child-process"
   ],
   "author": "link-foundation",
   "license": "Unlicense",
