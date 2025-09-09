@@ -4521,6 +4521,10 @@ import dirnameCommand from './commands/$.dirname.mjs';
 import yesCommand from './commands/$.yes.mjs';
 import seqCommand from './commands/$.seq.mjs';
 import testCommand from './commands/$.test.mjs';
+import headCommand from './commands/$.head.mjs';
+import tailCommand from './commands/$.tail.mjs';
+import sortCommand from './commands/$.sort.mjs';
+import uniqCommand from './commands/$.uniq.mjs';
 
 // Built-in commands that match Bun.$ functionality
 function registerBuiltins() {
@@ -4547,6 +4551,10 @@ function registerBuiltins() {
   register('yes', yesCommand);
   register('seq', seqCommand);
   register('test', testCommand);
+  register('head', headCommand);
+  register('tail', tailCommand);
+  register('sort', sortCommand);
+  register('uniq', uniqCommand);
 }
 
 
@@ -4615,10 +4623,121 @@ function processOutput(data, options = {}) {
   return data;
 }
 
+// ShellJS compatibility layer
+function createShellJSAPI() {
+  const shelljs = {
+    // Directory operations
+    cd: async (path) => {
+      const result = await $tagged`cd ${path}`;
+      return { code: result.exitCode || 0, stdout: result.stdout || '', stderr: result.stderr || '' };
+    },
+    pwd: async () => {
+      const result = await $tagged`pwd`;
+      return { code: result.exitCode || 0, stdout: result.stdout || '', stderr: result.stderr || '' };
+    },
+    ls: async (...args) => {
+      const result = await $tagged`ls ${args.join(' ')}`;
+      return { code: result.exitCode || 0, stdout: result.stdout || '', stderr: result.stderr || '' };
+    },
+    mkdir: async (...args) => {
+      const result = await $tagged`mkdir ${args.join(' ')}`;
+      return { code: result.exitCode || 0, stdout: result.stdout || '', stderr: result.stderr || '' };
+    },
+    
+    // File operations
+    cat: async (...args) => {
+      const result = await $tagged`cat ${args.join(' ')}`;
+      return { code: result.exitCode || 0, stdout: result.stdout || '', stderr: result.stderr || '' };
+    },
+    head: async (...args) => {
+      const result = await $tagged`head ${args.join(' ')}`;
+      return { code: result.exitCode || 0, stdout: result.stdout || '', stderr: result.stderr || '' };
+    },
+    tail: async (...args) => {
+      const result = await $tagged`tail ${args.join(' ')}`;
+      return { code: result.exitCode || 0, stdout: result.stdout || '', stderr: result.stderr || '' };
+    },
+    sort: async (...args) => {
+      const result = await $tagged`sort ${args.join(' ')}`;
+      return { code: result.exitCode || 0, stdout: result.stdout || '', stderr: result.stderr || '' };
+    },
+    uniq: async (...args) => {
+      const result = await $tagged`uniq ${args.join(' ')}`;
+      return { code: result.exitCode || 0, stdout: result.stdout || '', stderr: result.stderr || '' };
+    },
+    cp: async (...args) => {
+      const result = await $tagged`cp ${args.join(' ')}`;
+      return { code: result.exitCode || 0, stdout: result.stdout || '', stderr: result.stderr || '' };
+    },
+    mv: async (...args) => {
+      const result = await $tagged`mv ${args.join(' ')}`;
+      return { code: result.exitCode || 0, stdout: result.stdout || '', stderr: result.stderr || '' };
+    },
+    rm: async (...args) => {
+      const result = await $tagged`rm ${args.join(' ')}`;
+      return { code: result.exitCode || 0, stdout: result.stdout || '', stderr: result.stderr || '' };
+    },
+    touch: async (...args) => {
+      const result = await $tagged`touch ${args.join(' ')}`;
+      return { code: result.exitCode || 0, stdout: result.stdout || '', stderr: result.stderr || '' };
+    },
+    
+    // Text utilities
+    echo: async (...args) => {
+      const result = await $tagged`echo ${args.join(' ')}`;
+      return { code: result.exitCode || 0, stdout: result.stdout || '', stderr: result.stderr || '' };
+    },
+    
+    // Testing
+    test: async (...args) => {
+      const result = await $tagged`test ${args.join(' ')}`;
+      return { code: result.exitCode || 0, stdout: result.stdout || '', stderr: result.stderr || '' };
+    },
+    
+    // Path utilities
+    basename: async (...args) => {
+      const result = await $tagged`basename ${args.join(' ')}`;
+      return { code: result.exitCode || 0, stdout: result.stdout || '', stderr: result.stderr || '' };
+    },
+    dirname: async (...args) => {
+      const result = await $tagged`dirname ${args.join(' ')}`;
+      return { code: result.exitCode || 0, stdout: result.stdout || '', stderr: result.stderr || '' };
+    },
+    
+    // Process utilities
+    which: async (...args) => {
+      const result = await $tagged`which ${args.join(' ')}`;
+      return { code: result.exitCode || 0, stdout: result.stdout || '', stderr: result.stderr || '' };
+    },
+    
+    // Misc utilities
+    env: async () => {
+      const result = await $tagged`env`;
+      return { code: result.exitCode || 0, stdout: result.stdout || '', stderr: result.stderr || '' };
+    },
+    sleep: async (seconds) => {
+      const result = await $tagged`sleep ${seconds}`;
+      return { code: result.exitCode || 0, stdout: result.stdout || '', stderr: result.stderr || '' };
+    },
+    
+    // Configuration
+    config: {
+      silent: false,
+      fatal: false,
+      verbose: false
+    }
+  };
+  
+  return shelljs;
+}
+
 // Initialize built-in commands
 trace('Initialization', () => 'Registering built-in virtual commands');
 registerBuiltins();
 trace('Initialization', () => `Built-in commands registered: ${listCommands().join(', ')}`);
+
+// Create ShellJS compatibility instance
+const shelljs = createShellJSAPI();
 
 export {
   $tagged as $,
@@ -4642,6 +4761,7 @@ export {
   configureAnsi,
   getAnsiConfig,
   processOutput,
-  forceCleanupAll
+  forceCleanupAll,
+  shelljs
 };
 export default $tagged;
