@@ -1,7 +1,7 @@
 {
   "name": "command-stream",
-  "version": "0.7.1",
-  "description": "Modern $ shell utility library with streaming, async iteration, and EventEmitter support, optimized for Bun runtime",
+  "version": "0.8.0",
+  "description": "Advanced $ shell utility library with real-time stream processing, analytics engine, transforms, and async iteration, optimized for Bun runtime",
   "type": "module",
   "main": "src/$.mjs",
   "exports": {
@@ -29,6 +29,12 @@
     "shell",
     "command",
     "streaming",
+    "analytics",
+    "transforms",
+    "real-time",
+    "map",
+    "filter",
+    "reduce",
     "async",
     "iteration",
     "eventemitter",
