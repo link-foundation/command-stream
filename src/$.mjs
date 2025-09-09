@@ -1712,10 +1712,26 @@ class ProcessRunner extends StreamEmitter {
           const commandsThatNeedRealStdin = ['sleep', 'cat']; // Only these really need real processes for stdin
           const shouldBypassVirtual = hasCustomStdin && commandsThatNeedRealStdin.includes(parsed.cmd);
           
+          // Also bypass virtual commands in streaming mode if the original command contains shell operators
+          // This handles cases like `echo "immediate"; sleep 0.1; echo "delayed"` which get parsed as simple
+          // commands but actually contain shell syntax that needs to be processed by the shell
+          const hasShellOperators = this.spec.command.includes(';') || this.spec.command.includes('&&') || 
+                                   this.spec.command.includes('||') || this.spec.command.includes('|') ||
+                                   this.spec.command.includes('&');
+          const shouldBypassForStreaming = this._isStreaming && hasShellOperators;
+          
           if (shouldBypassVirtual) {
             trace('ProcessRunner', () => `Bypassing built-in virtual command due to custom stdin | ${JSON.stringify({
               cmd: parsed.cmd,
               stdin: typeof this.options.stdin
+            }, null, 2)}`);
+            // Fall through to run as real command
+          } else if (shouldBypassForStreaming) {
+            trace('ProcessRunner', () => `Bypassing virtual command for streaming with shell operators | ${JSON.stringify({
+              cmd: parsed.cmd,
+              isStreaming: this._isStreaming,
+              hasShellOperators,
+              command: this.spec.command.slice(0, 50)
             }, null, 2)}`);
             // Fall through to run as real command
           } else {
