@@ -3702,8 +3702,16 @@ class ProcessRunner extends StreamEmitter {
       commandType: subshell.command.type
     }, null, 2)}`);
     
-    // Save current directory
-    const savedCwd = process.cwd();
+    // Save current directory - handle getcwd() failures gracefully
+    let savedCwd;
+    try {
+      savedCwd = process.cwd();
+      trace('ProcessRunner', () => `Saved current directory: ${savedCwd}`);
+    } catch (e) {
+      // getcwd() failed - likely in a deleted directory
+      trace('ProcessRunner', () => `Failed to get current directory (${e.message}), using fallback`);
+      savedCwd = null; // Will trigger fallback logic in finally block
+    }
     
     try {
       // Execute subshell command
@@ -3720,20 +3728,50 @@ class ProcessRunner extends StreamEmitter {
       
       return result;
     } finally {
-      // Restore directory - check if it still exists first
-      trace('ProcessRunner', () => `Restoring cwd from ${process.cwd()} to ${savedCwd}`);
-      const fs = await import('fs');
-      if (fs.existsSync(savedCwd)) {
-        process.chdir(savedCwd);
-      } else {
-        // If the saved directory was deleted, try to go to a safe location
+      // Restore directory - handle cases where savedCwd is null or current dir is invalid
+      if (savedCwd === null) {
+        // We couldn't get the original directory, try to restore to a safe location
         const fallbackDir = process.env.HOME || process.env.USERPROFILE || '/';
-        trace('ProcessRunner', () => `Saved directory ${savedCwd} no longer exists, falling back to ${fallbackDir}`);
+        trace('ProcessRunner', () => `Cannot restore directory (original getcwd failed), falling back to ${fallbackDir}`);
         try {
           process.chdir(fallbackDir);
         } catch (e) {
-          // If even fallback fails, just stay where we are
-          trace('ProcessRunner', () => `Failed to restore directory: ${e.message}`);
+          trace('ProcessRunner', () => `Failed to restore to fallback directory: ${e.message}`);
+        }
+      } else {
+        // We have a savedCwd, try to restore it
+        let currentDir;
+        try {
+          currentDir = process.cwd();
+        } catch (e) {
+          currentDir = '<unavailable>';
+        }
+        trace('ProcessRunner', () => `Restoring cwd from ${currentDir} to ${savedCwd}`);
+        
+        const fs = await import('fs');
+        if (fs.existsSync(savedCwd)) {
+          try {
+            process.chdir(savedCwd);
+          } catch (e) {
+            trace('ProcessRunner', () => `Failed to restore to saved directory: ${e.message}`);
+            // Try fallback
+            const fallbackDir = process.env.HOME || process.env.USERPROFILE || '/';
+            try {
+              process.chdir(fallbackDir);
+            } catch (e2) {
+              trace('ProcessRunner', () => `Failed to restore to fallback directory: ${e2.message}`);
+            }
+          }
+        } else {
+          // If the saved directory was deleted, try to go to a safe location
+          const fallbackDir = process.env.HOME || process.env.USERPROFILE || '/';
+          trace('ProcessRunner', () => `Saved directory ${savedCwd} no longer exists, falling back to ${fallbackDir}`);
+          try {
+            process.chdir(fallbackDir);
+          } catch (e) {
+            // If even fallback fails, just stay where we are
+            trace('ProcessRunner', () => `Failed to restore directory: ${e.message}`);
+          }
         }
       }
     }
