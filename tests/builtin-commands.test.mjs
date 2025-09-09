@@ -340,6 +340,111 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
     });
   });
 
+  describe('Tee Command (Virtual)', () => {
+    test('tee should write to file and stdout', async () => {
+      const testFile = join(TEST_DIR, 'tee-output.txt');
+      const result = await $`echo "Hello Tee!" | tee ${testFile}`;
+      
+      expect(result.code).toBe(0);
+      expect(result.stdout).toBe('Hello Tee!\n');
+      expect(existsSync(testFile)).toBe(true);
+      
+      const fileContent = readFileSync(testFile, 'utf8');
+      expect(fileContent).toBe('Hello Tee!\n');
+    });
+
+    test('tee should support multiple output files', async () => {
+      const file1 = join(TEST_DIR, 'tee1.txt');
+      const file2 = join(TEST_DIR, 'tee2.txt');
+      const file3 = join(TEST_DIR, 'tee3.txt');
+      
+      const result = await $`echo "Multiple files" | tee ${file1} ${file2} ${file3}`;
+      
+      expect(result.code).toBe(0);
+      expect(result.stdout).toBe('Multiple files\n');
+      
+      [file1, file2, file3].forEach(file => {
+        expect(existsSync(file)).toBe(true);
+        const content = readFileSync(file, 'utf8');
+        expect(content).toBe('Multiple files\n');
+      });
+    });
+
+    test('tee should support append mode with -a flag', async () => {
+      const testFile = join(TEST_DIR, 'tee-append.txt');
+      
+      // First write
+      await $`echo "First line" | tee ${testFile}`;
+      
+      // Append second line
+      const result = await $`echo "Second line" | tee -a ${testFile}`;
+      
+      expect(result.code).toBe(0);
+      expect(result.stdout).toBe('Second line\n');
+      
+      const fileContent = readFileSync(testFile, 'utf8');
+      expect(fileContent).toBe('First line\nSecond line\n');
+    });
+
+    test('tee should work with direct stdin input', async () => {
+      const testFile = join(TEST_DIR, 'tee-stdin.txt');
+      const inputData = 'line1\nline2\nline3\n';
+      
+      const result = await $({ stdin: inputData })`tee ${testFile}`;
+      
+      expect(result.code).toBe(0);
+      expect(result.stdout).toBe(inputData);
+      
+      const fileContent = readFileSync(testFile, 'utf8');
+      expect(fileContent).toBe(inputData);
+    });
+
+    test('tee should handle empty input', async () => {
+      const testFile = join(TEST_DIR, 'tee-empty.txt');
+      
+      const result = await $({ stdin: '' })`tee ${testFile}`;
+      
+      expect(result.code).toBe(0);
+      expect(result.stdout).toBe('');
+      expect(existsSync(testFile)).toBe(true);
+      
+      const fileContent = readFileSync(testFile, 'utf8');
+      expect(fileContent).toBe('');
+    });
+
+    test('tee should work in complex pipelines', async () => {
+      const testFile = join(TEST_DIR, 'tee-pipeline.txt');
+      
+      const result = await $`echo "pipeline test" | tee ${testFile} | cat`;
+      
+      expect(result.code).toBe(0);
+      expect(result.stdout).toBe('pipeline test\n');
+      
+      const fileContent = readFileSync(testFile, 'utf8');
+      expect(fileContent).toBe('pipeline test\n');
+    });
+
+    test('tee should handle file write errors gracefully', async () => {
+      const invalidPath = '/invalid/path/tee-error.txt';
+      
+      // Test with direct tee call (not pipeline) to ensure error propagation
+      const result = await $({ stdin: 'error test' })`tee ${invalidPath}`;
+      
+      expect(result.code).toBe(1);
+      expect(result.stderr).toContain('tee:');
+      expect(result.stderr).toContain(invalidPath);
+      // Should still output to stdout even on file error
+      expect(result.stdout).toBe('error test');
+    });
+
+    test('tee should reject unknown options', async () => {
+      const result = await $({ stdin: 'test' })`tee --unknown-option file.txt`;
+      
+      expect(result.code).toBe(1);
+      expect(result.stderr).toContain('unrecognized option');
+    });
+  });
+
   describe('Error Handling', () => {
     test('commands should return proper exit codes', async () => {
       const success = await $`true`;

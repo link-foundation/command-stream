@@ -23,7 +23,7 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 - ⚡ **Performance**: Memory-efficient streaming prevents large buffer accumulation
 - 🎯 **Backward Compatible**: Existing `await $` syntax continues to work + Bun.$ `.text()` method
 - 🛡️ **Type Safe**: Full TypeScript support (coming soon)
-- 🔧 **Built-in Commands**: 18 essential commands work identically across platforms
+- 🔧 **Built-in Commands**: 19 essential commands work identically across platforms
 
 ## Comparison with Other Libraries
 
@@ -50,7 +50,7 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 | **Stdout Support** | ✅ Real-time streaming + events | ✅ Node.js streams + interleaved | ✅ Inherited/buffered | ✅ Shell redirection + buffered | ✅ Direct output | ✅ Readable streams + `.pipe.stdout` |
 | **Stderr Support** | ✅ Real-time streaming + events | ✅ Streams + interleaved output | ✅ Inherited/buffered | ✅ Redirection + `.quiet()` access | ✅ Error output | ✅ Readable streams + `.pipe.stderr` |
 | **Stdin Support** | ✅ string/Buffer/inherit/ignore | ✅ Input/output streams | ✅ Full stdio support | ✅ Pipe operations | 🟡 Basic | ✅ Basic stdin |
-| **Built-in Commands** | ✅ **18 commands**: cat, ls, mkdir, rm, mv, cp, touch, basename, dirname, seq, yes + all Bun.$ commands | ❌ Uses system | ❌ Uses system | ✅ echo, cd, etc. | ✅ **20+ commands**: cat, ls, mkdir, rm, mv, cp, etc. | ❌ Uses system |
+| **Built-in Commands** | ✅ **19 commands**: cat, ls, mkdir, rm, mv, cp, touch, basename, dirname, seq, yes, tee + all Bun.$ commands | ❌ Uses system | ❌ Uses system | ✅ echo, cd, etc. | ✅ **20+ commands**: cat, ls, mkdir, rm, mv, cp, etc. | ❌ Uses system |
 | **Virtual Commands Engine** | ✅ **Revolutionary**: Register JavaScript functions as shell commands with full pipeline support | ❌ No custom commands | ❌ No custom commands | ❌ No extensibility | ❌ No custom commands | ❌ No custom commands |
 | **Pipeline/Piping Support** | ✅ **Advanced**: System + Built-ins + Virtual + Mixed + `.pipe()` method | ✅ Programmatic `.pipe()` + multi-destination | ❌ No piping | ✅ Standard shell piping | ✅ Shell piping + `.to()` method | ✅ Shell piping + `.pipe()` method |
 | **Bundle Size** | 📦 **~20KB gzipped** | 📦 ~400KB+ (packagephobia) | 📦 ~2KB gzipped | 🎯 0KB (built-in) | 📦 ~15KB gzipped | 📦 ~50KB+ (estimated) |
@@ -75,7 +75,7 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 - **🆓 Truly Free**: **Unlicense (Public Domain)** - No restrictions, no attribution required, use however you want
 - **🚀 Revolutionary Virtual Commands**: **World's first** fully customizable virtual commands engine - register JavaScript functions as shell commands!
 - **🔗 Advanced Pipeline System**: **Only library** where virtual commands work seamlessly in pipelines with built-ins and system commands
-- **🔧 Built-in Commands**: **18 essential commands** work identically across all platforms - no system dependencies!
+- **🔧 Built-in Commands**: **19 essential commands** work identically across all platforms - no system dependencies!
 - **📡 Real-time Processing**: Only library with true streaming and async iteration
 - **🔄 Flexible Patterns**: Multiple usage patterns (await, events, iteration, mixed)
 - **🐚 Shell Replacement**: Dynamic error handling with `set -e`/`set +e` equivalents for .sh file replacement
@@ -87,7 +87,7 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 
 ## Built-in Commands (🚀 NEW!)
 
-command-stream now includes **18 built-in commands** that work identically to their bash/sh counterparts, providing true cross-platform shell scripting without system dependencies:
+command-stream now includes **19 built-in commands** that work identically to their bash/sh counterparts, providing true cross-platform shell scripting without system dependencies:
 
 ### 📁 **File System Commands**
 - `cat` - Read and display file contents
@@ -103,6 +103,7 @@ command-stream now includes **18 built-in commands** that work identically to th
 - `dirname` - Extract directory from path
 - `seq` - Generate number sequences
 - `yes` - Output string repeatedly (streaming)
+- `tee` - Read from stdin and write to both stdout and files (supports `-a` append)
 
 ### ⚡ **System Commands**
 - `cd` - Change directory
@@ -138,6 +139,7 @@ await $`rm -r project-backup`;
 
 // Mix built-ins with pipelines and virtual commands
 await $`seq 1 5 | cat > numbers.txt`;
+await $`echo "Important data" | tee backup.txt | cat`; // Saves to file AND continues pipeline
 await $`basename /path/to/file.txt .txt`; // → "file"
 ```
 
@@ -1007,10 +1009,10 @@ async function streamingHandler({ args, stdin, abortSignal, cwd, env, options, i
 
 ### Built-in Commands
 
-18 cross-platform commands that work identically everywhere:
+19 cross-platform commands that work identically everywhere:
 
 **File System**: `cat`, `ls`, `mkdir`, `rm`, `mv`, `cp`, `touch`  
-**Utilities**: `basename`, `dirname`, `seq`, `yes`  
+**Utilities**: `basename`, `dirname`, `seq`, `yes`, `tee`  
 **System**: `cd`, `pwd`, `echo`, `sleep`, `true`, `false`, `which`, `exit`, `env`, `test`
 
 All built-in commands support:
