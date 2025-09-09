@@ -1667,8 +1667,16 @@ class ProcessRunner extends StreamEmitter {
         command: this.spec.command.slice(0, 100)
       }, null, 2)}`);
       
-      // Only use enhanced parser when appropriate
-      if (!this.options._bypassVirtual && shouldUseShellOperators && !needsRealShell(this.spec.command)) {
+      // Check if command needs real shell first (for features like 2>&1 redirection)
+      if (!this.options._bypassVirtual && needsRealShell(this.spec.command)) {
+        trace('ProcessRunner', () => `Command needs real shell, executing in shell | ${JSON.stringify({
+          command: this.spec.command.slice(0, 50),
+          reason: 'needsRealShell'
+        }, null, 2)}`);
+        // Execute in real shell instead of using virtual commands
+        // Fall through to normal shell execution below
+      } else if (!this.options._bypassVirtual && shouldUseShellOperators && !needsRealShell(this.spec.command)) {
+        // Only use enhanced parser when appropriate and doesn't need real shell
         const enhancedParsed = parseShellCommand(this.spec.command);
         if (enhancedParsed && enhancedParsed.type !== 'simple') {
           trace('ProcessRunner', () => `Using enhanced parser for shell operators | ${JSON.stringify({
@@ -1700,7 +1708,7 @@ class ProcessRunner extends StreamEmitter {
             commandCount: parsed.commands?.length
           }, null, 2)}`);
           return await this._runPipeline(parsed.commands);
-        } else if (parsed.type === 'simple' && virtualCommandsEnabled && virtualCommands.has(parsed.cmd) && !this.options._bypassVirtual) {
+        } else if (parsed.type === 'simple' && virtualCommandsEnabled && virtualCommands.has(parsed.cmd) && !this.options._bypassVirtual && !needsRealShell(this.spec.command)) {
           // For built-in virtual commands that have real counterparts (like sleep),
           // skip the virtual version when custom stdin is provided to ensure proper process handling
           const hasCustomStdin = this.options.stdin && 
