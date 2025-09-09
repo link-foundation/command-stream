@@ -3883,6 +3883,397 @@ class ProcessRunner extends StreamEmitter {
     }
   }
 
+  // Stream Analytics - Real-time metrics and monitoring
+  analyze(config = {}) {
+    trace('ProcessRunner', () => `analyze ENTER | ${JSON.stringify({
+      config,
+      started: this.started,
+      finished: this.finished
+    }, null, 2)}`);
+
+    const analytics = {
+      errorRate: 0,
+      responseTime: [],
+      throughput: { count: 0, bytes: 0 },
+      customMetrics: {},
+      startTime: Date.now()
+    };
+
+    const self = this;
+    return {
+      async *[Symbol.asyncIterator]() {
+        for await (const chunk of self.stream()) {
+          if (chunk.type === 'stdout' || chunk.type === 'stderr') {
+            const data = chunk.data.toString();
+            const lines = data.split('\n').filter(line => line.length > 0);
+            
+            for (const line of lines) {
+              const timestamp = Date.now();
+
+              // Update throughput
+              analytics.throughput.count++;
+              analytics.throughput.bytes += line.length;
+
+              // Error rate analysis
+              if (config.errorRate && typeof config.errorRate === 'function') {
+                if (config.errorRate(line)) {
+                  analytics.errorRate++;
+                }
+              } else if (config.errorRate && line.toLowerCase().includes('error')) {
+                analytics.errorRate++;
+              }
+
+              // Response time analysis
+              if (config.responseTime && typeof config.responseTime === 'function') {
+                const time = config.responseTime(line);
+                if (typeof time === 'number') {
+                  analytics.responseTime.push(time);
+                }
+              }
+
+              // Custom metrics
+              if (config.customMetrics) {
+                for (const [key, analyzer] of Object.entries(config.customMetrics)) {
+                  if (typeof analyzer === 'function') {
+                    const value = analyzer(line, analytics);
+                    if (value !== undefined) {
+                      if (!analytics.customMetrics[key]) {
+                        analytics.customMetrics[key] = [];
+                      }
+                      analytics.customMetrics[key].push({ value, timestamp });
+                    }
+                  }
+                }
+              }
+
+              // Yield chunk with analytics
+              yield {
+                ...chunk,
+                data: Buffer.from(line),
+                analytics: {
+                  ...analytics,
+                  elapsedTime: timestamp - analytics.startTime,
+                  avgResponseTime: analytics.responseTime.length > 0 
+                    ? analytics.responseTime.reduce((a, b) => a + b, 0) / analytics.responseTime.length 
+                    : 0,
+                  throughputRate: analytics.throughput.bytes / ((timestamp - analytics.startTime) / 1000) // bytes per second
+                }
+              };
+            }
+          } else {
+            yield chunk;
+          }
+        }
+      }
+    };
+  }
+
+  // Stream Transforms - map, filter, reduce operations
+  map(transform) {
+    trace('ProcessRunner', () => `map ENTER | ${JSON.stringify({
+      hasTransform: typeof transform === 'function',
+      started: this.started
+    }, null, 2)}`);
+
+    const self = this;
+    return {
+      async *[Symbol.asyncIterator]() {
+        for await (const chunk of self.stream()) {
+          if (chunk.type === 'stdout' || chunk.type === 'stderr') {
+            const data = chunk.data.toString();
+            const lines = data.split('\n').filter(line => line.length > 0);
+            
+            for (const line of lines) {
+              const transformed = await transform(line, { ...chunk, data: Buffer.from(line) });
+              if (transformed !== undefined) {
+                yield {
+                  ...chunk,
+                  data: Buffer.from(String(transformed)),
+                  originalData: Buffer.from(line)
+                };
+              }
+            }
+          } else {
+            yield chunk;
+          }
+        }
+      },
+      
+      // Chain additional transforms
+      map: function(nextTransform) { 
+        return self.map(async (line, chunk) => {
+          const first = await transform(line, chunk);
+          return first !== undefined ? await nextTransform(String(first), { ...chunk, data: Buffer.from(String(first)) }) : undefined;
+        });
+      },
+      filter: function(predicate) { return this.filter(predicate); },
+      analyze: function(config) { return this.analyze(config); }
+    };
+  }
+
+  filter(predicate) {
+    trace('ProcessRunner', () => `filter ENTER | ${JSON.stringify({
+      hasPredicate: typeof predicate === 'function',
+      started: this.started
+    }, null, 2)}`);
+
+    const self = this;
+    return {
+      async *[Symbol.asyncIterator]() {
+        for await (const chunk of self.stream()) {
+          if (chunk.type === 'stdout' || chunk.type === 'stderr') {
+            const data = chunk.data.toString();
+            const lines = data.split('\n').filter(line => line.length > 0);
+            
+            for (const line of lines) {
+              const shouldInclude = await predicate(line, { ...chunk, data: Buffer.from(line) });
+              if (shouldInclude) {
+                yield {
+                  ...chunk,
+                  data: Buffer.from(line)
+                };
+              }
+            }
+          } else {
+            yield chunk;
+          }
+        }
+      },
+      
+      // Chain additional transforms
+      map: function(transform) { return this.map(transform); },
+      filter: function(nextPredicate) { 
+        return self.filter(async (line, chunk) => {
+          const firstMatch = await predicate(line, chunk);
+          return firstMatch ? await nextPredicate(line, chunk) : false;
+        });
+      },
+      analyze: function(config) { return this.analyze(config); }
+    };
+  }
+
+  reduce(reducer, initialValue) {
+    trace('ProcessRunner', () => `reduce ENTER | ${JSON.stringify({
+      hasReducer: typeof reducer === 'function',
+      hasInitialValue: initialValue !== undefined,
+      started: this.started
+    }, null, 2)}`);
+
+    const self = this;
+    return {
+      async aggregate() {
+        let accumulator = initialValue;
+        let index = 0;
+
+        for await (const chunk of self.stream()) {
+          if (chunk.type === 'stdout' || chunk.type === 'stderr') {
+            const data = chunk.data.toString();
+            const lines = data.split('\n').filter(line => line.length > 0);
+            
+            for (const line of lines) {
+              accumulator = await reducer(accumulator, line, index++, { ...chunk, data: Buffer.from(line) });
+            }
+          }
+        }
+
+        return accumulator;
+      },
+      
+      async *[Symbol.asyncIterator]() {
+        let accumulator = initialValue;
+        let index = 0;
+
+        for await (const chunk of self.stream()) {
+          if (chunk.type === 'stdout' || chunk.type === 'stderr') {
+            const data = chunk.data.toString();
+            const lines = data.split('\n').filter(line => line.length > 0);
+            
+            for (const line of lines) {
+              accumulator = await reducer(accumulator, line, index++, { ...chunk, data: Buffer.from(line) });
+              yield {
+                ...chunk,
+                data: Buffer.from(line),
+                accumulator,
+                index: index - 1
+              };
+            }
+          } else {
+            yield chunk;
+          }
+        }
+      }
+    };
+  }
+
+  // Stream Splitting - split stream based on predicate
+  split(predicate) {
+    trace('ProcessRunner', () => `split ENTER | ${JSON.stringify({
+      hasPredicate: typeof predicate === 'function',
+      started: this.started
+    }, null, 2)}`);
+
+    const self = this;
+    const streams = { matched: [], unmatched: [] };
+    let isConsuming = false;
+
+    const consumeStream = async () => {
+      if (isConsuming) return;
+      isConsuming = true;
+
+      try {
+        for await (const chunk of self.stream()) {
+          if (chunk.type === 'stdout' || chunk.type === 'stderr') {
+            const data = chunk.data.toString();
+            const lines = data.split('\n').filter(line => line.length > 0);
+            
+            for (const line of lines) {
+              const lineChunk = { ...chunk, data: Buffer.from(line) };
+              const matches = await predicate(line, lineChunk);
+              
+              if (matches) {
+                streams.matched.push(lineChunk);
+              } else {
+                streams.unmatched.push(lineChunk);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        trace('ProcessRunner', () => `split stream consumption error: ${error.message}`);
+      }
+    };
+
+    return {
+      matched: {
+        async *[Symbol.asyncIterator]() {
+          const promise = consumeStream();
+          let index = 0;
+          
+          while (true) {
+            if (index < streams.matched.length) {
+              yield streams.matched[index++];
+            } else if (isConsuming) {
+              await new Promise(resolve => setTimeout(resolve, 10));
+            } else {
+              break;
+            }
+          }
+          
+          await promise;
+        }
+      },
+      unmatched: {
+        async *[Symbol.asyncIterator]() {
+          const promise = consumeStream();
+          let index = 0;
+          
+          while (true) {
+            if (index < streams.unmatched.length) {
+              yield streams.unmatched[index++];
+            } else if (isConsuming) {
+              await new Promise(resolve => setTimeout(resolve, 10));
+            } else {
+              break;
+            }
+          }
+          
+          await promise;
+        }
+      }
+    };
+  }
+
+  // Buffering strategies - sliding windows, batching
+  batch(size, timeWindow = null) {
+    trace('ProcessRunner', () => `batch ENTER | ${JSON.stringify({
+      size,
+      timeWindow,
+      started: this.started
+    }, null, 2)}`);
+
+    const self = this;
+    return {
+      async *[Symbol.asyncIterator]() {
+        let buffer = [];
+        let lastBatchTime = Date.now();
+
+        for await (const chunk of self.stream()) {
+          if (chunk.type === 'stdout' || chunk.type === 'stderr') {
+            const data = chunk.data.toString();
+            const lines = data.split('\n').filter(line => line.length > 0);
+            
+            for (const line of lines) {
+              buffer.push({ ...chunk, data: Buffer.from(line) });
+
+              const shouldFlush = buffer.length >= size || 
+                (timeWindow && (Date.now() - lastBatchTime) >= timeWindow);
+
+              if (shouldFlush) {
+                yield {
+                  type: 'batch',
+                  data: buffer,
+                  size: buffer.length,
+                  timestamp: Date.now()
+                };
+                buffer = [];
+                lastBatchTime = Date.now();
+              }
+            }
+          }
+        }
+
+        // Flush remaining buffer
+        if (buffer.length > 0) {
+          yield {
+            type: 'batch',
+            data: buffer,
+            size: buffer.length,
+            timestamp: Date.now()
+          };
+        }
+      }
+    };
+  }
+
+  slidingWindow(size) {
+    trace('ProcessRunner', () => `slidingWindow ENTER | ${JSON.stringify({
+      size,
+      started: this.started
+    }, null, 2)}`);
+
+    const self = this;
+    return {
+      async *[Symbol.asyncIterator]() {
+        const window = [];
+
+        for await (const chunk of self.stream()) {
+          if (chunk.type === 'stdout' || chunk.type === 'stderr') {
+            const data = chunk.data.toString();
+            const lines = data.split('\n').filter(line => line.length > 0);
+            
+            for (const line of lines) {
+              const lineChunk = { ...chunk, data: Buffer.from(line) };
+              window.push(lineChunk);
+
+              if (window.length > size) {
+                window.shift();
+              }
+
+              if (window.length === size) {
+                yield {
+                  type: 'window',
+                  data: [...window],
+                  size: window.length,
+                  timestamp: Date.now()
+                };
+              }
+            }
+          }
+        }
+      }
+    };
+  }
+
   kill(signal = 'SIGTERM') {
     trace('ProcessRunner', () => `kill ENTER | ${JSON.stringify({
       signal,
@@ -4615,6 +5006,122 @@ function processOutput(data, options = {}) {
   return data;
 }
 
+// Stream Merging - merge multiple streams
+function merge(...streams) {
+  trace('StreamMerging', () => `merge ENTER | ${JSON.stringify({
+    streamCount: streams.length,
+    streamTypes: streams.map(s => s.constructor?.name || typeof s)
+  }, null, 2)}`);
+
+  return {
+    async *[Symbol.asyncIterator]() {
+      // Convert all inputs to async iterators
+      const iterators = await Promise.all(streams.map(async (stream) => {
+        if (stream && typeof stream[Symbol.asyncIterator] === 'function') {
+          return stream[Symbol.asyncIterator]();
+        } else if (stream instanceof ProcessRunner) {
+          return stream.stream();
+        } else if (stream && typeof stream.stream === 'function') {
+          return stream.stream();
+        } else {
+          throw new Error('Invalid stream: must be async iterable or have .stream() method');
+        }
+      }));
+
+      // Track active iterators and their current promises
+      const activePromises = new Map();
+      let finished = 0;
+      const results = new Map();
+
+      // Function to get next value from an iterator
+      const getNext = async (iterator, index) => {
+        try {
+          const result = await iterator.next();
+          return { index, result };
+        } catch (error) {
+          return { index, error };
+        }
+      };
+
+      // Initialize all iterators
+      for (let i = 0; i < iterators.length; i++) {
+        activePromises.set(i, getNext(iterators[i], i));
+      }
+
+      // Main merging loop
+      while (finished < iterators.length) {
+        // Wait for the first iterator to yield a value
+        const { index, result, error } = await Promise.race(activePromises.values());
+
+        if (error) {
+          trace('StreamMerging', () => `Stream ${index} error: ${error.message}`);
+          activePromises.delete(index);
+          finished++;
+          continue;
+        }
+
+        if (result.done) {
+          trace('StreamMerging', () => `Stream ${index} finished`);
+          activePromises.delete(index);
+          finished++;
+          continue;
+        }
+
+        // Yield the value with stream metadata
+        yield {
+          ...result.value,
+          streamIndex: index,
+          timestamp: Date.now()
+        };
+
+        // Queue next value from this iterator
+        activePromises.set(index, getNext(iterators[index], index));
+      }
+
+      trace('StreamMerging', () => 'All streams finished');
+    },
+
+    // Additional merge operations
+    analyze: function(config = {}) {
+      const parentIterator = this;
+      return {
+        async *[Symbol.asyncIterator]() {
+          const analytics = {
+            streamCounts: new Array(streams.length).fill(0),
+            totalCount: 0,
+            errorRates: new Array(streams.length).fill(0),
+            startTime: Date.now()
+          };
+
+          for await (const chunk of parentIterator[Symbol.asyncIterator]()) {
+            analytics.streamCounts[chunk.streamIndex]++;
+            analytics.totalCount++;
+
+            // Stream-specific error analysis
+            if (config.errorRate && typeof config.errorRate === 'function') {
+              if (chunk.type === 'stdout' || chunk.type === 'stderr') {
+                const line = chunk.data?.toString() || '';
+                if (config.errorRate(line, chunk.streamIndex)) {
+                  analytics.errorRates[chunk.streamIndex]++;
+                }
+              }
+            }
+
+            yield {
+              ...chunk,
+              analytics: {
+                ...analytics,
+                elapsedTime: Date.now() - analytics.startTime,
+                dominantStream: analytics.streamCounts.indexOf(Math.max(...analytics.streamCounts))
+              }
+            };
+          }
+        }
+      };
+    }
+  };
+}
+
 // Initialize built-in commands
 trace('Initialization', () => 'Registering built-in virtual commands');
 registerBuiltins();
@@ -4638,6 +5145,7 @@ export {
   listCommands,
   enableVirtualCommands,
   disableVirtualCommands,
+  merge,
   AnsiUtils,
   configureAnsi,
   getAnsiConfig,
