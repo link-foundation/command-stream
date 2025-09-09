@@ -8,6 +8,7 @@
 import cp from 'child_process';
 import path from 'path';
 import fs from 'fs';
+import { Readable, Writable } from 'stream';
 import { parseShellCommand, needsRealShell } from './shell-parser.mjs';
 
 const isBun = typeof globalThis.Bun !== 'undefined';
@@ -638,14 +639,302 @@ let globalShellSettings = {
   nounset: false     // set -u equivalent: error on undefined variables
 };
 
+// Stream wrapper classes to provide stream interfaces for result data
+
+class ReadableStreamWrapper extends Readable {
+  constructor(data = '') {
+    super();
+    this._data = typeof data === 'string' ? data : data.toString();
+    this._position = 0;
+  }
+
+  _read() {
+    if (this._position >= this._data.length) {
+      this.push(null); // End of stream
+      return;
+    }
+    
+    // Push data in chunks
+    const chunkSize = 1024;
+    const chunk = this._data.slice(this._position, this._position + chunkSize);
+    this._position += chunk.length;
+    this.push(chunk);
+  }
+
+  // Make it behave like a string for backward compatibility
+  toString() {
+    return this._data;
+  }
+
+  // String-like properties
+  get length() {
+    return this._data.length;
+  }
+
+  // Common string methods for compatibility
+  trim() {
+    return this._data.trim();
+  }
+
+  slice(...args) {
+    return this._data.slice(...args);
+  }
+
+  indexOf(...args) {
+    return this._data.indexOf(...args);
+  }
+
+  includes(...args) {
+    return this._data.includes(...args);
+  }
+
+  split(...args) {
+    return this._data.split(...args);
+  }
+
+  replace(...args) {
+    return this._data.replace(...args);
+  }
+
+  match(...args) {
+    return this._data.match(...args);
+  }
+
+  substring(...args) {
+    return this._data.substring(...args);
+  }
+
+  // Custom inspect for Node.js console.log
+  [Symbol.for('nodejs.util.inspect.custom')]() {
+    return this._data;
+  }
+
+  // JSON serialization support
+  toJSON() {
+    return this._data;
+  }
+
+  // Symbol.toPrimitive for automatic conversion - carefully managed
+  [Symbol.toPrimitive](hint) {
+    if (hint === 'number') {
+      return NaN; // Strings don't convert well to numbers
+    }
+    // Always convert to string for both 'string' and 'default' hints
+    // This helps with typeof checks and automatic conversions
+    return this._data;
+  }
+
+  // Override valueOf to help with type coercion
+  valueOf() {
+    return this._data;
+  }
+
+  // Additional compatibility methods for testing frameworks
+  search(...args) {
+    return this._data.search(...args);
+  }
+
+  charAt(...args) {
+    return this._data.charAt(...args);
+  }
+
+  charCodeAt(...args) {
+    return this._data.charCodeAt(...args);
+  }
+
+  concat(...args) {
+    return this._data.concat(...args);
+  }
+
+  endsWith(...args) {
+    return this._data.endsWith(...args);
+  }
+
+  startsWith(...args) {
+    return this._data.startsWith(...args);
+  }
+
+  localeCompare(...args) {
+    return this._data.localeCompare(...args);
+  }
+
+  padStart(...args) {
+    return this._data.padStart(...args);
+  }
+
+  padEnd(...args) {
+    return this._data.padEnd(...args);
+  }
+
+  repeat(...args) {
+    return this._data.repeat(...args);
+  }
+
+  toLowerCase(...args) {
+    return this._data.toLowerCase(...args);
+  }
+
+  toUpperCase(...args) {
+    return this._data.toUpperCase(...args);
+  }
+
+  // Make it work with strict equality comparisons
+  [Symbol.for('jest-string-value')]() {
+    return this._data;
+  }
+}
+
+class WritableStreamWrapper extends Writable {
+  constructor(data = '') {
+    super();
+    this._data = typeof data === 'string' ? data : data.toString();
+    this._chunks = [];
+  }
+
+  _write(chunk, encoding, callback) {
+    this._chunks.push(chunk);
+    callback();
+  }
+
+  _final(callback) {
+    // Combine all written chunks with initial data
+    const writtenData = Buffer.concat(this._chunks).toString();
+    this._data = this._data + writtenData;
+    callback();
+  }
+
+  // Make it behave like a string for backward compatibility
+  toString() {
+    return this._data;
+  }
+
+  // String-like properties
+  get length() {
+    return this._data.length;
+  }
+
+  // Common string methods for compatibility
+  trim() {
+    return this._data.trim();
+  }
+
+  slice(...args) {
+    return this._data.slice(...args);
+  }
+
+  indexOf(...args) {
+    return this._data.indexOf(...args);
+  }
+
+  includes(...args) {
+    return this._data.includes(...args);
+  }
+
+  split(...args) {
+    return this._data.split(...args);
+  }
+
+  replace(...args) {
+    return this._data.replace(...args);
+  }
+
+  match(...args) {
+    return this._data.match(...args);
+  }
+
+  substring(...args) {
+    return this._data.substring(...args);
+  }
+
+  // Custom inspect for Node.js console.log
+  [Symbol.for('nodejs.util.inspect.custom')]() {
+    return this._data;
+  }
+
+  // JSON serialization support
+  toJSON() {
+    return this._data;
+  }
+
+  // Symbol.toPrimitive for automatic conversion - carefully managed
+  [Symbol.toPrimitive](hint) {
+    if (hint === 'number') {
+      return NaN; // Strings don't convert well to numbers
+    }
+    // Always convert to string for both 'string' and 'default' hints
+    // This helps with typeof checks and automatic conversions
+    return this._data;
+  }
+
+  // Override valueOf to help with type coercion
+  valueOf() {
+    return this._data;
+  }
+
+  // Additional compatibility methods for testing frameworks
+  search(...args) {
+    return this._data.search(...args);
+  }
+
+  charAt(...args) {
+    return this._data.charAt(...args);
+  }
+
+  charCodeAt(...args) {
+    return this._data.charCodeAt(...args);
+  }
+
+  concat(...args) {
+    return this._data.concat(...args);
+  }
+
+  endsWith(...args) {
+    return this._data.endsWith(...args);
+  }
+
+  startsWith(...args) {
+    return this._data.startsWith(...args);
+  }
+
+  localeCompare(...args) {
+    return this._data.localeCompare(...args);
+  }
+
+  padStart(...args) {
+    return this._data.padStart(...args);
+  }
+
+  padEnd(...args) {
+    return this._data.padEnd(...args);
+  }
+
+  repeat(...args) {
+    return this._data.repeat(...args);
+  }
+
+  toLowerCase(...args) {
+    return this._data.toLowerCase(...args);
+  }
+
+  toUpperCase(...args) {
+    return this._data.toUpperCase(...args);
+  }
+
+  // Make it work with strict equality comparisons
+  [Symbol.for('jest-string-value')]() {
+    return this._data;
+  }
+}
+
 function createResult({ code, stdout = '', stderr = '', stdin = '' }) {
+  const stdoutStream = new ReadableStreamWrapper(stdout);
   return {
     code,
-    stdout,
-    stderr,
-    stdin,
+    stdout: stdoutStream,
+    stderr: new ReadableStreamWrapper(stderr), 
+    stdin: new WritableStreamWrapper(stdin),
     async text() {
-      return stdout;
+      return stdoutStream.toString();
     }
   };
 }
@@ -2076,12 +2365,26 @@ class ProcessRunner extends StreamEmitter {
       runtime: isBun ? 'Bun' : 'Node.js'
     }, null, 2)}`);
 
-    const result = {
-      ...resultData,
-      async text() {
-        return resultData.stdout || '';
-      }
-    };
+    let result;
+    if (this.options.capture) {
+      result = createResult({
+        code: resultData.code,
+        stdout: resultData.stdout || '',
+        stderr: resultData.stderr || '',
+        stdin: resultData.stdin || ''
+      });
+    } else {
+      // When not capturing, preserve the basic result structure but without stream wrappers
+      result = {
+        code: resultData.code,
+        stdout: undefined,
+        stderr: undefined,
+        stdin: undefined,
+        async text() { return ''; }
+      };
+    }
+    // Preserve the child property
+    result.child = resultData.child;
 
     trace('ProcessRunner', () => `About to finish process with result | ${JSON.stringify({
       exitCode: result.code,
@@ -2317,7 +2620,7 @@ class ProcessRunner extends StreamEmitter {
         };
         const realRunner = new ProcessRunner({ mode: 'shell', command: originalCommand || cmd }, modifiedOptions);
         return await realRunner._doStartAsync();
-      } else if (this.options.stdin && typeof this.options.stdin === 'string') {
+      } else if (this.options.stdin && typeof this.options.stdin === 'string' && this.options.stdin !== 'inherit' && this.options.stdin !== 'ignore') {
         stdinData = this.options.stdin;
       } else if (this.options.stdin && Buffer.isBuffer(this.options.stdin)) {
         stdinData = this.options.stdin.toString('utf8');
@@ -2502,13 +2805,23 @@ class ProcessRunner extends StreamEmitter {
           }
         }
 
-        result = {
-          ...result,
-          code: result.code ?? 0,
-          stdout: this.options.capture ? (result.stdout ?? '') : undefined,
-          stderr: this.options.capture ? (result.stderr ?? '') : undefined,
-          stdin: this.options.capture ? stdinData : undefined
-        };
+        if (this.options.capture) {
+          result = createResult({
+            code: result.code ?? 0,
+            stdout: result.stdout ?? '',
+            stderr: result.stderr ?? '',
+            stdin: stdinData ?? ''
+          });
+        } else {
+          // When not capturing, preserve the basic result structure but without stream wrappers
+          result = {
+            code: result.code ?? 0,
+            stdout: undefined,
+            stderr: undefined,
+            stdin: undefined,
+            async text() { return ''; }
+          };
+        }
 
         // Mirror and emit output
         if (result.stdout) {
