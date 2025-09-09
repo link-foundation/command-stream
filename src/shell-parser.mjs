@@ -356,6 +356,7 @@ export function needsRealShell(command) {
     '*',     // Glob patterns
     '?',     // Glob patterns
     '[',     // Glob patterns
+    '2>&1',  // stderr to stdout redirection (check before >&)
     '2>',    // stderr redirection
     '&>',    // Combined redirection
     '>&',    // File descriptor duplication

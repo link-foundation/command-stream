@@ -1700,7 +1700,7 @@ class ProcessRunner extends StreamEmitter {
             commandCount: parsed.commands?.length
           }, null, 2)}`);
           return await this._runPipeline(parsed.commands);
-        } else if (parsed.type === 'simple' && virtualCommandsEnabled && virtualCommands.has(parsed.cmd) && !this.options._bypassVirtual) {
+        } else if (parsed.type === 'simple' && virtualCommandsEnabled && virtualCommands.has(parsed.cmd) && !this.options._bypassVirtual && !needsRealShell(this.spec.command)) {
           // For built-in virtual commands that have real counterparts (like sleep),
           // skip the virtual version when custom stdin is provided to ensure proper process handling
           const hasCustomStdin = this.options.stdin && 
