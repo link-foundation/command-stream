@@ -431,6 +431,53 @@ console.log(traditional.stdout); // "still works\n"
 - **`streams.*`** - Available **immediately** when command starts, for real-time interaction
 - **`buffers.*` & `strings.*`** - Complete **snapshots** available only **after** command finishes
 
+### Process ID (PID) Access
+
+Get the process ID of running commands for monitoring and management:
+
+```javascript
+import { $ } from 'command-stream';
+
+// Method 1: Access PID after starting via streams (recommended)
+const command = $`ping -c 5 google.com`;
+const stdout = await command.streams.stdout;
+
+if (command.child && command.child.pid) {
+  console.log(`Command PID: ${command.child.pid}`);
+  console.log('Process is running, you can monitor it externally');
+}
+
+const result = await command;
+
+// Method 2: Access PID with explicit start
+const longCmd = $`sleep 10`;
+await longCmd.start();
+
+console.log(`Sleep PID: ${longCmd.child.pid}`); 
+// PID remains available even after completion
+
+// Method 3: Safe PID access with error handling
+function getPidSafely(cmd, name) {
+  if (cmd.child && cmd.child.pid) {
+    return cmd.child.pid;
+  } else {
+    console.log(`PID not available for ${name}`);
+    return null;
+  }
+}
+
+const echoCmd = $`echo "Hello"`;
+await echoCmd.streams.stdout;
+const pid = getPidSafely(echoCmd, 'echo command');
+```
+
+**Key Points:**
+- Access PID via: `command.child.pid`
+- Process must be started first (use `.streams.*`, `.start()`, or `.stream()`)
+- Always check if `command.child` and `command.child.pid` exist
+- PID remains accessible even after command completion
+- Very fast commands may finish before PID access
+
 ### Shell Replacement (.sh → .mjs)
 
 Replace bash scripts with JavaScript while keeping shell semantics:
@@ -828,6 +875,8 @@ The enhanced `$` function returns a `ProcessRunner` instance that extends `Event
 - `stdout`: Direct access to child process stdout stream
 - `stderr`: Direct access to child process stderr stream  
 - `stdin`: Direct access to child process stdin stream
+- `child`: Reference to the underlying Node.js ChildProcess object
+- `child.pid`: Process ID (PID) of the running command (available after process starts)
 
 ### Default Options
 
