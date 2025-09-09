@@ -4615,6 +4615,504 @@ function processOutput(data, options = {}) {
   return data;
 }
 
+// Advanced Virtual Commands Ecosystem
+// Storage for installed packages and middleware
+const installedPackages = new Map();
+const commandMiddleware = new Map();
+const commandComposition = new Map();
+
+// Package installation system
+async function installPackage(packageName, options = {}) {
+  trace('VirtualEcosystem', () => `Installing package: ${packageName}`);
+  
+  try {
+    // Validate package name
+    if (!packageName || typeof packageName !== 'string') {
+      throw new Error('Package name must be a valid string');
+    }
+    
+    // Check if already installed
+    if (installedPackages.has(packageName)) {
+      if (!options.force) {
+        trace('VirtualEcosystem', () => `Package ${packageName} already installed`);
+        return { success: true, message: `Package ${packageName} already installed` };
+      }
+    }
+    
+    // For now, simulate package installation
+    // In real implementation, this would fetch from npm or custom registry
+    const mockPackage = await mockPackageResolver(packageName, options);
+    
+    if (mockPackage) {
+      installedPackages.set(packageName, {
+        name: packageName,
+        version: mockPackage.version || '1.0.0',
+        commands: mockPackage.commands || {},
+        installed: new Date(),
+        options
+      });
+      
+      // Register commands from the package
+      Object.entries(mockPackage.commands || {}).forEach(([cmdName, handler]) => {
+        register(cmdName, handler);
+        trace('VirtualEcosystem', () => `Registered command ${cmdName} from package ${packageName}`);
+      });
+      
+      return { 
+        success: true, 
+        message: `Successfully installed ${packageName}@${mockPackage.version}`,
+        commands: Object.keys(mockPackage.commands || {})
+      };
+    } else {
+      throw new Error(`Package ${packageName} not found`);
+    }
+  } catch (error) {
+    trace('VirtualEcosystem', () => `Failed to install ${packageName}: ${error.message}`);
+    return { success: false, error: error.message };
+  }
+}
+
+// Mock package resolver for demonstration
+async function mockPackageResolver(packageName, options = {}) {
+  // Simulate some popular command packages
+  const mockPackages = {
+    '@command-stream/git-tools': {
+      version: '1.0.0',
+      commands: {
+        'git-status-clean': async ({ args, cwd }) => {
+          // Simple git status command that shows clean status
+          return { stdout: 'Working directory clean\n', stderr: '', code: 0 };
+        },
+        'git-branch-list': async ({ args, cwd }) => {
+          return { stdout: '* main\n  feature\n  develop\n', stderr: '', code: 0 };
+        }
+      }
+    },
+    '@command-stream/file-tools': {
+      version: '1.2.0', 
+      commands: {
+        'enhanced-ls': async ({ args, cwd }) => {
+          // Enhanced ls with colors and formatting
+          return { stdout: 'file1.txt\nfile2.js\ndir/\n', stderr: '', code: 0 };
+        },
+        'tree-view': async ({ args, cwd }) => {
+          return { stdout: '.\n├── file1.txt\n├── file2.js\n└── dir/\n', stderr: '', code: 0 };
+        }
+      }
+    },
+    '@command-stream/deploy-tools': {
+      version: '2.1.0',
+      commands: {
+        'deploy': async ({ args, cwd }) => {
+          const env = args[0] || 'staging';
+          return { stdout: `Deploying to ${env}...\nDeployment successful!\n`, stderr: '', code: 0 };
+        }
+      }
+    }
+  };
+  
+  // Simulate async package fetch
+  await new Promise(resolve => setTimeout(resolve, 100));
+  
+  return mockPackages[packageName] || null;
+}
+
+// Create custom virtual command
+function createVirtualCommand(name, handler, options = {}) {
+  trace('VirtualEcosystem', () => `Creating virtual command: ${name}`);
+  
+  if (!name || typeof name !== 'string') {
+    throw new Error('Command name must be a valid string');
+  }
+  
+  if (!handler || typeof handler !== 'function') {
+    throw new Error('Command handler must be a function');
+  }
+  
+  // Wrap handler to support additional features
+  const wrappedHandler = async (context) => {
+    const startTime = Date.now();
+    try {
+      trace('VirtualCommand', () => `Executing custom command: ${name}`);
+      
+      // Support for async generators (streaming)
+      if (options.streaming && handler.constructor.name === 'AsyncGeneratorFunction') {
+        return await handleStreamingCommand(handler, context);
+      }
+      
+      const result = await handler(context);
+      
+      const duration = Date.now() - startTime;
+      trace('VirtualCommand', () => `Custom command ${name} completed in ${duration}ms`);
+      
+      return result;
+    } catch (error) {
+      trace('VirtualCommand', () => `Custom command ${name} failed: ${error.message}`);
+      return { stdout: '', stderr: error.message, code: 1 };
+    }
+  };
+  
+  // Store metadata about the command
+  const commandMetadata = {
+    name,
+    handler: wrappedHandler,
+    originalHandler: handler,
+    options,
+    created: new Date(),
+    type: 'custom'
+  };
+  
+  register(name, wrappedHandler);
+  virtualCommands.set(name + '_metadata', commandMetadata);
+  
+  return {
+    name,
+    registered: true,
+    metadata: commandMetadata
+  };
+}
+
+// Handle streaming commands (async generators)
+async function handleStreamingCommand(generator, context) {
+  trace('VirtualCommand', () => 'Handling streaming virtual command');
+  
+  let stdout = '';
+  let stderr = '';
+  let code = 0;
+  
+  try {
+    const gen = generator(context);
+    
+    for await (const chunk of gen) {
+      if (typeof chunk === 'string') {
+        stdout += chunk;
+      } else if (chunk && typeof chunk === 'object') {
+        if (chunk.stdout) stdout += chunk.stdout;
+        if (chunk.stderr) stderr += chunk.stderr;
+        if (chunk.code !== undefined) code = chunk.code;
+      }
+    }
+    
+    return { stdout, stderr, code };
+  } catch (error) {
+    return { stdout, stderr: error.message, code: 1 };
+  }
+}
+
+// Extend existing commands with middleware
+function extendCommand(commandName, middleware, options = {}) {
+  trace('VirtualEcosystem', () => `Extending command: ${commandName}`);
+  
+  if (!commandName || typeof commandName !== 'string') {
+    throw new Error('Command name must be a valid string');
+  }
+  
+  if (!middleware || (typeof middleware !== 'function' && typeof middleware !== 'object')) {
+    throw new Error('Middleware must be a function or object with pre/post methods');
+  }
+  
+  // Get existing command - could be original or already wrapped
+  const existingHandler = virtualCommands.get(commandName);
+  if (!existingHandler) {
+    throw new Error(`Command ${commandName} not found`);
+  }
+  
+  // Store middleware chain
+  if (!commandMiddleware.has(commandName)) {
+    commandMiddleware.set(commandName, []);
+  }
+  
+  // Get the original handler if this command has already been extended
+  const originalHandler = commandMiddleware.has(commandName) && commandMiddleware.get(commandName).length > 0
+    ? commandMiddleware.get(commandName)[0].originalHandler || existingHandler
+    : existingHandler;
+    
+  // Store original handler reference on first extension
+  if (commandMiddleware.get(commandName).length === 0) {
+    commandMiddleware.get(commandName).push({ originalHandler, middleware: null, options: {} });
+  }
+  
+  commandMiddleware.get(commandName).push({ middleware, options });
+  
+  // Create wrapped handler with all middleware
+  const wrappedHandler = async (context) => {
+    let result = context;
+    
+    // Apply pre-middleware in order
+    const middlewares = commandMiddleware.get(commandName) || [];
+    for (const { middleware: mw } of middlewares) {
+      if (mw && mw.pre) {
+        result = await mw.pre(result) || result;
+      }
+    }
+    
+    // Execute original command (skip the first entry which stores original handler)
+    const originalResult = await originalHandler(result);
+    
+    // Apply post-middleware in order
+    let finalResult = originalResult;
+    for (const { middleware: mw } of middlewares) {
+      if (mw && mw.post) {
+        finalResult = await mw.post(finalResult, result) || finalResult;
+      } else if (mw && typeof mw === 'function' && !mw.pre && !mw.post) {
+        // Simple middleware function
+        finalResult = await mw(finalResult, result) || finalResult;
+      }
+    }
+    
+    return finalResult;
+  };
+  
+  // Re-register with middleware
+  register(commandName, wrappedHandler);
+  
+  return {
+    command: commandName,
+    middlewareCount: commandMiddleware.get(commandName).length - 1, // Subtract 1 for original handler entry
+    extended: true
+  };
+}
+
+// Marketplace for command discovery
+const marketplace = {
+  // Search for available command packages
+  async search(query, options = {}) {
+    trace('VirtualEcosystem', () => `Searching marketplace for: ${query}`);
+    
+    // Mock marketplace search results
+    const mockResults = [
+      {
+        name: '@command-stream/git-tools',
+        version: '1.0.0',
+        description: 'Enhanced git command utilities',
+        commands: ['git-status-clean', 'git-branch-list'],
+        downloads: 1250,
+        rating: 4.8
+      },
+      {
+        name: '@command-stream/file-tools', 
+        version: '1.2.0',
+        description: 'Advanced file system operations',
+        commands: ['enhanced-ls', 'tree-view'],
+        downloads: 890,
+        rating: 4.6
+      },
+      {
+        name: '@command-stream/deploy-tools',
+        version: '2.1.0', 
+        description: 'Deployment automation commands',
+        commands: ['deploy'],
+        downloads: 2100,
+        rating: 4.9
+      }
+    ];
+    
+    // Filter results based on query
+    const filtered = mockResults.filter(pkg => 
+      pkg.name.toLowerCase().includes(query.toLowerCase()) ||
+      pkg.description.toLowerCase().includes(query.toLowerCase()) ||
+      pkg.commands.some(cmd => cmd.toLowerCase().includes(query.toLowerCase()))
+    );
+    
+    // Sort by relevance (downloads * rating for now)
+    const sorted = filtered.sort((a, b) => (b.downloads * b.rating) - (a.downloads * a.rating));
+    
+    return {
+      query,
+      results: sorted.slice(0, options.limit || 10),
+      total: sorted.length
+    };
+  },
+  
+  // Get package details
+  async info(packageName) {
+    trace('VirtualEcosystem', () => `Getting package info for: ${packageName}`);
+    
+    const mockPackage = await mockPackageResolver(packageName);
+    if (!mockPackage) {
+      throw new Error(`Package ${packageName} not found`);
+    }
+    
+    return {
+      name: packageName,
+      version: mockPackage.version,
+      commands: Object.keys(mockPackage.commands || {}),
+      description: `Mock package ${packageName}`,
+      installed: installedPackages.has(packageName)
+    };
+  },
+  
+  // List installed packages
+  list() {
+    trace('VirtualEcosystem', () => 'Listing installed packages');
+    
+    return Array.from(installedPackages.values()).map(pkg => ({
+      name: pkg.name,
+      version: pkg.version,
+      commands: Object.keys(pkg.commands || {}),
+      installed: pkg.installed
+    }));
+  }
+};
+
+// Command composition system
+function composeCommands(name, commands, options = {}) {
+  trace('VirtualEcosystem', () => `Composing command: ${name} from ${commands.length} commands`);
+  
+  if (!name || typeof name !== 'string') {
+    throw new Error('Composed command name must be a valid string');
+  }
+  
+  if (!Array.isArray(commands) || commands.length === 0) {
+    throw new Error('Commands must be a non-empty array');
+  }
+  
+  const composedHandler = async (context) => {
+    let results = [];
+    let finalStdout = '';
+    let finalStderr = '';
+    let finalCode = 0;
+    
+    for (let i = 0; i < commands.length; i++) {
+      const cmd = commands[i];
+      let cmdResult;
+      
+      if (typeof cmd === 'string') {
+        // Check if it's a virtual command first
+        if (virtualCommands.has(cmd)) {
+          const handler = virtualCommands.get(cmd);
+          cmdResult = await handler(context);
+        } else {
+          // Execute as shell command
+          const runner = new ProcessRunner(cmd, {}, context.cwd);
+          cmdResult = await runner.run();
+        }
+      } else if (typeof cmd === 'function') {
+        // Execute as function
+        cmdResult = await cmd(context);
+      } else {
+        throw new Error(`Invalid command at index ${i}: ${cmd}`);
+      }
+      
+      results.push(cmdResult);
+      
+      if (options.mode === 'pipeline') {
+        // Pass stdout of previous command as stdin of next
+        context.stdin = cmdResult.stdout;
+      } else if (options.mode === 'sequence') {
+        // Accumulate all outputs
+        finalStdout += cmdResult.stdout || '';
+        finalStderr += cmdResult.stderr || '';
+        
+        // Stop on first error unless continueOnError is true
+        if (cmdResult.code !== 0 && !options.continueOnError) {
+          finalCode = cmdResult.code;
+          break;
+        }
+      }
+    }
+    
+    return {
+      stdout: finalStdout || results[results.length - 1]?.stdout || '',
+      stderr: finalStderr || results[results.length - 1]?.stderr || '',
+      code: finalCode || results[results.length - 1]?.code || 0,
+      results: options.detailed ? results : undefined
+    };
+  };
+  
+  // Store composition metadata
+  commandComposition.set(name, {
+    name,
+    commands,
+    options,
+    created: new Date()
+  });
+  
+  register(name, composedHandler);
+  
+  return {
+    name,
+    commands: commands.length,
+    registered: true
+  };
+}
+
+// Hot-reloadable command development
+const hotReloadableCommands = new Map();
+
+function enableHotReload(commandName, filePath, options = {}) {
+  trace('VirtualEcosystem', () => `Enabling hot reload for: ${commandName} at ${filePath}`);
+  
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`Command file not found: ${filePath}`);
+  }
+  
+  const watcher = fs.watchFile(filePath, { interval: options.interval || 1000 }, async () => {
+    try {
+      trace('VirtualEcosystem', () => `Hot reloading command: ${commandName}`);
+      
+      // Clear require cache for the module
+      delete require.cache[require.resolve(path.resolve(filePath))];
+      
+      // Re-import the command
+      const commandModule = await import(path.resolve(filePath) + '?t=' + Date.now());
+      const newHandler = commandModule.default || commandModule[commandName];
+      
+      if (newHandler) {
+        register(commandName, newHandler);
+        trace('VirtualEcosystem', () => `Successfully hot reloaded: ${commandName}`);
+      }
+    } catch (error) {
+      trace('VirtualEcosystem', () => `Hot reload failed for ${commandName}: ${error.message}`);
+    }
+  });
+  
+  hotReloadableCommands.set(commandName, {
+    filePath,
+    watcher,
+    options
+  });
+  
+  return {
+    command: commandName,
+    filePath,
+    watching: true
+  };
+}
+
+function disableHotReload(commandName) {
+  trace('VirtualEcosystem', () => `Disabling hot reload for: ${commandName}`);
+  
+  const reloadInfo = hotReloadableCommands.get(commandName);
+  if (reloadInfo) {
+    fs.unwatchFile(reloadInfo.filePath);
+    hotReloadableCommands.delete(commandName);
+    return true;
+  }
+  return false;
+}
+
+// Cleanup function for ecosystem state
+function cleanupEcosystemState() {
+  installedPackages.clear();
+  commandMiddleware.clear();
+  commandComposition.clear();
+  hotReloadableCommands.forEach(({ watcher, filePath }) => {
+    fs.unwatchFile(filePath);
+  });
+  hotReloadableCommands.clear();
+}
+
+// Add new methods to the $tagged function
+$tagged.install = installPackage;
+$tagged.create = createVirtualCommand;
+$tagged.extend = extendCommand;
+$tagged.marketplace = marketplace;
+$tagged.compose = composeCommands;
+$tagged.hotReload = enableHotReload;
+$tagged.disableHotReload = disableHotReload;
+$tagged.cleanupEcosystem = cleanupEcosystemState;
+
 // Initialize built-in commands
 trace('Initialization', () => 'Registering built-in virtual commands');
 registerBuiltins();
@@ -4642,6 +5140,15 @@ export {
   configureAnsi,
   getAnsiConfig,
   processOutput,
-  forceCleanupAll
+  forceCleanupAll,
+  // Virtual Commands Ecosystem
+  installPackage,
+  createVirtualCommand,
+  extendCommand,
+  composeCommands,
+  enableHotReload,
+  disableHotReload,
+  marketplace,
+  cleanupEcosystemState
 };
 export default $tagged;
