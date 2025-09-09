@@ -1,0 +1,15 @@
+# Benchmark results and temporary data
+results/
+temp/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Node.js
+node_modules/
+*.log
+
+# Temporary test files
+test-*
+*-test-*

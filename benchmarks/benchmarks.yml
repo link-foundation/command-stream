@@ -1,0 +1,329 @@
+name: Benchmarks
+
+on:
+  # Run on PRs that touch benchmarking code
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'benchmarks/**'
+      - 'src/**'
+      - 'package.json'
+      - '.github/workflows/benchmarks.yml'
+  
+  # Run on main branch pushes
+  push:
+    branches: [ main ]
+    paths:
+      - 'benchmarks/**'
+      - 'src/**'
+      - 'package.json'
+      - '.github/workflows/benchmarks.yml'
+  
+  # Manual trigger
+  workflow_dispatch:
+    inputs:
+      skip_bundle_size:
+        description: 'Skip bundle size benchmarks'
+        type: boolean
+        default: false
+      skip_performance:
+        description: 'Skip performance benchmarks'
+        type: boolean
+        default: false
+      skip_features:
+        description: 'Skip feature tests'
+        type: boolean
+        default: false
+      skip_real_world:
+        description: 'Skip real-world benchmarks'
+        type: boolean
+        default: false
+  
+  # Weekly benchmark runs for regression testing
+  schedule:
+    - cron: '0 6 * * 1'  # Every Monday at 6 AM UTC
+
+env:
+  COMMAND_STREAM_VERBOSE: true
+
+jobs:
+  # Quick benchmark smoke test
+  benchmark-smoke:
+    name: Benchmark Smoke Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq curl
+      
+      - name: Install dependencies
+        run: bun install
+      
+      - name: Run basic tests first
+        run: bun test tests/ --timeout 30000
+        env:
+          COMMAND_STREAM_VERBOSE: true
+      
+      - name: Quick feature completeness test
+        run: |
+          cd benchmarks
+          node features/feature-completeness-benchmark.mjs
+        timeout-minutes: 10
+      
+      - name: Upload smoke test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-smoke-results
+          path: benchmarks/results/
+          retention-days: 7
+
+  # Full benchmark suite
+  benchmark-full:
+    name: Full Benchmark Suite
+    runs-on: ubuntu-latest
+    needs: benchmark-smoke
+    if: github.event_name != 'pull_request' || contains(github.event.pull_request.title, '[benchmark]')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      
+      - name: Setup Node.js (for compatibility testing)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq curl wget time
+      
+      - name: Install dependencies
+        run: bun install
+      
+      - name: Create results directory
+        run: mkdir -p benchmarks/results
+      
+      - name: Run bundle size benchmark
+        if: ${{ !inputs.skip_bundle_size }}
+        run: |
+          cd benchmarks
+          node bundle-size/bundle-size-benchmark.mjs
+        timeout-minutes: 15
+      
+      - name: Run performance benchmarks
+        if: ${{ !inputs.skip_performance }}
+        run: |
+          cd benchmarks
+          node performance/performance-benchmark.mjs
+        timeout-minutes: 20
+      
+      - name: Run feature completeness tests
+        if: ${{ !inputs.skip_features }}
+        run: |
+          cd benchmarks
+          node features/feature-completeness-benchmark.mjs
+        timeout-minutes: 10
+      
+      - name: Run real-world benchmarks
+        if: ${{ !inputs.skip_real_world }}
+        run: |
+          cd benchmarks
+          node real-world/real-world-benchmark.mjs
+        timeout-minutes: 20
+      
+      - name: Run comprehensive benchmark suite
+        run: |
+          cd benchmarks
+          node run-all-benchmarks.mjs \
+            ${{ inputs.skip_bundle_size && '--skip-bundle-size' || '' }} \
+            ${{ inputs.skip_performance && '--skip-performance' || '' }} \
+            ${{ inputs.skip_features && '--skip-features' || '' }} \
+            ${{ inputs.skip_real_world && '--skip-real-world' || '' }}
+        timeout-minutes: 30
+      
+      - name: Generate benchmark summary
+        run: |
+          cd benchmarks/results
+          echo "## 📊 Benchmark Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f "comprehensive-results.json" ]; then
+            echo "### 🏆 Overall Results" >> $GITHUB_STEP_SUMMARY
+            node -e "
+              const results = JSON.parse(require('fs').readFileSync('comprehensive-results.json', 'utf8'));
+              console.log(\`**Duration:** \${(results.duration / 1000).toFixed(2)}s\`);
+              console.log(\`**Completed:** \${results.timestamp}\`);
+              console.log('');
+              
+              if (results.summary.features) {
+                console.log(\`**Feature Tests:** \${results.summary.features.successRate.toFixed(1)}% success (\${results.summary.features.passed}/\${results.summary.features.totalTests})\`);
+              }
+              
+              if (results.summary.bundleSize) {
+                console.log(\`**Bundle Size:** ~\${(results.summary.bundleSize.size / 1024).toFixed(1)}KB gzipped\`);
+              }
+              
+              console.log('');
+              console.log('📋 **Reports Generated:**');
+              console.log('- comprehensive-benchmark-report.html');
+              console.log('- Individual JSON results for each benchmark suite');
+            " >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📁 Artifact Contents" >> $GITHUB_STEP_SUMMARY
+          ls -la . >> $GITHUB_STEP_SUMMARY
+      
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-results-${{ github.sha }}
+          path: benchmarks/results/
+          retention-days: 30
+      
+      - name: Comment on PR (if applicable)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = 'benchmarks/results/comprehensive-results.json';
+            
+            if (!fs.existsSync(path)) {
+              console.log('No comprehensive results found');
+              return;
+            }
+            
+            const results = JSON.parse(fs.readFileSync(path, 'utf8'));
+            
+            let comment = '## 📊 Benchmark Results\n\n';
+            comment += `**Duration:** ${(results.duration / 1000).toFixed(2)}s\n`;
+            comment += `**Timestamp:** ${results.timestamp}\n\n`;
+            
+            if (results.summary.features) {
+              const rate = results.summary.features.successRate;
+              const emoji = rate >= 90 ? '✅' : rate >= 70 ? '⚠️' : '❌';
+              comment += `${emoji} **Feature Tests:** ${rate.toFixed(1)}% (${results.summary.features.passed}/${results.summary.features.totalTests})\n`;
+            }
+            
+            if (results.summary.bundleSize) {
+              comment += `📦 **Bundle Size:** ~${(results.summary.bundleSize.size / 1024).toFixed(1)}KB gzipped\n`;
+            }
+            
+            if (results.summary.performance) {
+              comment += `⚡ **Performance:** ${results.summary.performance.suites} benchmark suites completed\n`;
+            }
+            
+            if (results.summary.realWorld) {
+              comment += `🌍 **Real-World:** ${results.summary.realWorld.benchmarks} use cases tested\n`;
+            }
+            
+            comment += '\n📋 **Full reports available in artifacts**\n';
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  # Compare with baseline (main branch)
+  benchmark-compare:
+    name: Compare with Baseline
+    runs-on: ubuntu-latest
+    needs: benchmark-full
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+      
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      
+      - name: Install dependencies
+        run: bun install
+      
+      - name: Run PR benchmarks (quick)
+        run: |
+          cd benchmarks
+          mkdir -p results/pr
+          node features/feature-completeness-benchmark.mjs
+          cp results/feature-completeness-results.json results/pr/
+      
+      - name: Checkout main branch
+        run: |
+          git fetch origin main
+          git checkout origin/main
+      
+      - name: Install dependencies (main)
+        run: bun install
+      
+      - name: Run main benchmarks (quick)
+        run: |
+          cd benchmarks
+          mkdir -p results/main
+          node features/feature-completeness-benchmark.mjs
+          cp results/feature-completeness-results.json results/main/
+      
+      - name: Compare results
+        run: |
+          cd benchmarks
+          node -e "
+            const fs = require('fs');
+            
+            const prPath = 'results/pr/feature-completeness-results.json';
+            const mainPath = 'results/main/feature-completeness-results.json';
+            
+            if (!fs.existsSync(prPath) || !fs.existsSync(mainPath)) {
+              console.log('Comparison files not found');
+              process.exit(0);
+            }
+            
+            const prResults = JSON.parse(fs.readFileSync(prPath, 'utf8'));
+            const mainResults = JSON.parse(fs.readFileSync(mainPath, 'utf8'));
+            
+            console.log('## 📊 Benchmark Comparison (PR vs Main)');
+            console.log('');
+            console.log('| Metric | PR | Main | Change |');
+            console.log('|--------|-----|------|--------|');
+            
+            const prRate = prResults.summary?.successRate || 0;
+            const mainRate = mainResults.summary?.successRate || 0;
+            const diff = prRate - mainRate;
+            const diffStr = diff > 0 ? '+' + diff.toFixed(1) + '%' : diff.toFixed(1) + '%';
+            const emoji = diff >= 0 ? '✅' : '⚠️';
+            
+            console.log(\`| Feature Tests | \${prRate.toFixed(1)}% | \${mainRate.toFixed(1)}% | \${emoji} \${diffStr} |\`);
+            console.log('');
+            
+            if (Math.abs(diff) > 5) {
+              console.log('⚠️ **Significant change in test success rate detected!**');
+            } else {
+              console.log('✅ **No significant regressions detected**');
+            }
+          " >> comparison-report.md
+      
+      - name: Upload comparison results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-comparison-${{ github.sha }}
+          path: benchmarks/comparison-report.md
+          retention-days: 7

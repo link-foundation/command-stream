@@ -1,6 +1,6 @@
 {
   "name": "command-stream",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "description": "Modern $ shell utility library with streaming, async iteration, and EventEmitter support, optimized for Bun runtime",
   "type": "module",
   "main": "src/$.mjs",
@@ -23,7 +23,14 @@
     "test:readme": "bun test tests/readme-examples.test.mjs",
     "test:sync": "bun test tests/sync.test.mjs",
     "test:builtin": "bun test tests/builtin-commands.test.mjs",
-    "test:pipe": "bun test tests/pipe.test.mjs"
+    "test:pipe": "bun test tests/pipe.test.mjs",
+    "benchmark": "cd benchmarks && node run-all-benchmarks.mjs",
+    "benchmark:bundle": "cd benchmarks && node bundle-size/bundle-size-benchmark.mjs",
+    "benchmark:performance": "cd benchmarks && node performance/performance-benchmark.mjs",
+    "benchmark:features": "cd benchmarks && node features/feature-completeness-benchmark.mjs",
+    "benchmark:real-world": "cd benchmarks && node real-world/real-world-benchmark.mjs",
+    "benchmark:quick": "cd benchmarks && node run-all-benchmarks.mjs --skip-bundle-size --skip-real-world",
+    "benchmark:demo": "cd benchmarks && node quick-demo.mjs"
   },
   "keywords": [
     "shell",
