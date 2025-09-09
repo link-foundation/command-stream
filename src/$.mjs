@@ -641,6 +641,7 @@ let globalShellSettings = {
 function createResult({ code, stdout = '', stderr = '', stdin = '' }) {
   return {
     code,
+    exitCode: code,
     stdout,
     stderr,
     stdin,
@@ -2053,6 +2054,7 @@ class ProcessRunner extends StreamEmitter {
 
     const resultData = {
       code: finalExitCode,
+      exitCode: finalExitCode,
       stdout: this.options.capture ? (this.outChunks && this.outChunks.length > 0 ? Buffer.concat(this.outChunks).toString('utf8') : '') : undefined,
       stderr: this.options.capture ? (this.errChunks && this.errChunks.length > 0 ? Buffer.concat(this.errChunks).toString('utf8') : '') : undefined,
       stdin: this.options.capture && this.inChunks ? Buffer.concat(this.inChunks).toString('utf8') : undefined,
@@ -2443,6 +2445,7 @@ class ProcessRunner extends StreamEmitter {
 
         result = {
           code: 0,
+          exitCode: 0,
           stdout: this.options.capture ? Buffer.concat(chunks).toString('utf8') : undefined,
           stderr: this.options.capture ? '' : undefined,
           stdin: this.options.capture ? stdinData : undefined
@@ -2494,6 +2497,7 @@ class ProcessRunner extends StreamEmitter {
             trace('ProcessRunner', () => `Virtual command cancelled with signal ${this._cancellationSignal}, exit code: ${exitCode}`);
             result = { 
               code: exitCode,
+              exitCode: exitCode,
               stdout: '',
               stderr: ''
             };
@@ -2505,6 +2509,7 @@ class ProcessRunner extends StreamEmitter {
         result = {
           ...result,
           code: result.code ?? 0,
+          exitCode: result.code ?? 0,
           stdout: this.options.capture ? (result.stdout ?? '') : undefined,
           stderr: this.options.capture ? (result.stderr ?? '') : undefined,
           stdin: this.options.capture ? stdinData : undefined
@@ -2553,6 +2558,7 @@ class ProcessRunner extends StreamEmitter {
       
       const result = {
         code: exitCode,
+        exitCode: exitCode,
         stdout: error.stdout ?? '',
         stderr: error.stderr ?? error.message,
         stdin: ''
@@ -3217,6 +3223,7 @@ class ProcessRunner extends StreamEmitter {
             }
             result = {
               code: 0,
+              exitCode: 0,
               stdout: this.options.capture ? Buffer.concat(chunks).toString('utf8') : undefined,
               stderr: this.options.capture ? '' : undefined,
               stdin: this.options.capture ? currentInput : undefined
@@ -3472,6 +3479,7 @@ class ProcessRunner extends StreamEmitter {
 
           let result = {
             code: proc.status || 0,
+            exitCode: proc.status || 0,
             stdout: proc.stdout || '',
             stderr: proc.stderr || '',
             stdin: currentInput
@@ -3647,7 +3655,7 @@ class ProcessRunner extends StreamEmitter {
       operators: sequence.operators
     }, null, 2)}`);
 
-    let lastResult = { code: 0, stdout: '', stderr: '' };
+    let lastResult = { code: 0, exitCode: 0, stdout: '', stderr: '' };
     let combinedStdout = '';
     let combinedStderr = '';
     
@@ -3689,6 +3697,7 @@ class ProcessRunner extends StreamEmitter {
     
     return {
       code: lastResult.code,
+      exitCode: lastResult.code,
       stdout: combinedStdout,
       stderr: combinedStderr,
       async text() {
@@ -3715,7 +3724,7 @@ class ProcessRunner extends StreamEmitter {
       } else if (subshell.command.type === 'simple') {
         result = await this._runSimpleCommand(subshell.command);
       } else {
-        result = { code: 0, stdout: '', stderr: '' };
+        result = { code: 0, exitCode: 0, stdout: '', stderr: '' };
       }
       
       return result;
