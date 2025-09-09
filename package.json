@@ -1,7 +1,7 @@
 {
   "name": "command-stream",
-  "version": "0.7.1",
-  "description": "Modern $ shell utility library with streaming, async iteration, and EventEmitter support, optimized for Bun runtime",
+  "version": "0.8.0",
+  "description": "Modern $ shell utility library with cross-spawn compatibility, streaming, async iteration, and EventEmitter support, optimized for Bun runtime",
   "type": "module",
   "main": "src/$.mjs",
   "exports": {
@@ -32,6 +32,9 @@
     "async",
     "iteration",
     "eventemitter",
+    "cross-spawn",
+    "spawn",
+    "compatibility",
     "bun",
     "node",
     "cross-runtime"

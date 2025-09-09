@@ -4298,6 +4298,121 @@ class ProcessRunner extends StreamEmitter {
     return result;
   }
 
+  // Create a child process-like object compatible with cross-spawn API
+  _createCompatibilityWrapper() {
+    trace('ProcessRunner', () => '_createCompatibilityWrapper ENTER');
+    
+    // Start the process asynchronously
+    const childPromise = this._startAsync();
+    
+    // Create a child process-like object with cross-spawn compatible API
+    const childProcess = {
+      pid: null,
+      connected: true,
+      killed: false,
+      exitCode: null,
+      signalCode: null,
+      spawnargs: this.spec.mode === 'exec' ? [this.spec.file, ...this.spec.args] : ['/bin/sh', '-c', this.spec.command],
+      spawnfile: this.spec.mode === 'exec' ? this.spec.file : '/bin/sh',
+      
+      // Event emitter methods
+      on: (event, callback) => {
+        this.on(event, callback);
+        return childProcess;
+      },
+      
+      once: (event, callback) => {
+        this.once(event, callback);
+        return childProcess;
+      },
+      
+      off: (event, callback) => {
+        this.off(event, callback);
+        return childProcess;
+      },
+      
+      removeListener: (event, callback) => {
+        this.removeListener(event, callback);
+        return childProcess;
+      },
+      
+      removeAllListeners: (event) => {
+        this.removeAllListeners(event);
+        return childProcess;
+      },
+      
+      emit: (event, ...args) => {
+        return this.emit(event, ...args);
+      },
+      
+      // Stream properties (will be set once process starts)
+      stdin: null,
+      stdout: null,
+      stderr: null,
+      
+      // Methods
+      kill: (signal = 'SIGTERM') => {
+        trace('ProcessRunner', () => `Compatibility wrapper kill() called with signal: ${signal}`);
+        if (this.child && this.child.kill) {
+          return this.child.kill(signal);
+        }
+        return false;
+      },
+      
+      disconnect: () => {
+        trace('ProcessRunner', () => 'Compatibility wrapper disconnect() called');
+        childProcess.connected = false;
+        if (this.child && this.child.disconnect) {
+          this.child.disconnect();
+        }
+      }
+    };
+    
+    // Start the process and wire up the compatibility layer
+    childPromise.then((result) => {
+      childProcess.exitCode = result.code;
+      childProcess.killed = result.signal !== null;
+      childProcess.signalCode = result.signal;
+      
+      // Emit compatible events
+      if (result.code !== 0) {
+        childProcess.emit('error', new Error(`Process exited with code ${result.code}`));
+      }
+      childProcess.emit('exit', result.code, result.signal);
+      childProcess.emit('close', result.code, result.signal);
+      
+      trace('ProcessRunner', () => `_createCompatibilityWrapper process completed | ${JSON.stringify({
+        code: result.code,
+        signal: result.signal
+      }, null, 2)}`);
+    }).catch((error) => {
+      childProcess.emit('error', error);
+      trace('ProcessRunner', () => `_createCompatibilityWrapper process error | ${error.message}`);
+    });
+    
+    // Set up streams once the runner is ready
+    if (this.child) {
+      childProcess.pid = this.child.pid;
+      childProcess.stdin = this.child.stdin;
+      childProcess.stdout = this.child.stdout;
+      childProcess.stderr = this.child.stderr;
+    } else {
+      // Wait for child to be available
+      this.once('spawn', () => {
+        if (this.child) {
+          childProcess.pid = this.child.pid;
+          childProcess.stdin = this.child.stdin;
+          childProcess.stdout = this.child.stdout;
+          childProcess.stderr = this.child.stderr;
+          childProcess.emit('spawn');
+        }
+      });
+    }
+    
+    trace('ProcessRunner', () => '_createCompatibilityWrapper EXIT');
+    return childProcess;
+  }
+
 }
 
 // Public APIs
@@ -4615,6 +4730,87 @@ function processOutput(data, options = {}) {
   return data;
 }
 
+// Cross-spawn compatibility wrapper
+function spawn(command, args = [], options = {}) {
+  trace('API', () => `spawn ENTER | ${JSON.stringify({
+    command,
+    argsCount: args.length,
+    options
+  }, null, 2)}`);
+
+  // Create ProcessRunner using exec mode for direct command execution
+  const runner = new ProcessRunner(
+    { mode: 'exec', file: command, args }, 
+    { 
+      mirror: options.stdio === 'inherit',
+      capture: options.stdio !== 'inherit',
+      ...options 
+    }
+  );
+
+  // Return a child process-like object that's compatible with cross-spawn
+  const childProcess = runner._createCompatibilityWrapper();
+  
+  trace('API', () => `spawn EXIT | ${JSON.stringify({ command }, null, 2)}`);
+  return childProcess;
+}
+
+// Synchronous spawn compatibility
+spawn.sync = function(command, args = [], options = {}) {
+  trace('API', () => `spawn.sync ENTER | ${JSON.stringify({
+    command,
+    argsCount: args.length,
+    options
+  }, null, 2)}`);
+
+  try {
+    // Create ProcessRunner with exec mode for direct command execution
+    const runner = new ProcessRunner(
+      { mode: 'exec', file: command, args }, 
+      { 
+        mirror: options.stdio === 'inherit',
+        capture: true,  // Always capture for sync results
+        ...options 
+      }
+    );
+    
+    // Use the sync execution method
+    const result = runner._startSync();
+    
+    trace('API', () => `spawn.sync EXIT | ${JSON.stringify({ 
+      command, 
+      code: result.code
+    }, null, 2)}`);
+    
+    // Return cross-spawn compatible result format
+    return {
+      pid: result.child?.pid || 0,
+      output: [null, result.stdout, result.stderr],
+      stdout: result.stdout,
+      stderr: result.stderr,
+      status: result.code,
+      signal: result.signal || null,
+      error: result.code !== 0 ? new Error(`Command failed with exit code ${result.code}`) : null
+    };
+  } catch (error) {
+    trace('API', () => `spawn.sync ERROR | ${JSON.stringify({ command, error: error.message }, null, 2)}`);
+    
+    // Return error in cross-spawn compatible format
+    return {
+      pid: 0,
+      output: [null, '', ''],
+      stdout: '',
+      stderr: '',
+      status: null,
+      signal: null,
+      error: error
+    };
+  }
+};
+
+// Add spawn method to $tagged function
+$tagged.spawn = spawn;
+
 // Initialize built-in commands
 trace('Initialization', () => 'Registering built-in virtual commands');
 registerBuiltins();
@@ -4628,6 +4824,7 @@ export {
   quote,
   create,
   raw,
+  spawn,
   ProcessRunner,
   shell,
   set,
