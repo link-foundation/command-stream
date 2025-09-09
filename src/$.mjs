@@ -766,6 +766,20 @@ function buildShellCommand(strings, values) {
     valuesLength: values.length
   }, null, 2)}`);
 
+  // Special case: if we have a single value with empty surrounding strings,
+  // and the value looks like a complete shell command, treat it as raw
+  if (values.length === 1 && strings.length === 2 && 
+      strings[0] === '' && strings[1] === '' &&
+      typeof values[0] === 'string') {
+    const commandStr = values[0];
+    // Check if this looks like a complete shell command (contains spaces and shell-safe characters)
+    const commandPattern = /^[a-zA-Z0-9_\-./=,+@:\s"'`$(){}<>|&;*?[\]~\\]+$/;
+    if (commandPattern.test(commandStr) && commandStr.trim().length > 0) {
+      trace('Utils', () => `BRANCH: buildShellCommand => COMPLETE_COMMAND | ${JSON.stringify({ command: commandStr }, null, 2)}`);
+      return commandStr;
+    }
+  }
+
   let out = '';
   for (let i = 0; i < strings.length; i++) {
     out += strings[i];
