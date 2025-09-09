@@ -755,6 +755,22 @@ function quote(value) {
     return value;
   }
   
+  // Check for multi-line strings or strings with complex shell characters
+  const hasNewlines = value.includes('\n');
+  const hasBackticks = value.includes('`');
+  const hasDollarSigns = value.includes('$');
+  const hasComplexShellChars = hasBackticks || hasDollarSigns;
+  
+  // For multi-line strings with shell special characters, mark them for special handling
+  if (hasNewlines && hasComplexShellChars) {
+    // Return an object that signals the need for special handling (like heredoc)
+    return { 
+      raw: value, 
+      needsSpecialHandling: true, 
+      type: 'multiline-complex' 
+    };
+  }
+  
   // Default behavior: wrap in single quotes and escape any internal single quotes
   // This handles spaces, special shell characters, etc.
   return `'${value.replace(/'/g, "'\\''")}'`;
@@ -780,6 +796,55 @@ function buildShellCommand(strings, values) {
     }
   }
 
+  // Check for complex multi-line strings that need special handling
+  let hasComplexMultilineString = false;
+  let complexValue = null;
+  let complexIndex = -1;
+
+  for (let i = 0; i < values.length; i++) {
+    const v = values[i];
+    const quoted = quote(v);
+    if (quoted && typeof quoted === 'object' && quoted.needsSpecialHandling) {
+      hasComplexMultilineString = true;
+      complexValue = quoted;
+      complexIndex = i;
+      break;
+    }
+  }
+
+  // If we have a complex multi-line string, handle it specially
+  if (hasComplexMultilineString && complexValue.type === 'multiline-complex') {
+    // For echo commands with multi-line content, use a virtual command bypass
+    // Build the command template by including all strings and non-complex values
+    let cmdParts = [];
+    
+    for (let i = 0; i < strings.length; i++) {
+      cmdParts.push(strings[i]);
+      if (i < values.length) {
+        if (i === complexIndex) {
+          // Skip the complex value, we'll handle it separately
+          cmdParts.push('PLACEHOLDER');
+        } else {
+          cmdParts.push(quote(values[i]));
+        }
+      }
+    }
+    
+    const commandTemplate = cmdParts.join('').trim();
+    
+    // Check if this looks like an echo command with redirection
+    const echoRedirectPattern = /^echo\s+.*?>\s*(.+)$/;
+    const match = commandTemplate.match(echoRedirectPattern);
+    
+    if (match) {
+      const filename = match[1].trim();
+      trace('Utils', () => `BRANCH: buildShellCommand => MULTILINE_WRITE_CONVERSION | ${JSON.stringify({ filename }, null, 2)}`);
+      
+      // Instead of heredoc, use a special virtual command that will handle file writing
+      return `_write_multiline_content ${filename} ${Buffer.from(complexValue.raw).toString('base64')}`;
+    }
+  }
+
   let out = '';
   for (let i = 0; i < strings.length; i++) {
     out += strings[i];
@@ -790,8 +855,14 @@ function buildShellCommand(strings, values) {
         out += String(v.raw);
       } else {
         const quoted = quote(v);
-        trace('Utils', () => `BRANCH: buildShellCommand => QUOTED_VALUE | ${JSON.stringify({ original: v, quoted }, null, 2)}`);
-        out += quoted;
+        if (quoted && typeof quoted === 'object' && quoted.needsSpecialHandling) {
+          // For complex strings that couldn't be converted to heredoc, just use the raw value
+          trace('Utils', () => `BRANCH: buildShellCommand => COMPLEX_MULTILINE_RAW | ${JSON.stringify({ type: quoted.type }, null, 2)}`);
+          out += quoted.raw;
+        } else {
+          trace('Utils', () => `BRANCH: buildShellCommand => QUOTED_VALUE | ${JSON.stringify({ original: v, quoted }, null, 2)}`);
+          out += quoted;
+        }
       }
     }
   }
@@ -2212,8 +2283,8 @@ class ProcessRunner extends StreamEmitter {
       return this._parsePipeline(trimmed);
     }
 
-    // Simple command parsing
-    const parts = trimmed.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) || [];
+    // Simple command parsing - updated to handle multi-line strings
+    const parts = trimmed.match(/(?:[^\s"']+|"[^"]*?"|'[^']*?')+/gs) || [];
     if (parts.length === 0) return null;
 
     const cmd = parts[0];
@@ -2265,7 +2336,7 @@ class ProcessRunner extends StreamEmitter {
     }
 
     const commands = segments.map(segment => {
-      const parts = segment.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) || [];
+      const parts = segment.match(/(?:[^\s"']+|"[^"]*?"|'[^']*?')+/gs) || [];
       if (parts.length === 0) return null;
 
       const cmd = parts[0];
@@ -4521,6 +4592,7 @@ import dirnameCommand from './commands/$.dirname.mjs';
 import yesCommand from './commands/$.yes.mjs';
 import seqCommand from './commands/$.seq.mjs';
 import testCommand from './commands/$.test.mjs';
+import writeMultilineContentCommand from './commands/$._write_multiline_content.mjs';
 
 // Built-in commands that match Bun.$ functionality
 function registerBuiltins() {
@@ -4547,6 +4619,7 @@ function registerBuiltins() {
   register('yes', yesCommand);
   register('seq', seqCommand);
   register('test', testCommand);
+  register('_write_multiline_content', writeMultilineContentCommand);
 }
 
 
