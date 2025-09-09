@@ -2106,6 +2106,7 @@ class ProcessRunner extends StreamEmitter {
       
       const error = new Error(`Command failed with exit code ${this.result.code}`);
       error.code = this.result.code;
+      error.exitCode = this.result.code;
       error.stdout = this.result.stdout;
       error.stderr = this.result.stderr;
       error.result = this.result;
@@ -2534,6 +2535,8 @@ class ProcessRunner extends StreamEmitter {
       if (globalShellSettings.errexit && result.code !== 0) {
         const error = new Error(`Command failed with exit code ${result.code}`);
         error.code = result.code;
+      error.exitCode = result.code;
+        error.exitCode = result.code;
         error.stdout = result.stdout;
         error.stderr = result.stderr;
         error.result = result;
@@ -2746,6 +2749,7 @@ class ProcessRunner extends StreamEmitter {
       if (failedIndex !== -1) {
         const error = new Error(`Pipeline command at index ${failedIndex} failed with exit code ${exitCodes[failedIndex]}`);
         error.code = exitCodes[failedIndex];
+        error.exitCode = exitCodes[failedIndex];
         throw error;
       }
     }
@@ -2764,6 +2768,7 @@ class ProcessRunner extends StreamEmitter {
     if (globalShellSettings.errexit && result.code !== 0) {
       const error = new Error(`Pipeline failed with exit code ${result.code}`);
       error.code = result.code;
+      error.exitCode = result.code;
       error.stdout = result.stdout;
       error.stderr = result.stderr;
       error.result = result;
@@ -2922,6 +2927,7 @@ class ProcessRunner extends StreamEmitter {
       if (failedIndex !== -1) {
         const error = new Error(`Pipeline command at index ${failedIndex} failed with exit code ${exitCodes[failedIndex]}`);
         error.code = exitCodes[failedIndex];
+        error.exitCode = exitCodes[failedIndex];
         throw error;
       }
     }
@@ -2940,6 +2946,7 @@ class ProcessRunner extends StreamEmitter {
     if (globalShellSettings.errexit && result.code !== 0) {
       const error = new Error(`Pipeline failed with exit code ${result.code}`);
       error.code = result.code;
+      error.exitCode = result.code;
       error.stdout = result.stdout;
       error.stderr = result.stderr;
       error.result = result;
@@ -3271,6 +3278,7 @@ class ProcessRunner extends StreamEmitter {
             if (globalShellSettings.errexit && finalResult.code !== 0) {
               const error = new Error(`Pipeline failed with exit code ${finalResult.code}`);
               error.code = finalResult.code;
+              error.exitCode = finalResult.code;
               error.stdout = finalResult.stdout;
               error.stderr = finalResult.stderr;
               error.result = finalResult;
@@ -3283,6 +3291,7 @@ class ProcessRunner extends StreamEmitter {
           if (globalShellSettings.errexit && result.code !== 0) {
             const error = new Error(`Pipeline command failed with exit code ${result.code}`);
             error.code = result.code;
+      error.exitCode = result.code;
             error.stdout = result.stdout;
             error.stderr = result.stderr;
             error.result = result;
@@ -3480,6 +3489,7 @@ class ProcessRunner extends StreamEmitter {
           if (globalShellSettings.pipefail && result.code !== 0) {
             const error = new Error(`Pipeline command '${commandStr}' failed with exit code ${result.code}`);
             error.code = result.code;
+      error.exitCode = result.code;
             error.stdout = result.stdout;
             error.stderr = result.stderr;
             throw error;
@@ -3520,6 +3530,7 @@ class ProcessRunner extends StreamEmitter {
             if (globalShellSettings.errexit && finalResult.code !== 0) {
               const error = new Error(`Pipeline failed with exit code ${finalResult.code}`);
               error.code = finalResult.code;
+              error.exitCode = finalResult.code;
               error.stdout = finalResult.stdout;
               error.stderr = finalResult.stderr;
               error.result = finalResult;
@@ -4289,6 +4300,7 @@ class ProcessRunner extends StreamEmitter {
     if (globalShellSettings.errexit && result.code !== 0) {
       const error = new Error(`Command failed with exit code ${result.code}`);
       error.code = result.code;
+      error.exitCode = result.code;
       error.stdout = result.stdout;
       error.stderr = result.stderr;
       error.result = result;
