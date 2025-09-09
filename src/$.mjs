@@ -4379,6 +4379,137 @@ function $tagged(strings, ...values) {
   return runner;
 }
 
+// Command Builder Class - for safe, injection-free command construction
+class CommandBuilder {
+  constructor(cmd, args = []) {
+    this.cmd = cmd;
+    this.args = [...args.map(String)]; // Convert all args to strings
+    this.options = {};
+  }
+
+  // Add arguments to the command
+  arg(...args) {
+    this.args.push(...args.map(String));
+    return this;
+  }
+
+  // Set stdout handling
+  stdout(mode) {
+    this.options.stdout = mode;
+    return this;
+  }
+
+  // Set stderr handling  
+  stderr(mode) {
+    this.options.stderr = mode;
+    return this;
+  }
+
+  // Set stdin handling
+  stdin(input) {
+    this.options.stdin = input;
+    return this;
+  }
+
+  // Set working directory
+  cwd(dir) {
+    this.options.cwd = dir;
+    return this;
+  }
+
+  // Set environment variables
+  env(envVars) {
+    this.options.env = { ...this.options.env, ...envVars };
+    return this;
+  }
+
+  // Configure capture behavior
+  capture(shouldCapture = true) {
+    this.options.capture = shouldCapture;
+    return this;
+  }
+
+  // Configure mirroring behavior
+  mirror(shouldMirror = true) {
+    this.options.mirror = shouldMirror;
+    return this;
+  }
+
+  // Build the command string for execution
+  buildCommand() {
+    // Use proper shell escaping for arguments
+    const escapedArgs = this.args.map(arg => {
+      // Simple escaping for safety - wrap in single quotes and escape single quotes
+      if (typeof arg !== 'string') {
+        arg = String(arg);
+      }
+      
+      // If arg contains single quotes, we need special handling
+      if (arg.includes("'")) {
+        // Replace ' with '\'' (close quote, escaped quote, open quote)
+        return `'${arg.replace(/'/g, "'\\''")}'`;
+      }
+      
+      // Simple case - wrap in single quotes
+      return `'${arg}'`;
+    });
+
+    return [this.cmd, ...escapedArgs].join(' ');
+  }
+
+  // Create a new ProcessRunner with the built command
+  run(additionalOptions = {}) {
+    trace('CommandBuilder', () => `run() called | cmd: ${this.cmd}, args: ${JSON.stringify(this.args)}`);
+    
+    const command = this.buildCommand();
+    const finalOptions = {
+      mirror: true,
+      capture: true,
+      ...this.options,
+      ...additionalOptions
+    };
+
+    trace('CommandBuilder', () => `Creating ProcessRunner | command: ${command}, options: ${JSON.stringify(finalOptions)}`);
+    
+    return new ProcessRunner({ mode: 'shell', command }, finalOptions);
+  }
+
+  // Support piping configuration
+  pipe(...configs) {
+    // Apply each configuration function to this builder
+    for (const config of configs) {
+      if (typeof config === 'function') {
+        config(this);
+      }
+    }
+    return this;
+  }
+}
+
+// Command builder factory function
+function command(cmd, ...args) {
+  trace('API', () => `command() called | cmd: ${cmd}, args: ${JSON.stringify(args)}`);
+  return new CommandBuilder(cmd, args);
+}
+
+// Configuration helper functions for piping
+command.stdout = (mode) => (builder) => builder.stdout(mode);
+command.stderr = (mode) => (builder) => builder.stderr(mode);
+command.stdin = (input) => (builder) => builder.stdin(input);
+command.capture = (shouldCapture = true) => (builder) => builder.capture(shouldCapture);
+command.mirror = (shouldMirror = true) => (builder) => builder.mirror(shouldMirror);
+command.cwd = (dir) => (builder) => builder.cwd(dir);
+command.env = (envVars) => (builder) => builder.env(envVars);
+
+// For compatibility with the issue example ($.command.exitCode)
+command.exitCode = (builder) => {
+  // This is a no-op configuration - exitCode is always available on ProcessRunner
+  return builder;
+};
+
+// Attach the command builder to $tagged
+$tagged.command = command;
+
 function create(defaultOptions = {}) {
   trace('API', () => `create ENTER | ${JSON.stringify({ defaultOptions }, null, 2)}`);
 
@@ -4642,6 +4773,8 @@ export {
   configureAnsi,
   getAnsiConfig,
   processOutput,
-  forceCleanupAll
+  forceCleanupAll,
+  CommandBuilder,
+  command
 };
 export default $tagged;

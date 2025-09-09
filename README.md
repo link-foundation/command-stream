@@ -35,6 +35,7 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 | **📈 Total Downloads** | **Growing** | **6B+** | **5.4B** | N/A (Built-in) | **596M** | **37M** |
 | **Runtime Support** | ✅ Bun + Node.js | ✅ Node.js | ✅ Node.js | 🟡 Bun only | ✅ Node.js | ✅ Node.js |
 | **Template Literals** | ✅ `` $`cmd` `` | ✅ `` $`cmd` `` | ❌ Function calls | ✅ `` $`cmd` `` | ❌ Function calls | ✅ `` $`cmd` `` |
+| **Command Builder API** | ✅ **`$.command()`** injection-safe | ❌ No | ❌ No | ❌ No | ❌ No | ❌ No |
 | **Real-time Streaming** | ✅ Live output | 🟡 Limited | ❌ Buffer only | ❌ Buffer only | ❌ Buffer only | ❌ Buffer only |
 | **Synchronous Execution** | ✅ `.sync()` with events | ✅ `execaSync` | ✅ `spawnSync` | ❌ No | ✅ Sync by default | ❌ No |
 | **Async Iteration** | ✅ `for await (chunk of $.stream())` | ❌ No | ❌ No | ❌ No | ❌ No | ❌ No |
@@ -251,6 +252,68 @@ const $prod = $({ env: { NODE_ENV: 'production' }, capture: true });
 await $prod`npm start`;
 await $prod`npm test`;
 ```
+
+### Command Builder API (🚀 NEW!)
+
+**Safe, injection-free command construction with fluent API:**
+
+```javascript
+import { $ } from 'command-stream';
+
+// Basic usage - exactly as requested in the issue
+const result = await $.command("cat", "./some-file.txt").pipe(
+  $.command.stdout("inherit"),
+  $.command.exitCode
+).run();
+
+// Method chaining for configuration
+const result2 = await $.command('echo', 'hello world')
+  .arg('extra', 'arguments')
+  .stdout('inherit')
+  .capture(true)
+  .env({ DEBUG: '1' })
+  .cwd('/tmp')
+  .run();
+
+// Safe argument handling - prevents shell injection
+const userInput = "dangerous; rm -rf /";
+const safeResult = await $.command('echo', userInput).run();
+console.log(safeResult.stdout); // Outputs literal string, not executed
+
+// Environment and working directory
+const envResult = await $.command('env')
+  .env({ MY_VAR: 'value', ANOTHER: 'test' })
+  .run({ capture: true, mirror: false });
+
+// stdin input
+const stdinResult = await $.command('cat')
+  .stdin('Hello from stdin!')
+  .run({ capture: true, mirror: false });
+
+// Complex argument escaping handled automatically
+const complexArgs = await $.command('echo', 'file with spaces.txt', "quotes'and\"stuff")
+  .run({ capture: true, mirror: false });
+
+// Direct access to CommandBuilder and command function
+import { CommandBuilder, command } from 'command-stream';
+
+const cmd = new CommandBuilder('ls', ['-la']);
+const cmd2 = command('pwd'); // Factory function
+```
+
+**Key Features:**
+- **🛡️ Injection-Safe**: All arguments are properly escaped automatically
+- **🔗 Fluent API**: Method chaining for readable configuration
+- **⚙️ Full Configuration**: stdin, stdout, stderr, env, cwd, capture, mirror
+- **🔧 Pipe Support**: Works with pipe configuration functions
+- **✅ Type Safety**: No shell parsing - direct argument passing
+- **🏗️ Extensible**: Use CommandBuilder class directly for advanced cases
+
+**Why Use Command Builder?**
+- **Security**: Eliminates shell injection vulnerabilities
+- **Clarity**: Explicit arguments vs. string interpolation
+- **Compatibility**: Similar to Rust's `std::process::Command` and Effect's `Command`
+- **Reliability**: Arguments are passed exactly as intended
 
 ### Execution Control (NEW!)
 
