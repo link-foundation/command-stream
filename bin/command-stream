@@ -1,0 +1,48 @@
+#!/usr/bin/env node
+
+// command-stream executable - zx-compatible shell script runner
+// Usage: #!/usr/bin/env command-stream
+
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Import command-stream with zx compatibility
+const { $ } = await import('../src/zx-compat.mjs');
+
+// Get the script file path
+const scriptPath = process.argv[2];
+if (!scriptPath) {
+  console.error('Usage: command-stream <script.mjs>');
+  console.error('Or use as shebang: #!/usr/bin/env command-stream');
+  process.exit(1);
+}
+
+// Resolve script path
+const resolvedPath = path.resolve(scriptPath);
+if (!fs.existsSync(resolvedPath)) {
+  console.error(`Error: Script not found: ${scriptPath}`);
+  process.exit(1);
+}
+
+// Set up global imports like zx does
+global.$ = $;
+global.cd = (await import('../src/zx-compat.mjs')).cd;
+global.echo = (await import('../src/zx-compat.mjs')).echo;
+global.fs = (await import('../src/zx-compat.mjs')).fs;
+global.path = (await import('../src/zx-compat.mjs')).path;
+global.os = (await import('../src/zx-compat.mjs')).os;
+
+try {
+  // Import and execute the script
+  await import(`file://${resolvedPath}`);
+} catch (error) {
+  console.error('Script execution failed:', error.message);
+  if (process.env.DEBUG) {
+    console.error(error.stack);
+  }
+  process.exit(1);
+}

@@ -4379,6 +4379,99 @@ function $tagged(strings, ...values) {
   return runner;
 }
 
+// Add zx compatibility mode
+$tagged.zx = function(strings, ...values) {
+  if (!Array.isArray(strings) && typeof strings === 'object' && strings !== null) {
+    // Options object - return a new function with those options
+    const options = strings;
+    return async (innerStrings, ...innerValues) => {
+      return $zxExecute(innerStrings, innerValues, options);
+    };
+  }
+  
+  return $zxExecute(strings, values);
+};
+
+// zx-like nothrow support
+$tagged.zx.nothrow = function(strings, ...values) {
+  if (!Array.isArray(strings) && typeof strings === 'object') {
+    const options = { ...strings, nothrow: true };
+    return async (innerStrings, ...innerValues) => {
+      return $zxExecuteNoThrow(innerStrings, innerValues, options);
+    };
+  }
+  
+  return $zxExecuteNoThrow(strings, values);
+};
+
+// zx-compatible execution functions
+async function $zxExecute(strings, values, options = {}) {
+  try {
+    const cmd = buildShellCommand(strings, values);
+    const runner = new ProcessRunner({ mode: 'shell', command: cmd }, { mirror: false, capture: true, ...options });
+    
+    // Wait for the command to complete and buffer all output
+    const result = await runner;
+    
+    const zxResult = {
+      exitCode: result.code || 0,
+      stdout: result.stdout || '',
+      stderr: result.stderr || '',
+      signal: result.signal || null,
+      // zx compatibility aliases
+      get code() { return this.exitCode; },
+      toString() { return this.stdout; }
+    };
+    
+    // zx throws by default on non-zero exit codes
+    if (zxResult.exitCode !== 0) {
+      const zxError = new Error(`Command failed with exit code ${zxResult.exitCode}`);
+      zxError.exitCode = zxResult.exitCode;
+      zxError.stdout = zxResult.stdout;
+      zxError.stderr = zxResult.stderr;
+      zxError.signal = zxResult.signal;
+      throw zxError;
+    }
+    
+    return zxResult;
+  } catch (error) {
+    // Convert command-stream error to zx-like error
+    const zxResult = {
+      exitCode: error.code || 1,
+      stdout: error.stdout || '',
+      stderr: error.stderr || error.message || '',
+      signal: error.signal,
+      get code() { return this.exitCode; },
+      toString() { return this.stdout; }
+    };
+    
+    // zx throws by default on non-zero exit codes
+    const zxError = new Error(`Command failed with exit code ${zxResult.exitCode}`);
+    zxError.exitCode = zxResult.exitCode;
+    zxError.stdout = zxResult.stdout;
+    zxError.stderr = zxResult.stderr;
+    zxError.signal = zxResult.signal;
+    
+    throw zxError;
+  }
+}
+
+async function $zxExecuteNoThrow(strings, values, options = {}) {
+  try {
+    return await $zxExecute(strings, values, options);
+  } catch (error) {
+    // Return result object instead of throwing
+    return {
+      exitCode: error.exitCode || 1,
+      stdout: error.stdout || '',
+      stderr: error.stderr || error.message || '',
+      signal: error.signal,
+      get code() { return this.exitCode; },
+      toString() { return this.stdout; }
+    };
+  }
+}
+
 function create(defaultOptions = {}) {
   trace('API', () => `create ENTER | ${JSON.stringify({ defaultOptions }, null, 2)}`);
 
