@@ -199,6 +199,55 @@ const complex = "`cat /etc/passwd`";
 await $`echo ${complex}`;        // → echo '`cat /etc/passwd`' (literal text)
 ```
 
+### Disabling Auto-Escape (Advanced)
+
+**⚠️ WARNING: Use with extreme caution! Only use `raw()` with trusted input to prevent shell injection attacks.**
+
+For advanced use cases where you need to use command strings directly without auto-escaping, use the `raw()` function:
+
+```javascript
+import { $, raw } from 'command-stream';
+
+// ⚠️ DANGEROUS - Bypasses all safety checks
+const userCommand = 'echo "hello" && ls -la';
+await $`${raw(userCommand)}`;    // → Executes: echo "hello" && ls -la
+
+// ✅ Safe use case: Trusted command templates
+const trustedCommand = 'git log --oneline --graph --all';
+await $`${raw(trustedCommand)}`;
+
+// ✅ Combining raw with safe interpolation
+const branch = 'main';  // User input - will be auto-quoted
+await $`${raw('git log --oneline')} ${branch}`;
+// → git log --oneline 'main' (raw part unescaped, branch safely quoted)
+
+// 🎯 Use case: Pre-built command strings from configuration
+const config = {
+  backupCommand: 'tar -czf backup.tar.gz --exclude="*.log" .',
+  cleanCommand: 'find . -name "*.tmp" -delete'
+};
+await $`${raw(config.backupCommand)}`;
+
+// ⚠️ NEVER use raw() with user input
+const userInput = req.body.command; // ❌ DANGEROUS!
+await $`${raw(userInput)}`;         // ❌ Shell injection vulnerability!
+
+// ✅ Instead, use normal interpolation for user input
+await $`echo ${userInput}`;         // ✅ Safe - auto-escaped
+```
+
+**When to use `raw()`:**
+- ✅ Trusted command templates from your codebase
+- ✅ Configuration files you control
+- ✅ Hardcoded command strings
+- ✅ Complex shell operators that need to be preserved
+
+**When NOT to use `raw()`:**
+- ❌ User input (form fields, API parameters, CLI arguments)
+- ❌ External data (database, API responses, files)
+- ❌ Any untrusted source
+- ❌ When you're unsure - use normal interpolation instead
+
 ## Usage Patterns
 
 ### Classic Await (Backward Compatible)
@@ -1003,6 +1052,46 @@ async function streamingHandler({ args, stdin, abortSignal, cwd, env, options, i
   yield "chunk1\n";
   yield "chunk2\n";
 }
+```
+
+### Utility Functions API
+
+Control how values are interpolated into commands:
+
+#### Functions
+
+- `quote(value)`: Manually quote a value using the same smart quoting logic as auto-interpolation
+- `raw(value)`: **⚠️ Dangerous!** Bypass auto-escaping to use command strings directly (see [Disabling Auto-Escape](#disabling-auto-escape-advanced))
+
+#### quote() - Manual Quoting
+
+Apply the same smart quoting logic manually:
+
+```javascript
+import { $, quote } from 'command-stream';
+
+const path = '/path with spaces/file.txt';
+const quoted = quote(path);
+console.log(quoted); // → '/path with spaces/file.txt'
+
+// Use case: Pre-process values before interpolation
+const args = ['hello world', 'test'].map(quote);
+// → ["'hello world'", 'test']
+```
+
+#### raw() - Disable Auto-Escape
+
+**⚠️ WARNING: Only use with trusted input!** See [Disabling Auto-Escape](#disabling-auto-escape-advanced) section for detailed documentation and security considerations.
+
+```javascript
+import { $, raw } from 'command-stream';
+
+// Bypass auto-escaping for trusted command strings
+const trustedCommand = 'echo "hello" && ls -la';
+await $`${raw(trustedCommand)}`;
+// → Executes: echo "hello" && ls -la (without escaping)
+
+// ⚠️ NEVER use with untrusted input - shell injection risk!
 ```
 
 ### Built-in Commands
