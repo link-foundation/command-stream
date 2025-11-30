@@ -4137,6 +4137,12 @@ class ProcessRunner extends StreamEmitter {
     throw new Error('pipe() destination must be a ProcessRunner or $`command` result');
   }
 
+  quiet() {
+    trace('ProcessRunner', () => `quiet() called - disabling console output`);
+    this.options.mirror = false;
+    return this;
+  }
+
   // Promise interface (for await)
   then(onFulfilled, onRejected) {
     trace('ProcessRunner', () => `then() called | ${JSON.stringify({
