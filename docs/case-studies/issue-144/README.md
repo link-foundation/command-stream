@@ -22,14 +22,14 @@ This document provides a comprehensive analysis of the Windows test failures in 
 
 From CI Run 20541247679 (2025-12-27T16:03:52Z):
 
-| Metric | Count |
-|--------|-------|
-| Total tests | 647 |
-| Passed | 595 |
-| Failed | 47 |
-| Skipped | 5 |
-| Errors | 2 |
-| Duration | 175.88s |
+| Metric      | Count   |
+| ----------- | ------- |
+| Total tests | 647     |
+| Passed      | 595     |
+| Failed      | 47      |
+| Skipped     | 5       |
+| Errors      | 2       |
+| Duration    | 175.88s |
 
 ### Success Rate: 91.96% (595/647)
 
@@ -51,6 +51,7 @@ const shellsToTry = [
 ```
 
 On Windows, these paths don't exist, leading to:
+
 ```
 ENOENT: no such file or directory, uv_spawn 'sh'
 ```
@@ -78,6 +79,7 @@ ENOENT: no such file or directory, uv_spawn 'sh'
 ## Failed Tests Categories
 
 ### Category 1: Shell Spawn Failures (ENOENT 'sh')
+
 - ProcessRunner Options > should handle cwd option
 - Synchronous Execution (.sync()) > Options in Sync Mode > should handle cwd option
 - Start/Run Options Passing > .start() method with options > should work with real shell commands
@@ -85,21 +87,25 @@ ENOENT: no such file or directory, uv_spawn 'sh'
 - And many more shell-dependent tests
 
 ### Category 2: Path/CD Command Issues
+
 - cd Virtual Command - Command Chains > should persist directory change within command chain
 - cd Virtual Command - Edge Cases > should handle cd with trailing slash
 - cd Virtual Command - Edge Cases > should handle cd with multiple slashes
 - Virtual Commands System > Built-in Commands > should execute virtual cd command
 
 ### Category 3: Signal Handling Timeouts
+
 - CTRL+C Signal Handling > should forward SIGINT to child process
 - CTRL+C Different stdin Modes > should handle CTRL+C with string stdin
 - CTRL+C with Different stdin Modes > should bypass virtual commands with custom stdin
 - streaming interfaces - kill method works
 
 ### Category 4: Timing-Sensitive Tests
+
 - command-stream Feature Validation > Real-time Streaming > should stream data as it arrives
 
 ### Category 5: Platform-Specific Commands
+
 - Built-in Commands > Command Location (which) > which should find existing system commands
 - System Command Piping (Issue #8) > Piping to sort > should pipe to sort for sorting lines
 
@@ -112,14 +118,24 @@ Add Windows shells to `findAvailableShell()`:
 ```javascript
 const shellsToTry = [
   // Windows shells (check first on Windows)
-  ...(process.platform === 'win32' ? [
-    { cmd: 'cmd.exe', args: ['/c'], checkPath: false },
-    { cmd: 'powershell.exe', args: ['-Command'], checkPath: false },
-    { cmd: 'pwsh.exe', args: ['-Command'], checkPath: false },
-    // Git Bash (most compatible)
-    { cmd: 'C:\\Program Files\\Git\\bin\\bash.exe', args: ['-c'], checkPath: true },
-    { cmd: 'C:\\Program Files\\Git\\usr\\bin\\bash.exe', args: ['-c'], checkPath: true },
-  ] : []),
+  ...(process.platform === 'win32'
+    ? [
+        { cmd: 'cmd.exe', args: ['/c'], checkPath: false },
+        { cmd: 'powershell.exe', args: ['-Command'], checkPath: false },
+        { cmd: 'pwsh.exe', args: ['-Command'], checkPath: false },
+        // Git Bash (most compatible)
+        {
+          cmd: 'C:\\Program Files\\Git\\bin\\bash.exe',
+          args: ['-c'],
+          checkPath: true,
+        },
+        {
+          cmd: 'C:\\Program Files\\Git\\usr\\bin\\bash.exe',
+          args: ['-c'],
+          checkPath: true,
+        },
+      ]
+    : []),
   // Unix shells
   { cmd: '/bin/sh', args: ['-l', '-c'], checkPath: true },
   // ... rest of Unix shells
@@ -146,9 +162,12 @@ function normalizePath(p) {
 Add platform checks to inherently Unix-specific tests:
 
 ```javascript
-test.skipIf(process.platform === 'win32')('should forward SIGINT...', async () => {
-  // Unix-specific signal handling
-});
+test.skipIf(process.platform === 'win32')(
+  'should forward SIGINT...',
+  async () => {
+    // Unix-specific signal handling
+  }
+);
 ```
 
 ### Solution 4: Increase Timing Tolerances
@@ -165,23 +184,25 @@ expect(timeToFirstChunk).toBeLessThan(MAX_FIRST_CHUNK_TIME);
 Given the complexity of full Windows support, I recommend a phased approach:
 
 ### Phase 1: Quick Wins (This PR)
+
 1. Add basic Windows shell detection with Git Bash fallback
 2. Skip tests that are fundamentally incompatible with Windows
 3. Document Windows limitations in README
 
 ### Phase 2: Future Work
+
 1. Implement full cross-platform path handling
 2. Add Windows-specific virtual command implementations
 3. Create Windows-specific test configurations
 
 ## Files Changed/To Be Changed
 
-| File | Change Type | Description |
-|------|-------------|-------------|
-| `src/$.mjs` | Modified | Add Windows shell detection |
-| `tests/*.test.mjs` | Modified | Add platform-specific skips |
-| `.github/workflows/release.yml` | Modified | Re-enable Windows in CI matrix |
-| `README.md` | Modified | Document Windows support status |
+| File                            | Change Type | Description                     |
+| ------------------------------- | ----------- | ------------------------------- |
+| `src/$.mjs`                     | Modified    | Add Windows shell detection     |
+| `tests/*.test.mjs`              | Modified    | Add platform-specific skips     |
+| `.github/workflows/release.yml` | Modified    | Re-enable Windows in CI matrix  |
+| `README.md`                     | Modified    | Document Windows support status |
 
 ## References
 

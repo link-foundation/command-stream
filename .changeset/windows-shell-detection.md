@@ -1,5 +1,5 @@
 ---
-"command-stream": patch
+'command-stream': patch
 ---
 
 Add Windows shell detection support
