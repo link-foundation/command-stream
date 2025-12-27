@@ -1,9 +1,18 @@
 import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
 import { beforeTestCleanup, afterTestCleanup } from './test-cleanup.mjs';
 import { $, shell, enableVirtualCommands } from '../src/$.mjs';
-import { mkdtempSync, rmSync, existsSync } from 'fs';
+import { mkdtempSync, rmSync, existsSync, realpathSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
+
+// Helper to normalize paths (handles macOS /var -> /private/var symlink)
+const normalizePath = (p) => {
+  try {
+    return realpathSync(p);
+  } catch {
+    return p;
+  }
+};
 
 beforeEach(async () => {
   // IMPORTANT: Call cleanup first to restore cwd
@@ -240,7 +249,7 @@ describe('Git and GH commands with cd virtual command', () => {
 
         // Test that we're in the right directory
         const pwdResult = await $`pwd`;
-        expect(pwdResult.stdout.trim()).toBe(tempDir);
+        expect(normalizePath(pwdResult.stdout.trim())).toBe(normalizePath(tempDir));
 
         await $`cd ${originalCwd}`;
       } finally {
@@ -410,7 +419,7 @@ describe('Git and GH commands with cd virtual command', () => {
         await $`cd ${tempDirWithSpace} && git init`;
 
         const pwdResult = await $`cd ${tempDirWithSpace} && pwd`;
-        expect(pwdResult.stdout.trim()).toBe(tempDirWithSpace);
+        expect(normalizePath(pwdResult.stdout.trim())).toBe(normalizePath(tempDirWithSpace));
 
         // Test git operations in directory with spaces
         await $`cd ${tempDirWithSpace} && git config user.email "test@test.com"`;

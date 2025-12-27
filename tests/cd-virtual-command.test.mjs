@@ -135,11 +135,11 @@ describe('cd Virtual Command - Core Behavior', () => {
     try {
       await $`cd ${dir1}`;
       const pwd1 = await $`pwd`;
-      expect(pwd1.stdout.trim()).toBe(dir1);
+      expect(normalizePath(pwd1.stdout.trim())).toBe(normalizePath(dir1));
 
       await $`cd ${dir2}`;
       const pwd2 = await $`pwd`;
-      expect(pwd2.stdout.trim()).toBe(dir2);
+      expect(normalizePath(pwd2.stdout.trim())).toBe(normalizePath(dir2));
 
       // Note: cd - might not be implemented in virtual command yet
       // This test documents expected behavior
@@ -219,7 +219,7 @@ describe('cd Virtual Command - Core Behavior', () => {
       expect(result.stdout).toBe('');
 
       const pwd = await $`pwd`;
-      expect(pwd.stdout.trim()).toBe(dirWithSpaces);
+      expect(normalizePath(pwd.stdout.trim())).toBe(normalizePath(dirWithSpaces));
 
       await $`cd ${originalCwd}`;
     } finally {
@@ -240,7 +240,7 @@ describe('cd Virtual Command - Core Behavior', () => {
       expect(result.stdout).toBe('');
 
       const pwd = await $`pwd`;
-      expect(pwd.stdout.trim()).toBe(specialDir);
+      expect(normalizePath(pwd.stdout.trim())).toBe(normalizePath(specialDir));
 
       await $`cd ${originalCwd}`;
     } finally {
@@ -339,11 +339,11 @@ describe('cd Virtual Command - Command Chains', () => {
       // First command changes to dir1
       await $`cd ${dir1}`;
       const pwd1 = await $`pwd`;
-      expect(pwd1.stdout.trim()).toBe(dir1);
+      expect(normalizePath(pwd1.stdout.trim())).toBe(normalizePath(dir1));
 
       // Second separate command should still be in dir1
       const pwd2 = await $`pwd`;
-      expect(pwd2.stdout.trim()).toBe(dir1);
+      expect(normalizePath(pwd2.stdout.trim())).toBe(normalizePath(dir1));
 
       await $`cd ${originalCwd}`;
     } finally {
@@ -466,7 +466,7 @@ describe('cd Virtual Command - Edge Cases', () => {
       expect(result.code).toBe(0);
 
       const pwd = await $`pwd`;
-      expect(pwd.stdout.trim()).toBe(currentPath);
+      expect(normalizePath(pwd.stdout.trim())).toBe(normalizePath(currentPath));
 
       await $`cd ${originalCwd}`;
     } finally {
@@ -599,7 +599,7 @@ describe('cd Virtual Command - Platform Compatibility', () => {
       await $`cd ./sub1/../sub1/sub2`;
 
       const pwd = await $`pwd`;
-      expect(pwd.stdout.trim()).toBe(sub2);
+      expect(normalizePath(pwd.stdout.trim())).toBe(normalizePath(sub2));
 
       await $`cd ${originalCwd}`;
     } finally {

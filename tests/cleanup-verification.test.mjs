@@ -100,13 +100,13 @@ describe('Cleanup Verification', () => {
 
     // Multiple cd commands
     await $`cd ${tempDir1}`;
-    expect(process.cwd()).toBe(tempDir1);
+    expect(normalizePath(process.cwd())).toBe(normalizePath(tempDir1));
 
     await $`cd ${tempDir2}`;
-    expect(process.cwd()).toBe(tempDir2);
+    expect(normalizePath(process.cwd())).toBe(normalizePath(tempDir2));
 
     await $`cd ${tempDir1}`;
-    expect(process.cwd()).toBe(tempDir1);
+    expect(normalizePath(process.cwd())).toBe(normalizePath(tempDir1));
   });
 
   test('final verification - should still be in original directory', () => {
