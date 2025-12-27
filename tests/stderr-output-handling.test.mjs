@@ -15,7 +15,8 @@ describe('Stderr output handling in $.mjs', () => {
     await afterTestCleanup();
   });
 
-  test('commands that output to stderr should not hang when captured', async () => {
+  // Skip on Windows - uses sh -c with shell redirection
+  test.skipIf(isWindows)('commands that output to stderr should not hang when captured', async () => {
     // Test with a command that writes to stderr
     const result =
       await $`sh -c 'echo "stdout message" && echo "stderr message" >&2'`.run({
@@ -29,7 +30,8 @@ describe('Stderr output handling in $.mjs', () => {
     expect(result.stderr).toContain('stderr message');
   });
 
-  test('gh commands with progress output to stderr should complete', async () => {
+  // Skip on Windows - uses 'which' command which is Unix-specific
+  test.skipIf(isWindows)('gh commands with progress output to stderr should complete', async () => {
     // Check if gh is available
     try {
       await $`which gh`.run({ capture: true, mirror: false });
@@ -51,7 +53,8 @@ describe('Stderr output handling in $.mjs', () => {
     expect(result.stdout).toContain('gh version');
   });
 
-  test('capturing with 2>&1 should combine stderr into stdout', async () => {
+  // Skip on Windows - uses sh -c and 2>&1 shell redirection
+  test.skipIf(isWindows)('capturing with 2>&1 should combine stderr into stdout', async () => {
     const result = await $`sh -c 'echo "stdout" && echo "stderr" >&2' 2>&1`.run(
       {
         capture: true,
@@ -97,7 +100,8 @@ done
     }
   });
 
-  test('gh gist create with stderr progress should work correctly', async () => {
+  // Skip on Windows - uses 2>&1 shell redirection which doesn't work the same way on Windows
+  test.skipIf(isWindows)('gh gist create with stderr progress should work correctly', async () => {
     // Check authentication first
     const authCheck = await $`gh auth status 2>&1`.run({
       capture: true,
@@ -198,7 +202,8 @@ done
     }
   });
 
-  test('streaming mode should handle stderr correctly', async () => {
+  // Skip on Windows - uses sh -c with shell redirection
+  test.skipIf(isWindows)('streaming mode should handle stderr correctly', async () => {
     const cmd = $`sh -c 'echo "line1" && echo "err1" >&2 && sleep 0.1 && echo "line2" && echo "err2" >&2'`;
 
     const collected = {
@@ -223,6 +228,7 @@ done
     expect(collected.stderr.join('')).toContain('err2');
   });
 
+  // Skip on Windows - uses sh -c with shell redirection; also already skipped
   test.skip('timeout should work even with pending stderr', async () => {
     // Command that continuously outputs to stderr
     const startTime = Date.now();

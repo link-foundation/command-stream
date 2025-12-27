@@ -88,8 +88,9 @@ describe.skipIf(isWindows)(`String interpolation fix for ${runtime}`, () => {
 });
 
 // Additional runtime-specific tests
+// Skip on Windows - uses 'pwd' which outputs Unix-style paths with '/'
 if (isBun) {
-  describe('Bun-specific shell path tests', () => {
+  describe.skipIf(isWindows)('Bun-specific shell path tests', () => {
     test('Bun.spawn compatibility is maintained', async () => {
       const result = await $`pwd`;
       expect(result.stdout.toString().trim()).toContain('/');
@@ -101,7 +102,7 @@ if (isBun) {
     });
   });
 } else {
-  describe('Node.js-specific shell path tests', () => {
+  describe.skipIf(isWindows)('Node.js-specific shell path tests', () => {
     test('Node.js child_process compatibility is maintained', async () => {
       const result = await $`pwd`;
       expect(result.stdout.toString().trim()).toContain('/');
