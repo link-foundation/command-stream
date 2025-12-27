@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.1
+
+### Patch Changes
+
+- Test patch release
+
 ## 0.8.0
 
 ### Minor Changes
