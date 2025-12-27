@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { test, expect, describe } from 'bun:test';
-import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
+import { isWindows } from './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
 import { $ } from '../src/$.mjs';
 
 describe('Start/Run Options Passing', () => {
@@ -49,7 +49,8 @@ describe('Start/Run Options Passing', () => {
       expect(result.code).toBe(0);
     });
 
-    test('should work with real shell commands', async () => {
+    // Skip on Windows - uses 'ls /tmp' which is Unix-specific
+    test.skipIf(isWindows)('should work with real shell commands', async () => {
       const result = await $`ls /tmp`.start({ capture: false });
       expect(result.stdout).toBeUndefined();
       expect(result.code).toBe(0);

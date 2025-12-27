@@ -1,5 +1,6 @@
 import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
 import { beforeTestCleanup, afterTestCleanup } from './test-cleanup.mjs';
+import { isWindows } from './test-helper.mjs';
 import { $ } from '../src/$.mjs';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -64,7 +65,8 @@ describe('Stderr output handling in $.mjs', () => {
     expect(result.stderr).toBe(''); // stderr should be empty since redirected
   });
 
-  test('long-running commands with stderr output should not hang', async () => {
+  // Skip on Windows - uses sh scripts and chmod
+  test.skipIf(isWindows)('long-running commands with stderr output should not hang', async () => {
     // Create a script that outputs to both stdout and stderr over time
     const scriptPath = path.join(os.tmpdir(), 'test-script.sh');
     const scriptContent = `#!/bin/sh

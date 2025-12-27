@@ -1,5 +1,5 @@
 import { test, expect, describe, beforeEach } from 'bun:test';
-import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
+import { isWindows } from './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
 import { $, shell, set, unset } from '../src/$.mjs';
 
 describe('Shell Settings (set -e / set +e equivalent)', () => {
@@ -212,7 +212,8 @@ describe('Shell Settings (set -e / set +e equivalent)', () => {
       }
     });
 
-    test('should allow JavaScript control flow with shell semantics', async () => {
+    // Skip on Windows - shell command execution differs
+    test.skipIf(isWindows)('should allow JavaScript control flow with shell semantics', async () => {
       const results = [];
 
       // Test a list of commands with error handling

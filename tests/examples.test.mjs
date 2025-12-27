@@ -1,5 +1,5 @@
 import { test, expect, describe } from 'bun:test';
-import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
+import { isWindows } from './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
 import { $ } from '../src/$.mjs';
 import { trace } from '../src/$.utils.mjs';
 import { readdirSync, statSync, readFileSync } from 'fs';
@@ -161,7 +161,8 @@ describe('Examples Execution Tests', () => {
   );
 
   // Test that we don't interfere with user's SIGINT handling when no children are active
-  test(
+  // Skip on Windows - uses SIGINT signal handling which works differently on Windows
+  test.skipIf(isWindows)(
     'should not interfere with user SIGINT handling when no children active',
     async () => {
       const { spawn } = await import('child_process');

@@ -1,5 +1,5 @@
 import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
-import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
+import { isWindows } from './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
 import { $, register, unregister, enableVirtualCommands } from '../src/$.mjs';
 import { trace } from '../src/$.utils.mjs';
 import { rmSync, existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
@@ -284,7 +284,8 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
   });
 
   describe('Command Location (which)', () => {
-    test('which should find existing system commands', async () => {
+    // Skip on Windows - uses Unix 'which sh' command
+    test.skipIf(isWindows)('which should find existing system commands', async () => {
       // Test with a command that should definitely exist on all systems
       const result = await $`which sh`;
       expect(result.code).toBe(0);
