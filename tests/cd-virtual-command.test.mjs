@@ -219,7 +219,9 @@ describe('cd Virtual Command - Core Behavior', () => {
       expect(result.stdout).toBe('');
 
       const pwd = await $`pwd`;
-      expect(normalizePath(pwd.stdout.trim())).toBe(normalizePath(dirWithSpaces));
+      expect(normalizePath(pwd.stdout.trim())).toBe(
+        normalizePath(dirWithSpaces)
+      );
 
       await $`cd ${originalCwd}`;
     } finally {

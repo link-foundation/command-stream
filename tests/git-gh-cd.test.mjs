@@ -249,7 +249,9 @@ describe('Git and GH commands with cd virtual command', () => {
 
         // Test that we're in the right directory
         const pwdResult = await $`pwd`;
-        expect(normalizePath(pwdResult.stdout.trim())).toBe(normalizePath(tempDir));
+        expect(normalizePath(pwdResult.stdout.trim())).toBe(
+          normalizePath(tempDir)
+        );
 
         await $`cd ${originalCwd}`;
       } finally {
@@ -419,7 +421,9 @@ describe('Git and GH commands with cd virtual command', () => {
         await $`cd ${tempDirWithSpace} && git init`;
 
         const pwdResult = await $`cd ${tempDirWithSpace} && pwd`;
-        expect(normalizePath(pwdResult.stdout.trim())).toBe(normalizePath(tempDirWithSpace));
+        expect(normalizePath(pwdResult.stdout.trim())).toBe(
+          normalizePath(tempDirWithSpace)
+        );
 
         // Test git operations in directory with spaces
         await $`cd ${tempDirWithSpace} && git config user.email "test@test.com"`;
