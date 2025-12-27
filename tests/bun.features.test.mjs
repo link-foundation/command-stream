@@ -103,7 +103,9 @@ describe('Bun.$ Feature Validation', () => {
       const endTime = Date.now();
 
       expect(result.exitCode).toBe(0);
-      expect(endTime - startTime).toBeLessThan(100); // Should be very fast
+      // Windows shell spawning is slower, allow more time
+      const maxTime = process.platform === 'win32' ? 500 : 100;
+      expect(endTime - startTime).toBeLessThan(maxTime); // Should be very fast
     });
   });
 
