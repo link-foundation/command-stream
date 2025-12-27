@@ -5,16 +5,33 @@ import {
   originalCwd,
 } from './test-cleanup.mjs';
 import { $, shell, enableVirtualCommands } from '../src/$.mjs';
-import { mkdtempSync, rmSync, mkdirSync, writeFileSync, existsSync } from 'fs';
+import {
+  mkdtempSync,
+  rmSync,
+  mkdirSync,
+  writeFileSync,
+  existsSync,
+  realpathSync,
+} from 'fs';
 import { tmpdir, homedir } from 'os';
 import { join, resolve } from 'path';
 
+// Helper to normalize paths (handles macOS /var -> /private/var symlink)
+const normalizePath = (p) => {
+  try {
+    return realpathSync(p);
+  } catch {
+    return p;
+  }
+};
+
 // Helper function to verify we're in the expected directory
 function verifyCwd(expected, message) {
-  const actual = process.cwd();
-  if (actual !== expected) {
+  const actual = normalizePath(process.cwd());
+  const expectedNormalized = normalizePath(expected);
+  if (actual !== expectedNormalized) {
     throw new Error(
-      `${message}: Expected cwd to be ${expected}, but got ${actual}`
+      `${message}: Expected cwd to be ${expectedNormalized}, but got ${actual}`
     );
   }
 }
@@ -55,7 +72,7 @@ describe('cd Virtual Command - Core Behavior', () => {
       verifyCwd(tempDir, 'After cd to tempDir');
 
       const pwd = await $`pwd`;
-      expect(pwd.stdout.trim()).toBe(tempDir);
+      expect(normalizePath(pwd.stdout.trim())).toBe(normalizePath(tempDir));
 
       // Go back to original
       await $`cd ${testStartCwd}`;
@@ -83,7 +100,7 @@ describe('cd Virtual Command - Core Behavior', () => {
       expect(result.stdout).toBe('');
 
       const pwd = await $`pwd`;
-      expect(pwd.stdout.trim()).toBe(subDir);
+      expect(normalizePath(pwd.stdout.trim())).toBe(normalizePath(subDir));
 
       await $`cd ${originalCwd}`;
     } finally {
@@ -149,7 +166,7 @@ describe('cd Virtual Command - Core Behavior', () => {
       expect(result.stdout).toBe('');
 
       const pwd = await $`pwd`;
-      expect(pwd.stdout.trim()).toBe(baseDir);
+      expect(normalizePath(pwd.stdout.trim())).toBe(normalizePath(baseDir));
 
       await $`cd ${originalCwd}`;
     } finally {
@@ -503,7 +520,7 @@ describe('cd Virtual Command - Edge Cases', () => {
       expect(result.stdout).toBe('');
 
       const pwd = await $`pwd`;
-      expect(pwd.stdout.trim()).toBe(tempDir);
+      expect(normalizePath(pwd.stdout.trim())).toBe(normalizePath(tempDir));
 
       await $`cd ${originalCwd}`;
     } finally {
@@ -523,7 +540,7 @@ describe('cd Virtual Command - Edge Cases', () => {
       expect(result.code).toBe(0);
 
       const pwd = await $`pwd`;
-      expect(pwd.stdout.trim()).toBe(subDir);
+      expect(normalizePath(pwd.stdout.trim())).toBe(normalizePath(subDir));
 
       await $`cd ${originalCwd}`;
     } finally {
@@ -561,7 +578,7 @@ describe('cd Virtual Command - Platform Compatibility', () => {
       expect(result.code).toBe(0);
 
       const pwd = await $`pwd`;
-      expect(pwd.stdout.trim()).toBe(subDir);
+      expect(normalizePath(pwd.stdout.trim())).toBe(normalizePath(subDir));
 
       await $`cd ${originalCwd}`;
     } finally {

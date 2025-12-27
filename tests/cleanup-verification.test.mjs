@@ -7,9 +7,18 @@ import {
   originalCwd,
 } from './test-cleanup.mjs';
 import { $ } from '../src/$.mjs';
-import { mkdtempSync, rmSync } from 'fs';
+import { mkdtempSync, rmSync, realpathSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
+
+// Helper to normalize paths (handles macOS /var -> /private/var symlink)
+const normalizePath = (p) => {
+  try {
+    return realpathSync(p);
+  } catch {
+    return p;
+  }
+};
 
 describe('Cleanup Verification', () => {
   beforeEach(beforeTestCleanup);
@@ -43,10 +52,10 @@ describe('Cleanup Verification', () => {
 
     // Verify we changed
     const result = await $`pwd`;
-    expect(result.stdout.trim()).toBe(tempDir);
+    expect(normalizePath(result.stdout.trim())).toBe(normalizePath(tempDir));
 
     // Cwd should be changed within test
-    expect(process.cwd()).toBe(tempDir);
+    expect(normalizePath(process.cwd())).toBe(normalizePath(tempDir));
   });
 
   test('should be back in original directory after cd test', () => {
@@ -63,7 +72,7 @@ describe('Cleanup Verification', () => {
     await $`cd ${tempDir} && echo "test"`;
 
     // Should be in temp dir
-    expect(process.cwd()).toBe(tempDir);
+    expect(normalizePath(process.cwd())).toBe(normalizePath(tempDir));
   });
 
   test('should verify restoration after && cd test', () => {
@@ -77,7 +86,7 @@ describe('Cleanup Verification', () => {
 
     // Change directory in subshell - should not affect parent
     const result = await $`(cd ${tempDir} && pwd)`;
-    expect(result.stdout.trim()).toBe(tempDir);
+    expect(normalizePath(result.stdout.trim())).toBe(normalizePath(tempDir));
 
     // Should still be in original directory
     const currentCwd = process.cwd();
