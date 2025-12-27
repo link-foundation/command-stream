@@ -5,6 +5,9 @@ import { mkdtempSync, rmSync, existsSync, realpathSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 
+// Platform detection - Tests use bash and Unix shell commands
+const isWindows = process.platform === 'win32';
+
 // Helper to normalize paths (handles macOS /var -> /private/var symlink)
 const normalizePath = (p) => {
   try {
@@ -37,7 +40,8 @@ afterEach(async () => {
   shell.nounset(false);
 });
 
-describe('Git and GH commands with cd virtual command', () => {
+// Skip on Windows - uses bash -c, pwd, subshells, and Unix redirection
+describe.skipIf(isWindows)('Git and GH commands with cd virtual command', () => {
   // The test-cleanup functions handle cwd restoration globally
 
   describe('Git operations in temp directories', () => {

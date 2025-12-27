@@ -16,6 +16,9 @@ import {
 import { tmpdir, homedir } from 'os';
 import { join, resolve } from 'path';
 
+// Platform detection - Some tests use Unix-specific commands (cat, ln -s, chmod)
+const isWindows = process.platform === 'win32';
+
 // Helper to normalize paths (handles macOS /var -> /private/var symlink)
 const normalizePath = (p) => {
   try {
@@ -36,7 +39,8 @@ function verifyCwd(expected, message) {
   }
 }
 
-describe('cd Virtual Command - Core Behavior', () => {
+// Skip on Windows - uses pwd, cat, ln -s, chmod commands
+describe.skipIf(isWindows)('cd Virtual Command - Core Behavior', () => {
   beforeEach(async () => {
     await beforeTestCleanup();
     shell.errexit(false);
@@ -251,7 +255,8 @@ describe('cd Virtual Command - Core Behavior', () => {
   });
 });
 
-describe('cd Virtual Command - Command Chains', () => {
+// Skip on Windows - uses pwd and cat commands
+describe.skipIf(isWindows)('cd Virtual Command - Command Chains', () => {
   beforeEach(async () => {
     await beforeTestCleanup();
     shell.errexit(false);
@@ -355,7 +360,8 @@ describe('cd Virtual Command - Command Chains', () => {
   });
 });
 
-describe('cd Virtual Command - Subshell Behavior', () => {
+// Skip on Windows - uses subshells (parentheses) and pwd/cat commands
+describe.skipIf(isWindows)('cd Virtual Command - Subshell Behavior', () => {
   beforeEach(async () => {
     await beforeTestCleanup();
     shell.errexit(false);
@@ -409,7 +415,8 @@ describe('cd Virtual Command - Subshell Behavior', () => {
   });
 });
 
-describe('cd Virtual Command - Edge Cases', () => {
+// Skip on Windows - uses ln -s, chmod, and pwd commands
+describe.skipIf(isWindows)('cd Virtual Command - Edge Cases', () => {
   beforeEach(async () => {
     await beforeTestCleanup();
     shell.errexit(false);
@@ -551,7 +558,8 @@ describe('cd Virtual Command - Edge Cases', () => {
   });
 });
 
-describe('cd Virtual Command - Platform Compatibility', () => {
+// Skip on Windows - uses pwd command
+describe.skipIf(isWindows)('cd Virtual Command - Platform Compatibility', () => {
   beforeEach(async () => {
     await beforeTestCleanup();
     shell.errexit(false);

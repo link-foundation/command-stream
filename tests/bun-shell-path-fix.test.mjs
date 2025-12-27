@@ -13,7 +13,11 @@ import { $ } from '../src/$.mjs';
 const isBun = typeof globalThis.Bun !== 'undefined';
 const runtime = isBun ? 'Bun' : 'Node.js';
 
-describe(`String interpolation fix for ${runtime}`, () => {
+// Platform detection - Some tests use Unix-specific paths and commands
+const isWindows = process.platform === 'win32';
+
+// Skip on Windows - tests reference /bin/sh and Unix paths
+describe.skipIf(isWindows)(`String interpolation fix for ${runtime}`, () => {
   test('Template literal without interpolation should work', async () => {
     const result = await $`echo hello`;
     expect(result.stdout.toString().trim()).toBe('hello');

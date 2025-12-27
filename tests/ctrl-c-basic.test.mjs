@@ -2,7 +2,11 @@ import { describe, it, expect } from 'bun:test';
 import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
 import { $ } from '../src/$.mjs';
 
-describe('CTRL+C Basic Handling', () => {
+// Platform detection - Windows handles signals differently than Unix
+const isWindows = process.platform === 'win32';
+
+// Skip signal tests on Windows - SIGTERM exit code 143 is Unix-specific
+describe.skipIf(isWindows)('CTRL+C Basic Handling', () => {
   it('should be able to kill a long-running process', async () => {
     // Start a long-running process
     const runner = $`sleep 10`;
@@ -80,7 +84,8 @@ describe('CTRL+C Basic Handling', () => {
   });
 });
 
-describe('CTRL+C Virtual Commands', () => {
+// Skip on Windows - SIGTERM exit code 143 is Unix-specific
+describe.skipIf(isWindows)('CTRL+C Virtual Commands', () => {
   it(
     'should cancel virtual command with AbortController',
     async () => {
@@ -128,7 +133,8 @@ describe('CTRL+C Virtual Commands', () => {
   );
 });
 
-describe('CTRL+C Different stdin Modes', () => {
+// Skip on Windows - SIGTERM exit code 143 is Unix-specific
+describe.skipIf(isWindows)('CTRL+C Different stdin Modes', () => {
   it('should handle CTRL+C with string stdin', async () => {
     // Use a long-running command that will actually be killed
     const runner = $({ stdin: 'test input\n' })`sleep 10`;
@@ -168,7 +174,8 @@ describe('CTRL+C Different stdin Modes', () => {
   });
 });
 
-describe('CTRL+C Pipeline Interruption', () => {
+// Skip on Windows - SIGTERM exit code 143 is Unix-specific
+describe.skipIf(isWindows)('CTRL+C Pipeline Interruption', () => {
   it(
     'should interrupt simple pipeline',
     async () => {
@@ -188,7 +195,8 @@ describe('CTRL+C Pipeline Interruption', () => {
   );
 });
 
-describe('CTRL+C Process Groups', () => {
+// Skip on Windows - uses 'sh' command and Unix-specific signals
+describe.skipIf(isWindows)('CTRL+C Process Groups', () => {
   it(
     'should handle process group termination on Unix',
     async () => {

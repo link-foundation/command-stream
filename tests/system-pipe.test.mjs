@@ -3,6 +3,9 @@ import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanu
 import { $, shell, disableVirtualCommands } from '../src/$.mjs';
 import { execSync } from 'child_process';
 
+// Platform detection - These tests use Unix utilities (printf, grep, sed, awk, etc.)
+const isWindows = process.platform === 'win32';
+
 beforeEach(() => {
   shell.errexit(false);
   shell.verbose(false);
@@ -32,7 +35,8 @@ const hasCommand = (cmd) => {
 
 const hasJq = hasCommand('jq');
 
-describe('System Command Piping (Issue #8)', () => {
+// Skip on Windows - uses Unix utilities (printf, grep, sed, awk, jq, etc.)
+describe.skipIf(isWindows)('System Command Piping (Issue #8)', () => {
   describe('Piping to jq', () => {
     test.skipIf(!hasJq)(
       'should pipe echo output to jq for JSON processing',

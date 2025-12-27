@@ -7,7 +7,11 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-describe('SIGINT Cleanup Tests (Isolated)', () => {
+// Platform detection - Windows handles signals differently than Unix
+const isWindows = process.platform === 'win32';
+
+// Skip on Windows - SIGINT handler testing requires Unix signal semantics
+describe.skipIf(isWindows)('SIGINT Cleanup Tests (Isolated)', () => {
   test('should properly manage SIGINT handlers', async () => {
     // Run the test in a subprocess to avoid interfering with test runner
     const scriptPath = join(__dirname, '../examples/sigint-handler-test.mjs');

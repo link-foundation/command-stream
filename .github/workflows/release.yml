@@ -106,9 +106,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Windows tests disabled due to path separator differences and shell detection issues
-        # TODO: Fix Windows compatibility in a follow-up PR
-        os: [ubuntu-latest, macos-latest]
+        # Windows tests now enabled - tests with Unix-specific commands are skipped on Windows
+        os: [ubuntu-latest, macos-latest, windows-latest]
         runtime: [bun]
         include:
           # Also test Node.js compatibility on Ubuntu

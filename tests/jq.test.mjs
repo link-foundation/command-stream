@@ -3,7 +3,11 @@ import { trace } from '../src/$.utils.mjs';
 import { describe, test, expect } from 'bun:test';
 import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
 
-describe('jq streaming tests', () => {
+// Platform detection - These tests use Unix shell commands (sh, printf)
+const isWindows = process.platform === 'win32';
+
+// Skip on Windows - uses printf and jq (Unix utilities)
+describe.skipIf(isWindows)('jq streaming tests', () => {
   test('stream of JSON objects through jq -c', async () => {
     // Generate a stream of JSON objects using printf
     const result =
@@ -86,7 +90,8 @@ describe('jq streaming tests', () => {
   });
 });
 
-describe('jq streaming with pipe | syntax', () => {
+// Skip on Windows - uses printf and jq (Unix utilities)
+describe.skipIf(isWindows)('jq streaming with pipe | syntax', () => {
   test('stream of JSON objects through jq -c using pipe syntax', async () => {
     // Generate a stream of JSON objects using printf with pipe syntax
     const result =
@@ -156,7 +161,8 @@ describe('jq streaming with pipe | syntax', () => {
   });
 });
 
-describe('realtime JSON streaming with delays', () => {
+// Skip on Windows - uses sh -c and Unix utilities
+describe.skipIf(isWindows)('realtime JSON streaming with delays', () => {
   test('stream JSON with random delays between outputs', async () => {
     // Simulate realtime stream with random delays between 0.01 and 0.05 seconds
     const result =
