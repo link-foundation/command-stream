@@ -1,6 +1,6 @@
 /**
  * Tests for Bun runtime shell path issue fix
- * 
+ *
  * This addresses GitHub issue #42: Bun runtime shell path issues
  * The issue was that string interpolation in template literals was incorrectly quoting
  * complete command strings, causing shell commands to fail execution.

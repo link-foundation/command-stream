@@ -12,7 +12,7 @@ const tests = [
     test: async () => {
       const result = await $`echo hello`;
       return result.stdout.toString().trim() === 'hello';
-    }
+    },
   },
   {
     name: 'String interpolation with complete command',
@@ -20,7 +20,7 @@ const tests = [
       const cmd = 'echo hello';
       const result = await $`${cmd}`;
       return result.stdout.toString().trim() === 'hello';
-    }
+    },
   },
   {
     name: 'String interpolation with complex command',
@@ -28,7 +28,7 @@ const tests = [
       const cmd = 'echo hello | wc -w';
       const result = await $`${cmd}`;
       return result.stdout.toString().trim() === '1';
-    }
+    },
   },
   {
     name: 'Mixed template literal with interpolation',
@@ -36,7 +36,7 @@ const tests = [
       const arg = 'hello';
       const result = await $`echo ${arg}`;
       return result.stdout.toString().trim() === 'hello';
-    }
+    },
   },
   {
     name: 'Shell operators in interpolated commands',
@@ -44,8 +44,8 @@ const tests = [
       const cmd = 'test -f /bin/sh && echo "sh exists"';
       const result = await $`${cmd}`;
       return result.stdout.toString().trim() === 'sh exists';
-    }
-  }
+    },
+  },
 ];
 
 let passed = 0;

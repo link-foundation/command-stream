@@ -12,7 +12,11 @@ cmd1.on('end', (result) => {
 });
 
 const result1 = await cmd1;
-console.log('[VIRTUAL] await result:', result1.code, JSON.stringify(result1.stdout.trim()));
+console.log(
+  '[VIRTUAL] await result:',
+  result1.code,
+  JSON.stringify(result1.stdout.trim())
+);
 
 console.log('2. Testing with virtual commands disabled:');
 disableVirtualCommands();
@@ -24,7 +28,11 @@ cmd2.on('end', (result) => {
 });
 
 const result2 = await cmd2;
-console.log('[REAL] await result:', result2.code, JSON.stringify(result2.stdout.trim()));
+console.log(
+  '[REAL] await result:',
+  result2.code,
+  JSON.stringify(result2.stdout.trim())
+);
 
 console.log('3. Testing stream with virtual commands disabled:');
 const cmd3 = $`echo "real stream test"`;
@@ -40,8 +48,12 @@ try {
   const chunks = [];
   for await (const chunk of cmd3.stream()) {
     chunks.push(chunk);
-    console.log('[REAL STREAM] chunk:', chunk.type, JSON.stringify(chunk.data.toString().trim()));
-    
+    console.log(
+      '[REAL STREAM] chunk:',
+      chunk.type,
+      JSON.stringify(chunk.data.toString().trim())
+    );
+
     // Break after receiving data to see if end event fires
     if (chunks.length >= 1) {
       console.log('[REAL STREAM] Breaking after first chunk');

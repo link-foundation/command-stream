@@ -18,8 +18,12 @@ echo "INFO: Process completed"
 
   for await (const chunk of $filtered`bash -c '${testScript}'`.stream()) {
     const output = chunk.data.toString().trim();
-    
-    if (chunk.type === 'stderr' || output.includes('ERROR') || output.includes('WARNING')) {
+
+    if (
+      chunk.type === 'stderr' ||
+      output.includes('ERROR') ||
+      output.includes('WARNING')
+    ) {
       const prefix = chunk.type === 'stderr' ? '🚨' : '⚠️';
       console.log(`${prefix} ${output}`);
     }

@@ -2,10 +2,10 @@
 
 /**
  * Signal Handling Tracing Test
- * 
+ *
  * Tests process killing and signal handling with tracing to debug
  * SIGINT forwarding and cleanup operations.
- * 
+ *
  * Usage:
  *   COMMAND_STREAM_TRACE=ProcessRunner node examples/trace-signal-handling.mjs
  */
@@ -26,5 +26,10 @@ try {
   const result = await promise;
   console.log('✓ Sleep result (killed):', result.code);
 } catch (error) {
-  console.log('✓ Sleep was interrupted (expected):', error.message, 'code:', error.code);
+  console.log(
+    '✓ Sleep was interrupted (expected):',
+    error.message,
+    'code:',
+    error.code
+  );
 }

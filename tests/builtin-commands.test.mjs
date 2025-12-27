@@ -11,7 +11,7 @@ const TEST_DIR = 'test-builtin-commands';
 beforeEach(() => {
   // Enable virtual commands for these tests
   enableVirtualCommands();
-  
+
   // Create clean test directory
   if (existsSync(TEST_DIR)) {
     rmSync(TEST_DIR, { recursive: true, force: true });
@@ -31,7 +31,7 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
     test('cat should read file contents', async () => {
       const testFile = join(TEST_DIR, 'test.txt');
       writeFileSync(testFile, 'Hello World\nLine 2\n');
-      
+
       const result = await $`cat ${testFile}`;
       expect(result.code).toBe(0);
       expect(result.stdout).toBe('Hello World\nLine 2\n');
@@ -55,7 +55,7 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
       writeFileSync(join(TEST_DIR, 'file1.txt'), 'content');
       writeFileSync(join(TEST_DIR, 'file2.txt'), 'content');
       mkdirSync(join(TEST_DIR, 'subdir'));
-      
+
       const result = await $`ls ${TEST_DIR}`;
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('file1.txt');
@@ -66,7 +66,7 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
     test('ls should support -a flag for hidden files', async () => {
       writeFileSync(join(TEST_DIR, '.hidden'), 'content');
       writeFileSync(join(TEST_DIR, 'visible.txt'), 'content');
-      
+
       const result = await $`ls -a ${TEST_DIR}`;
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('.hidden');
@@ -75,7 +75,7 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
 
     test('ls should support -l flag for long format', async () => {
       writeFileSync(join(TEST_DIR, 'test.txt'), 'content');
-      
+
       const result = await $`ls -l ${TEST_DIR}`;
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('-rw-r--r--');
@@ -107,13 +107,13 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
       const testFile = join(TEST_DIR, 'existing.txt');
       writeFileSync(testFile, 'content');
       const oldStat = require('fs').statSync(testFile);
-      
+
       // Wait a bit to ensure timestamp difference
-      await new Promise(resolve => setTimeout(resolve, 10));
-      
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
       const result = await $`touch ${testFile}`;
       expect(result.code).toBe(0);
-      
+
       const newStat = require('fs').statSync(testFile);
       expect(newStat.mtime.getTime()).toBeGreaterThan(oldStat.mtime.getTime());
     });
@@ -123,7 +123,7 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
     test('rm should remove files', async () => {
       const testFile = join(TEST_DIR, 'to-remove.txt');
       writeFileSync(testFile, 'content');
-      
+
       const result = await $`rm ${testFile}`;
       expect(result.code).toBe(0);
       expect(existsSync(testFile)).toBe(false);
@@ -132,7 +132,7 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
     test('rm should fail on directories without -r', async () => {
       const testDir = join(TEST_DIR, 'to-remove-dir');
       mkdirSync(testDir);
-      
+
       const result = await $`rm ${testDir}`;
       expect(result.code).toBe(1);
       expect(result.stderr).toContain('Is a directory');
@@ -143,7 +143,7 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
       const testDir = join(TEST_DIR, 'to-remove-recursive');
       mkdirSync(testDir);
       writeFileSync(join(testDir, 'file.txt'), 'content');
-      
+
       const result = await $`rm -r ${testDir}`;
       expect(result.code).toBe(0);
       expect(existsSync(testDir)).toBe(false);
@@ -160,7 +160,7 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
       const source = join(TEST_DIR, 'source.txt');
       const dest = join(TEST_DIR, 'dest.txt');
       writeFileSync(source, 'test content');
-      
+
       const result = await $`cp ${source} ${dest}`;
       expect(result.code).toBe(0);
       expect(existsSync(dest)).toBe(true);
@@ -172,7 +172,7 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
       const destDir = join(TEST_DIR, 'dest-dir');
       mkdirSync(sourceDir);
       writeFileSync(join(sourceDir, 'file.txt'), 'content');
-      
+
       const result = await $`cp -r ${sourceDir} ${destDir}`;
       expect(result.code).toBe(0);
       expect(existsSync(destDir)).toBe(true);
@@ -183,7 +183,7 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
       const source = join(TEST_DIR, 'source.txt');
       const dest = join(TEST_DIR, 'dest.txt');
       writeFileSync(source, 'test content');
-      
+
       const result = await $`mv ${source} ${dest}`;
       expect(result.code).toBe(0);
       expect(existsSync(source)).toBe(false);
@@ -196,7 +196,7 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
       const destDir = join(TEST_DIR, 'dest-dir');
       writeFileSync(source, 'test content');
       mkdirSync(destDir);
-      
+
       const result = await $`mv ${source} ${destDir}`;
       expect(result.code).toBe(0);
       expect(existsSync(source)).toBe(false);
@@ -249,15 +249,17 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
       // Test with a limit to avoid infinite output
       const chunks = [];
       let count = 0;
-      
+
       for await (const chunk of $`yes hello`.stream()) {
         chunks.push(chunk.data.toString());
         count++;
-        if (count >= 3) break;
+        if (count >= 3) {
+          break;
+        }
       }
-      
+
       expect(chunks.length).toBe(3);
-      chunks.forEach(chunk => {
+      chunks.forEach((chunk) => {
         expect(chunk).toBe('hello\n');
       });
     });
@@ -265,15 +267,17 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
     test('yes should default to "y"', async () => {
       const chunks = [];
       let count = 0;
-      
+
       for await (const chunk of $`yes`.stream()) {
         chunks.push(chunk.data.toString());
         count++;
-        if (count >= 2) break;
+        if (count >= 2) {
+          break;
+        }
       }
-      
+
       expect(chunks.length).toBe(2);
-      chunks.forEach(chunk => {
+      chunks.forEach((chunk) => {
         expect(chunk).toBe('y\n');
       });
     });
@@ -298,7 +302,7 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
     test('which should find homebrew-installed commands (if available)', async () => {
       // Test with gh (GitHub CLI) which is commonly installed via homebrew
       const result = await $`which gh`;
-      
+
       // Enable verbose mode to see debug info if this test fails
       if (result.code !== 0) {
         trace('BuiltinTest', 'DEBUG: which gh failed');
@@ -306,18 +310,28 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
         trace('BuiltinTest', () => `Stdout: ${JSON.stringify(result.stdout)}`);
         trace('BuiltinTest', () => `Stderr: ${JSON.stringify(result.stderr)}`);
         trace('BuiltinTest', () => `PATH: ${process.env.PATH}`);
-        
+
         // Try to find gh manually to confirm it exists
-        const manualCheck = await $`/usr/bin/which gh`.catch(() => ({ code: 1, stdout: '', stderr: 'manual which failed' }));
-        trace('BuiltinTest', () => `Manual /usr/bin/which result: ${manualCheck}`);
+        const manualCheck = await $`/usr/bin/which gh`.catch(() => ({
+          code: 1,
+          stdout: '',
+          stderr: 'manual which failed',
+        }));
+        trace(
+          'BuiltinTest',
+          () => `Manual /usr/bin/which result: ${manualCheck}`
+        );
       }
-      
+
       // If gh is installed, it should return 0, otherwise skip this test
       // Note: We can't guarantee gh is installed on all systems
       if (result.code === 0) {
         expect(result.stdout).toMatch(/.*gh/);
       } else {
-        trace('BuiltinTest', 'Skipping gh test - command not found or which implementation bug');
+        trace(
+          'BuiltinTest',
+          'Skipping gh test - command not found or which implementation bug'
+        );
       }
     });
 
@@ -344,7 +358,7 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
     test('commands should return proper exit codes', async () => {
       const success = await $`true`;
       expect(success.code).toBe(0);
-      
+
       const failure = await $`false`;
       expect(failure.code).toBe(1);
     });
@@ -360,7 +374,7 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
       const mkdirResult = await $`mkdir`;
       expect(mkdirResult.code).toBe(1);
       expect(mkdirResult.stderr).toContain('missing operand');
-      
+
       const rmResult = await $`rm`;
       expect(rmResult.code).toBe(1);
       expect(rmResult.stderr).toContain('missing operand');

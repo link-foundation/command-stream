@@ -21,28 +21,31 @@ switch (method) {
     console.log('Using Method 1: Direct spawn...\n');
     const proc = spawn('top', [], {
       stdio: 'inherit',
-      env: process.env
+      env: process.env,
     });
     proc.on('close', (code) => {
       console.log(`\n=== top exited with code: ${code} ===`);
     });
     break;
 
-  case '2':  
+  case '2':
     console.log('Using Method 2: Enhanced ProcessRunner...\n');
-    const runner = new ProcessRunner({ mode: 'shell', command: 'top' }, {
-      stdin: 'inherit',
-      mirror: true,
-      capture: false,
-      tty: true  // Request TTY mode if supported
-    });
-    
+    const runner = new ProcessRunner(
+      { mode: 'shell', command: 'top' },
+      {
+        stdin: 'inherit',
+        mirror: true,
+        capture: false,
+        tty: true, // Request TTY mode if supported
+      }
+    );
+
     await runner.start();
     break;
 
   case '3':
     console.log('Using Method 3: Command-stream with settings...\n');
-    
+
     // Set raw mode on stdin to forward keystrokes immediately
     if (process.stdin.isTTY) {
       process.stdin.setRawMode(true);
@@ -51,7 +54,7 @@ switch (method) {
 
     const proc3 = spawn('top', [], {
       stdio: [process.stdin, process.stdout, process.stderr],
-      env: process.env
+      env: process.env,
     });
 
     proc3.on('close', (code) => {
@@ -63,5 +66,7 @@ switch (method) {
     break;
 
   default:
-    console.log('Invalid method. Use: node interactive-top-improved.mjs [1|2|3]');
+    console.log(
+      'Invalid method. Use: node interactive-top-improved.mjs [1|2|3]'
+    );
 }

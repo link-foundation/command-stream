@@ -6,13 +6,13 @@ test('streaming interfaces - basic functionality', async () => {
   // Test streams.stdin with cat
   const catCmd = $`cat`;
   const stdin = await catCmd.streams.stdin;
-  
+
   if (stdin) {
     stdin.write('Hello from streams.stdin!\n');
     stdin.write('Multiple lines work\n');
     stdin.end();
   }
-  
+
   const result = await catCmd;
   expect(result.code).toBe(0);
   expect(result.stdout).toContain('Hello from streams.stdin!');
@@ -21,24 +21,24 @@ test('streaming interfaces - basic functionality', async () => {
 
 test('streaming interfaces - auto-start behavior', async () => {
   const cmd = $`echo "test"`;
-  
+
   // Accessing parent objects should not auto-start
   const streams = cmd.streams;
   const buffers = cmd.buffers;
   const strings = cmd.strings;
   expect(cmd.started).toBe(false);
-  
+
   // Accessing actual properties should auto-start
   const stdout = cmd.streams.stdout;
   expect(cmd.started).toBe(true);
-  
+
   await cmd;
 });
 
 test('streaming interfaces - buffers interface', async () => {
   const cmd = $`printf "Binary test"`;
   const buffer = await cmd.buffers.stdout;
-  
+
   expect(Buffer.isBuffer(buffer)).toBe(true);
   expect(buffer.toString()).toBe('Binary test');
 });
@@ -46,33 +46,33 @@ test('streaming interfaces - buffers interface', async () => {
 test('streaming interfaces - strings interface', async () => {
   const cmd = $`echo "String test"`;
   const str = await cmd.strings.stdout;
-  
+
   expect(typeof str).toBe('string');
   expect(str.trim()).toBe('String test');
 });
 
 test('streaming interfaces - mixed stdout/stderr', async () => {
   const cmd = $`sh -c 'echo "stdout" && echo "stderr" >&2'`;
-  
+
   const [stdout, stderr] = await Promise.all([
     cmd.strings.stdout,
-    cmd.strings.stderr
+    cmd.strings.stderr,
   ]);
-  
+
   expect(stdout.trim()).toBe('stdout');
   expect(stderr.trim()).toBe('stderr');
 });
 
 test('streaming interfaces - kill method works', async () => {
   const cmd = $`sleep 10`;
-  
+
   // Start the process
   await cmd.streams.stdout;
   expect(cmd.started).toBe(true);
-  
+
   // Kill after short delay
   setTimeout(() => cmd.kill(), 100);
-  
+
   const result = await cmd;
   expect([130, 143, null]).toContain(result.code); // SIGTERM/SIGINT codes
 }, 5000);
@@ -81,7 +81,7 @@ test('streaming interfaces - stdin control with cross-platform command', async (
   // Use 'cat' which works identically on all platforms and waits for input
   const catCmd = $`cat`;
   const stdin = await catCmd.streams.stdin;
-  
+
   // Send some data and close stdin
   setTimeout(() => {
     if (stdin && !stdin.destroyed) {
@@ -90,14 +90,14 @@ test('streaming interfaces - stdin control with cross-platform command', async (
       setTimeout(() => stdin.end(), 100);
     }
   }, 100);
-  
+
   // Backup kill (shouldn't be needed since we close stdin)
   setTimeout(() => {
     if (!catCmd.finished) {
       catCmd.kill();
     }
   }, 2000);
-  
+
   const result = await catCmd;
   expect(typeof result.code).toBe('number');
   expect(result.code).toBe(0); // Should exit cleanly when stdin is closed
@@ -109,11 +109,11 @@ test('streaming interfaces - stdin control with cross-platform command', async (
 test('streaming interfaces - immediate access after completion', async () => {
   const cmd = $`echo "immediate test"`;
   const result = await cmd;
-  
+
   // After completion, should return immediate results
   const buffer = cmd.buffers.stdout;
   const string = cmd.strings.stdout;
-  
+
   expect(Buffer.isBuffer(buffer)).toBe(true);
   expect(typeof string).toBe('string');
   expect(buffer.toString().trim()).toBe('immediate test');
@@ -131,15 +131,15 @@ test('streaming interfaces - stdin pipe mode works', async () => {
   // Test that stdin: 'pipe' is properly handled vs string data
   const sortCmd = $`sort`;
   const stdin = await sortCmd.streams.stdin;
-  
+
   expect(stdin).not.toBe(null);
   expect(typeof stdin.write).toBe('function');
-  
+
   stdin.write('zebra\n');
   stdin.write('apple\n');
   stdin.write('banana\n');
   stdin.end();
-  
+
   const result = await sortCmd;
   expect(result.code).toBe(0);
   expect(result.stdout).toBe('apple\nbanana\nzebra\n');
@@ -148,13 +148,13 @@ test('streaming interfaces - stdin pipe mode works', async () => {
 test('streaming interfaces - grep filtering via stdin', async () => {
   const grepCmd = $`grep "important"`;
   const stdin = await grepCmd.streams.stdin;
-  
+
   stdin.write('ignore this line\n');
-  stdin.write('important message 1\n'); 
+  stdin.write('important message 1\n');
   stdin.write('skip this too\n');
   stdin.write('another important note\n');
   stdin.end();
-  
+
   const result = await grepCmd;
   expect(result.code).toBe(0);
   expect(result.stdout).toContain('important message 1');

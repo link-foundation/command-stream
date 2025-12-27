@@ -19,25 +19,28 @@ const timeout = setTimeout(() => {
 try {
   let chunkCount = 0;
   let buffer = '';
-  
+
   console.log('Starting stream iteration...');
   for await (const chunk of cmd.stream()) {
     if (chunk.type === 'stdout') {
       chunkCount++;
       buffer += chunk.data.toString();
-      
-      console.log(`Chunk ${chunkCount}:`, JSON.stringify(chunk.data.toString()));
-      
+
+      console.log(
+        `Chunk ${chunkCount}:`,
+        JSON.stringify(chunk.data.toString())
+      );
+
       // Process complete lines
       const lines = buffer.split('\n');
       buffer = lines.pop() || '';
-      
+
       for (const line of lines) {
         if (line.trim()) {
           console.log('Complete line:', JSON.stringify(line.trim()));
         }
       }
-      
+
       // Safety break after getting some output
       if (chunkCount >= 5) {
         console.log('Safety break after 5 chunks');
@@ -45,7 +48,7 @@ try {
       }
     }
   }
-  
+
   clearTimeout(timeout);
   console.log('JQ streaming completed with', chunkCount, 'chunks');
 } catch (error) {

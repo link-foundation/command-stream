@@ -9,7 +9,7 @@ console.log('Running ping -c 3 127.0.0.1 with mirror: false...\n');
 
 try {
   const $silent = $({ mirror: false });
-  
+
   for await (const chunk of $silent`ping -c 3 127.0.0.1`.stream()) {
     if (chunk.type === 'stdout') {
       const output = chunk.data.toString().trim();

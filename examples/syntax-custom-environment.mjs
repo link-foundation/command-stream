@@ -5,9 +5,9 @@
 import { $ } from '../src/$.mjs';
 
 console.log('Custom environment:');
-const $withEnv = $({ 
+const $withEnv = $({
   env: { ...process.env, DEMO_VAR: 'custom_value' },
-  mirror: false 
+  mirror: false,
 });
 const result = await $withEnv`printenv DEMO_VAR`;
 console.log('DEMO_VAR =', result.stdout.trim());

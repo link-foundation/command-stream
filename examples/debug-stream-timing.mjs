@@ -12,12 +12,12 @@ console.log('Immediately after start:');
 console.log('child:', cmd.child);
 console.log('stdout:', cmd.stdout);
 
-await new Promise(resolve => setTimeout(resolve, 50));
+await new Promise((resolve) => setTimeout(resolve, 50));
 console.log('After 50ms:');
 console.log('child:', cmd.child);
 console.log('stdout:', cmd.stdout);
 
-await new Promise(resolve => setTimeout(resolve, 100));
+await new Promise((resolve) => setTimeout(resolve, 100));
 console.log('After 150ms total:');
 console.log('child:', cmd.child);
 console.log('stdout:', cmd.stdout);

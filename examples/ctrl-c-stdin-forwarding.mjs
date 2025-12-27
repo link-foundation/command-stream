@@ -5,7 +5,9 @@
 import { $ } from '../src/$.mjs';
 
 console.log('Command with stdin forwarding');
-console.log('This example shows that stdin is properly forwarded while still handling CTRL+C\n');
+console.log(
+  'This example shows that stdin is properly forwarded while still handling CTRL+C\n'
+);
 
 try {
   // Create a simple script that reads input

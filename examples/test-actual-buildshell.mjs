@@ -25,7 +25,7 @@ try {
   console.log(`✗ Error: ${error.message}`);
 }
 
-console.log('\n--- Case 3: $`echo ${arg}` where arg="hello" ---');  
+console.log('\n--- Case 3: $`echo ${arg}` where arg="hello" ---');
 const arg = 'hello';
 try {
   const result3 = await $`echo ${arg}`;

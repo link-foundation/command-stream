@@ -18,22 +18,22 @@ async function testSpecialChars() {
     { desc: 'Pipe character', input: 'a | b', testExec: false },
     { desc: 'Backslash', input: 'path\\to\\file', testExec: true },
     { desc: 'Newline', input: 'line1\nline2', testExec: true },
-    { desc: 'Tab', input: 'col1\tcol2', testExec: true }
+    { desc: 'Tab', input: 'col1\tcol2', testExec: true },
   ];
-  
+
   for (const { desc, input, testExec } of tests) {
     console.log(`\n${desc}:`);
     console.log('Input:', JSON.stringify(input));
-    
+
     const cmd = $({ mirror: false })`echo ${input}`;
     console.log('Generated:', cmd.spec.command);
-    
+
     if (testExec) {
       try {
         const result = await $`echo ${input}`;
         const output = String(result).trim();
         console.log('Output:', JSON.stringify(output));
-        
+
         // Check if special chars were properly escaped
         if (input === '$HOME' && output === '$HOME') {
           console.log('✅ Variable not expanded (properly escaped)');

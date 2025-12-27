@@ -47,6 +47,12 @@ export default [
         TextDecoder: 'readonly',
         AbortController: 'readonly',
         AbortSignal: 'readonly',
+        // Web API globals available in modern runtimes
+        Response: 'readonly',
+        Request: 'readonly',
+        ReadableStream: 'readonly',
+        WritableStream: 'readonly',
+        TransformStream: 'readonly',
       },
     },
     rules: {
@@ -54,12 +60,22 @@ export default [
       'prettier/prettier': 'error',
 
       // Code quality rules
-      'no-unused-vars': 'error',
+      // Note: Set to warn for now due to many pre-existing unused variables.
+      // TODO: Gradually fix unused variables and change this to 'error'.
+      'no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
       'no-console': 'off', // Allow console in this project
       'no-debugger': 'error',
+      // Allow control characters in regex for ANSI escape detection
+      'no-control-regex': 'off',
 
       // Best practices
-      eqeqeq: ['error', 'always'],
       curly: ['error', 'all'],
       'no-var': 'error',
       'prefer-const': 'error',
@@ -69,14 +85,22 @@ export default [
       // ES6+ features
       'arrow-body-style': ['error', 'as-needed'],
       'object-shorthand': ['error', 'always'],
-      'prefer-template': 'error',
-
-      // Async/await
-      'no-async-promise-executor': 'error',
-      'require-await': 'warn',
 
       // Comments and documentation
       'spaced-comment': ['error', 'always', { markers: ['/'] }],
+
+      // Relaxed rules for existing codebase
+      // These are set to warn because fixing them in existing code would be disruptive
+      eqeqeq: ['warn', 'always'], // Allow == for now
+      'prefer-template': 'warn', // String concatenation is acceptable
+      'no-empty': 'warn', // Empty blocks are sometimes intentional
+      'no-useless-escape': 'warn', // Sometimes escape is for clarity
+      'no-case-declarations': 'warn', // Lexical declarations in case blocks
+      'no-async-promise-executor': 'warn', // Async promise executors
+      'require-await': 'warn', // Async functions without await
+      'require-yield': 'warn', // Generators without yield
+      'no-prototype-builtins': 'warn', // Prototype method access
+      'no-constant-binary-expression': 'warn', // Constant truthiness
 
       // Complexity rules - reasonable thresholds for maintainability
       complexity: ['warn', 15], // Cyclomatic complexity - allow more complex logic than strict 8
@@ -91,7 +115,7 @@ export default [
       ],
       'max-params': ['warn', 6], // Maximum function parameters - slightly more lenient than strict 5
       'max-statements': ['warn', 60], // Maximum statements per function - reasonable limit for orchestration functions
-      'max-lines': ['error', 1500], // Maximum lines per file - counts all lines including blank lines and comments
+      'max-lines': ['warn', 1500], // Maximum lines per file - set to warn for existing large files
     },
   },
   {
@@ -102,21 +126,25 @@ export default [
     },
   },
   {
+    // CommonJS compatibility (some files use require() for dynamic imports)
+    files: ['**/*.js', '**/*.mjs'],
+    languageOptions: {
+      globals: {
+        require: 'readonly',
+        module: 'readonly',
+        exports: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+      },
+    },
+  },
+  {
     ignores: [
       'node_modules/**',
       'coverage/**',
       'dist/**',
       '*.min.js',
       '.eslintcache',
-      // Temporarily ignore existing code during CI/CD transition
-      // TODO: Remove these ignores and fix formatting in a follow-up PR
-      'claude-profiles.mjs',
-      'claude-profile-*.sh',
-      'gitpod-*.sh',
-      'examples/**',
-      'src/**',
-      'tests/**',
-      'docs/**',
     ],
   },
 ];

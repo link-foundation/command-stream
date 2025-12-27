@@ -20,7 +20,7 @@ console.log(`Finished: ${runner.finished}`);
 console.log(`Total iterations: ${iterations}`);
 
 // Wait a bit to ensure no more output
-await new Promise(resolve => setTimeout(resolve, 100));
+await new Promise((resolve) => setTimeout(resolve, 100));
 
 console.log('Test complete');
 process.exit(0);

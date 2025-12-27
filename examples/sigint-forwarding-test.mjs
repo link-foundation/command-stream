@@ -22,22 +22,26 @@ process.on('SIGINT', () => {
 });
 
 // Wait a bit for command to start
-await new Promise(resolve => setTimeout(resolve, 100));
+await new Promise((resolve) => setTimeout(resolve, 100));
 
 // Send SIGINT to ourselves
 console.log('TEST: Sending SIGINT');
 process.kill(process.pid, 'SIGINT');
 
 // Wait a bit for signal handling
-await new Promise(resolve => setTimeout(resolve, 200));
+await new Promise((resolve) => setTimeout(resolve, 200));
 
 // Check if process was killed
 let exitCode = null;
 try {
   // Try to wait for the promise with a timeout
   await Promise.race([
-    promise.then(result => { exitCode = result.code; }),
-    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 500))
+    promise.then((result) => {
+      exitCode = result.code;
+    }),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('timeout')), 500)
+    ),
   ]);
 } catch (e) {
   if (e.message === 'timeout') {

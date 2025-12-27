@@ -191,7 +191,7 @@ describe('raw() function - Disable auto-escape', () => {
     test('configuration-based commands', async () => {
       const config = {
         buildCommand: raw('echo "Building..." && echo "Done"'),
-        testCommand: raw('echo "Testing..." && echo "Passed"')
+        testCommand: raw('echo "Testing..." && echo "Passed"'),
       };
 
       const buildResult = await $`${config.buildCommand}`;
@@ -232,7 +232,9 @@ describe('raw() function - Disable auto-escape', () => {
 
     test('raw() would execute injection (demonstration only)', async () => {
       // We demonstrate the danger without actually running dangerous commands
-      const dangerous = raw('echo "safe" ; echo "This would be dangerous with rm -rf"');
+      const dangerous = raw(
+        'echo "safe" ; echo "This would be dangerous with rm -rf"'
+      );
       const result = await $`${dangerous}`;
 
       // Both parts execute because raw() disables escaping

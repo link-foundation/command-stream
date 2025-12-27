@@ -13,7 +13,7 @@ cmd.on('exit', () => console.log('LISTENER: exit event at', Date.now()));
 
 // Override emit to see exact timing
 const originalEmit = cmd.emit.bind(cmd);
-cmd.emit = function(event, ...args) {
+cmd.emit = function (event, ...args) {
   console.log(`EMIT: ${event} event at ${Date.now()}`);
   return originalEmit(event, ...args);
 };

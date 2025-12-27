@@ -2,10 +2,10 @@
 
 /**
  * Error Handling Tracing Test
- * 
+ *
  * Tests error conditions with tracing to debug error propagation,
  * cleanup on failure, and exception handling.
- * 
+ *
  * Usage:
  *   COMMAND_STREAM_TRACE=ProcessRunner node examples/trace-error-handling.mjs
  */

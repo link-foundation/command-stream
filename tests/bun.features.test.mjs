@@ -36,11 +36,11 @@ describe('Bun.$ Feature Validation', () => {
       // Bun.$ buffers output and returns it all at once
       // This test documents the buffering behavior
       const result = await Bun.$`echo "bun buffered test"`;
-      
+
       // Result is returned as complete buffer, not streamed
       expect(typeof result.text).toBe('function');
       expect(result.text().trim()).toBe('bun buffered test');
-      
+
       // No streaming interface available
       expect(result.stream).toBeUndefined();
       expect(typeof result[Symbol.asyncIterator]).toBe('undefined');
@@ -50,7 +50,7 @@ describe('Bun.$ Feature Validation', () => {
   describe('Async Iteration', () => {
     test('should NOT support for await iteration', async () => {
       const result = await Bun.$`echo "no async iteration"`;
-      
+
       // Bun.$ result is not async iterable
       expect(typeof result[Symbol.asyncIterator]).toBe('undefined');
       expect(result.stream).toBeUndefined();
@@ -60,7 +60,7 @@ describe('Bun.$ Feature Validation', () => {
   describe('EventEmitter Pattern', () => {
     test('should NOT support .on() events', async () => {
       const result = await Bun.$`echo "no events"`;
-      
+
       // Bun.$ result doesn't have EventEmitter interface
       expect(typeof result.on).toBe('undefined');
       expect(typeof result.emit).toBe('undefined');
@@ -72,7 +72,7 @@ describe('Bun.$ Feature Validation', () => {
     test('should NOT support events + await (only await)', async () => {
       // Bun.$ only supports await pattern, no events
       const result = await Bun.$`echo "await only"`;
-      
+
       expect(result.text().trim()).toBe('await only');
       expect(typeof result.on).toBe('undefined');
     });
@@ -82,7 +82,7 @@ describe('Bun.$ Feature Validation', () => {
     test('should have built-in injection protection', async () => {
       const dangerous = "'; rm -rf /; echo 'hacked";
       const result = await Bun.$`echo ${dangerous}`;
-      
+
       expect(result.text().trim()).toBe(dangerous);
       expect(result.exitCode).toBe(0);
     });
@@ -101,7 +101,7 @@ describe('Bun.$ Feature Validation', () => {
       const startTime = Date.now();
       const result = await Bun.$`echo "performance test"`;
       const endTime = Date.now();
-      
+
       expect(result.exitCode).toBe(0);
       expect(endTime - startTime).toBeLessThan(100); // Should be very fast
     });
@@ -111,7 +111,7 @@ describe('Bun.$ Feature Validation', () => {
     test('should buffer in memory (not streaming)', async () => {
       // Bun.$ buffers output in memory
       const result = await Bun.$`echo "memory buffering"`;
-      
+
       // All output is available immediately as buffer
       expect(result.text().trim()).toBe('memory buffering');
       expect(typeof result.text()).toBe('string');
@@ -146,7 +146,7 @@ describe('Bun.$ Feature Validation', () => {
     test('should support input through echo/pipe (conceptual)', async () => {
       // Bun.$ supports pipe operations differently
       // const result = await Bun.$`echo ${input} | cat`;
-      const input = "stdin input test";
+      const input = 'stdin input test';
       const result = await Bun.$`echo ${input}`;
       expect(result.text().trim()).toBe(input);
     });

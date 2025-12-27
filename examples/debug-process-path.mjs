@@ -12,11 +12,19 @@ const cmd = $`echo "test"`;
 
 // Add event listeners to track what happens
 cmd.on('data', (chunk) => {
-  console.log('[EVENT] data:', chunk.type, JSON.stringify(chunk.data.toString().trim()));
+  console.log(
+    '[EVENT] data:',
+    chunk.type,
+    JSON.stringify(chunk.data.toString().trim())
+  );
 });
 
 cmd.on('end', (result) => {
-  console.log('[EVENT] end:', result.code, JSON.stringify(result.stdout.trim()));
+  console.log(
+    '[EVENT] end:',
+    result.code,
+    JSON.stringify(result.stdout.trim())
+  );
 });
 
 cmd.on('exit', (code) => {

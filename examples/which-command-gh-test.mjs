@@ -9,8 +9,10 @@ try {
   const result = await $`which gh`;
   console.log(`Exit code: ${result.code}`);
   console.log(`Output: ${result.stdout.trim()}`);
-  if (result.stderr) console.log(`Stderr: ${result.stderr.trim()}`);
-  
+  if (result.stderr) {
+    console.log(`Stderr: ${result.stderr.trim()}`);
+  }
+
   if (result.code === 0) {
     console.log('✅ SUCCESS: which gh now returns exit code 0');
   } else {

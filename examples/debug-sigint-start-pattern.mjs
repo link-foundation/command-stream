@@ -6,22 +6,26 @@ console.log('=== SIGINT Listeners Start Pattern Debug ===');
 
 function getInternalState() {
   const sigintListeners = process.listeners('SIGINT');
-  const commandStreamListeners = sigintListeners.filter(l => {
+  const commandStreamListeners = sigintListeners.filter((l) => {
     const str = l.toString();
-    return str.includes('activeProcessRunners') || 
-           str.includes('ProcessRunner') ||
-           str.includes('activeChildren');
+    return (
+      str.includes('activeProcessRunners') ||
+      str.includes('ProcessRunner') ||
+      str.includes('activeChildren')
+    );
   });
-  
+
   return {
     sigintHandlerCount: commandStreamListeners.length,
-    totalSigintListeners: sigintListeners.length
+    totalSigintListeners: sigintListeners.length,
   };
 }
 
 function logState(label) {
   const state = getInternalState();
-  console.log(`${label}: sigintHandlerCount=${state.sigintHandlerCount}, total=${state.totalSigintListeners}`);
+  console.log(
+    `${label}: sigintHandlerCount=${state.sigintHandlerCount}, total=${state.totalSigintListeners}`
+  );
 }
 
 logState('Initial state');

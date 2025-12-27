@@ -4,13 +4,13 @@
 
 const proc1 = Bun.spawn(['bun', 'run', 'examples/emulate-claude-stream.mjs'], {
   stdout: 'pipe',
-  stderr: 'pipe'
+  stderr: 'pipe',
 });
 
 const proc2 = Bun.spawn(['jq', '.'], {
   stdin: proc1.stdout,
-  stdout: 'pipe', 
-  stderr: 'pipe'
+  stdout: 'pipe',
+  stderr: 'pipe',
 });
 
 console.log('Testing direct process pipe connection:');
@@ -22,7 +22,7 @@ const start = Date.now();
 for await (const chunk of proc2.stdout) {
   const elapsed = Date.now() - start;
   const text = Buffer.from(chunk).toString();
-  const lines = text.split('\n').filter(l => l.trim());
+  const lines = text.split('\n').filter((l) => l.trim());
   for (const line of lines) {
     console.log(`[${elapsed}ms] ${line}`);
   }

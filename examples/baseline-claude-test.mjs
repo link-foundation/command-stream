@@ -4,7 +4,15 @@ import { spawn } from 'child_process';
 
 console.log('🧪 Baseline Claude test with spawn');
 
-const claude = spawn('claude', ['-p', 'hi', '--output-format', 'stream-json', '--verbose', '--model', 'sonnet']);
+const claude = spawn('claude', [
+  '-p',
+  'hi',
+  '--output-format',
+  'stream-json',
+  '--verbose',
+  '--model',
+  'sonnet',
+]);
 
 let chunkCount = 0;
 let totalOutput = '';
@@ -23,7 +31,9 @@ claude.stderr.on('data', (data) => {
 });
 
 claude.on('close', (code) => {
-  console.log(`✅ Process closed: ${chunkCount} chunks, ${totalOutput.length} total bytes, exit code ${code}`);
+  console.log(
+    `✅ Process closed: ${chunkCount} chunks, ${totalOutput.length} total bytes, exit code ${code}`
+  );
 });
 
 claude.on('error', (error) => {

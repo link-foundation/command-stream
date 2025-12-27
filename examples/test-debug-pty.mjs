@@ -4,18 +4,23 @@ import { $ } from '../src/$.mjs';
 
 // Add debug logging
 const original_runPipeline = $.prototype._runPipeline;
-$.prototype._runPipeline = async function(commands) {
-  console.log('Pipeline commands:', commands.map(c => c.cmd));
+$.prototype._runPipeline = async function (commands) {
+  console.log(
+    'Pipeline commands:',
+    commands.map((c) => c.cmd)
+  );
   const result = await original_runPipeline.call(this, commands);
   return result;
 };
 
 const original_runStreamingPipelineBun = $.prototype._runStreamingPipelineBun;
-$.prototype._runStreamingPipelineBun = async function(commands) {
-  const hasJq = commands.some(c => c.cmd === 'jq');
-  const hasVirtual = commands.some(c => c.isVirtual);
-  console.log(`Streaming pipeline: hasJq=${hasJq}, hasVirtual=${hasVirtual}, platform=${process.platform}`);
-  
+$.prototype._runStreamingPipelineBun = async function (commands) {
+  const hasJq = commands.some((c) => c.cmd === 'jq');
+  const hasVirtual = commands.some((c) => c.isVirtual);
+  console.log(
+    `Streaming pipeline: hasJq=${hasJq}, hasVirtual=${hasVirtual}, platform=${process.platform}`
+  );
+
   const result = await original_runStreamingPipelineBun.call(this, commands);
   return result;
 };

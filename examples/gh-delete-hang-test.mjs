@@ -12,13 +12,16 @@ const tempFile = path.join(os.tmpdir(), 'delete-hang-test.txt');
 await fs.writeFile(tempFile, 'Test content for deletion\n');
 
 console.log('Creating a gist to test deletion...');
-const createResult = await $`gh gist create ${tempFile} --desc "delete-test" --public=false 2>&1`.run({
-  capture: true,
-  mirror: false
-});
+const createResult =
+  await $`gh gist create ${tempFile} --desc "delete-test" --public=false 2>&1`.run(
+    {
+      capture: true,
+      mirror: false,
+    }
+  );
 
 const lines = createResult.stdout.trim().split('\n');
-const gistUrl = lines.find(line => line.includes('gist.github.com'));
+const gistUrl = lines.find((line) => line.includes('gist.github.com'));
 if (!gistUrl) {
   console.error('Failed to create test gist');
   process.exit(1);
@@ -33,9 +36,12 @@ console.log('Using the pattern from the original test:\n');
 // This is the pattern that was in the original test
 async function deleteGist(gistId) {
   console.log('🗑️  Deleting the test gist...');
-  
+
   try {
-    const deleteResult = await $`gh gist delete ${gistId} --yes`.run({ capture: true, mirror: false });
+    const deleteResult = await $`gh gist delete ${gistId} --yes`.run({
+      capture: true,
+      mirror: false,
+    });
     console.log('   - Exit code:', deleteResult.code);
     console.log('   - ✅ Gist deleted successfully');
     return true;

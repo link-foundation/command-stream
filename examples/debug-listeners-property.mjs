@@ -16,13 +16,13 @@ Object.defineProperty(cmd, 'listeners', {
     console.log('LISTENERS PROPERTY SET!');
     console.log('Old value size:', _listeners ? _listeners.size : 'undefined');
     console.log('New value size:', newValue ? newValue.size : 'undefined');
-    
+
     // Get stack trace to see who's setting the property
     const stack = new Error().stack;
     console.log('Stack trace:', stack.split('\n').slice(1, 5).join('\n'));
-    
+
     _listeners = newValue;
-  }
+  },
 });
 
 cmd.on('data', () => console.log('DATA listener called'));

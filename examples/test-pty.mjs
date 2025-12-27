@@ -6,7 +6,7 @@ console.log('Test: Using unbuffer to force line buffering\n');
 
 const proc1 = Bun.spawn(['./examples/emulate-claude-stream.mjs'], {
   stdout: 'pipe',
-  stderr: 'pipe'
+  stderr: 'pipe',
 });
 
 // Try using unbuffer (if available) to force line buffering
@@ -14,7 +14,7 @@ const proc1 = Bun.spawn(['./examples/emulate-claude-stream.mjs'], {
 const proc2 = Bun.spawn(['unbuffer', 'jq', '.'], {
   stdin: proc1.stdout,
   stdout: 'pipe',
-  stderr: 'pipe'
+  stderr: 'pipe',
 });
 
 const start = Date.now();
@@ -24,8 +24,11 @@ for await (const chunk of proc2.stdout) {
   chunkCount++;
   const elapsed = Date.now() - start;
   const text = Buffer.from(chunk).toString();
-  const lines = text.split('\n').filter(l => l.trim()).slice(0, 2);
-  
+  const lines = text
+    .split('\n')
+    .filter((l) => l.trim())
+    .slice(0, 2);
+
   console.log(`[${elapsed}ms] Chunk ${chunkCount}: First lines:`, lines);
 }
 

@@ -5,17 +5,3 @@ dist
 package-lock.json
 .eslintcache
 CLAUDE.md
-
-# Temporarily ignore existing code during CI/CD transition
-# TODO: Remove these ignores and fix formatting in a follow-up PR
-claude-profiles.mjs
-claude-profile-*.sh
-gitpod-*.sh
-examples/
-src/
-tests/
-docs/
-README.md
-.github/
-.claude/
-.gitpod.yml

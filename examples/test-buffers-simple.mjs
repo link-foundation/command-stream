@@ -6,17 +6,20 @@ console.log('Testing buffer access...');
 
 async function testBuffers() {
   const cmd = $`echo "test buffer"`;
-  
+
   // First access - should be promise
   console.log('Getting buffer (first access)...');
   const buffer1 = await cmd.buffers.stdout;
   console.log('Buffer 1:', buffer1.toString());
-  
+
   // Check if process is finished
   console.log('Process finished?', cmd.finished);
   console.log('Has outChunks?', !!cmd.outChunks);
-  console.log('OutChunks length:', cmd.outChunks ? cmd.outChunks.length : 'null');
-  
+  console.log(
+    'OutChunks length:',
+    cmd.outChunks ? cmd.outChunks.length : 'null'
+  );
+
   // Second access - should be immediate
   console.log('Getting buffer (second access)...');
   const buffer2 = cmd.buffers.stdout;

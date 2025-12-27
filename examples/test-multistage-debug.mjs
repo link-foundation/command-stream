@@ -14,11 +14,15 @@ for await (const chunk of $`bun run examples/emulate-claude-stream.mjs | cat | j
   if (chunk.type === 'stdout') {
     chunkCount++;
     const elapsed = Date.now() - start;
-    
-    if (!firstChunkTime) firstChunkTime = elapsed;
+
+    if (!firstChunkTime) {
+      firstChunkTime = elapsed;
+    }
     lastChunkTime = elapsed;
-    
-    console.log(`[${elapsed}ms] Chunk ${chunkCount}: ${chunk.data.length} bytes`);
+
+    console.log(
+      `[${elapsed}ms] Chunk ${chunkCount}: ${chunk.data.length} bytes`
+    );
   }
 }
 

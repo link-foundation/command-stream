@@ -5,7 +5,7 @@ class TestClass {
   constructor() {
     this.child = null;
   }
-  
+
   get stdout() {
     return this.child ? this.child.stdout : null;
   }
@@ -24,4 +24,7 @@ console.log('Should be null:', cmd.stdout === null);
 
 // Check if the object is really a ProcessRunner
 console.log('cmd constructor name:', cmd.constructor.name);
-console.log('cmd instanceof ProcessRunner:', cmd.constructor.name === 'ProcessRunner');
+console.log(
+  'cmd instanceof ProcessRunner:',
+  cmd.constructor.name === 'ProcessRunner'
+);

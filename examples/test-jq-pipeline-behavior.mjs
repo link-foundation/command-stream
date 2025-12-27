@@ -15,7 +15,7 @@ console.log('='.repeat(60));
 
 console.log('\nEnvironment:', {
   'process.stdout.isTTY': process.stdout.isTTY,
-  'TERM': process.env.TERM
+  TERM: process.env.TERM,
 });
 
 console.log('\n1. JQ IN A PIPELINE (through command-stream):');
@@ -24,7 +24,7 @@ console.log('-'.repeat(40));
 const pipeResult = await $`echo ${testJson} | jq .`;
 console.log('Command: echo ... | jq .');
 console.log('Has colors:', /\u001b\[\d+/.test(pipeResult.stdout));
-console.log('Reason: jq detects it\'s in a pipeline, not direct TTY output\n');
+console.log("Reason: jq detects it's in a pipeline, not direct TTY output\n");
 
 console.log('2. JQ DIRECTLY TO TTY (if possible):');
 console.log('-'.repeat(40));
@@ -42,19 +42,27 @@ console.log('\n3. JQ WITH EXPLICIT COLOR FLAGS:');
 console.log('-'.repeat(40));
 const colorResult = await $`echo ${testJson} | jq -C .`;
 console.log('Command: echo ... | jq -C .');
-console.log('Has colors:', /\u001b\[\d+/.test(colorResult.stdout), '(forced with -C)');
+console.log(
+  'Has colors:',
+  /\u001b\[\d+/.test(colorResult.stdout),
+  '(forced with -C)'
+);
 
 const noColorResult = await $`echo ${testJson} | jq -M .`;
 console.log('Command: echo ... | jq -M .');
-console.log('Has colors:', /\u001b\[\d+/.test(noColorResult.stdout), '(disabled with -M)');
+console.log(
+  'Has colors:',
+  /\u001b\[\d+/.test(noColorResult.stdout),
+  '(disabled with -M)'
+);
 
 console.log('\n4. DIRECT SHELL EXECUTION (for comparison):');
 console.log('-'.repeat(40));
 try {
   // Using execSync to run directly in shell
-  const shellOutput = execSync(`echo '${testJson}' | jq .`, { 
+  const shellOutput = execSync(`echo '${testJson}' | jq .`, {
     encoding: 'utf8',
-    shell: '/bin/sh'
+    shell: '/bin/sh',
   });
   console.log('Via execSync with shell:');
   console.log('Has colors:', /\u001b\[\d+/.test(shellOutput));
@@ -62,9 +70,9 @@ try {
   console.log('Error:', e.message);
 }
 
-console.log('\n' + '='.repeat(60));
+console.log(`\n${'='.repeat(60)}`);
 console.log('SUMMARY:');
-console.log('- jq auto-detects when it\'s in a pipeline vs direct TTY');
+console.log("- jq auto-detects when it's in a pipeline vs direct TTY");
 console.log('- In pipelines, jq disables colors by default (smart behavior)');
 console.log('- This is why the test sees no colors even with isTTY=true');
 console.log('- The -C flag forces colors even in pipelines');

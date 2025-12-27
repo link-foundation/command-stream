@@ -24,11 +24,12 @@ console.log('If this hangs, press Ctrl+C to stop\n');
 
 const startTime = Date.now();
 
-const result = await $`gh gist create ${tempFile} --desc "hang-test" --secret`.run({ 
-  capture: true, 
-  mirror: false
-  // No timeout - let it hang if it will
-});
+const result =
+  await $`gh gist create ${tempFile} --desc "hang-test" --secret`.run({
+    capture: true,
+    mirror: false,
+    // No timeout - let it hang if it will
+  });
 
 // If we get here, it didn't hang
 const duration = Date.now() - startTime;

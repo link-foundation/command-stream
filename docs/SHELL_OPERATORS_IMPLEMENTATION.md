@@ -1,11 +1,13 @@
 # Shell Operators Implementation Complete
 
 ## Summary
+
 We've successfully implemented support for shell operators (`&&`, `||`, `;`, `()`) in command-stream, allowing virtual commands like `cd` to work correctly with these operators.
 
 ## What Was Implemented
 
 ### 1. Shell Parser (`src/shell-parser.mjs`)
+
 - Tokenizes and parses shell commands with operators
 - Handles `&&` (AND), `||` (OR), `;` (semicolon), `()` (subshells)
 - Supports pipes `|`, redirections `>`, `>>`, `<`
@@ -13,12 +15,14 @@ We've successfully implemented support for shell operators (`&&`, `||`, `;`, `()
 - Falls back to `sh -c` for unsupported features (globs, variable expansion, etc.)
 
 ### 2. ProcessRunner Enhancements (`src/$.mjs`)
+
 - `_runSequence()` - Executes command sequences with proper operator semantics
 - `_runSubshell()` - Handles subshell isolation (saves/restores cwd)
 - `_runSimpleCommand()` - Executes individual commands (virtual or real)
 - Integration with existing pipeline support
 
 ### 3. Fixed cd Command Behavior
+
 - `cd` now works correctly in all contexts:
   - `cd /tmp` - changes directory (persists) ✓
   - `cd /tmp && ls` - both commands see /tmp ✓
@@ -41,22 +45,22 @@ We've successfully implemented support for shell operators (`&&`, `||`, `;`, `()
 
 ```javascript
 // cd with && operator
-await $`cd /tmp && pwd`  // Output: /tmp
+await $`cd /tmp && pwd`; // Output: /tmp
 
-// cd with || operator  
-await $`cd /nonexistent || echo "failed"`  // Output: failed
+// cd with || operator
+await $`cd /nonexistent || echo "failed"`; // Output: failed
 
 // Multiple commands with ;
-await $`cd /tmp ; pwd ; cd /usr ; pwd`  // Output: /tmp\n/usr
+await $`cd /tmp ; pwd ; cd /usr ; pwd`; // Output: /tmp\n/usr
 
 // Subshell isolation
-await $`(cd /tmp && pwd) ; pwd`  // Output: /tmp\n<original-dir>
+await $`(cd /tmp && pwd) ; pwd`; // Output: /tmp\n<original-dir>
 
 // Complex chains
-await $`cd /tmp && git init && echo "done"`
+await $`cd /tmp && git init && echo "done"`;
 
 // Nested subshells
-await $`(cd /tmp && (cd /usr && pwd) && pwd)`  // Output: /usr\n/tmp
+await $`(cd /tmp && (cd /usr && pwd) && pwd)`; // Output: /usr\n/tmp
 ```
 
 ## Benefits
@@ -70,6 +74,7 @@ await $`(cd /tmp && (cd /usr && pwd) && pwd)`  // Output: /usr\n/tmp
 ## Testing
 
 All major shell operator scenarios are tested and working:
+
 - ✓ AND operator (`&&`)
 - ✓ OR operator (`||`)
 - ✓ Semicolon operator (`;`)
@@ -89,6 +94,7 @@ All major shell operator scenarios are tested and working:
 ## Future Enhancements
 
 Possible future additions:
+
 - Background execution (`&`)
 - Here documents (`<<`)
 - Process substitution (`<()`, `>()`)

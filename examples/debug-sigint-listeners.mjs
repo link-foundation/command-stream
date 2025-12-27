@@ -8,13 +8,16 @@ function logSigintListeners(label) {
   const listeners = process.listeners('SIGINT');
   console.log(`\n--- ${label} ---`);
   console.log('Total SIGINT listeners:', listeners.length);
-  
+
   listeners.forEach((listener, i) => {
     const str = listener.toString();
-    const isCommandStream = str.includes('activeProcessRunners') || 
-                           str.includes('ProcessRunner') ||
-                           str.includes('activeChildren');
-    console.log(`Listener ${i}: ${isCommandStream ? 'COMMAND-STREAM' : 'OTHER'}`);
+    const isCommandStream =
+      str.includes('activeProcessRunners') ||
+      str.includes('ProcessRunner') ||
+      str.includes('activeChildren');
+    console.log(
+      `Listener ${i}: ${isCommandStream ? 'COMMAND-STREAM' : 'OTHER'}`
+    );
     if (isCommandStream) {
       console.log(`  Source preview: ${str.substring(0, 200)}...`);
     }

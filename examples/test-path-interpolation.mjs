@@ -38,7 +38,7 @@ async function testPathInterpolation() {
   console.log('\n4. Testing command building:');
   const testPath = '/Users/test/.claude/local/claude';
   console.log('Variable value:', JSON.stringify(testPath));
-  
+
   try {
     // Create command but don't execute
     const cmd = $`${testPath} --help`;
@@ -52,7 +52,7 @@ async function testPathInterpolation() {
   process.env.TEST_CLAUDE_PATH = '/usr/bin/echo';
   const claudeFromEnv = process.env.TEST_CLAUDE_PATH;
   console.log('Env var value:', JSON.stringify(claudeFromEnv));
-  
+
   try {
     const result5 = await $`${claudeFromEnv} "env test"`;
     console.log('✅ Env var path works:', result5.stdout.trim());

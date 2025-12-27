@@ -5,19 +5,19 @@ console.log('=== Test cat | jq directly ===\n');
 // Direct Bun test
 const proc1 = Bun.spawn(['bun', 'run', 'examples/emulate-claude-stream.mjs'], {
   stdout: 'pipe',
-  stderr: 'pipe'
+  stderr: 'pipe',
 });
 
 const proc2 = Bun.spawn(['cat'], {
   stdin: proc1.stdout,
   stdout: 'pipe',
-  stderr: 'pipe'
+  stderr: 'pipe',
 });
 
 const proc3 = Bun.spawn(['jq', '.'], {
   stdin: proc2.stdout,
   stdout: 'pipe',
-  stderr: 'pipe'
+  stderr: 'pipe',
 });
 
 const start = Date.now();

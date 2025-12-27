@@ -18,13 +18,19 @@ console.log('- Uses pseudo-terminal for proper capture');
 console.log('\nStarting top... Press q to quit when ready.\n');
 
 const logStream = fs.createWriteStream(logPath, { flags: 'a' });
-logStream.write(`\n=== Top PTY session started at ${new Date().toISOString()} ===\n`);
+logStream.write(
+  `\n=== Top PTY session started at ${new Date().toISOString()} ===\n`
+);
 
 // The issue: automatic interactive detection uses stdio: 'inherit' which prevents output capture
 // For now, we need to use a non-interactive command to demonstrate logging
 // Using 'top -l 3' (3 iterations) instead of interactive top
-console.log('Note: Using top -l 3 (3 iterations) to demonstrate logging capability');
-console.log('Interactive top with logging requires PTY support which is not yet implemented\n');
+console.log(
+  'Note: Using top -l 3 (3 iterations) to demonstrate logging capability'
+);
+console.log(
+  'Interactive top with logging requires PTY support which is not yet implemented\n'
+);
 
 const proc = $`top -l 3`;
 
@@ -35,9 +41,11 @@ proc.on('stdout', (chunk) => {
   // Log raw data (with ANSI codes) to file
   logStream.write(chunk);
   outputSize += chunk.length;
-  
+
   // Log progress
-  console.log(`[LOG] Captured ${chunk.length} bytes (total: ${outputSize} bytes)`);
+  console.log(
+    `[LOG] Captured ${chunk.length} bytes (total: ${outputSize} bytes)`
+  );
 });
 
 // Log stderr if any
@@ -48,7 +56,9 @@ proc.on('stderr', (chunk) => {
 
 // Handle process completion
 proc.on('end', (result) => {
-  logStream.write(`\n=== Top PTY session ended with code: ${result.code} at ${new Date().toISOString()} ===\n`);
+  logStream.write(
+    `\n=== Top PTY session ended with code: ${result.code} at ${new Date().toISOString()} ===\n`
+  );
   logStream.end();
   console.log(`\n=== Session logged to ${logPath} ===`);
   console.log(`=== Total output captured: ${outputSize} bytes ===`);

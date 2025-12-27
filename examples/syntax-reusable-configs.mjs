@@ -5,9 +5,9 @@
 import { $ } from '../src/$.mjs';
 
 console.log('Reusable configurations:');
-const $debug = $({ 
+const $debug = $({
   env: { ...process.env, DEBUG: 'true' },
-  mirror: false 
+  mirror: false,
 });
 
 // Run multiple commands with same configuration

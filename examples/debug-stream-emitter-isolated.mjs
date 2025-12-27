@@ -12,7 +12,7 @@ console.log('Initial listeners map:', cmd.listeners);
 cmd.on('data', () => console.log('DATA listener called'));
 console.log('After data listener:', cmd.listeners);
 
-cmd.on('end', () => console.log('END listener called'));  
+cmd.on('end', () => console.log('END listener called'));
 console.log('After end listener:', cmd.listeners);
 
 cmd.on('exit', () => console.log('EXIT listener called'));
@@ -20,9 +20,11 @@ console.log('After exit listener:', cmd.listeners);
 
 // Override emit to debug the listener lookup
 const originalEmit = cmd.emit.bind(cmd);
-cmd.emit = function(event, ...args) {
+cmd.emit = function (event, ...args) {
   const listeners = this.listeners.get(event);
-  console.log(`EMIT ${event}: found ${listeners ? listeners.length : 0} listeners`);
+  console.log(
+    `EMIT ${event}: found ${listeners ? listeners.length : 0} listeners`
+  );
   if (listeners) {
     console.log(`Listeners array:`, listeners);
     for (let i = 0; i < listeners.length; i++) {

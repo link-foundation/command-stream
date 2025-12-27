@@ -18,4 +18,6 @@ for await (const chunk of $`bun run examples/emulate-claude-stream.mjs | cat | j
   }
 }
 console.log(`Total: ${chunkCount} chunks`);
-console.log(chunkCount >= 5 ? '✅ Multi-stage streaming works' : '❌ Multi-stage buffered');
+console.log(
+  chunkCount >= 5 ? '✅ Multi-stage streaming works' : '❌ Multi-stage buffered'
+);

@@ -44,14 +44,14 @@ export default async function test({ args }) {
         }
 
       case '-z': // String is empty
-        return { stdout: '', code: (!operand || operand.length === 0) ? 0 : 1 };
+        return { stdout: '', code: !operand || operand.length === 0 ? 0 : 1 };
 
       case '-n': // String is not empty
-        return { stdout: '', code: (operand && operand.length > 0) ? 0 : 1 };
+        return { stdout: '', code: operand && operand.length > 0 ? 0 : 1 };
 
       default:
         // Simple string test (non-empty)
-        return { stdout: '', code: (operator && operator.length > 0) ? 0 : 1 };
+        return { stdout: '', code: operator && operator.length > 0 ? 0 : 1 };
     }
   } catch (error) {
     return VirtualUtils.error(`test: ${error.message}`);

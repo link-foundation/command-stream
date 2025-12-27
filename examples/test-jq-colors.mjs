@@ -6,14 +6,16 @@ console.log('=== Testing jq color output in pipelines ===\n');
 
 // Test 1: Direct jq with color output
 console.log('1. Direct jq command with --color-output:');
-const directResult = await $`echo '{"name": "test", "value": 42, "active": true}' | jq --color-output .`;
+const directResult =
+  await $`echo '{"name": "test", "value": 42, "active": true}' | jq --color-output .`;
 console.log('Raw output:');
 process.stdout.write(directResult.stdout);
 console.log('\nRaw bytes (first 100):');
 console.log(Buffer.from(directResult.stdout.slice(0, 100)));
 
 console.log('\n2. Pipeline with jq --color-output:');
-const pipeResult = await $`echo '{"users": [{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}]}' | jq --color-output '.users[]'`;
+const pipeResult =
+  await $`echo '{"users": [{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}]}' | jq --color-output '.users[]'`;
 console.log('Raw output:');
 process.stdout.write(pipeResult.stdout);
 
