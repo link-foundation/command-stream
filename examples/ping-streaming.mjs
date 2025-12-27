@@ -16,14 +16,18 @@ try {
       if (output) {
         const timestamp = new Date().toISOString().substring(11, 23);
         console.log(`[${timestamp}] ${output}`);
-        
+
         // Parse ping statistics if available
         if (output.includes('time=')) {
           const timeMatch = output.match(/time=([0-9.]+)/);
           if (timeMatch) {
             const responseTime = parseFloat(timeMatch[1]);
-            const status = responseTime < 50 ? '🟢 Fast' : 
-                          responseTime < 100 ? '🟡 Normal' : '🔴 Slow';
+            const status =
+              responseTime < 50
+                ? '🟢 Fast'
+                : responseTime < 100
+                  ? '🟡 Normal'
+                  : '🔴 Slow';
             console.log(`    └─ Response time: ${responseTime}ms ${status}`);
           }
         }

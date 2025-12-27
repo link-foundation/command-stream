@@ -56,7 +56,7 @@ describe('command-stream Feature Validation', () => {
     test('should provide live output streaming', async () => {
       const chunks = [];
       let receivedLiveData = false;
-      
+
       for await (const chunk of $`echo "streaming test"`.stream()) {
         if (chunk.type === 'stdout') {
           chunks.push(chunk.data.toString());
@@ -64,7 +64,7 @@ describe('command-stream Feature Validation', () => {
           break; // Test that we can get data immediately
         }
       }
-      
+
       expect(receivedLiveData).toBe(true);
       expect(chunks.length).toBeGreaterThan(0);
     });
@@ -72,14 +72,14 @@ describe('command-stream Feature Validation', () => {
     test('should stream data as it arrives, not buffered', async () => {
       const startTime = Date.now();
       let firstChunkTime = null;
-      
+
       for await (const chunk of $`echo "immediate"; sleep 0.1; echo "delayed"`.stream()) {
         if (chunk.type === 'stdout' && firstChunkTime === null) {
           firstChunkTime = Date.now();
           break; // Get first chunk immediately
         }
       }
-      
+
       const timeToFirstChunk = firstChunkTime - startTime;
       expect(timeToFirstChunk).toBeLessThan(50); // Should be immediate, not waiting for full command
     });
@@ -88,12 +88,14 @@ describe('command-stream Feature Validation', () => {
   describe('Async Iteration', () => {
     test('should support for await (chunk of $.stream())', async () => {
       const chunks = [];
-      
+
       for await (const chunk of $`echo "async iteration test"`.stream()) {
         chunks.push(chunk);
-        if (chunk.type === 'stdout') break;
+        if (chunk.type === 'stdout') {
+          break;
+        }
       }
-      
+
       expect(chunks.length).toBeGreaterThan(0);
       expect(chunks[0]).toHaveProperty('type');
       expect(chunks[0]).toHaveProperty('data');
@@ -111,11 +113,11 @@ describe('command-stream Feature Validation', () => {
   });
 
   describe('EventEmitter Pattern', () => {
-    test('should support .on("data", ...) events', async () => {
-      return new Promise(async (resolve) => {
+    test('should support .on("data", ...) events', async () =>
+      new Promise(async (resolve) => {
         let dataReceived = false;
         const timeout = setTimeout(() => resolve(), 1000);
-        
+
         const runner = $`echo "event test"`
           .on('data', (chunk) => {
             dataReceived = true;
@@ -135,15 +137,14 @@ describe('command-stream Feature Validation', () => {
               setTimeout(() => resolve(), 10);
             }
           });
-        
+
         // Ensure the command starts
         await runner.start();
-      });
-    });
+      }));
 
-    test('should support multiple event types', async () => {
-      return new Promise(async (resolve, reject) => {
-        let events = [];
+    test('should support multiple event types', async () =>
+      new Promise(async (resolve, reject) => {
+        const events = [];
         const timeout = setTimeout(() => {
           // Don't wait forever, just check what we got
           clearTimeout(timeout);
@@ -153,7 +154,7 @@ describe('command-stream Feature Validation', () => {
           // Wait a bit to ensure cleanup completes
           setTimeout(() => resolve(), 10);
         }, 1000);
-        
+
         const cmd = $`echo "stdout"; echo "stderr" >&2`
           .on('stdout', () => events.push('stdout'))
           .on('stderr', () => events.push('stderr'))
@@ -170,29 +171,28 @@ describe('command-stream Feature Validation', () => {
             clearTimeout(timeout);
             reject(err);
           });
-        
+
         // Start the command explicitly
         await cmd.start();
-      });
-    });
+      }));
   });
 
   describe('Mixed Patterns', () => {
     test('should support events + await simultaneously', async () => {
       let eventData = '';
       let eventCount = 0;
-      
+
       const process = $`echo "mixed pattern test"`;
-      
+
       process.on('data', (chunk) => {
         if (chunk.type === 'stdout') {
           eventCount++;
           eventData += chunk.data.toString();
         }
       });
-      
+
       const result = await process;
-      
+
       expect(eventCount).toBeGreaterThan(0);
       expect(eventData.trim()).toBe('mixed pattern test');
       expect(result.stdout.trim()).toBe('mixed pattern test');
@@ -204,7 +204,7 @@ describe('command-stream Feature Validation', () => {
     test('should auto-quote dangerous input', async () => {
       const dangerous = "'; rm -rf /; echo 'hacked";
       const result = await $`echo ${dangerous}`;
-      
+
       expect(result.stdout.trim()).toBe(dangerous);
       expect(result.code).toBe(0);
     });
@@ -212,7 +212,7 @@ describe('command-stream Feature Validation', () => {
     test('should handle special characters safely', async () => {
       const special = '$HOME && echo "injection"';
       const result = await $`echo ${special}`;
-      
+
       expect(result.stdout.trim()).toBe(special);
     });
   });
@@ -232,7 +232,7 @@ describe('command-stream Feature Validation', () => {
       // by processing data as it comes rather than buffering everything
       const chunks = [];
       let totalSize = 0;
-      
+
       for await (const chunk of $`echo "memory efficient streaming test"`.stream()) {
         if (chunk.type === 'stdout') {
           chunks.push(chunk.data);
@@ -240,7 +240,7 @@ describe('command-stream Feature Validation', () => {
           break; // Process immediately, don't accumulate
         }
       }
-      
+
       expect(chunks.length).toBe(1);
       expect(totalSize).toBeGreaterThan(0);
     });
@@ -249,7 +249,7 @@ describe('command-stream Feature Validation', () => {
   describe('Error Handling', () => {
     test('should handle non-zero exit codes gracefully', async () => {
       const result = await $`exit 42`;
-      
+
       expect(result.code).toBe(42);
       expect(result).toHaveProperty('stdout');
       expect(result).toHaveProperty('stderr');

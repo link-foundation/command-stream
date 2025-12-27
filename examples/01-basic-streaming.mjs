@@ -8,5 +8,7 @@ $`claude "Count from 1 to 3 briefly"`
   .on('data', (chunk) => {
     console.log(`Chunk ${++chunkCount}: ${chunk.data.toString().trim()}`);
   })
-  .on('end', (result) => console.log(`Done! ${chunkCount} chunks, exit: ${result.code}`))
+  .on('end', (result) =>
+    console.log(`Done! ${chunkCount} chunks, exit: ${result.code}`)
+  )
   .start();

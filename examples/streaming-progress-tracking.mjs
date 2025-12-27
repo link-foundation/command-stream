@@ -22,7 +22,7 @@ echo "Complete!"
       const output = chunk.data.toString().trim();
       if (output.includes('Progress:')) {
         progressCount++;
-        const percent = (progressCount / 5 * 100).toFixed(0);
+        const percent = ((progressCount / 5) * 100).toFixed(0);
         console.log(`📊 ${output} (${percent}%)`);
       } else if (output.includes('Complete')) {
         console.log(`✅ ${output}`);

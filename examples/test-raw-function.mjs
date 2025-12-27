@@ -40,7 +40,7 @@ async function demonstrateRaw() {
 
   // Example 4: Mix raw command with safe user input
   console.log('\nExample 4: Raw command + safe variable');
-  const safeInput = 'test file.txt';  // This will be auto-quoted
+  const safeInput = 'test file.txt'; // This will be auto-quoted
   const cmd4 = raw('echo "Processing:"');
   const result4 = await $`${cmd4} ${safeInput}`;
   console.log('Command:', `${cmd4.raw} [auto-quoted: ${safeInput}]`);
@@ -54,7 +54,7 @@ async function demonstrateRaw() {
   const config = {
     listHidden: 'ls -la | grep "^\\."',
     countFiles: 'ls -1 | wc -l',
-    diskUsage: 'du -sh . 2>/dev/null || echo "N/A"'
+    diskUsage: 'du -sh . 2>/dev/null || echo "N/A"',
   };
 
   console.log('\nExample 5: Commands from trusted configuration');
@@ -62,7 +62,10 @@ async function demonstrateRaw() {
     console.log(`\n${name}:`, command);
     try {
       const result = await $({ mirror: false })`${raw(command)}`;
-      console.log('Output:', result.stdout.trim() || result.stderr.trim() || '(no output)');
+      console.log(
+        'Output:',
+        result.stdout.trim() || result.stderr.trim() || '(no output)'
+      );
       console.log('Exit code:', result.code);
     } catch (error) {
       console.log('Error:', error.message);
@@ -78,7 +81,10 @@ async function demonstrateRaw() {
   console.log('Input:', testString);
   const rawResult = await $({ mirror: false })`${raw(testString)}`;
   console.log('Executed:', testString);
-  console.log('Output lines:', rawResult.stdout.split('\n').filter(l => l.trim()).length);
+  console.log(
+    'Output lines:',
+    rawResult.stdout.split('\n').filter((l) => l.trim()).length
+  );
 
   console.log('\nWithout raw() - treated as literal string:');
   console.log('Input:', testString);
@@ -127,13 +133,21 @@ async function demonstrateRaw() {
   console.log('❌ BAD use case: User input');
   console.log('const userCmd = getUserInput();');
   console.log('await $`${raw(userCmd)}`; // ❌ DANGEROUS!');
-  console.log('Note: NEVER use raw() with user input - use normal interpolation\n');
+  console.log(
+    'Note: NEVER use raw() with user input - use normal interpolation\n'
+  );
 
   console.log('Summary:');
   console.log('--------');
-  console.log('✅ Use raw() for: Trusted commands, config files, hardcoded strings');
-  console.log('❌ Never use raw() for: User input, external data, untrusted sources');
-  console.log('💡 Default behavior (auto-escape) is safe and should be used for all user input');
+  console.log(
+    '✅ Use raw() for: Trusted commands, config files, hardcoded strings'
+  );
+  console.log(
+    '❌ Never use raw() for: User input, external data, untrusted sources'
+  );
+  console.log(
+    '💡 Default behavior (auto-escape) is safe and should be used for all user input'
+  );
 }
 
 demonstrateRaw().catch(console.error);

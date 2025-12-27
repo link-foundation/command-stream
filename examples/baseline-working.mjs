@@ -4,9 +4,13 @@ import { spawn } from 'child_process';
 
 console.log('🧪 Baseline: Claude with stdin (WORKING)');
 
-const claude = spawn('claude', ['--output-format', 'stream-json', '--verbose', '--model', 'sonnet'], {
-  stdio: ['pipe', 'pipe', 'pipe']
-});
+const claude = spawn(
+  'claude',
+  ['--output-format', 'stream-json', '--verbose', '--model', 'sonnet'],
+  {
+    stdio: ['pipe', 'pipe', 'pipe'],
+  }
+);
 
 let chunkCount = 0;
 

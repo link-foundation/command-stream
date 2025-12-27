@@ -32,7 +32,11 @@ console.log(`  cmd: ${shell.cmd}`);
 console.log(`  args: ${JSON.stringify(shell.args)}`);
 
 console.log('\nOriginal spawn args:');
-const spawnArgs1 = [shell.cmd, ...shell.args.filter(arg => arg !== '-l'), commandStr];
+const spawnArgs1 = [
+  shell.cmd,
+  ...shell.args.filter((arg) => arg !== '-l'),
+  commandStr,
+];
 console.log(`  ${JSON.stringify(spawnArgs1)}`);
 
 console.log('\nCorrected spawn args (should include -c):');
@@ -72,10 +76,12 @@ if (isBun) {
   }
 } else {
   const cp = await import('child_process');
-  
+
   console.log('\nTesting with original args:');
   try {
-    const result1 = cp.spawnSync(spawnArgs1[0], spawnArgs1.slice(1), { encoding: 'utf-8' });
+    const result1 = cp.spawnSync(spawnArgs1[0], spawnArgs1.slice(1), {
+      encoding: 'utf-8',
+    });
     console.log(`  Exit code: ${result1.status}`);
     console.log(`  Stdout: "${result1.stdout?.trim() || ''}"`);
     console.log(`  Stderr: "${result1.stderr?.trim() || ''}"`);
@@ -85,7 +91,9 @@ if (isBun) {
 
   console.log('\nTesting with corrected args:');
   try {
-    const result2 = cp.spawnSync(spawnArgs2[0], spawnArgs2.slice(1), { encoding: 'utf-8' });
+    const result2 = cp.spawnSync(spawnArgs2[0], spawnArgs2.slice(1), {
+      encoding: 'utf-8',
+    });
     console.log(`  Exit code: ${result2.status}`);
     console.log(`  Stdout: "${result2.stdout?.trim() || ''}"`);
     console.log(`  Stderr: "${result2.stderr?.trim() || ''}"`);

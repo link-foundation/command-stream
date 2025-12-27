@@ -8,30 +8,32 @@ const cmd = $`sh -c 'echo "test"'`;
 
 // Instrument the stream method to see internal state
 const originalStream = cmd.stream.bind(cmd);
-cmd.stream = function() {
+cmd.stream = function () {
   console.log('stream() called');
-  
+
   const generator = originalStream();
-  
+
   // Override the generator's next method to log state changes
   const originalNext = generator.next.bind(generator);
-  generator.next = function() {
+  generator.next = function () {
     console.log('generator.next() called');
     const promise = originalNext();
-    
-    promise.then(result => {
-      console.log('generator.next() resolved:', {
-        done: result.done,
-        hasValue: !!result.value,
-        valueType: result.value?.type
+
+    promise
+      .then((result) => {
+        console.log('generator.next() resolved:', {
+          done: result.done,
+          hasValue: !!result.value,
+          valueType: result.value?.type,
+        });
+      })
+      .catch((err) => {
+        console.log('generator.next() error:', err.message);
       });
-    }).catch(err => {
-      console.log('generator.next() error:', err.message);
-    });
-    
+
     return promise;
   };
-  
+
   return generator;
 };
 
@@ -47,13 +49,13 @@ try {
   for await (const chunk of cmd.stream()) {
     count++;
     console.log(`Received chunk ${count}:`, chunk.type);
-    
+
     if (count >= 2) {
       console.log('Breaking after 2 chunks');
       break;
     }
   }
-  
+
   clearTimeout(timeout);
   console.log('Stream test completed with', count, 'chunks');
 } catch (error) {

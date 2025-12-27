@@ -9,7 +9,7 @@ console.log('Starting iteration...');
 for await (const chunk of runner.stream()) {
   iterations++;
   console.log(`Iteration ${iterations}`);
-  
+
   if (iterations >= 3) {
     console.log('Breaking...');
     break;
@@ -21,7 +21,7 @@ console.log(`Total iterations: ${iterations}`);
 
 // Check if the runner is actually stopped
 console.log('\nWaiting 100ms...');
-await new Promise(resolve => setTimeout(resolve, 100));
+await new Promise((resolve) => setTimeout(resolve, 100));
 
 console.log('Still finished:', runner.finished);
 

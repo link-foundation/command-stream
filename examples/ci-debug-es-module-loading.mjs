@@ -2,10 +2,10 @@
 
 /**
  * Example: Debugging ES module loading failures in CI
- * 
+ *
  * Problem: In CI environments, child processes spawned with ES module imports
  * sometimes fail immediately with SIGINT or other signals.
- * 
+ *
  * Solution: Use different approaches for loading modules in child processes.
  */
 
@@ -17,21 +17,21 @@ console.log('Testing ES module loading in child processes');
 // Example 1: Direct ES module import (may fail in CI)
 async function testDirectESModule() {
   console.log('\nTEST 1: Direct ES module import in child process');
-  
+
   const script = `
     import { $ } from '../src/$.mjs';
     console.log('Module loaded successfully');
     const result = await $\`echo "ES module test"\`;
     console.log('Result:', result.stdout);
   `;
-  
+
   try {
     // This might fail in CI with immediate SIGINT
     const child = spawn('node', ['--input-type=module', '-e', script], {
       stdio: 'inherit',
-      cwd: process.cwd()
+      cwd: process.cwd(),
     });
-    
+
     await new Promise((resolve, reject) => {
       child.on('exit', (code, signal) => {
         if (code === 0) {
@@ -51,7 +51,7 @@ async function testDirectESModule() {
 // Example 2: CommonJS fallback approach
 async function testCommonJSFallback() {
   console.log('\nTEST 2: CommonJS-style dynamic import');
-  
+
   const script = `
     (async () => {
       try {
@@ -66,12 +66,12 @@ async function testCommonJSFallback() {
       }
     })();
   `;
-  
+
   const child = spawn('node', ['--input-type=module', '-e', script], {
     stdio: 'inherit',
-    cwd: process.cwd()
+    cwd: process.cwd(),
   });
-  
+
   await new Promise((resolve) => {
     child.on('exit', (code, signal) => {
       console.log(`Process exited with code ${code}, signal ${signal}`);
@@ -83,17 +83,24 @@ async function testCommonJSFallback() {
 // Example 3: Simple inline script without imports (most reliable in CI)
 async function testInlineScript() {
   console.log('\nTEST 3: Inline script without ES module imports');
-  
-  const child = spawn('node', ['-e', `
+
+  const child = spawn(
+    'node',
+    [
+      '-e',
+      `
     console.log('INLINE_START');
     setTimeout(() => {
       console.log('INLINE_END');
       process.exit(0);
     }, 100);
-  `], {
-    stdio: 'inherit'
-  });
-  
+  `,
+    ],
+    {
+      stdio: 'inherit',
+    }
+  );
+
   await new Promise((resolve) => {
     child.on('exit', (code) => {
       console.log(`✓ Inline script completed with code ${code}`);
@@ -105,12 +112,16 @@ async function testInlineScript() {
 // Example 4: Shell command fallback (most compatible)
 async function testShellFallback() {
   console.log('\nTEST 4: Shell command fallback');
-  
+
   // Use shell commands directly when ES modules fail
-  const child = spawn('sh', ['-c', 'echo "SHELL_START" && sleep 0.1 && echo "SHELL_END"'], {
-    stdio: 'inherit'
-  });
-  
+  const child = spawn(
+    'sh',
+    ['-c', 'echo "SHELL_START" && sleep 0.1 && echo "SHELL_END"'],
+    {
+      stdio: 'inherit',
+    }
+  );
+
   await new Promise((resolve) => {
     child.on('exit', (code) => {
       console.log(`✓ Shell command completed with code ${code}`);
@@ -122,7 +133,7 @@ async function testShellFallback() {
 // Example 5: Error handling with detailed diagnostics
 async function testWithDiagnostics() {
   console.log('\nTEST 5: Child process with detailed diagnostics');
-  
+
   const script = `
     console.error('[DIAG] Node version:', process.version);
     console.error('[DIAG] Platform:', process.platform);
@@ -142,12 +153,12 @@ async function testWithDiagnostics() {
       }
     );
   `;
-  
+
   const child = spawn('node', ['--input-type=module', '-e', script], {
     stdio: 'inherit',
-    cwd: process.cwd()
+    cwd: process.cwd(),
   });
-  
+
   await new Promise((resolve) => {
     child.on('exit', resolve);
   });
@@ -160,13 +171,13 @@ async function main() {
   console.log('- Platform:', process.platform);
   console.log('- CI:', process.env.CI || 'false');
   console.log('- GitHub Actions:', process.env.GITHUB_ACTIONS || 'false');
-  
+
   await testDirectESModule();
   await testCommonJSFallback();
   await testInlineScript();
   await testShellFallback();
   await testWithDiagnostics();
-  
+
   console.log('\nAll tests completed');
 }
 

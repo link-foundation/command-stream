@@ -26,7 +26,7 @@ console.log('\nStarting iteration...');
 for await (const chunk of runner.stream()) {
   iterations++;
   console.log(`  [RECEIVED ${iterations}]: ${chunk.data.toString().trim()}`);
-  
+
   if (iterations >= 3) {
     console.log('  [BREAKING]');
     break;

@@ -31,13 +31,9 @@ console.log(`RESULT: after_listeners=${afterListeners}`);
 
 // Test 2: Multiple concurrent commands share single handler
 console.log('TEST: Starting multiple concurrent commands');
-const promises = [
-  $`sleep 0.05`,
-  $`sleep 0.05`,
-  $`sleep 0.05`
-];
+const promises = [$`sleep 0.05`, $`sleep 0.05`, $`sleep 0.05`];
 
-const starts = promises.map(p => p.start());
+const starts = promises.map((p) => p.start());
 const concurrentListeners = process.listeners('SIGINT').length;
 console.log(`RESULT: concurrent_listeners=${concurrentListeners}`);
 

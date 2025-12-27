@@ -3,13 +3,19 @@
 import { $ } from '../src/$.mjs';
 
 console.log('=== Realtime JSON Streaming Demo ===\n');
-console.log('This demo shows that jq processes and outputs JSON objects immediately');
+console.log(
+  'This demo shows that jq processes and outputs JSON objects immediately'
+);
 console.log('as they arrive, not waiting for the entire stream to complete.\n');
-console.log('Watch the timestamps - each JSON object appears immediately after being generated!\n');
+console.log(
+  'Watch the timestamps - each JSON object appears immediately after being generated!\n'
+);
 console.log('---\n');
 
 // Example 1: Simple realtime streaming with visible delays
-console.log('Example 1: Streaming with 1-second delays between each JSON object:');
+console.log(
+  'Example 1: Streaming with 1-second delays between each JSON object:'
+);
 console.log('Starting at:', new Date().toISOString());
 console.log('');
 
@@ -46,13 +52,15 @@ for await (const chunk of serverLogs.stream()) {
     buffer += chunk.data.toString();
     const lines = buffer.split('\n');
     buffer = lines.pop() || ''; // Keep incomplete line in buffer
-    
+
     for (const line of lines) {
       if (line.trim()) {
         try {
           const timestamp = new Date().toISOString();
           const log = JSON.parse(line.trim());
-          console.log(`[${timestamp}] ${log.level}: ${log.msg} (generated at ${log.time})`);
+          console.log(
+            `[${timestamp}] ${log.level}: ${log.msg} (generated at ${log.time})`
+          );
         } catch (e) {
           console.log('Failed to parse:', line);
         }
@@ -82,14 +90,21 @@ for await (const chunk of metrics.stream()) {
     metricsBuffer += chunk.data.toString();
     const lines = metricsBuffer.split('\n');
     metricsBuffer = lines.pop() || '';
-    
+
     for (const line of lines) {
       if (line.trim()) {
         try {
           const timestamp = new Date().toISOString();
           const metric = JSON.parse(line.trim());
-          const statusIcon = metric.status === 'critical' ? '🔴' : metric.status === 'warning' ? '🟡' : '🟢';
-          console.log(`[${timestamp}] ${statusIcon} ${metric.host}: CPU ${metric.value}% - ${metric.status}`);
+          const statusIcon =
+            metric.status === 'critical'
+              ? '🔴'
+              : metric.status === 'warning'
+                ? '🟡'
+                : '🟢';
+          console.log(
+            `[${timestamp}] ${statusIcon} ${metric.host}: CPU ${metric.value}% - ${metric.status}`
+          );
         } catch (e) {
           console.log('Failed to parse metric:', line);
         }
@@ -116,11 +131,13 @@ eventCmd
   .on('data', (chunk) => {
     eventCount++;
     const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] Event #${eventCount}: ${chunk.toString().trim()}`);
+    console.log(
+      `[${timestamp}] Event #${eventCount}: ${chunk.toString().trim()}`
+    );
   })
   .on('end', (result) => {
     console.log(`\nStream completed. Total events: ${eventCount}`);
     console.log('Final result code:', result.code);
-    
+
     console.log('\n=== Demo Complete ===');
   });

@@ -11,12 +11,12 @@ console.log('- Proper stdin/stdout forwarding');
 console.log('\nStarting top... Press q to quit when ready.\n');
 
 // Use direct spawn with proper TTY settings for true interactivity
-const proc = $`top`.run({ 
-  stdin: 'inherit',  // Forward stdin directly 
-  mirror: false      // Don't mirror - we want direct terminal output
+const proc = $`top`.run({
+  stdin: 'inherit', // Forward stdin directly
+  mirror: false, // Don't mirror - we want direct terminal output
 });
 
-// Handle process completion  
+// Handle process completion
 proc.on('end', (result) => {
   console.log(`\n=== top exited with code: ${result.code} ===`);
 });

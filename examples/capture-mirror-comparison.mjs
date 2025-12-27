@@ -18,4 +18,6 @@ console.log('\n💡 Use cases:');
 console.log('  - capture: false, mirror: false → Maximum performance');
 console.log('  - capture: true, mirror: false  → Silent data processing');
 console.log('  - capture: false, mirror: true  → Just run and show output');
-console.log('  - capture: true, mirror: true   → Default (both capture and show)');
+console.log(
+  '  - capture: true, mirror: true   → Default (both capture and show)'
+);

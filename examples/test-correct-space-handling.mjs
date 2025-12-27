@@ -22,20 +22,19 @@ try {
   // This is the correct way - let the template literal handle quoting
   const result1 = await $`cd ${dirWithSpaces}`;
   console.log('Exit code:', result1.code);
-  
+
   const pwd1 = await $`pwd`;
   console.log('Current dir:', pwd1.stdout.trim());
   console.log('Expected:', dirWithSpaces);
   console.log('Match:', pwd1.stdout.trim() === dirWithSpaces);
-  
+
   await $`cd ${originalCwd}`;
-  
+
   console.log('\nAlso works: cd with && chain');
   const result2 = await $`cd ${dirWithSpaces} && pwd`;
   console.log('Output:', result2.stdout.trim());
   console.log('Expected:', dirWithSpaces);
   console.log('Match:', result2.stdout.trim() === dirWithSpaces);
-  
 } catch (error) {
   console.error('Error:', error.message);
   console.error('Stack:', error.stack);

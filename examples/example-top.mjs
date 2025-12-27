@@ -2,7 +2,9 @@
 
 import { $ } from '../src/$.mjs';
 
-console.log('=== Running top command with ANSI colors preserved (default behavior) ===');
+console.log(
+  '=== Running top command with ANSI colors preserved (default behavior) ==='
+);
 
 // Run top for 3 seconds then kill it
 const proc = $`top -l 1`;

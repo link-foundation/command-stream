@@ -3,8 +3,11 @@ import path from 'path';
 const VERBOSE = process.env.COMMAND_STREAM_VERBOSE === 'true';
 
 export function trace(category, messageOrFunc) {
-  if (!VERBOSE) return;
-  const message = typeof messageOrFunc === 'function' ? messageOrFunc() : messageOrFunc;
+  if (!VERBOSE) {
+    return;
+  }
+  const message =
+    typeof messageOrFunc === 'function' ? messageOrFunc() : messageOrFunc;
   const timestamp = new Date().toISOString();
   console.error(`[TRACE ${timestamp}] [${category}] ${message}`);
 }
@@ -47,7 +50,10 @@ export const VirtualUtils = {
       if (minCount === 1) {
         return this.missingOperandError(commandName);
       } else {
-        return this.invalidArgumentError(commandName, `requires at least ${minCount} arguments`);
+        return this.invalidArgumentError(
+          commandName,
+          `requires at least ${minCount} arguments`
+        );
       }
     }
     return null; // No error
@@ -58,7 +64,9 @@ export const VirtualUtils = {
    */
   resolvePath(filePath, cwd = null) {
     const basePath = cwd || process.cwd();
-    return path.isAbsolute(filePath) ? filePath : path.resolve(basePath, filePath);
+    return path.isAbsolute(filePath)
+      ? filePath
+      : path.resolve(basePath, filePath);
   },
 
   /**
@@ -77,5 +85,5 @@ export const VirtualUtils = {
    */
   createAsyncWrapper(promiseFactory) {
     return new Promise(promiseFactory);
-  }
+  },
 };

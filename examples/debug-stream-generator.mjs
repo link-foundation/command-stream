@@ -7,7 +7,7 @@ console.log('=== Stream Generator Debug ===');
 const cmd = $`echo "test"`;
 
 cmd.on('data', () => console.log('DATA listener called'));
-cmd.on('end', () => console.log('END listener called')); 
+cmd.on('end', () => console.log('END listener called'));
 cmd.on('exit', () => console.log('EXIT listener called'));
 
 console.log('Listeners before getting stream generator:', cmd.listeners.size);

@@ -11,16 +11,16 @@ const events = [
   { type: 'data', content: 'Processing module imports' },
   { type: 'progress', step: 3, message: 'Building context...' },
   { type: 'result', summary: 'Analysis complete' },
-  { type: 'end', status: 'success' }
+  { type: 'end', status: 'success' },
 ];
 
 async function* streamJsonEvents() {
   for (const event of events) {
     // Output JSON object
     console.log(JSON.stringify(event));
-    
+
     // Small delay to simulate processing
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise((resolve) => setTimeout(resolve, 200));
   }
 }
 

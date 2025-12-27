@@ -15,7 +15,7 @@ for await (const chunk of $`yes x`.stream()) {
 console.log('After break');
 
 // Small delay to see if output continues
-await new Promise(r => setTimeout(r, 100));
+await new Promise((r) => setTimeout(r, 100));
 
 console.log('Done');
 process.exit(0);

@@ -75,6 +75,7 @@ const isTTY = process.stdout.isTTY;
 ## Common Fixes
 
 ### Force Stdout Flush
+
 ```javascript
 process.stdout.write('output\n');
 if (!process.stdout.isTTY) {
@@ -83,6 +84,7 @@ if (!process.stdout.isTTY) {
 ```
 
 ### Add Test Timeouts (Bun)
+
 ```javascript
 test('my test', async () => {
   // test code
@@ -90,15 +92,17 @@ test('my test', async () => {
 ```
 
 ### Fallback to Shell Commands
+
 ```javascript
 // Instead of spawning Node with ES modules
 spawn('sh', ['-c', 'echo "test"'], { stdio: 'inherit' });
 ```
 
 ### Proper Signal Cleanup
+
 ```javascript
 const cleanup = () => {
-  children.forEach(child => child.kill('SIGTERM'));
+  children.forEach((child) => child.kill('SIGTERM'));
 };
 process.on('SIGINT', cleanup);
 process.on('SIGTERM', cleanup);

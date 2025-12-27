@@ -11,15 +11,21 @@ const $verbose = $({ mirror: true });
 try {
   console.log('Running quiet ping...');
   for await (const chunk of $quiet`ping -c 2 127.0.0.1`.stream()) {
-    if (chunk.type === 'stdout' && chunk.data.toString().includes('bytes from')) {
+    if (
+      chunk.type === 'stdout' &&
+      chunk.data.toString().includes('bytes from')
+    ) {
       console.log(`🤫 Quiet result: ping successful`);
     }
   }
-  
+
   console.log('\nRunning verbose ping...');
   let count = 0;
   for await (const chunk of $verbose`ping -c 2 127.0.0.1`.stream()) {
-    if (chunk.type === 'stdout' && chunk.data.toString().includes('bytes from')) {
+    if (
+      chunk.type === 'stdout' &&
+      chunk.data.toString().includes('bytes from')
+    ) {
       count++;
       console.log(`📢 Verbose: packet #${count} received`);
     }

@@ -24,9 +24,11 @@ console.log('STARTING_SLEEP');
 console.error('[test-sleep.mjs] Wrote STARTING_SLEEP to stdout');
 
 // Ensure stdout is flushed immediately for CI environments
-await new Promise(resolve => {
+await new Promise((resolve) => {
   if (process.stdout.isTTY === false) {
-    console.error('[test-sleep.mjs] Non-TTY environment detected, forcing flush');
+    console.error(
+      '[test-sleep.mjs] Non-TTY environment detected, forcing flush'
+    );
     // Force flush in non-TTY environments (CI)
     process.stdout.write('', () => {
       console.error('[test-sleep.mjs] Stdout flush completed');
@@ -44,6 +46,11 @@ try {
   console.log('SLEEP_COMPLETED');
   console.error('[test-sleep.mjs] Sleep completed with code:', result.code);
 } catch (error) {
-  console.error('[test-sleep.mjs] Sleep interrupted:', error.message, 'code:', error.code);
+  console.error(
+    '[test-sleep.mjs] Sleep interrupted:',
+    error.message,
+    'code:',
+    error.code
+  );
   process.exit(error.code || 1);
 }

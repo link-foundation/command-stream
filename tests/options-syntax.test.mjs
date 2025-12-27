@@ -21,10 +21,10 @@ describe('$({ options }) syntax', () => {
 
   it('should support multiple options at once', async () => {
     // Test with multiple options
-    const $custom = $({ 
+    const $custom = $({
       stdin: 'hello world',
       capture: true,
-      mirror: false 
+      mirror: false,
     });
     const result = await $custom`cat`;
     expect(result.stdout).toBe('hello world');
@@ -33,8 +33,8 @@ describe('$({ options }) syntax', () => {
 
   it('should work with environment variables', async () => {
     // Test with custom environment
-    const $withEnv = $({ 
-      env: { ...process.env, TEST_VAR: 'custom_value' }
+    const $withEnv = $({
+      env: { ...process.env, TEST_VAR: 'custom_value' },
     });
     const result = await $withEnv`printenv TEST_VAR`;
     expect(result.stdout.trim()).toBe('custom_value');
@@ -50,13 +50,13 @@ describe('$({ options }) syntax', () => {
   it('should be reusable for multiple commands', async () => {
     // Create a reusable $ with options
     const $silent = $({ mirror: false, capture: true });
-    
+
     const result1 = await $silent`echo "first"`;
     expect(result1.stdout.trim()).toBe('first');
-    
+
     const result2 = await $silent`echo "second"`;
     expect(result2.stdout.trim()).toBe('second');
-    
+
     const result3 = await $silent`echo "third"`;
     expect(result3.stdout.trim()).toBe('third');
   });
@@ -65,10 +65,10 @@ describe('$({ options }) syntax', () => {
     // Mix regular and options syntax
     const regular = await $`echo "regular"`;
     expect(regular.stdout.trim()).toBe('regular');
-    
+
     const withOptions = await $({ mirror: false })`echo "with options"`;
     expect(withOptions.stdout.trim()).toBe('with options');
-    
+
     const regular2 = await $`echo "regular again"`;
     expect(regular2.stdout.trim()).toBe('regular again');
   });
@@ -93,7 +93,7 @@ describe('$({ options }) syntax', () => {
     const result = await $custom`echo Hello, ${name}!`;
     // Interpolation should apply quoting, but the final output depends on whether
     // virtual or real echo is used. Both behaviors are acceptable.
-    const expected = ["Hello, 'World'!", "Hello, World!"];
+    const expected = ["Hello, 'World'!", 'Hello, World!'];
     expect(expected).toContain(result.stdout.trim());
   });
 

@@ -20,6 +20,9 @@ const result = await coloredCmd;
 
 console.log('\nFinal result:');
 console.log('RESULT TYPE:', typeof result.stdout);
-console.log('RESULT BYTES (first 50):', Buffer.from(result.stdout.slice(0, 50)));
+console.log(
+  'RESULT BYTES (first 50):',
+  Buffer.from(result.stdout.slice(0, 50))
+);
 console.log('RESULT CONTENT:');
 process.stdout.write(result.stdout);

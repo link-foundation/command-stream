@@ -9,10 +9,12 @@ const cmd = $`bun run examples/emulate-claude-stream.mjs | cat | jq .`;
 const originalEmit = cmd.emit.bind(cmd);
 let emitCount = 0;
 
-cmd.emit = function(event, data) {
+cmd.emit = function (event, data) {
   if (event === 'stdout' || event === 'data') {
     emitCount++;
-    const preview = data.toString ? data.toString().substring(0, 40) : JSON.stringify(data).substring(0, 40);
+    const preview = data.toString
+      ? data.toString().substring(0, 40)
+      : JSON.stringify(data).substring(0, 40);
     console.log(`EMIT #${emitCount} [${event}]: ${preview}...`);
   }
   return originalEmit(event, data);

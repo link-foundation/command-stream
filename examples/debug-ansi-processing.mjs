@@ -17,8 +17,8 @@ console.log('Are they equal?', testData === processed);
 console.log('\n3. Testing with jq command and manual event handling:');
 const proc = $`echo '{"test": "value"}' | jq --color-output .`;
 
-let rawChunks = [];
-let processedChunks = [];
+const rawChunks = [];
+const processedChunks = [];
 
 // Capture raw stdout before processing
 proc.child.stdout.on('data', (chunk) => {

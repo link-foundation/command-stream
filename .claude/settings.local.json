@@ -44,9 +44,6 @@
     ],
     "deny": [],
     "ask": [],
-    "additionalDirectories": [
-      "/tmp",
-      "/usr/bin"
-    ]
+    "additionalDirectories": ["/tmp", "/usr/bin"]
   }
 }

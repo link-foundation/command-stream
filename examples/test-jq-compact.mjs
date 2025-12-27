@@ -6,14 +6,14 @@ console.log('Test: jq with -c (compact) flag\n');
 
 const proc1 = Bun.spawn(['./examples/emulate-claude-stream.mjs'], {
   stdout: 'pipe',
-  stderr: 'pipe'
+  stderr: 'pipe',
 });
 
 // Use jq -c for compact output (one line per JSON object)
 const proc2 = Bun.spawn(['jq', '-c', '.'], {
   stdin: proc1.stdout,
   stdout: 'pipe',
-  stderr: 'pipe'
+  stderr: 'pipe',
 });
 
 const start = Date.now();
@@ -23,7 +23,7 @@ for await (const chunk of proc2.stdout) {
   chunkCount++;
   const elapsed = Date.now() - start;
   const text = Buffer.from(chunk).toString().trim();
-  
+
   console.log(`[${elapsed}ms] Chunk ${chunkCount}: ${text}`);
 }
 

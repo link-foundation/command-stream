@@ -18,4 +18,6 @@ for await (const chunk of $`bun run examples/emulate-claude-stream.mjs | jq .`.s
   }
 }
 console.log(`Total: ${chunkCount} chunks`);
-console.log(chunkCount >= 5 ? '✅ Streaming works with jq!' : '❌ jq buffered output');
+console.log(
+  chunkCount >= 5 ? '✅ Streaming works with jq!' : '❌ jq buffered output'
+);

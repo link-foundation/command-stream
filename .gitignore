@@ -140,3 +140,6 @@ vite.config.ts.timestamp-*
 
 # Auth data
 .persisted-configs
+
+# jscpd reports
+reports/

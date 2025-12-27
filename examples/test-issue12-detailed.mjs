@@ -20,7 +20,7 @@ async function testScenarios() {
     const result = await cmd;
     console.log('Exit code:', result.code);
     console.log('Stderr:', result.stderr.trim());
-    
+
     // Check for double quotes in stderr
     if (result.stderr.includes("''")) {
       console.log('❌ Double quotes found in stderr!');
@@ -30,11 +30,14 @@ async function testScenarios() {
   } catch (error) {
     console.log('Exception:', error.message);
   }
-  
+
   console.log('\n2. Test with pipe (original issue):');
   console.log('------------------------------------');
   try {
-    const cmd = $({ capture: true, mirror: false })`${claude} -p "hi" --output-format stream-json --model sonnet | jq .`;
+    const cmd = $({
+      capture: true,
+      mirror: false,
+    })`${claude} -p "hi" --output-format stream-json --model sonnet | jq .`;
     console.log('Generated command:', cmd.spec.command);
     const result = await cmd;
     console.log('Exit code:', result.code);
@@ -42,32 +45,41 @@ async function testScenarios() {
   } catch (error) {
     console.log('Exception:', error.message);
   }
-  
+
   console.log('\n3. Test command construction:');
   console.log('------------------------------');
-  
+
   // Check different interpolation positions
   const testCases = [
-    { desc: 'First position', template: (p) => $({ mirror: false })`${p} --test` },
-    { desc: 'Middle position', template: (p) => $({ mirror: false })`echo ${p} test` },
+    {
+      desc: 'First position',
+      template: (p) => $({ mirror: false })`${p} --test`,
+    },
+    {
+      desc: 'Middle position',
+      template: (p) => $({ mirror: false })`echo ${p} test`,
+    },
     { desc: 'With pipe', template: (p) => $({ mirror: false })`${p} | cat` },
   ];
-  
+
   for (const { desc, template } of testCases) {
     const cmd = template(claude);
     console.log(`${desc}: ${cmd.spec.command}`);
   }
-  
+
   console.log('\n4. Check if pre-quoted paths work:');
   console.log('-----------------------------------');
-  
+
   // Test if already-quoted paths are handled correctly
   const quotedPath = `'${claude}'`;
   console.log('Input (pre-quoted):', quotedPath);
   const quotedCmd = $({ mirror: false })`${quotedPath} --test`;
   console.log('Generated command:', quotedCmd.spec.command);
-  
-  if (quotedCmd.spec.command.includes("'''") || quotedCmd.spec.command.includes("''")) {
+
+  if (
+    quotedCmd.spec.command.includes("'''") ||
+    quotedCmd.spec.command.includes("''")
+  ) {
     console.log('⚠️  Potential issue with pre-quoted path handling');
   } else {
     console.log('✅ Pre-quoted path handled correctly');

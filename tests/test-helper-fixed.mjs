@@ -1,17 +1,17 @@
 /**
  * Test Helper for command-stream tests
- * 
+ *
  * IMPORTANT: Due to Bun's test runner limitations, beforeEach/afterEach hooks
  * MUST be within describe() blocks to work properly.
- * 
+ *
  * Usage:
  * ```js
  * import { setupTestHooks } from './test-helper-fixed.mjs';
  * import { describe } from 'bun:test';
- * 
+ *
  * describe('Your test suite', () => {
  *   setupTestHooks();
- *   
+ *
  *   // Your tests here
  * });
  * ```
@@ -37,7 +37,7 @@ trace(`Original working directory: ${originalCwd}`);
 /**
  * Sets up beforeEach and afterEach hooks to restore working directory
  * and reset global state between tests.
- * 
+ *
  * MUST be called inside a describe() block!
  */
 export function setupTestHooks() {
@@ -63,15 +63,17 @@ export function setupTestHooks() {
             process.chdir('/');
           }
         } catch (e2) {
-          console.error('[test-helper] FATAL: Cannot set working directory in beforeEach');
+          console.error(
+            '[test-helper] FATAL: Cannot set working directory in beforeEach'
+          );
           trace('FATAL: Cannot set working directory in beforeEach');
         }
       }
     }
-    
+
     // Call the comprehensive reset
     resetGlobalState();
-    
+
     // Extra safety: ensure we're in a valid directory after reset
     try {
       process.cwd(); // This will throw if we're in a bad state
@@ -79,9 +81,9 @@ export function setupTestHooks() {
       // Force to a known good directory
       process.chdir(originalCwd);
     }
-    
+
     // Give a tiny bit of time for any async cleanup to complete
-    await new Promise(resolve => setTimeout(resolve, 1));
+    await new Promise((resolve) => setTimeout(resolve, 1));
     trace('beforeEach hook completed');
   });
 
@@ -107,15 +109,17 @@ export function setupTestHooks() {
             process.chdir('/');
           }
         } catch (e2) {
-          console.error('[test-helper] FATAL: Cannot set working directory in afterEach');
+          console.error(
+            '[test-helper] FATAL: Cannot set working directory in afterEach'
+          );
           trace('FATAL: Cannot set working directory in afterEach');
         }
       }
     }
-    
+
     // Call the comprehensive reset
     resetGlobalState();
-    
+
     // Extra safety: ensure we're in a valid directory after reset
     try {
       process.cwd(); // This will throw if we're in a bad state
@@ -123,9 +127,9 @@ export function setupTestHooks() {
       // Force to a known good directory
       process.chdir(originalCwd);
     }
-    
+
     // Give a tiny bit of time for any async cleanup to complete
-    await new Promise(resolve => setTimeout(resolve, 1));
+    await new Promise((resolve) => setTimeout(resolve, 1));
     trace('afterEach hook completed');
   });
 }

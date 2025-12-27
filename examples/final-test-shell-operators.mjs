@@ -67,7 +67,8 @@ await test('Subshell isolation works', async () => {
 await test('Complex chain works', async () => {
   const tempDir = mkdtempSync(join(tmpdir(), 'test-'));
   try {
-    const result = await $`cd ${tempDir} && echo "file1" > a.txt && echo "file2" > b.txt && ls | wc -l`;
+    const result =
+      await $`cd ${tempDir} && echo "file1" > a.txt && echo "file2" > b.txt && ls | wc -l`;
     const fileCount = parseInt(result.stdout.trim());
     if (fileCount !== 2) {
       throw new Error(`Expected 2 files, got ${fileCount}`);
@@ -107,14 +108,16 @@ await test('Virtual commands work in chains', async () => {
 
 // Summary
 console.log('\n=== Test Summary ===');
-const passed = testResults.filter(r => r.status === '✓').length;
-const failed = testResults.filter(r => r.status === '✗').length;
+const passed = testResults.filter((r) => r.status === '✓').length;
+const failed = testResults.filter((r) => r.status === '✗').length;
 console.log(`Passed: ${passed}/${testResults.length}`);
 if (failed > 0) {
   console.log('\nFailed tests:');
-  testResults.filter(r => r.status === '✗').forEach(r => {
-    console.log(`  - ${r.name}: ${r.error}`);
-  });
+  testResults
+    .filter((r) => r.status === '✗')
+    .forEach((r) => {
+      console.log(`  - ${r.name}: ${r.error}`);
+    });
 }
 
 process.exit(failed > 0 ? 1 : 0);

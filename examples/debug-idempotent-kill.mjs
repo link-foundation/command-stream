@@ -12,7 +12,9 @@ let exitEventCount = 0;
 
 runner.on('end', (result) => {
   endEventCount++;
-  console.log(`End event #${endEventCount}, code: ${result.code}, stderr: ${result.stderr.trim()}`);
+  console.log(
+    `End event #${endEventCount}, code: ${result.code}, stderr: ${result.stderr.trim()}`
+  );
 });
 
 runner.on('exit', (code) => {
@@ -23,7 +25,7 @@ runner.on('exit', (code) => {
 const promise = runner.start();
 
 // Give it a moment to start
-await new Promise(resolve => setTimeout(resolve, 50));
+await new Promise((resolve) => setTimeout(resolve, 50));
 
 console.log('Killing process...');
 runner.kill('SIGTERM');
@@ -47,7 +49,9 @@ runner.kill('SIGKILL');
 
 console.log(`\nAfter second kill:`);
 console.log(`- finished: ${runner.finished}`);
-console.log(`- result code: ${runner.result.code} (should still be 143 for SIGTERM)`);
+console.log(
+  `- result code: ${runner.result.code} (should still be 143 for SIGTERM)`
+);
 console.log(`- end events: ${endEventCount} (should still be 1)`);
 console.log(`- exit events: ${exitEventCount} (should still be 1)`);
 

@@ -17,5 +17,7 @@ child.stderr.on('data', (data) => {
 });
 
 child.on('close', (code) => {
-  console.log(`Process closed with code ${code}, received ${chunkCount} chunks`);
+  console.log(
+    `Process closed with code ${code}, received ${chunkCount} chunks`
+  );
 });

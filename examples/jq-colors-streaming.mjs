@@ -37,6 +37,6 @@ await filterCmd;
 
 console.log('\n=== Results ===');
 console.log('✅ ANSI colors preserved in jq pipelines');
-console.log('✅ Real-time streaming with color support');  
+console.log('✅ Real-time streaming with color support');
 console.log('✅ Use --color-output to force colors in pipelines');
 console.log('✅ Colors work even when not connected to terminal');

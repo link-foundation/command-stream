@@ -6,7 +6,7 @@ console.log('=== Testing Multi-Stream Pipeline Reading ===\n');
 
 const proc1 = Bun.spawn(['bun', 'run', 'examples/emulate-claude-stream.mjs'], {
   stdout: 'pipe',
-  stderr: 'pipe'
+  stderr: 'pipe',
 });
 
 // Use tee to split the stream so we can both pipe it and read it
@@ -15,7 +15,7 @@ const [readStream, pipeStream] = proc1.stdout.tee();
 const proc2 = Bun.spawn(['jq', '.'], {
   stdin: pipeStream,
   stdout: 'pipe',
-  stderr: 'pipe'
+  stderr: 'pipe',
 });
 
 const start = Date.now();

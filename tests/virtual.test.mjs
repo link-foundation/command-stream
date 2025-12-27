@@ -1,6 +1,13 @@
 import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
 import { beforeTestCleanup, afterTestCleanup } from './test-cleanup.mjs';
-import { $, shell, register, unregister, listCommands, enableVirtualCommands } from '../src/$.mjs';
+import {
+  $,
+  shell,
+  register,
+  unregister,
+  listCommands,
+  enableVirtualCommands,
+} from '../src/$.mjs';
 
 // Helper function to setup shell settings
 function setupShellSettings() {
@@ -17,11 +24,11 @@ describe('Virtual Commands System', () => {
     await beforeTestCleanup();
     setupShellSettings();
   });
-  
+
   afterEach(async () => {
     await afterTestCleanup();
   });
-  
+
   describe('Registration API', () => {
     test('should register and execute custom virtual command', async () => {
       register('greet', async ({ args }) => {
@@ -30,25 +37,25 @@ describe('Virtual Commands System', () => {
       });
 
       const result = await $`greet Alice`;
-      
+
       expect(result.stdout).toBe('Hello, Alice!\n');
       expect(result.code).toBe(0);
-      
+
       // Cleanup
       unregister('greet');
     });
 
     test('should unregister commands', async () => {
       register('temp', async () => ({ stdout: 'temp', code: 0 }));
-      
+
       // Verify it exists
       expect(listCommands()).toContain('temp');
-      
+
       // Unregister
       const removed = unregister('temp');
       expect(removed).toBe(true);
       expect(listCommands()).not.toContain('temp');
-      
+
       // Verify it falls back to system command
       try {
         await $`temp`; // Should fail since 'temp' is not a system command
@@ -59,15 +66,15 @@ describe('Virtual Commands System', () => {
 
     test('should list registered commands', () => {
       const initialCommands = listCommands();
-      
+
       register('test1', async () => ({ stdout: '', code: 0 }));
       register('test2', async () => ({ stdout: '', code: 0 }));
-      
+
       const commands = listCommands();
       expect(commands).toContain('test1');
       expect(commands).toContain('test2');
       expect(commands.length).toBe(initialCommands.length + 2);
-      
+
       // Cleanup
       unregister('test1');
       unregister('test2');
@@ -77,7 +84,7 @@ describe('Virtual Commands System', () => {
   describe('Built-in Commands', () => {
     test('should execute virtual cd command', async () => {
       const originalCwd = process.cwd();
-      
+
       try {
         const result = await $`cd /tmp`;
         expect(result.code).toBe(0);
@@ -110,7 +117,7 @@ describe('Virtual Commands System', () => {
       const start = Date.now();
       const result = await $`sleep 0.1`;
       const elapsed = Date.now() - start;
-      
+
       expect(result.code).toBe(0);
       expect(elapsed).toBeGreaterThan(90); // At least 90ms
       expect(elapsed).toBeLessThan(200); // But not too long
@@ -135,7 +142,7 @@ describe('Virtual Commands System', () => {
     test('should execute virtual exit command', async () => {
       const result = await $`exit 0`;
       expect(result.code).toBe(0);
-      
+
       const result2 = await $`exit 42`;
       expect(result2.code).toBe(42);
     });
@@ -150,11 +157,11 @@ describe('Virtual Commands System', () => {
       // Test directory
       const result1 = await $`test -d .`;
       expect(result1.code).toBe(0);
-      
+
       // Test file
       const result2 = await $`test -f package.json`;
       expect(result2.code).toBe(0);
-      
+
       // Test non-existent
       const result3 = await $`test -f nonexistent-file-99999`;
       expect(result3.code).toBe(1);
@@ -164,16 +171,17 @@ describe('Virtual Commands System', () => {
   describe('Virtual vs System Commands', () => {
     test('should prioritize virtual commands over system commands', async () => {
       // Register a virtual 'ls' that overrides system ls
-      register('ls', async ({ args }) => {
-        return { stdout: 'virtual ls output\n', code: 0 };
-      });
+      register('ls', async ({ args }) => ({
+        stdout: 'virtual ls output\n',
+        code: 0,
+      }));
 
       const result = await $`ls`;
       expect(result.stdout).toBe('virtual ls output\n');
-      
+
       // Cleanup - should fall back to system ls
       unregister('ls');
-      
+
       const systemResult = await $`ls`;
       expect(systemResult.stdout).not.toBe('virtual ls output\n');
       expect(systemResult.code).toBe(0); // System ls should work
@@ -195,7 +203,7 @@ describe('Virtual Commands System', () => {
         for (let i = 1; i <= max; i++) {
           yield `${i}\n`;
           // Small delay to test streaming
-          await new Promise(r => setTimeout(r, 10));
+          await new Promise((r) => setTimeout(r, 10));
         }
       });
 
@@ -204,19 +212,19 @@ describe('Virtual Commands System', () => {
       for await (const chunk of cmd.stream()) {
         chunks.push(chunk.data.toString());
       }
-      
+
       expect(chunks.length).toBeGreaterThan(0);
       const output = chunks.join('');
-      
+
       // Check if we got the numbers in order, regardless of newlines
       expect(output).toContain('1');
       expect(output).toContain('2');
       expect(output).toContain('3');
-      
+
       // The output should be either "1\n2\n3\n" or "123" depending on buffering
       const normalized = output.replace(/\n/g, '');
       expect(normalized).toBe('123');
-      
+
       // Cleanup
       unregister('count');
     });
@@ -239,7 +247,7 @@ describe('Virtual Commands System', () => {
       expect(events.length).toBeGreaterThan(0);
       expect(events).toContain('stdout');
       expect(events).toContain('data-stdout');
-      
+
       // Cleanup
       unregister('stream-test');
     });
@@ -254,29 +262,31 @@ describe('Virtual Commands System', () => {
       const result = await $`fail`;
       expect(result.code).toBe(1);
       expect(result.stderr).toContain('Virtual command failed');
-      
+
       // Cleanup
       unregister('fail');
     });
 
     test('should respect errexit setting with virtual commands', async () => {
-      register('fail-code', async ({ args }) => {
-        return { stdout: '', stderr: 'Failed', code: 42 };
-      });
+      register('fail-code', async ({ args }) => ({
+        stdout: '',
+        stderr: 'Failed',
+        code: 42,
+      }));
 
       shell.errexit(true);
-      
+
       try {
         await $`fail-code`;
         expect(true).toBe(false); // Should not reach here
       } catch (error) {
         expect(error.code).toBe(42);
       }
-      
+
       shell.errexit(false);
       const result = await $`fail-code`;
       expect(result.code).toBe(42);
-      
+
       // Cleanup
       unregister('fail-code');
     });
@@ -284,25 +294,27 @@ describe('Virtual Commands System', () => {
 
   describe('Command Arguments and Stdin', () => {
     test('should pass arguments correctly to virtual commands', async () => {
-      register('args-test', async ({ args }) => {
-        return { stdout: `Args: [${args.join(', ')}]\n`, code: 0 };
-      });
+      register('args-test', async ({ args }) => ({
+        stdout: `Args: [${args.join(', ')}]\n`,
+        code: 0,
+      }));
 
       const result = await $`args-test one "two three" four`;
       expect(result.stdout).toBe('Args: [one, two three, four]\n');
-      
+
       // Cleanup
       unregister('args-test');
     });
 
     test('should pass stdin to virtual commands', async () => {
-      register('stdin-test', async ({ args, stdin }) => {
-        return { stdout: `Received: ${stdin}\n`, code: 0 };
-      });
+      register('stdin-test', async ({ args, stdin }) => ({
+        stdout: `Received: ${stdin}\n`,
+        code: 0,
+      }));
 
       const result = await $`echo "test input" | stdin-test`;
       expect(result.stdout).toBe('Received: test input\n\n');
-      
+
       // Cleanup
       unregister('stdin-test');
     });
@@ -315,12 +327,14 @@ describe('Virtual Commands System', () => {
       const originalLog = console.log;
       const logs = [];
       console.log = (...args) => logs.push(args.join(' '));
-      
+
       try {
         shell.verbose(true);
         await $`verbose-test arg1 arg2`;
-        
-        expect(logs.some(log => log.includes('verbose-test arg1 arg2'))).toBe(true);
+
+        expect(logs.some((log) => log.includes('verbose-test arg1 arg2'))).toBe(
+          true
+        );
       } finally {
         console.log = originalLog;
         unregister('verbose-test');
@@ -333,12 +347,12 @@ describe('Virtual Commands System', () => {
       const originalLog = console.log;
       const logs = [];
       console.log = (...args) => logs.push(args.join(' '));
-      
+
       try {
         shell.xtrace(true);
         await $`trace-test`;
-        
-        expect(logs.some(log => log.startsWith('+ trace-test'))).toBe(true);
+
+        expect(logs.some((log) => log.startsWith('+ trace-test'))).toBe(true);
       } finally {
         console.log = originalLog;
         unregister('trace-test');

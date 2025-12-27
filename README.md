@@ -27,43 +27,44 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 
 ## Comparison with Other Libraries
 
-| Feature | [**command-stream**](https://github.com/link-foundation/command-stream) | [**execa**](https://github.com/sindresorhus/execa) | [**cross-spawn**](https://github.com/moxystudio/node-cross-spawn) | [**Bun.$**](https://github.com/oven-sh/bun) | [**ShellJS**](https://github.com/shelljs/shelljs) | [**zx**](https://github.com/google/zx) |
-|---------|----------------|-------|-------|-----|-------|-------|
-| **📦 NPM Package** | [![npm](https://img.shields.io/npm/v/command-stream.svg)](https://www.npmjs.com/package/command-stream) | [![npm](https://img.shields.io/npm/v/execa.svg)](https://www.npmjs.com/package/execa) | [![npm](https://img.shields.io/npm/v/cross-spawn.svg)](https://www.npmjs.com/package/cross-spawn) | N/A (Built-in) | [![npm](https://img.shields.io/npm/v/shelljs.svg)](https://www.npmjs.com/package/shelljs) | [![npm](https://img.shields.io/npm/v/zx.svg)](https://www.npmjs.com/package/zx) |
-| **⭐ GitHub Stars** | [**⭐ 2** (Please ⭐ us!)](https://github.com/link-foundation/command-stream) | [⭐ 7,264](https://github.com/sindresorhus/execa) | [⭐ 1,149](https://github.com/moxystudio/node-cross-spawn) | [⭐ 80,169](https://github.com/oven-sh/bun) (Full Runtime) | [⭐ 14,375](https://github.com/shelljs/shelljs) | [⭐ 44,569](https://github.com/google/zx) |
-| **📊 Monthly Downloads** | **893** (New project!) | **381M** | **409M** | N/A (Built-in) | **35M** | **4.2M** |
-| **📈 Total Downloads** | **Growing** | **6B+** | **5.4B** | N/A (Built-in) | **596M** | **37M** |
-| **Runtime Support** | ✅ Bun + Node.js | ✅ Node.js | ✅ Node.js | 🟡 Bun only | ✅ Node.js | ✅ Node.js |
-| **Template Literals** | ✅ `` $`cmd` `` | ✅ `` $`cmd` `` | ❌ Function calls | ✅ `` $`cmd` `` | ❌ Function calls | ✅ `` $`cmd` `` |
-| **Real-time Streaming** | ✅ Live output | 🟡 Limited | ❌ Buffer only | ❌ Buffer only | ❌ Buffer only | ❌ Buffer only |
-| **Synchronous Execution** | ✅ `.sync()` with events | ✅ `execaSync` | ✅ `spawnSync` | ❌ No | ✅ Sync by default | ❌ No |
-| **Async Iteration** | ✅ `for await (chunk of $.stream())` | ❌ No | ❌ No | ❌ No | ❌ No | ❌ No |
-| **EventEmitter Pattern** | ✅ `.on('data', ...)` | 🟡 Limited events | 🟡 Child process events | ❌ No | ❌ No | ❌ No |
-| **Mixed Patterns** | ✅ Events + await/sync | ❌ No | ❌ No | ❌ No | ❌ No | ❌ No |
-| **Bun.$ Compatibility** | ✅ `.text()` method support | ❌ No | ❌ No | ✅ Native API | ❌ No | ❌ No |
-| **Shell Injection Protection** | ✅ Smart auto-quoting | ✅ Safe by default | ✅ Safe by default | ✅ Built-in | 🟡 Manual escaping | ✅ Safe by default |
-| **Cross-platform** | ✅ macOS/Linux/Windows | ✅ Yes | ✅ **Specialized** cross-platform | ✅ Yes | ✅ Yes | ✅ Yes |
-| **Performance** | ⚡ Fast (Bun optimized) | 🐌 Moderate | ⚡ Fast | ⚡ Very fast | 🐌 Moderate | 🐌 Slow |
-| **Memory Efficiency** | ✅ Streaming prevents buildup | 🟡 Buffers in memory | 🟡 Buffers in memory | 🟡 Buffers in memory | 🟡 Buffers in memory | 🟡 Buffers in memory |
-| **Error Handling** | ✅ Configurable (`set -e`/`set +e`, non-zero OK by default) | ✅ Throws on error | ❌ Basic (exit codes) | ✅ Throws on error | ✅ Configurable | ✅ Throws on error |
-| **Shell Settings** | ✅ `set -e`/`set +e` equivalent | ❌ No | ❌ No | ❌ No | 🟡 Limited (`set()`) | ❌ No |
-| **Stdout Support** | ✅ Real-time streaming + events | ✅ Node.js streams + interleaved | ✅ Inherited/buffered | ✅ Shell redirection + buffered | ✅ Direct output | ✅ Readable streams + `.pipe.stdout` |
-| **Stderr Support** | ✅ Real-time streaming + events | ✅ Streams + interleaved output | ✅ Inherited/buffered | ✅ Redirection + `.quiet()` access | ✅ Error output | ✅ Readable streams + `.pipe.stderr` |
-| **Stdin Support** | ✅ string/Buffer/inherit/ignore | ✅ Input/output streams | ✅ Full stdio support | ✅ Pipe operations | 🟡 Basic | ✅ Basic stdin |
-| **Built-in Commands** | ✅ **18 commands**: cat, ls, mkdir, rm, mv, cp, touch, basename, dirname, seq, yes + all Bun.$ commands | ❌ Uses system | ❌ Uses system | ✅ echo, cd, etc. | ✅ **20+ commands**: cat, ls, mkdir, rm, mv, cp, etc. | ❌ Uses system |
-| **Virtual Commands Engine** | ✅ **Revolutionary**: Register JavaScript functions as shell commands with full pipeline support | ❌ No custom commands | ❌ No custom commands | ❌ No extensibility | ❌ No custom commands | ❌ No custom commands |
-| **Pipeline/Piping Support** | ✅ **Advanced**: System + Built-ins + Virtual + Mixed + `.pipe()` method | ✅ Programmatic `.pipe()` + multi-destination | ❌ No piping | ✅ Standard shell piping | ✅ Shell piping + `.to()` method | ✅ Shell piping + `.pipe()` method |
-| **Bundle Size** | 📦 **~20KB gzipped** | 📦 ~400KB+ (packagephobia) | 📦 ~2KB gzipped | 🎯 0KB (built-in) | 📦 ~15KB gzipped | 📦 ~50KB+ (estimated) |
-| **Signal Handling** | ✅ **Advanced SIGINT/SIGTERM forwarding** with cleanup | 🟡 Basic | ✅ **Excellent** cross-platform | 🟡 Basic | 🟡 Basic | 🟡 Basic |
-| **Process Management** | ✅ **Robust child process lifecycle** with proper termination | ✅ Good | ✅ **Excellent** spawn wrapper | ❌ Basic | 🟡 Limited | 🟡 Limited |
-| **Debug Tracing** | ✅ **Comprehensive VERBOSE logging** for CI/debugging | 🟡 Limited | ❌ No | ❌ No | 🟡 Basic | ❌ No |
-| **Test Coverage** | ✅ **518+ tests, 1165+ assertions** | ✅ Excellent | ✅ Good | 🟡 Good coverage | ✅ Good | 🟡 Good |
-| **CI Reliability** | ✅ **Platform-specific handling** (macOS/Ubuntu) | ✅ Good | ✅ **Excellent** | 🟡 Basic | ✅ Good | 🟡 Basic |
-| **Documentation** | ✅ **Comprehensive examples + guides** | ✅ Excellent | 🟡 Basic | ✅ Good | ✅ Good | 🟡 Limited |
-| **TypeScript** | 🔄 Coming soon | ✅ Full support | ✅ Built-in | ✅ Built-in | 🟡 Community types | ✅ Full support |
-| **License** | ✅ **Unlicense (Public Domain)** | 🟡 MIT | 🟡 MIT | 🟡 MIT (+ LGPL dependencies) | 🟡 BSD-3-Clause | 🟡 Apache 2.0 |
+| Feature                        | [**command-stream**](https://github.com/link-foundation/command-stream)                                 | [**execa**](https://github.com/sindresorhus/execa)                                    | [**cross-spawn**](https://github.com/moxystudio/node-cross-spawn)                                 | [**Bun.$**](https://github.com/oven-sh/bun)                | [**ShellJS**](https://github.com/shelljs/shelljs)                                         | [**zx**](https://github.com/google/zx)                                          |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| **📦 NPM Package**             | [![npm](https://img.shields.io/npm/v/command-stream.svg)](https://www.npmjs.com/package/command-stream) | [![npm](https://img.shields.io/npm/v/execa.svg)](https://www.npmjs.com/package/execa) | [![npm](https://img.shields.io/npm/v/cross-spawn.svg)](https://www.npmjs.com/package/cross-spawn) | N/A (Built-in)                                             | [![npm](https://img.shields.io/npm/v/shelljs.svg)](https://www.npmjs.com/package/shelljs) | [![npm](https://img.shields.io/npm/v/zx.svg)](https://www.npmjs.com/package/zx) |
+| **⭐ GitHub Stars**            | [**⭐ 2** (Please ⭐ us!)](https://github.com/link-foundation/command-stream)                           | [⭐ 7,264](https://github.com/sindresorhus/execa)                                     | [⭐ 1,149](https://github.com/moxystudio/node-cross-spawn)                                        | [⭐ 80,169](https://github.com/oven-sh/bun) (Full Runtime) | [⭐ 14,375](https://github.com/shelljs/shelljs)                                           | [⭐ 44,569](https://github.com/google/zx)                                       |
+| **📊 Monthly Downloads**       | **893** (New project!)                                                                                  | **381M**                                                                              | **409M**                                                                                          | N/A (Built-in)                                             | **35M**                                                                                   | **4.2M**                                                                        |
+| **📈 Total Downloads**         | **Growing**                                                                                             | **6B+**                                                                               | **5.4B**                                                                                          | N/A (Built-in)                                             | **596M**                                                                                  | **37M**                                                                         |
+| **Runtime Support**            | ✅ Bun + Node.js                                                                                        | ✅ Node.js                                                                            | ✅ Node.js                                                                                        | 🟡 Bun only                                                | ✅ Node.js                                                                                | ✅ Node.js                                                                      |
+| **Template Literals**          | ✅ `` $`cmd` ``                                                                                         | ✅ `` $`cmd` ``                                                                       | ❌ Function calls                                                                                 | ✅ `` $`cmd` ``                                            | ❌ Function calls                                                                         | ✅ `` $`cmd` ``                                                                 |
+| **Real-time Streaming**        | ✅ Live output                                                                                          | 🟡 Limited                                                                            | ❌ Buffer only                                                                                    | ❌ Buffer only                                             | ❌ Buffer only                                                                            | ❌ Buffer only                                                                  |
+| **Synchronous Execution**      | ✅ `.sync()` with events                                                                                | ✅ `execaSync`                                                                        | ✅ `spawnSync`                                                                                    | ❌ No                                                      | ✅ Sync by default                                                                        | ❌ No                                                                           |
+| **Async Iteration**            | ✅ `for await (chunk of $.stream())`                                                                    | ❌ No                                                                                 | ❌ No                                                                                             | ❌ No                                                      | ❌ No                                                                                     | ❌ No                                                                           |
+| **EventEmitter Pattern**       | ✅ `.on('data', ...)`                                                                                   | 🟡 Limited events                                                                     | 🟡 Child process events                                                                           | ❌ No                                                      | ❌ No                                                                                     | ❌ No                                                                           |
+| **Mixed Patterns**             | ✅ Events + await/sync                                                                                  | ❌ No                                                                                 | ❌ No                                                                                             | ❌ No                                                      | ❌ No                                                                                     | ❌ No                                                                           |
+| **Bun.$ Compatibility**        | ✅ `.text()` method support                                                                             | ❌ No                                                                                 | ❌ No                                                                                             | ✅ Native API                                              | ❌ No                                                                                     | ❌ No                                                                           |
+| **Shell Injection Protection** | ✅ Smart auto-quoting                                                                                   | ✅ Safe by default                                                                    | ✅ Safe by default                                                                                | ✅ Built-in                                                | 🟡 Manual escaping                                                                        | ✅ Safe by default                                                              |
+| **Cross-platform**             | ✅ macOS/Linux/Windows                                                                                  | ✅ Yes                                                                                | ✅ **Specialized** cross-platform                                                                 | ✅ Yes                                                     | ✅ Yes                                                                                    | ✅ Yes                                                                          |
+| **Performance**                | ⚡ Fast (Bun optimized)                                                                                 | 🐌 Moderate                                                                           | ⚡ Fast                                                                                           | ⚡ Very fast                                               | 🐌 Moderate                                                                               | 🐌 Slow                                                                         |
+| **Memory Efficiency**          | ✅ Streaming prevents buildup                                                                           | 🟡 Buffers in memory                                                                  | 🟡 Buffers in memory                                                                              | 🟡 Buffers in memory                                       | 🟡 Buffers in memory                                                                      | 🟡 Buffers in memory                                                            |
+| **Error Handling**             | ✅ Configurable (`set -e`/`set +e`, non-zero OK by default)                                             | ✅ Throws on error                                                                    | ❌ Basic (exit codes)                                                                             | ✅ Throws on error                                         | ✅ Configurable                                                                           | ✅ Throws on error                                                              |
+| **Shell Settings**             | ✅ `set -e`/`set +e` equivalent                                                                         | ❌ No                                                                                 | ❌ No                                                                                             | ❌ No                                                      | 🟡 Limited (`set()`)                                                                      | ❌ No                                                                           |
+| **Stdout Support**             | ✅ Real-time streaming + events                                                                         | ✅ Node.js streams + interleaved                                                      | ✅ Inherited/buffered                                                                             | ✅ Shell redirection + buffered                            | ✅ Direct output                                                                          | ✅ Readable streams + `.pipe.stdout`                                            |
+| **Stderr Support**             | ✅ Real-time streaming + events                                                                         | ✅ Streams + interleaved output                                                       | ✅ Inherited/buffered                                                                             | ✅ Redirection + `.quiet()` access                         | ✅ Error output                                                                           | ✅ Readable streams + `.pipe.stderr`                                            |
+| **Stdin Support**              | ✅ string/Buffer/inherit/ignore                                                                         | ✅ Input/output streams                                                               | ✅ Full stdio support                                                                             | ✅ Pipe operations                                         | 🟡 Basic                                                                                  | ✅ Basic stdin                                                                  |
+| **Built-in Commands**          | ✅ **18 commands**: cat, ls, mkdir, rm, mv, cp, touch, basename, dirname, seq, yes + all Bun.$ commands | ❌ Uses system                                                                        | ❌ Uses system                                                                                    | ✅ echo, cd, etc.                                          | ✅ **20+ commands**: cat, ls, mkdir, rm, mv, cp, etc.                                     | ❌ Uses system                                                                  |
+| **Virtual Commands Engine**    | ✅ **Revolutionary**: Register JavaScript functions as shell commands with full pipeline support        | ❌ No custom commands                                                                 | ❌ No custom commands                                                                             | ❌ No extensibility                                        | ❌ No custom commands                                                                     | ❌ No custom commands                                                           |
+| **Pipeline/Piping Support**    | ✅ **Advanced**: System + Built-ins + Virtual + Mixed + `.pipe()` method                                | ✅ Programmatic `.pipe()` + multi-destination                                         | ❌ No piping                                                                                      | ✅ Standard shell piping                                   | ✅ Shell piping + `.to()` method                                                          | ✅ Shell piping + `.pipe()` method                                              |
+| **Bundle Size**                | 📦 **~20KB gzipped**                                                                                    | 📦 ~400KB+ (packagephobia)                                                            | 📦 ~2KB gzipped                                                                                   | 🎯 0KB (built-in)                                          | 📦 ~15KB gzipped                                                                          | 📦 ~50KB+ (estimated)                                                           |
+| **Signal Handling**            | ✅ **Advanced SIGINT/SIGTERM forwarding** with cleanup                                                  | 🟡 Basic                                                                              | ✅ **Excellent** cross-platform                                                                   | 🟡 Basic                                                   | 🟡 Basic                                                                                  | 🟡 Basic                                                                        |
+| **Process Management**         | ✅ **Robust child process lifecycle** with proper termination                                           | ✅ Good                                                                               | ✅ **Excellent** spawn wrapper                                                                    | ❌ Basic                                                   | 🟡 Limited                                                                                | 🟡 Limited                                                                      |
+| **Debug Tracing**              | ✅ **Comprehensive VERBOSE logging** for CI/debugging                                                   | 🟡 Limited                                                                            | ❌ No                                                                                             | ❌ No                                                      | 🟡 Basic                                                                                  | ❌ No                                                                           |
+| **Test Coverage**              | ✅ **518+ tests, 1165+ assertions**                                                                     | ✅ Excellent                                                                          | ✅ Good                                                                                           | 🟡 Good coverage                                           | ✅ Good                                                                                   | 🟡 Good                                                                         |
+| **CI Reliability**             | ✅ **Platform-specific handling** (macOS/Ubuntu)                                                        | ✅ Good                                                                               | ✅ **Excellent**                                                                                  | 🟡 Basic                                                   | ✅ Good                                                                                   | 🟡 Basic                                                                        |
+| **Documentation**              | ✅ **Comprehensive examples + guides**                                                                  | ✅ Excellent                                                                          | 🟡 Basic                                                                                          | ✅ Good                                                    | ✅ Good                                                                                   | 🟡 Limited                                                                      |
+| **TypeScript**                 | 🔄 Coming soon                                                                                          | ✅ Full support                                                                       | ✅ Built-in                                                                                       | ✅ Built-in                                                | 🟡 Community types                                                                        | ✅ Full support                                                                 |
+| **License**                    | ✅ **Unlicense (Public Domain)**                                                                        | 🟡 MIT                                                                                | 🟡 MIT                                                                                            | 🟡 MIT (+ LGPL dependencies)                               | 🟡 BSD-3-Clause                                                                           | 🟡 Apache 2.0                                                                   |
 
-**📊 Popularity & Adoption:** 
+**📊 Popularity & Adoption:**
+
 - **⭐ GitHub Stars:** [Bun: 80,169](https://github.com/oven-sh/bun) • [zx: 44,569](https://github.com/google/zx) • [ShellJS: 14,375](https://github.com/shelljs/shelljs) • [execa: 7,264](https://github.com/sindresorhus/execa) • [cross-spawn: 1,149](https://github.com/moxystudio/node-cross-spawn) • [**command-stream: 2 ⭐ us!**](https://github.com/link-foundation/command-stream)
 - **📈 Total Downloads:** [execa: 6B+](https://www.npmjs.com/package/execa) • [cross-spawn: 5.4B](https://www.npmjs.com/package/cross-spawn) • [ShellJS: 596M](https://www.npmjs.com/package/shelljs) • [zx: 37M](https://www.npmjs.com/package/zx) • [command-stream: Growing](https://www.npmjs.com/package/command-stream)
 - **📊 Monthly Downloads:** [cross-spawn: 409M](https://www.npmjs.com/package/cross-spawn) • [execa: 381M](https://www.npmjs.com/package/execa) • [ShellJS: 35M](https://www.npmjs.com/package/shelljs) • [zx: 4.2M](https://www.npmjs.com/package/zx) • [command-stream: 893 (growing!)](https://www.npmjs.com/package/command-stream)
@@ -79,7 +80,7 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 - **📡 Real-time Processing**: Only library with true streaming and async iteration
 - **🔄 Flexible Patterns**: Multiple usage patterns (await, events, iteration, mixed)
 - **🐚 Shell Replacement**: Dynamic error handling with `set -e`/`set +e` equivalents for .sh file replacement
-- **⚡ Bun Optimized**: Designed for Bun with Node.js fallback compatibility  
+- **⚡ Bun Optimized**: Designed for Bun with Node.js fallback compatibility
 - **💾 Memory Efficient**: Streaming prevents large buffer accumulation
 - **🛡️ Production Ready**: **518+ tests, 1165+ assertions** with comprehensive coverage including CI reliability
 - **🎯 Advanced Signal Handling**: Robust SIGINT/SIGTERM forwarding with proper child process cleanup
@@ -90,21 +91,24 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 command-stream now includes **18 built-in commands** that work identically to their bash/sh counterparts, providing true cross-platform shell scripting without system dependencies:
 
 ### 📁 **File System Commands**
+
 - `cat` - Read and display file contents
 - `ls` - List directory contents (supports `-l`, `-a`, `-A`)
 - `mkdir` - Create directories (supports `-p` recursive)
-- `rm` - Remove files/directories (supports `-r`, `-f`) 
+- `rm` - Remove files/directories (supports `-r`, `-f`)
 - `mv` - Move/rename files and directories
 - `cp` - Copy files/directories (supports `-r` recursive)
 - `touch` - Create files or update timestamps
 
-### 🔧 **Utility Commands**  
+### 🔧 **Utility Commands**
+
 - `basename` - Extract filename from path
 - `dirname` - Extract directory from path
 - `seq` - Generate number sequences
 - `yes` - Output string repeatedly (streaming)
 
 ### ⚡ **System Commands**
+
 - `cd` - Change directory
 - `pwd` - Print working directory
 - `echo` - Print arguments (supports `-n`)
@@ -161,11 +165,11 @@ Command-stream provides intelligent auto-quoting to protect against shell inject
 import { $ } from 'command-stream';
 
 // Safe strings are NOT quoted (performance optimization)
-await $`echo ${name}`;           // name = "hello" → echo hello
-await $`${cmd} --version`;       // cmd = "/usr/bin/node" → /usr/bin/node --version
+await $`echo ${name}`; // name = "hello" → echo hello
+await $`${cmd} --version`; // cmd = "/usr/bin/node" → /usr/bin/node --version
 
 // Dangerous strings are automatically quoted for safety
-await $`echo ${userInput}`;      // userInput = "test; rm -rf /" → echo 'test; rm -rf /'
+await $`echo ${userInput}`; // userInput = "test; rm -rf /" → echo 'test; rm -rf /'
 await $`echo ${pathWithSpaces}`; // pathWithSpaces = "/my path/file" → echo '/my path/file'
 
 // Special characters that trigger auto-quoting:
@@ -173,10 +177,10 @@ await $`echo ${pathWithSpaces}`; // pathWithSpaces = "/my path/file" → echo '/
 
 // User-provided quotes are preserved
 const quotedPath = "'/path with spaces/file'";
-await $`cat ${quotedPath}`;      // → cat '/path with spaces/file' (no double-quoting!)
+await $`cat ${quotedPath}`; // → cat '/path with spaces/file' (no double-quoting!)
 
 const doubleQuoted = '"/path with spaces/file"';
-await $`cat ${doubleQuoted}`;    // → cat '"/path with spaces/file"' (preserves intent)
+await $`cat ${doubleQuoted}`; // → cat '"/path with spaces/file"' (preserves intent)
 ```
 
 ### Shell Injection Protection
@@ -186,17 +190,17 @@ All interpolated values are automatically secured:
 ```javascript
 // ✅ SAFE - All these injection attempts are neutralized
 const dangerous = "'; rm -rf /; echo '";
-await $`echo ${dangerous}`;      // → echo ''\'' rm -rf /; echo '\'''
+await $`echo ${dangerous}`; // → echo ''\'' rm -rf /; echo '\'''
 
-const cmdSubstitution = "$(whoami)";
+const cmdSubstitution = '$(whoami)';
 await $`echo ${cmdSubstitution}`; // → echo '$(whoami)' (literal text, not executed)
 
-const varExpansion = "$HOME";
-await $`echo ${varExpansion}`;   // → echo '$HOME' (literal text, not expanded)
+const varExpansion = '$HOME';
+await $`echo ${varExpansion}`; // → echo '$HOME' (literal text, not expanded)
 
 // ✅ SAFE - Even complex injection attempts
-const complex = "`cat /etc/passwd`";
-await $`echo ${complex}`;        // → echo '`cat /etc/passwd`' (literal text)
+const complex = '`cat /etc/passwd`';
+await $`echo ${complex}`; // → echo '`cat /etc/passwd`' (literal text)
 ```
 
 ### Disabling Auto-Escape (Advanced)
@@ -210,39 +214,41 @@ import { $, raw } from 'command-stream';
 
 // ⚠️ DANGEROUS - Bypasses all safety checks
 const userCommand = 'echo "hello" && ls -la';
-await $`${raw(userCommand)}`;    // → Executes: echo "hello" && ls -la
+await $`${raw(userCommand)}`; // → Executes: echo "hello" && ls -la
 
 // ✅ Safe use case: Trusted command templates
 const trustedCommand = 'git log --oneline --graph --all';
 await $`${raw(trustedCommand)}`;
 
 // ✅ Combining raw with safe interpolation
-const branch = 'main';  // User input - will be auto-quoted
+const branch = 'main'; // User input - will be auto-quoted
 await $`${raw('git log --oneline')} ${branch}`;
 // → git log --oneline 'main' (raw part unescaped, branch safely quoted)
 
 // 🎯 Use case: Pre-built command strings from configuration
 const config = {
   backupCommand: 'tar -czf backup.tar.gz --exclude="*.log" .',
-  cleanCommand: 'find . -name "*.tmp" -delete'
+  cleanCommand: 'find . -name "*.tmp" -delete',
 };
 await $`${raw(config.backupCommand)}`;
 
 // ⚠️ NEVER use raw() with user input
 const userInput = req.body.command; // ❌ DANGEROUS!
-await $`${raw(userInput)}`;         // ❌ Shell injection vulnerability!
+await $`${raw(userInput)}`; // ❌ Shell injection vulnerability!
 
 // ✅ Instead, use normal interpolation for user input
-await $`echo ${userInput}`;         // ✅ Safe - auto-escaped
+await $`echo ${userInput}`; // ✅ Safe - auto-escaped
 ```
 
 **When to use `raw()`:**
+
 - ✅ Trusted command templates from your codebase
 - ✅ Configuration files you control
 - ✅ Hardcoded command strings
 - ✅ Complex shell operators that need to be preserved
 
 **When NOT to use `raw()`:**
+
 - ❌ User input (form fields, API parameters, CLI arguments)
 - ❌ External data (database, API responses, files)
 - ❌ Any untrusted source
@@ -291,7 +297,7 @@ const $custom = $({
   stdin: 'test data',
   mirror: false,
   capture: true,
-  cwd: '/tmp'
+  cwd: '/tmp',
 });
 await $custom`cat > output.txt`; // Writes to /tmp/output.txt silently
 
@@ -312,21 +318,21 @@ const cmd = $`echo "hello"`;
 // Three ways to start execution:
 
 // 1. Explicit start with options
-cmd.start();                    // Default async mode
-cmd.start({ mode: 'async' });   // Explicitly async
-cmd.start({ mode: 'sync' });    // Synchronous execution
+cmd.start(); // Default async mode
+cmd.start({ mode: 'async' }); // Explicitly async
+cmd.start({ mode: 'sync' }); // Synchronous execution
 
 // 2. Convenience methods
-cmd.async();  // Same as start({ mode: 'async' })
-cmd.sync();   // Same as start({ mode: 'sync' })
+cmd.async(); // Same as start({ mode: 'async' })
+cmd.sync(); // Same as start({ mode: 'sync' })
 
 // 3. Auto-start by awaiting (always async)
-await cmd;    // Auto-starts in async mode
+await cmd; // Auto-starts in async mode
 
 // Event handlers can be attached before starting
 const process = $`long-command`
-  .on('data', chunk => console.log('Received:', chunk))
-  .on('end', result => console.log('Done!'));
+  .on('data', (chunk) => console.log('Received:', chunk))
+  .on('end', (result) => console.log('Done!'));
 
 // Start whenever you're ready
 process.start();
@@ -342,9 +348,7 @@ const result = $`echo "hello"`.sync();
 console.log(result.stdout); // "hello\n"
 
 // Events still work but are batched after completion
-$`echo "world"`
-  .on('end', result => console.log('Done:', result))
-  .sync();
+$`echo "world"`.on('end', (result) => console.log('Done:', result)).sync();
 ```
 
 ### Async Iteration (Real-time Streaming)
@@ -366,19 +370,18 @@ import { $ } from 'command-stream';
 
 // Attach event handlers then start execution
 $`command`
-  .on('data', chunk => {
+  .on('data', (chunk) => {
     if (chunk.type === 'stdout') {
       console.log('Stdout:', chunk.data.toString());
     }
   })
-  .on('stderr', chunk => console.log('Stderr:', chunk))
-  .on('end', result => console.log('Done:', result))
-  .on('exit', code => console.log('Exit code:', code))
+  .on('stderr', (chunk) => console.log('Stderr:', chunk))
+  .on('end', (result) => console.log('Done:', result))
+  .on('exit', (code) => console.log('Exit code:', code))
   .start(); // Explicitly start the command
 
 // Or auto-start by awaiting
-const cmd = $`another-command`
-  .on('data', chunk => console.log(chunk));
+const cmd = $`another-command`.on('data', (chunk) => console.log(chunk));
 await cmd; // Auto-starts in async mode
 ```
 
@@ -389,7 +392,7 @@ import { $ } from 'command-stream';
 
 // Async mode - events fire in real-time
 const process = $`streaming-command`;
-process.on('data', chunk => {
+process.on('data', (chunk) => {
   processRealTimeData(chunk);
 });
 const result = await process;
@@ -397,7 +400,7 @@ console.log('Final output:', result.stdout);
 
 // Sync mode - events fire after completion (batched)
 const syncCmd = $`another-command`;
-syncCmd.on('end', result => {
+syncCmd.on('end', (result) => {
   console.log('Completed with:', result.stdout);
 });
 const syncResult = syncCmd.sync();
@@ -450,9 +453,9 @@ console.log('Ping stopped with code:', pingResult.code); // 143 (SIGTERM)
 const mixedCmd = $`sh -c 'echo "out" && echo "err" >&2'`;
 const [stdout, stderr] = await Promise.all([
   mixedCmd.strings.stdout, // Available after finish
-  mixedCmd.strings.stderr  // Available after finish
+  mixedCmd.strings.stderr, // Available after finish
 ]);
-console.log('Out:', stdout.trim()); // "out"  
+console.log('Out:', stdout.trim()); // "out"
 console.log('Err:', stderr.trim()); // "err"
 
 // 🏃‍♂️ AUTO-START: Streams auto-start processes when accessed
@@ -468,7 +471,8 @@ console.log(traditional.stdout); // "still works\n"
 ```
 
 **Key Features:**
-- `command.streams.stdin/stdout/stderr` - Direct access to Node.js streams  
+
+- `command.streams.stdin/stdout/stderr` - Direct access to Node.js streams
 - `command.buffers.stdin/stdout/stderr` - Binary data as Buffer objects
 - `command.strings.stdin/stdout/stderr` - Text data as strings
 - `command.kill()` - Forceful process termination
@@ -477,6 +481,7 @@ console.log(traditional.stdout); // "still works\n"
 - **Network commands (ping, wget) ignore stdin** → Use `kill()` method instead
 
 **🚀 Streams vs Buffers/Strings:**
+
 - **`streams.*`** - Available **immediately** when command starts, for real-time interaction
 - **`buffers.*` & `strings.*`** - Complete **snapshots** available only **after** command finishes
 
@@ -497,18 +502,18 @@ await $`npm run build`;
 shell.errexit(false);
 const cleanup = await $`rm -rf temp`; // Won't throw if fails
 
-// set -e again for critical operations  
+// set -e again for critical operations
 shell.errexit(true);
 await $`cp -r build/* deploy/`;
 
 // Other bash-like settings
-shell.verbose(true);  // set -v: print commands
-shell.xtrace(true);   // set -x: trace execution
+shell.verbose(true); // set -v: print commands
+shell.xtrace(true); // set -x: trace execution
 
 // Or use the bash-style API
-set('e');    // set -e
-unset('e');  // set +e
-set('x');    // set -x
+set('e'); // set -e
+unset('e'); // set +e
+set('x'); // set -x
 set('verbose'); // Long form also supported
 ```
 
@@ -538,7 +543,7 @@ console.log(content.stdout);
 
 // Path operations
 const filename = await $`basename project/src/index.js .js`; // → "index"
-const directory = await $`dirname project/src/index.js`;     // → "project/src"
+const directory = await $`dirname project/src/index.js`; // → "project/src"
 
 // Generate sequences and process them
 await $`seq 1 10 | cat > numbers.txt`;
@@ -562,15 +567,15 @@ register('greet', async ({ args, stdin }) => {
 });
 
 // Use it like any other command
-await $`greet Alice`;                    // → "Hello, Alice!"
-await $`echo "Bob" | greet`;             // → "Hello, Bob!"
+await $`greet Alice`; // → "Hello, Alice!"
+await $`echo "Bob" | greet`; // → "Hello, Bob!"
 
 // Streaming virtual commands with async generators
 register('countdown', async function* ({ args }) {
   const start = parseInt(args[0] || 5);
   for (let i = start; i >= 0; i--) {
     yield `${i}\n`;
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise((r) => setTimeout(r, 1000));
   }
 });
 
@@ -583,8 +588,8 @@ for await (const chunk of $`countdown 3`.stream()) {
 }
 
 // Management functions
-console.log(listCommands());  // List all registered commands
-unregister('greet');          // Remove custom commands
+console.log(listCommands()); // List all registered commands
+unregister('greet'); // Remove custom commands
 ```
 
 #### 🔥 **Why Virtual Commands Are Revolutionary**
@@ -592,28 +597,29 @@ unregister('greet');          // Remove custom commands
 **No other shell library offers this level of extensibility:**
 
 - **🚫 Bun.$**: Fixed set of built-in commands, no extensibility API
-- **🚫 execa**: Transform/pipeline system, but no custom commands  
+- **🚫 execa**: Transform/pipeline system, but no custom commands
 - **🚫 zx**: JavaScript functions only, no shell command integration
 
 **command-stream breaks the barrier** between JavaScript functions and shell commands:
 
 ```javascript
 // ❌ Other libraries: Choose JavaScript OR shell
-await execa('node', ['script.js']);  // execa: separate processes
-await $`node script.js`;             // zx: shell commands only
+await execa('node', ['script.js']); // execa: separate processes
+await $`node script.js`; // zx: shell commands only
 
-// ✅ command-stream: JavaScript functions AS shell commands  
+// ✅ command-stream: JavaScript functions AS shell commands
 register('deploy', async ({ args }) => {
   const env = args[0] || 'staging';
   await deployToEnvironment(env);
   return { stdout: `Deployed to ${env}!\n`, code: 0 };
 });
 
-await $`deploy production`;           // JavaScript function as shell command!
+await $`deploy production`; // JavaScript function as shell command!
 await $`deploy staging | tee log.txt`; // Works in pipelines!
 ```
 
 **Unique capabilities:**
+
 - **Seamless Integration**: Virtual commands work exactly like built-ins
 - **Pipeline Support**: Full stdin/stdout passing between virtual and system commands
 - **Streaming**: Async generators for real-time output
@@ -630,9 +636,9 @@ await $`deploy staging | tee log.txt`; // Works in pipelines!
 import { $, register } from 'command-stream';
 
 // ✅ Standard shell piping (like all libraries)
-await $`echo "hello world" | wc -w`;  // → "2"
+await $`echo "hello world" | wc -w`; // → "2"
 
-// ✅ Built-in to built-in piping  
+// ✅ Built-in to built-in piping
 await $`seq 1 5 | cat > numbers.txt`;
 
 // ✅ System to built-in piping
@@ -648,10 +654,10 @@ register('reverse', async ({ args, stdin }) => {
 });
 
 // ✅ Built-in to virtual piping
-await $`echo "hello" | uppercase`;  // → "HELLO"
+await $`echo "hello" | uppercase`; // → "HELLO"
 
-// ✅ Virtual to virtual piping  
-await $`echo "hello" | uppercase | reverse`;  // → "OLLEH"
+// ✅ Virtual to virtual piping
+await $`echo "hello" | uppercase | reverse`; // → "OLLEH"
 
 // ✅ Mixed pipelines (system + built-in + virtual)
 await $`git log --oneline | head -n 3 | uppercase | cat > LOG.txt`;
@@ -736,17 +742,18 @@ unregister('extract-field');
 
 #### **🆚 How We Compare**
 
-| Library | Pipeline Types | Custom Commands in Pipes | `.pipe()` Method | Real-time Streaming |
-|---------|----------------|---------------------------|------------------|---------------------|
-| **command-stream** | ✅ System + Built-ins + Virtual + Mixed | ✅ **Full support** | ✅ **Full virtual command support** | ✅ **Yes** |
-| **Bun.$** | ✅ System + Built-ins | ❌ No custom commands | ❌ No `.pipe()` method | ❌ No |
-| **execa** | ✅ Programmatic `.pipe()` | ❌ No shell integration | ✅ Basic process piping | 🟡 Limited |
-| **zx** | ✅ Shell piping + `.pipe()` | ❌ No custom commands | ✅ Stream piping only | ❌ No |
+| Library            | Pipeline Types                          | Custom Commands in Pipes | `.pipe()` Method                    | Real-time Streaming |
+| ------------------ | --------------------------------------- | ------------------------ | ----------------------------------- | ------------------- |
+| **command-stream** | ✅ System + Built-ins + Virtual + Mixed | ✅ **Full support**      | ✅ **Full virtual command support** | ✅ **Yes**          |
+| **Bun.$**          | ✅ System + Built-ins                   | ❌ No custom commands    | ❌ No `.pipe()` method              | ❌ No               |
+| **execa**          | ✅ Programmatic `.pipe()`               | ❌ No shell integration  | ✅ Basic process piping             | 🟡 Limited          |
+| **zx**             | ✅ Shell piping + `.pipe()`             | ❌ No custom commands    | ✅ Stream piping only               | ❌ No               |
 
 **🎯 Unique Advantages:**
+
 - **Virtual commands work seamlessly in both shell pipes AND `.pipe()` method** - no other library can do this
 - **Mixed pipeline types** - combine system, built-in, and virtual commands freely in both syntaxes
-- **Real-time streaming** through virtual command pipelines  
+- **Real-time streaming** through virtual command pipelines
 - **Full stdin/stdout passing** between all command types
 - **Dual piping syntax** - use shell `|` OR programmatic `.pipe()` interchangeably
 
@@ -759,29 +766,31 @@ import { $ } from 'command-stream';
 
 // This command will:
 // 1. Print "Hello" to your terminal (stdout→stdout)
-// 2. Print "Error!" to your terminal (stderr→stderr) 
+// 2. Print "Error!" to your terminal (stderr→stderr)
 // 3. Capture both outputs for programmatic access
 const result = await $`sh -c "echo 'Hello'; echo 'Error!' >&2"`;
 
 console.log('Captured stdout:', result.stdout); // "Hello\n"
 console.log('Captured stderr:', result.stderr); // "Error!\n"
-console.log('Exit code:', result.code);         // 0
+console.log('Exit code:', result.code); // 0
 ```
 
 **Key Default Options:**
+
 - `mirror: true` - Live output to terminal (like shell)
 - `capture: true` - Capture output for later use (unlike shell)
 - `stdin: 'inherit'` - Inherit stdin from parent process
 
 **Fully Controllable:**
+
 ```javascript
 import { $, create, sh } from 'command-stream';
 
 // Disable terminal output but still capture
 const result = await sh('echo "silent"', { mirror: false });
 
-// Custom stdin input  
-const custom = await sh('cat', { stdin: "custom input" });
+// Custom stdin input
+const custom = await sh('cat', { stdin: 'custom input' });
 
 // Create custom $ with different defaults
 const quiet$ = create({ mirror: false });
@@ -807,7 +816,7 @@ let logFile = null;
 for await (const chunk of $`your-streaming-command`.stream()) {
   if (chunk.type === 'stdout') {
     const data = chunk.data.toString();
-    
+
     // Extract session ID from output
     if (!sessionId && data.includes('session_id')) {
       try {
@@ -819,7 +828,7 @@ for await (const chunk of $`your-streaming-command`.stream()) {
         // Handle JSON parse errors
       }
     }
-    
+
     // Write to log file in real-time
     if (logFile) {
       appendFileSync(logFile, data);
@@ -875,7 +884,7 @@ The enhanced `$` function returns a `ProcessRunner` instance that extends `Event
 #### Properties
 
 - `stdout`: Direct access to child process stdout stream
-- `stderr`: Direct access to child process stderr stream  
+- `stderr`: Direct access to child process stderr stream
 - `stdin`: Direct access to child process stdin stream
 
 ### Default Options
@@ -892,6 +901,7 @@ The enhanced `$` function returns a `ProcessRunner` instance that extends `Event
 ```
 
 **Option Details:**
+
 - `mirror: boolean` - Whether to pipe output to terminal in real-time
 - `capture: boolean` - Whether to capture output in result object
 - `stdin: 'inherit' | 'ignore' | string | Buffer` - How to handle stdin
@@ -900,6 +910,7 @@ The enhanced `$` function returns a `ProcessRunner` instance that extends `Event
 - `env: object` - Environment variables
 
 **Override defaults:**
+
 - Use `$({ options })` syntax for one-off configurations with template literals
 - Use `sh(command, options)` for one-off overrides with string commands
 - Use `create(defaultOptions)` to create custom `$` with different defaults
@@ -959,7 +970,7 @@ Control and extend the command system with custom JavaScript functions:
   - `name`: Command name (string)
   - `handler`: Function or async generator `(args, stdin, options) => result`
 - `unregister(name)`: Remove a virtual command
-- `listCommands()`: Get array of all registered command names  
+- `listCommands()`: Get array of all registered command names
 - `enableVirtualCommands()`: Enable virtual command processing
 - `disableVirtualCommands()`: Disable virtual commands (use system commands only)
 
@@ -975,7 +986,7 @@ register('cancellable', async function* ({ args, stdin, abortSignal }) {
       break; // Proper cancellation handling
     }
     yield `Count: ${i}\n`;
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
   }
 });
 
@@ -983,35 +994,42 @@ register('cancellable', async function* ({ args, stdin, abortSignal }) {
 // All original options (built-in + custom) are available in the 'options' object
 // Common options like cwd, env are also available at top level for convenience
 // Runtime additions: isCancelled function, abortSignal
-register('debug-info', async ({ args, stdin, cwd, env, options, isCancelled }) => {
-  return {
-    stdout: JSON.stringify({
-      args,
-      cwd,  // Available at top level for convenience
-      env: Object.keys(env || {}),  // Available at top level for convenience
-      stdinLength: stdin?.length || 0,
-      allOptions: options,  // All original options (built-in + custom)
-      mirror: options.mirror,  // Built-in option from options object
-      capture: options.capture,  // Built-in option from options object
-      customOption: options.customOption || 'not provided',  // Custom option
-      isCancelledAvailable: typeof isCancelled === 'function'
-    }, null, 2),
-    code: 0
-  };
-});
+register(
+  'debug-info',
+  async ({ args, stdin, cwd, env, options, isCancelled }) => {
+    return {
+      stdout: JSON.stringify(
+        {
+          args,
+          cwd, // Available at top level for convenience
+          env: Object.keys(env || {}), // Available at top level for convenience
+          stdinLength: stdin?.length || 0,
+          allOptions: options, // All original options (built-in + custom)
+          mirror: options.mirror, // Built-in option from options object
+          capture: options.capture, // Built-in option from options object
+          customOption: options.customOption || 'not provided', // Custom option
+          isCancelledAvailable: typeof isCancelled === 'function',
+        },
+        null,
+        2
+      ),
+      code: 0,
+    };
+  }
+);
 
 // ✅ Error handling and non-zero exit codes
 register('maybe-fail', async ({ args }) => {
   if (Math.random() > 0.5) {
     return {
       stdout: 'Success!\n',
-      code: 0
+      code: 0,
     };
   } else {
     return {
       stdout: '',
       stderr: 'Random failure occurred\n',
-      code: 1
+      code: 1,
     };
   }
 });
@@ -1020,12 +1038,15 @@ register('maybe-fail', async ({ args }) => {
 register('show-options', async ({ args, stdin, options, cwd }) => {
   return {
     stdout: `Custom: ${options.customValue || 'none'}, CWD: ${cwd || options.cwd || 'default'}\n`,
-    code: 0
+    code: 0,
   };
 });
 
 // Usage example showing options passed to virtual command:
-const result = await $({ customValue: 'hello world', cwd: '/tmp' })`show-options`;
+const result = await $({
+  customValue: 'hello world',
+  cwd: '/tmp',
+})`show-options`;
 console.log(result.stdout); // Output: Custom: hello world, CWD: /tmp
 ```
 
@@ -1103,6 +1124,7 @@ await $`${raw(trustedCommand)}`;
 **System**: `cd`, `pwd`, `echo`, `sleep`, `true`, `false`, `which`, `exit`, `env`, `test`
 
 All built-in commands support:
+
 - Standard flags (e.g., `ls -la`, `mkdir -p`, `rm -rf`)
 - Pipeline operations
 - Option awareness (`cwd`, `env`, etc.)
@@ -1140,7 +1162,7 @@ import { $ } from 'command-stream';
 const result1 = await $`echo "hello world"`;
 const text1 = await result1.text(); // "hello world\n"
 
-const result2 = $`echo "sync example"`.sync();  
+const result2 = $`echo "sync example"`.sync();
 const text2 = await result2.text(); // "sync example\n"
 
 // .text() is equivalent to accessing .stdout
@@ -1174,7 +1196,7 @@ The library provides **advanced CTRL+C handling** that properly manages signals 
 // ✅ Smart signal handling - only interferes when necessary
 import { $ } from 'command-stream';
 
-// Case 1: No children active - your handlers work normally  
+// Case 1: No children active - your handlers work normally
 process.on('SIGINT', () => {
   console.log('My custom handler runs!');
   process.exit(42); // Custom exit code
@@ -1185,10 +1207,7 @@ process.on('SIGINT', () => {
 await $`ping 8.8.8.8`; // Press CTRL+C → Forwards to ping, exits with code 130
 
 // Case 3: Multiple processes - all interrupted
-await Promise.all([
-  $`sleep 100`,
-  $`ping google.com`  
-]); // Press CTRL+C → All processes terminated, exits with code 130
+await Promise.all([$`sleep 100`, $`ping google.com`]); // Press CTRL+C → All processes terminated, exits with code 130
 ```
 
 ### Examples
@@ -1196,7 +1215,7 @@ await Promise.all([
 ```javascript
 // Long-running command that can be interrupted with CTRL+C
 try {
-  await $`ping 8.8.8.8`;  // Press CTRL+C to stop
+  await $`ping 8.8.8.8`; // Press CTRL+C to stop
 } catch (error) {
   console.log('Command interrupted:', error.code); // Exit code 130 (SIGINT)
 }
@@ -1206,7 +1225,7 @@ try {
   await Promise.all([
     $`sleep 100`,
     $`ping google.com`,
-    $`tail -f /var/log/system.log`
+    $`tail -f /var/log/system.log`,
   ]);
 } catch (error) {
   // All processes are terminated when you press CTRL+C
@@ -1226,11 +1245,11 @@ try {
 ### Signal Handling Behavior
 
 - **🎯 Smart Detection**: Only forwards CTRL+C when child processes are active
-- **🛡️ Non-Interference**: Preserves user SIGINT handlers when no children running  
+- **🛡️ Non-Interference**: Preserves user SIGINT handlers when no children running
 - **⚡ Interactive Commands**: Use `interactive: true` option for commands like `vim`, `less`, `top` to enable proper TTY forwarding and signal handling
 - **🔄 Process Groups**: Detached spawning ensures proper signal isolation
 - **🧹 TTY Cleanup**: Raw terminal mode properly restored on interruption
-- **📊 Standard Exit Codes**: 
+- **📊 Standard Exit Codes**:
   - `130` - SIGINT interruption (CTRL+C)
   - `143` - SIGTERM termination (programmatic kill)
   - `137` - SIGKILL force termination
@@ -1244,7 +1263,7 @@ try {
 register('echo', () => ({ stdout: 'virtual!\n', code: 0 }));
 await $`echo test`; // → "virtual!"
 
-// 2. Built-in Commands (if no virtual match)  
+// 2. Built-in Commands (if no virtual match)
 unregister('echo');
 await $`echo test`; // → Uses built-in echo
 
@@ -1267,12 +1286,12 @@ const result = await $`ls -la`;
 
 // ✅ Use .sync() when you need blocking execution with events
 const syncCmd = $`build-script`
-  .on('stdout', chunk => updateProgress(chunk))
+  .on('stdout', (chunk) => updateProgress(chunk))
   .sync(); // Events fire after completion
 
-// ✅ Use .start() for non-blocking execution with real-time events  
+// ✅ Use .start() for non-blocking execution with real-time events
 const asyncCmd = $`long-running-server`
-  .on('stdout', chunk => logOutput(chunk))
+  .on('stdout', (chunk) => logOutput(chunk))
   .start(); // Events fire in real-time
 
 // ✅ Use .stream() for processing large outputs efficiently
@@ -1282,13 +1301,13 @@ for await (const chunk of $`generate-big-file`.stream()) {
 
 // ✅ Use EventEmitter pattern for complex workflows
 $`deployment-script`
-  .on('stdout', chunk => {
+  .on('stdout', (chunk) => {
     if (chunk.toString().includes('ERROR')) {
       handleError(chunk);
     }
   })
-  .on('stderr', chunk => logError(chunk))
-  .on('end', result => {
+  .on('stderr', (chunk) => logError(chunk))
+  .on('end', (result) => {
     if (result.code === 0) {
       notifySuccess();
     }
@@ -1312,9 +1331,7 @@ processFile(result.stdout); // Loads everything into memory
 const quickResult = $`pwd`.sync();
 
 // 🔄 Best for UX: Async with events for long-running commands
-$`npm install`
-  .on('stdout', showProgress)
-  .start();
+$`npm install`.on('stdout', showProgress).start();
 ```
 
 ## Testing
@@ -1328,7 +1345,7 @@ bun test --coverage
 
 # Run specific test categories
 npm run test:features    # Feature comparison tests
-npm run test:builtin     # Built-in commands tests  
+npm run test:builtin     # Built-in commands tests
 npm run test:pipe        # .pipe() method tests
 npm run test:sync        # Synchronous execution tests
 npm run test:signal      # CTRL+C signal handling tests
@@ -1342,11 +1359,13 @@ npm run test:signal      # CTRL+C signal handling tests
 ## Roadmap
 
 ### 🔄 **Coming Soon**
+
 - **TypeScript Support**: Full .d.ts definitions and type safety
 - **Enhanced Shell Options**: `set -u` (nounset) and `set -o pipefail` support
 - **More Built-in Commands**: Additional cross-platform utilities
 
 ### 💡 **Planned Features**
+
 - **Performance Optimizations**: Further Bun runtime optimizations
 - **Advanced Error Handling**: Enhanced error context and debugging
 - **Plugin System**: Extensible architecture for custom integrations
@@ -1356,6 +1375,7 @@ npm run test:signal      # CTRL+C signal handling tests
 We welcome contributions! Since command-stream is **public domain software**, your contributions will also be released into the public domain.
 
 ### 🚀 **Getting Started**
+
 ```bash
 git clone https://github.com/link-foundation/command-stream.git
 cd command-stream
@@ -1364,12 +1384,14 @@ bun test  # Run the full test suite
 ```
 
 ### 📋 **Development Guidelines**
+
 - All features must have comprehensive tests
 - Built-in commands should match bash/sh behavior exactly
 - Maintain cross-platform compatibility (Windows, macOS, Linux)
 - Follow the existing code style and patterns
 
 ### 🧪 **Running Tests**
+
 ```bash
 bun test                    # All 518+ tests
 bun test tests/pipe.test.mjs # Specific test file
@@ -1389,6 +1411,7 @@ Unlike other shell utilities that require attribution (MIT, Apache 2.0), command
 - ✅ **Corporate friendly** - No license compliance overhead
 
 This makes command-stream ideal for:
+
 - **Commercial products** where license attribution is inconvenient
 - **Embedded systems** where every byte counts
 - **Educational materials** that can be freely shared

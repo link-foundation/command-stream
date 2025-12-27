@@ -22,13 +22,13 @@ console.log('=== Shell Parser Test ===\n');
 
 for (const cmd of testCases) {
   console.log(`Command: ${cmd}`);
-  
+
   if (needsRealShell(cmd)) {
     console.log('  Needs real shell: YES');
   } else {
     console.log('  Needs real shell: NO');
   }
-  
+
   const parsed = parseShellCommand(cmd);
   console.log('  Parsed:', JSON.stringify(parsed, null, 2));
   console.log();

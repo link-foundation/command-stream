@@ -11,7 +11,7 @@ try {
   for await (const chunk of $`echo "apple,banana,cherry" | tr ',' '\\n' | sort`.stream()) {
     if (chunk.type === 'stdout') {
       const lines = chunk.data.toString().trim().split('\n');
-      lines.forEach(line => console.log(`🔗 Piped: ${line}`));
+      lines.forEach((line) => console.log(`🔗 Piped: ${line}`));
     }
   }
 } catch (error) {
@@ -24,7 +24,7 @@ try {
   for await (const chunk of $pipe`echo "zebra,yak,xerus" | tr ',' '\\n' | sort -r`.stream()) {
     if (chunk.type === 'stdout') {
       const lines = chunk.data.toString().trim().split('\n');
-      lines.forEach(line => console.log(`⚙️  Configured: ${line}`));
+      lines.forEach((line) => console.log(`⚙️  Configured: ${line}`));
     }
   }
 } catch (error) {

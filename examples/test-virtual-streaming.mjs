@@ -8,11 +8,11 @@ console.log('=== Testing Virtual Command Streaming ===\n');
 register('stream-numbers', async function* ({ args, stdin }) {
   const count = parseInt(args[0] || '3');
   const delay = parseInt(args[1] || '500');
-  
+
   for (let i = 1; i <= count; i++) {
     yield `{"number": ${i}}\n`;
     if (i < count) {
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
 });
@@ -24,7 +24,7 @@ register('filter-even', async function* ({ args, stdin }) {
     try {
       const obj = JSON.parse(line);
       if (obj.number && obj.number % 2 === 0) {
-        yield line + '\n';
+        yield `${line}\n`;
       }
     } catch (e) {
       // Skip invalid JSON
@@ -92,7 +92,7 @@ const start4 = Date.now();
 
 const cmd4 = $`stream-numbers 5 150 | jq -c '{value: .number, double: (.number * 2)}' | filter-even`;
 
-// Note: filter-even will only work on objects with 'number' field, 
+// Note: filter-even will only work on objects with 'number' field,
 // so let's create a better filter
 register('filter-double-even', async function* ({ args, stdin }) {
   const lines = stdin.trim().split('\n');
@@ -100,7 +100,7 @@ register('filter-double-even', async function* ({ args, stdin }) {
     try {
       const obj = JSON.parse(line);
       if (obj.double && obj.double % 4 === 0) {
-        yield line + '\n';
+        yield `${line}\n`;
       }
     } catch (e) {
       // Skip invalid JSON

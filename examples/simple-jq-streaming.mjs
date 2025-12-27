@@ -15,10 +15,10 @@ for await (const chunk of cmd.stream()) {
   if (chunk.type === 'stdout') {
     const elapsed = Date.now() - startTime;
     buffer += chunk.data.toString();
-    
+
     const lines = buffer.split('\n');
     buffer = lines.pop() || '';
-    
+
     for (const line of lines) {
       if (line.trim()) {
         console.log(`[${elapsed}ms] Got JSON:`, line.trim());
@@ -37,7 +37,7 @@ const result = await filterCmd;
 console.log('Filtered result:', result.stdout.trim());
 console.log('✅ Filtering works!\n');
 
-// Test 3: Transform JSON stream  
+// Test 3: Transform JSON stream
 console.log('Test 3: Transform JSON stream in realtime:');
 const transformCmd = $`printf '{"name":"Alice","age":30}\n{"name":"Bob","age":25}\n' | jq -c '{user: .name, years: .age}'`;
 

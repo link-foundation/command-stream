@@ -11,7 +11,7 @@ console.log('Starting iteration...');
 for await (const chunk of cmd.stream()) {
   count++;
   console.log(`Got chunk ${count}`);
-  
+
   if (count >= 2) {
     console.log('Breaking now...');
     break;

@@ -6,7 +6,9 @@ console.log('🤖 Command-stream: Claude with stdin');
 
 let chunkCount = 0;
 
-const command = $({ stdin: 'hi\n' })`claude --output-format stream-json --verbose --model sonnet`;
+const command = $({
+  stdin: 'hi\n',
+})`claude --output-format stream-json --verbose --model sonnet`;
 
 command
   .on('data', (chunk) => {

@@ -12,13 +12,13 @@ let userHandlerCalled = false;
 process.on('SIGINT', () => {
   userHandlerCalled = true;
   console.log('🔥 USER_HANDLER_START (sync)');
-  
+
   // Use synchronous delay to see if that changes anything
   const start = Date.now();
   while (Date.now() - start < 50) {
     // Busy wait for 50ms
   }
-  
+
   console.log('🔥 USER_HANDLER_DONE (sync)');
   console.log('🔥 About to call process.exit(0)');
   process.exit(0); // Exit cleanly after cleanup

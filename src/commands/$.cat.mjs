@@ -1,7 +1,13 @@
 import fs from 'fs';
 import { trace, VirtualUtils } from '../$.utils.mjs';
 
-export default async function cat({ args, stdin, cwd, isCancelled, abortSignal }) {
+export default async function cat({
+  args,
+  stdin,
+  cwd,
+  isCancelled,
+  abortSignal,
+}) {
   if (args.length === 0) {
     // Read from stdin if no files specified
     if (stdin !== undefined && stdin !== '') {
@@ -18,8 +24,11 @@ export default async function cat({ args, stdin, cwd, isCancelled, abortSignal }
         trace('VirtualCommand', () => `cat: cancelled while processing files`);
         return { code: 130, stdout: '', stderr: '' }; // SIGINT exit code
       }
-      
-      trace('VirtualCommand', () => `cat: reading file | ${JSON.stringify({ file }, null, 2)}`);
+
+      trace(
+        'VirtualCommand',
+        () => `cat: reading file | ${JSON.stringify({ file }, null, 2)}`
+      );
       const resolvedPath = VirtualUtils.resolvePath(file, cwd);
       try {
         const content = fs.readFileSync(resolvedPath, 'utf8');
@@ -35,10 +44,18 @@ export default async function cat({ args, stdin, cwd, isCancelled, abortSignal }
       }
     }
     const output = outputs.join('');
-    trace('VirtualCommand', () => `cat: success | ${JSON.stringify({ bytesRead: output.length }, null, 2)}`);
+    trace(
+      'VirtualCommand',
+      () =>
+        `cat: success | ${JSON.stringify({ bytesRead: output.length }, null, 2)}`
+    );
     return VirtualUtils.success(output);
   } catch (error) {
-    trace('VirtualCommand', () => `cat: unexpected error | ${JSON.stringify({ error: error.message }, null, 2)}`);
+    trace(
+      'VirtualCommand',
+      () =>
+        `cat: unexpected error | ${JSON.stringify({ error: error.message }, null, 2)}`
+    );
     return VirtualUtils.error(`cat: ${error.message}`);
   }
 }

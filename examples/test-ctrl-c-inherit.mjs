@@ -14,8 +14,14 @@ process.on('SIGINT', () => {
 
 try {
   // Test with different configurations
-  console.log('Running with default settings (should inherit stdin/stdout/stderr)...');
-  const result = await $({ stdin: 'inherit', capture: false, mirror: true })`ping 8.8.8.8`;
+  console.log(
+    'Running with default settings (should inherit stdin/stdout/stderr)...'
+  );
+  const result = await $({
+    stdin: 'inherit',
+    capture: false,
+    mirror: true,
+  })`ping 8.8.8.8`;
   console.log('Command completed normally:', result);
 } catch (error) {
   console.log('Command was interrupted or failed');

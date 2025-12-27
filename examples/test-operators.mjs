@@ -19,7 +19,7 @@ console.log();
 // Reset
 process.chdir(originalCwd);
 
-console.log('Test 2: || operator (OR - run next if previous fails)');  
+console.log('Test 2: || operator (OR - run next if previous fails)');
 console.log('Command: cd /nonexistent || echo "failed to cd"');
 const result2 = await $`cd /nonexistent || echo "failed to cd"`;
 console.log('Output:', result2.stdout);

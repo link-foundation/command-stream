@@ -2,10 +2,10 @@
 
 /**
  * Simple Command Tracing Test
- * 
+ *
  * Tests basic command execution with tracing to debug process creation,
  * stdout/stderr handling, and completion.
- * 
+ *
  * Usage:
  *   COMMAND_STREAM_TRACE=ProcessRunner node examples/trace-simple-command.mjs
  */

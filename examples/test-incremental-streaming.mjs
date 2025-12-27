@@ -13,7 +13,11 @@ const cmd = $`sh -c 'echo "line1"; sleep 0.5; echo "line2"; sleep 0.5; echo "lin
 for await (const chunk of cmd.stream()) {
   if (chunk.type === 'stdout') {
     const elapsed = Date.now() - start;
-    const lines = chunk.data.toString().trim().split('\n').filter(l => l);
+    const lines = chunk.data
+      .toString()
+      .trim()
+      .split('\n')
+      .filter((l) => l);
     for (const line of lines) {
       console.log(`[${elapsed}ms] ${line}`);
     }
@@ -28,7 +32,11 @@ const cmd2 = $`sh -c 'echo "line1"; sleep 0.5; echo "line2"; sleep 0.5; echo "li
 for await (const chunk of cmd2.stream()) {
   if (chunk.type === 'stdout') {
     const elapsed = Date.now() - start2;
-    const lines = chunk.data.toString().trim().split('\n').filter(l => l);
+    const lines = chunk.data
+      .toString()
+      .trim()
+      .split('\n')
+      .filter((l) => l);
     for (const line of lines) {
       console.log(`[${elapsed}ms] ${line}`);
     }

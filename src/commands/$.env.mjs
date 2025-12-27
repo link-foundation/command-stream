@@ -4,9 +4,9 @@ export default async function env({ args, stdin, env }) {
   if (args.length === 0) {
     // Use custom env if provided, otherwise use process.env
     const envVars = env || process.env;
-    const output = Object.entries(envVars)
+    const output = `${Object.entries(envVars)
       .map(([key, value]) => `${key}=${value}`)
-      .join('\n') + '\n';
+      .join('\n')}\n`;
     return VirtualUtils.success(output);
   }
   // TODO: Support setting environment variables for subsequent command
