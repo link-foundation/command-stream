@@ -23,7 +23,18 @@
     "test:readme": "bun test tests/readme-examples.test.mjs",
     "test:sync": "bun test tests/sync.test.mjs",
     "test:builtin": "bun test tests/builtin-commands.test.mjs",
-    "test:pipe": "bun test tests/pipe.test.mjs"
+    "test:pipe": "bun test tests/pipe.test.mjs",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check:duplication": "jscpd .",
+    "check": "bun run lint && bun run format:check && bun run check:duplication",
+    "prepare": "husky || true",
+    "changeset": "changeset",
+    "changeset:version": "bun scripts/changeset-version.mjs",
+    "changeset:publish": "changeset publish",
+    "changeset:status": "changeset status --since=origin/main"
   },
   "keywords": [
     "shell",
@@ -46,5 +57,26 @@
     "src/",
     "README.md",
     "LICENSE"
-  ]
+  ],
+  "devDependencies": {
+    "@changesets/cli": "^2.29.7",
+    "eslint": "^9.38.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "husky": "^9.1.7",
+    "jscpd": "^4.0.5",
+    "lint-staged": "^16.2.6",
+    "prettier": "^3.6.2"
+  },
+  "lint-staged": {
+    "*.{js,mjs,cjs}": [
+      "eslint --fix --max-warnings 0",
+      "prettier --write",
+      "prettier --check"
+    ],
+    "*.md": [
+      "prettier --write",
+      "prettier --check"
+    ]
+  }
 }
