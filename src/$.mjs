@@ -29,13 +29,15 @@ function trace(category, messageOrFunc, runner = null) {
   // COMMAND_STREAM_TRACE=false explicitly disables tracing even if COMMAND_STREAM_VERBOSE=true
   // COMMAND_STREAM_TRACE=true explicitly enables tracing
   // Otherwise, use COMMAND_STREAM_VERBOSE
-  const VERBOSE = TRACE_ENV === 'false' ? false :
-    TRACE_ENV === 'true' ? true :
-      VERBOSE_ENV;
+  const VERBOSE =
+    TRACE_ENV === 'false' ? false : TRACE_ENV === 'true' ? true : VERBOSE_ENV;
 
-  if (!VERBOSE) return;
+  if (!VERBOSE) {
+    return;
+  }
 
-  const message = typeof messageOrFunc === 'function' ? messageOrFunc() : messageOrFunc;
+  const message =
+    typeof messageOrFunc === 'function' ? messageOrFunc() : messageOrFunc;
   const timestamp = new Date().toISOString();
   console.error(`[TRACE ${timestamp}] [${category}] ${message}`);
 }

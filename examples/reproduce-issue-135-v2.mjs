@@ -10,4 +10,6 @@ console.log('=== Test with CI=true set BEFORE import ===');
 const $silent = $({ mirror: false, capture: true });
 const result = await $silent`echo '{"status":"ok"}'`;
 console.log('Output:', result.stdout || result);
-console.log('\n=== Expected: Should be just {"status":"ok"} without trace logs ===');
+console.log(
+  '\n=== Expected: Should be just {"status":"ok"} without trace logs ==='
+);
