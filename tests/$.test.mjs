@@ -1,5 +1,5 @@
 import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
-import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
+import { isWindows } from './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
 import {
   $,
   sh,
@@ -532,7 +532,8 @@ describe('ProcessRunner Options', () => {
     expect(result.stdout).toBeUndefined();
   });
 
-  test('should handle cwd option', async () => {
+  // Skip on Windows - uses 'pwd' command
+  test.skipIf(isWindows)('should handle cwd option', async () => {
     const result = await sh('pwd', { cwd: '/tmp' });
 
     expect(result.stdout.trim()).toContain('tmp');

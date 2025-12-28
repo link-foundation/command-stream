@@ -1,5 +1,6 @@
 import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
 import { beforeTestCleanup, afterTestCleanup } from './test-cleanup.mjs';
+import { isWindows } from './test-helper.mjs';
 import {
   $,
   shell,
@@ -82,7 +83,8 @@ describe('Virtual Commands System', () => {
   });
 
   describe('Built-in Commands', () => {
-    test('should execute virtual cd command', async () => {
+    // Skip on Windows - uses Unix path /tmp
+    test.skipIf(isWindows)('should execute virtual cd command', async () => {
       const originalCwd = process.cwd();
 
       try {

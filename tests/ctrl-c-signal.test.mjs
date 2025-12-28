@@ -3,7 +3,11 @@ import { beforeTestCleanup, afterTestCleanup } from './test-cleanup.mjs';
 import { spawn } from 'child_process';
 import { trace } from '../src/$.utils.mjs';
 
-describe('CTRL+C Signal Handling', () => {
+// Platform detection - Windows handles signals differently than Unix
+const isWindows = process.platform === 'win32';
+
+// Skip entire describe block on Windows - SIGINT/signal handling is fundamentally different
+describe.skipIf(isWindows)('CTRL+C Signal Handling', () => {
   let childProcesses = [];
 
   beforeEach(async () => {
@@ -531,7 +535,8 @@ describe('CTRL+C Signal Handling', () => {
   );
 });
 
-describe('CTRL+C with Different stdin Modes', () => {
+// Skip entire describe block on Windows - uses 'sh' shell and Unix signals
+describe.skipIf(isWindows)('CTRL+C with Different stdin Modes', () => {
   let childProcesses = [];
 
   beforeEach(async () => {

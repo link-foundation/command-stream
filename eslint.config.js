@@ -122,7 +122,49 @@ export default [
     // Test files have different requirements
     files: ['tests/**/*.js', 'tests/**/*.mjs', '**/*.test.js', '**/*.test.mjs'],
     rules: {
+      'no-unused-vars': 'off', // Tests often have unused vars for demonstration or intentional non-use
       'require-await': 'off', // Async functions without await are common in tests
+      complexity: 'off', // Test functions can be more complex
+      'max-depth': 'off', // Tests can have deeper nesting
+      'max-lines-per-function': 'off', // Test functions can be longer
+      'max-statements': 'off', // Test functions can have more statements
+      'max-lines': 'off', // Test files can be longer
+      'no-empty': 'off', // Empty blocks are sometimes intentional in tests
+      'no-async-promise-executor': 'off', // Async promise executors are ok in tests
+      'no-constant-binary-expression': 'off', // Constant expressions can be for testing
+      eqeqeq: 'off', // Allow == in tests
+      'no-useless-escape': 'off', // Escapes can be for testing edge cases
+    },
+  },
+  {
+    // Example and debug files are more lenient
+    files: ['examples/**/*.js', 'examples/**/*.mjs', 'claude-profiles.mjs'],
+    rules: {
+      'no-unused-vars': 'off', // Examples often have unused vars for demonstration
+      'require-await': 'off', // Async functions without await are common in examples
+      'require-yield': 'off', // Generators without yield are common in examples
+      complexity: 'off', // Examples can be more complex for demonstration
+      'max-depth': 'off', // Examples can have deeper nesting
+      'max-lines-per-function': 'off', // Examples can have longer functions
+      'max-statements': 'off', // Examples can have more statements
+      'max-lines': 'off', // Examples files can be longer
+      'no-empty': 'off', // Empty blocks are sometimes intentional in examples
+      'no-useless-escape': 'off', // Escapes can be for clarity in examples
+      'no-case-declarations': 'off', // Lexical declarations in case blocks are ok in examples
+      'no-async-promise-executor': 'off', // Async promise executors are ok in examples
+      'no-prototype-builtins': 'off', // Prototype method access is ok in examples
+      'no-constant-binary-expression': 'off', // Constant expressions can be for demonstration
+      eqeqeq: 'off', // Allow == in examples
+      'prefer-template': 'off', // String concatenation is ok in examples
+    },
+  },
+  {
+    // Virtual command implementations have specific interface requirements
+    files: ['src/commands/**/*.mjs'],
+    rules: {
+      'require-await': 'off', // Commands must be async to match interface even if they don't await
+      complexity: 'off', // Commands can be complex due to argument parsing and validation
+      'max-depth': 'off', // Commands can have deeper nesting due to flag parsing
     },
   },
   {

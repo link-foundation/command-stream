@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { trace, VirtualUtils } from '../$.utils.mjs';
 
-export default async function cp({ args, stdin, cwd }) {
+export default async function cp({ args, stdin: _stdin, cwd }) {
   const argError = VirtualUtils.validateArgs(args, 2, 'cp');
   if (argError) {
     return VirtualUtils.invalidArgumentError(

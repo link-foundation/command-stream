@@ -2,7 +2,7 @@ import { trace } from '../$.utils.mjs';
 
 export default async function* yes({
   args,
-  stdin,
+  stdin: _stdin,
   isCancelled,
   abortSignal,
   ...rest

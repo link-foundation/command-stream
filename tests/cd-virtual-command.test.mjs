@@ -16,6 +16,9 @@ import {
 import { tmpdir, homedir } from 'os';
 import { join, resolve } from 'path';
 
+// Platform detection - Some tests use Unix-specific commands (cat, ln -s, chmod)
+const isWindows = process.platform === 'win32';
+
 // Helper to normalize paths (handles macOS /var -> /private/var symlink)
 const normalizePath = (p) => {
   try {
@@ -36,7 +39,8 @@ function verifyCwd(expected, message) {
   }
 }
 
-describe('cd Virtual Command - Core Behavior', () => {
+// Skip on Windows - uses pwd, cat, ln -s, chmod commands
+describe.skipIf(isWindows)('cd Virtual Command - Core Behavior', () => {
   beforeEach(async () => {
     await beforeTestCleanup();
     shell.errexit(false);
@@ -251,7 +255,8 @@ describe('cd Virtual Command - Core Behavior', () => {
   });
 });
 
-describe('cd Virtual Command - Command Chains', () => {
+// Skip on Windows - uses pwd and cat commands
+describe.skipIf(isWindows)('cd Virtual Command - Command Chains', () => {
   beforeEach(async () => {
     await beforeTestCleanup();
     shell.errexit(false);
@@ -355,7 +360,8 @@ describe('cd Virtual Command - Command Chains', () => {
   });
 });
 
-describe('cd Virtual Command - Subshell Behavior', () => {
+// Skip on Windows - uses subshells (parentheses) and pwd/cat commands
+describe.skipIf(isWindows)('cd Virtual Command - Subshell Behavior', () => {
   beforeEach(async () => {
     await beforeTestCleanup();
     shell.errexit(false);
@@ -409,7 +415,8 @@ describe('cd Virtual Command - Subshell Behavior', () => {
   });
 });
 
-describe('cd Virtual Command - Edge Cases', () => {
+// Skip on Windows - uses ln -s, chmod, and pwd commands
+describe.skipIf(isWindows)('cd Virtual Command - Edge Cases', () => {
   beforeEach(async () => {
     await beforeTestCleanup();
     shell.errexit(false);
@@ -551,61 +558,65 @@ describe('cd Virtual Command - Edge Cases', () => {
   });
 });
 
-describe('cd Virtual Command - Platform Compatibility', () => {
-  beforeEach(async () => {
-    await beforeTestCleanup();
-    shell.errexit(false);
-    shell.verbose(false);
-    shell.xtrace(false);
-    shell.pipefail(false);
-    shell.nounset(false);
-    enableVirtualCommands();
-    verifyCwd(originalCwd, 'Before test start');
-  });
+// Skip on Windows - uses pwd command
+describe.skipIf(isWindows)(
+  'cd Virtual Command - Platform Compatibility',
+  () => {
+    beforeEach(async () => {
+      await beforeTestCleanup();
+      shell.errexit(false);
+      shell.verbose(false);
+      shell.xtrace(false);
+      shell.pipefail(false);
+      shell.nounset(false);
+      enableVirtualCommands();
+      verifyCwd(originalCwd, 'Before test start');
+    });
 
-  afterEach(async () => {
-    await afterTestCleanup();
-    verifyCwd(originalCwd, 'After test cleanup');
-  });
+    afterEach(async () => {
+      await afterTestCleanup();
+      verifyCwd(originalCwd, 'After test cleanup');
+    });
 
-  test('should handle platform-specific path separators', async () => {
-    const baseDir = mkdtempSync(join(tmpdir(), 'cd-platform-'));
-    const subDir = join(baseDir, 'cross', 'platform', 'test');
-    mkdirSync(subDir, { recursive: true });
-    const originalCwd = process.cwd();
+    test('should handle platform-specific path separators', async () => {
+      const baseDir = mkdtempSync(join(tmpdir(), 'cd-platform-'));
+      const subDir = join(baseDir, 'cross', 'platform', 'test');
+      mkdirSync(subDir, { recursive: true });
+      const originalCwd = process.cwd();
 
-    try {
-      // Use platform-specific path
-      const result = await $`cd ${subDir}`;
-      expect(result.code).toBe(0);
+      try {
+        // Use platform-specific path
+        const result = await $`cd ${subDir}`;
+        expect(result.code).toBe(0);
 
-      const pwd = await $`pwd`;
-      expect(normalizePath(pwd.stdout.trim())).toBe(normalizePath(subDir));
+        const pwd = await $`pwd`;
+        expect(normalizePath(pwd.stdout.trim())).toBe(normalizePath(subDir));
 
-      await $`cd ${originalCwd}`;
-    } finally {
-      rmSync(baseDir, { recursive: true, force: true });
-    }
-  });
+        await $`cd ${originalCwd}`;
+      } finally {
+        rmSync(baseDir, { recursive: true, force: true });
+      }
+    });
 
-  test('should normalize paths correctly', async () => {
-    const baseDir = mkdtempSync(join(tmpdir(), 'cd-normalize-'));
-    const sub1 = join(baseDir, 'sub1');
-    const sub2 = join(sub1, 'sub2');
-    mkdirSync(sub2, { recursive: true });
-    const originalCwd = process.cwd();
+    test('should normalize paths correctly', async () => {
+      const baseDir = mkdtempSync(join(tmpdir(), 'cd-normalize-'));
+      const sub1 = join(baseDir, 'sub1');
+      const sub2 = join(sub1, 'sub2');
+      mkdirSync(sub2, { recursive: true });
+      const originalCwd = process.cwd();
 
-    try {
-      // Test path with ./ and ../
-      await $`cd ${baseDir}`;
-      await $`cd ./sub1/../sub1/sub2`;
+      try {
+        // Test path with ./ and ../
+        await $`cd ${baseDir}`;
+        await $`cd ./sub1/../sub1/sub2`;
 
-      const pwd = await $`pwd`;
-      expect(normalizePath(pwd.stdout.trim())).toBe(normalizePath(sub2));
+        const pwd = await $`pwd`;
+        expect(normalizePath(pwd.stdout.trim())).toBe(normalizePath(sub2));
 
-      await $`cd ${originalCwd}`;
-    } finally {
-      rmSync(baseDir, { recursive: true, force: true });
-    }
-  });
-});
+        await $`cd ${originalCwd}`;
+      } finally {
+        rmSync(baseDir, { recursive: true, force: true });
+      }
+    });
+  }
+);

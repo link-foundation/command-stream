@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { trace, VirtualUtils } from '../$.utils.mjs';
 
-export default async function ls({ args, stdin, cwd }) {
+export default async function ls({ args, stdin: _stdin, cwd }) {
   try {
     // Parse flags
     const flags = new Set();

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { test, expect, describe } from 'bun:test';
-import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
+import { isWindows } from './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
 import { $ } from '../src/$.mjs';
 
 describe('Options Examples (Feature Demo)', () => {
@@ -74,18 +74,22 @@ describe('Options Examples (Feature Demo)', () => {
     expect(result.code).toBe(0);
   });
 
-  test('example: real shell command vs virtual command', async () => {
-    // Both work the same way
-    const virtualResult = await $`echo "virtual command"`.start({
-      capture: false,
-    });
-    const realResult = await $`ls /tmp`.start({ capture: false });
+  // Skip on Windows - uses 'ls /tmp' which is Unix-specific
+  test.skipIf(isWindows)(
+    'example: real shell command vs virtual command',
+    async () => {
+      // Both work the same way
+      const virtualResult = await $`echo "virtual command"`.start({
+        capture: false,
+      });
+      const realResult = await $`ls /tmp`.start({ capture: false });
 
-    expect(virtualResult.stdout).toBeUndefined();
-    expect(realResult.stdout).toBeUndefined();
-    expect(virtualResult.code).toBe(0);
-    expect(realResult.code).toBe(0);
-  });
+      expect(virtualResult.stdout).toBeUndefined();
+      expect(realResult.stdout).toBeUndefined();
+      expect(virtualResult.code).toBe(0);
+      expect(realResult.code).toBe(0);
+    }
+  );
 
   test('example: chaining still works', async () => {
     // You can still use all other methods after .start() or .run()

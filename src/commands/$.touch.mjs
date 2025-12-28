@@ -1,7 +1,7 @@
 import fs from 'fs';
 import { trace, VirtualUtils } from '../$.utils.mjs';
 
-export default async function touch({ args, stdin, cwd }) {
+export default async function touch({ args, stdin: _stdin, cwd }) {
   const argError = VirtualUtils.validateArgs(args, 1, 'touch');
   if (argError) {
     return VirtualUtils.missingOperandError(

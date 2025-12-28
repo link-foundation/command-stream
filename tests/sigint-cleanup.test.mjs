@@ -2,7 +2,11 @@ import { test, expect, describe } from 'bun:test';
 import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
 import { $ } from '../src/$.mjs';
 
-describe('SIGINT Handler Cleanup Tests', () => {
+// Platform detection - Windows handles signals differently than Unix
+const isWindows = process.platform === 'win32';
+
+// Skip on Windows - SIGINT handler testing requires Unix signal semantics
+describe.skipIf(isWindows)('SIGINT Handler Cleanup Tests', () => {
   test('should remove SIGINT handler when all ProcessRunners finish', async () => {
     // Check initial state
     const initialListeners = process.listeners('SIGINT').length;

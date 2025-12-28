@@ -2,6 +2,10 @@ import { beforeEach, afterEach } from 'bun:test';
 import { resetGlobalState } from '../src/$.mjs';
 import { existsSync } from 'fs';
 
+// Platform detection helpers
+export const isWindows = process.platform === 'win32';
+export const isUnix = process.platform !== 'win32';
+
 // Save the original working directory when tests start
 const originalCwd = process.cwd();
 

@@ -3,12 +3,20 @@ import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanu
 import { spawn } from 'child_process';
 import { trace } from '../src/$.utils.mjs';
 
+// Platform detection - Windows handles signals differently than Unix
+const isWindows = process.platform === 'win32';
+
 /**
  * Baseline tests for CTRL+C signal handling using native spawn
  * These tests verify that the CI environment can handle basic process spawning and signals
  * without using our library, providing a comparison point for debugging
+ *
+ * Note: These tests are skipped on Windows because:
+ * 1. Windows doesn't have 'sh' shell by default
+ * 2. SIGINT/signal handling works fundamentally different on Windows
+ * 3. Exit codes 130 (128+SIGINT) are Unix-specific
  */
-describe('CTRL+C Baseline Tests (Native Spawn)', () => {
+describe.skipIf(isWindows)('CTRL+C Baseline Tests (Native Spawn)', () => {
   let childProcesses = [];
 
   afterEach(() => {

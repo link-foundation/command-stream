@@ -4,11 +4,16 @@ import { spawn } from 'child_process';
 import { $ } from '../src/$.mjs';
 import { trace } from '../src/$.utils.mjs';
 
+// Platform detection - Windows handles signals differently than Unix
+const isWindows = process.platform === 'win32';
+
 /**
  * Tests for CTRL+C signal handling in our command-stream library
  * These tests verify that our $ library properly handles SIGINT forwarding
+ *
+ * Note: Skipped on Windows because SIGINT/SIGTERM exit codes (130, 143) are Unix-specific
  */
-describe('CTRL+C Library Tests (command-stream)', () => {
+describe.skipIf(isWindows)('CTRL+C Library Tests (command-stream)', () => {
   let childProcesses = [];
 
   afterEach(() => {

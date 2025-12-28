@@ -2,7 +2,11 @@ import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
 import { beforeTestCleanup, afterTestCleanup } from './test-cleanup.mjs';
 import { $ } from '../src/$.mjs';
 
-describe('GitHub CLI (gh) commands', () => {
+// Platform detection - tests use Unix shell redirection 2>&1 and sh -c
+const isWindows = process.platform === 'win32';
+
+// Skip on Windows - tests use 2>&1 shell redirection, pipes with head, and sh -c
+describe.skipIf(isWindows)('GitHub CLI (gh) commands', () => {
   beforeEach(async () => {
     await beforeTestCleanup();
   });

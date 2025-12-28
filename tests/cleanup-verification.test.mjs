@@ -6,6 +6,7 @@ import {
   afterTestCleanup,
   originalCwd,
 } from './test-cleanup.mjs';
+import { isWindows } from './test-helper.mjs';
 import { $ } from '../src/$.mjs';
 import { mkdtempSync, rmSync, realpathSync } from 'fs';
 import { tmpdir } from 'os';
@@ -80,18 +81,22 @@ describe('Cleanup Verification', () => {
     expect(currentCwd).toBe(originalCwd);
   });
 
-  test('should not affect cwd when cd is in subshell', async () => {
-    const tempDir = mkdtempSync(join(tmpdir(), 'cleanup-test3-'));
-    testDirs.push(tempDir);
+  // Skip on Windows - uses subshell syntax and pwd command
+  test.skipIf(isWindows)(
+    'should not affect cwd when cd is in subshell',
+    async () => {
+      const tempDir = mkdtempSync(join(tmpdir(), 'cleanup-test3-'));
+      testDirs.push(tempDir);
 
-    // Change directory in subshell - should not affect parent
-    const result = await $`(cd ${tempDir} && pwd)`;
-    expect(normalizePath(result.stdout.trim())).toBe(normalizePath(tempDir));
+      // Change directory in subshell - should not affect parent
+      const result = await $`(cd ${tempDir} && pwd)`;
+      expect(normalizePath(result.stdout.trim())).toBe(normalizePath(tempDir));
 
-    // Should still be in original directory
-    const currentCwd = process.cwd();
-    expect(currentCwd).toBe(originalCwd);
-  });
+      // Should still be in original directory
+      const currentCwd = process.cwd();
+      expect(currentCwd).toBe(originalCwd);
+    }
+  );
 
   test('should restore cwd after multiple cd commands', async () => {
     const tempDir1 = mkdtempSync(join(tmpdir(), 'cleanup-test4-'));

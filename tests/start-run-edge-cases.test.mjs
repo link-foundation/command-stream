@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
-import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
+import { isWindows } from './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
 import { $, shell } from '../src/$.mjs';
 
 describe('Start/Run Edge Cases and Advanced Usage', () => {
@@ -32,12 +32,16 @@ describe('Start/Run Edge Cases and Advanced Usage', () => {
     expect(result.code).toBe(0);
   });
 
-  test('should work with real shell commands that produce large output', async () => {
-    const result = await $`ls -la /tmp`.start({ capture: false });
+  // Skip on Windows - uses 'ls -la /tmp' which is Unix-specific
+  test.skipIf(isWindows)(
+    'should work with real shell commands that produce large output',
+    async () => {
+      const result = await $`ls -la /tmp`.start({ capture: false });
 
-    expect(result.stdout).toBeUndefined();
-    expect(result.code).toBe(0);
-  });
+      expect(result.stdout).toBeUndefined();
+      expect(result.code).toBe(0);
+    }
+  );
 
   test('should handle stderr with capture: false', async () => {
     const result = await $`ls /nonexistent-path-12345`.start({

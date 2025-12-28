@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { trace, VirtualUtils } from '../$.utils.mjs';
 
-export default async function mv({ args, stdin, cwd }) {
+export default async function mv({ args, stdin: _stdin, cwd }) {
   const argError = VirtualUtils.validateArgs(args, 2, 'mv');
   if (argError) {
     return VirtualUtils.invalidArgumentError(
@@ -62,7 +62,7 @@ export default async function mv({ args, stdin, cwd }) {
       const sourcePath = VirtualUtils.resolvePath(source, cwd);
 
       try {
-        const sourceStats = fs.statSync(sourcePath);
+        const _sourceStats = fs.statSync(sourcePath);
         let finalDestPath = destPath;
 
         if (destIsDir) {

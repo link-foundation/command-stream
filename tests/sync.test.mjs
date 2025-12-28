@@ -1,5 +1,5 @@
 import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
-import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
+import { isWindows } from './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
 import { $, shell } from '../src/$.mjs';
 
 // Reset shell settings before each test
@@ -132,7 +132,8 @@ describe('Synchronous Execution (.sync())', () => {
       expect(result3.stdout.trim()).toBe('ignored');
     });
 
-    test('should handle cwd option', () => {
+    // Skip on Windows - uses 'pwd' command and Unix paths
+    test.skipIf(isWindows)('should handle cwd option', () => {
       const cmd = $`pwd`;
       cmd.options.cwd = '/tmp';
       const result = cmd.sync();

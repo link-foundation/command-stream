@@ -42,7 +42,40 @@ function findAvailableShell() {
     return cachedShell;
   }
 
-  const shellsToTry = [
+  const isWindows = process.platform === 'win32';
+
+  // Windows-specific shells
+  const windowsShells = [
+    // Git Bash is the most Unix-compatible option on Windows
+    // Check common installation paths
+    {
+      cmd: 'C:\\Program Files\\Git\\bin\\bash.exe',
+      args: ['-c'],
+      checkPath: true,
+    },
+    {
+      cmd: 'C:\\Program Files\\Git\\usr\\bin\\bash.exe',
+      args: ['-c'],
+      checkPath: true,
+    },
+    {
+      cmd: 'C:\\Program Files (x86)\\Git\\bin\\bash.exe',
+      args: ['-c'],
+      checkPath: true,
+    },
+    // Git Bash via PATH (if added to PATH by user)
+    { cmd: 'bash.exe', args: ['-c'], checkPath: false },
+    // WSL bash as fallback
+    { cmd: 'wsl.exe', args: ['bash', '-c'], checkPath: false },
+    // PowerShell as last resort (different syntax for commands)
+    { cmd: 'powershell.exe', args: ['-Command'], checkPath: false },
+    { cmd: 'pwsh.exe', args: ['-Command'], checkPath: false },
+    // cmd.exe as final fallback
+    { cmd: 'cmd.exe', args: ['/c'], checkPath: false },
+  ];
+
+  // Unix-specific shells
+  const unixShells = [
     // Try absolute paths first (most reliable)
     { cmd: '/bin/sh', args: ['-l', '-c'], checkPath: true },
     { cmd: '/usr/bin/sh', args: ['-l', '-c'], checkPath: true },
@@ -71,6 +104,9 @@ function findAvailableShell() {
     { cmd: 'zsh', args: ['-l', '-c'], checkPath: false },
   ];
 
+  // Select shells based on platform
+  const shellsToTry = isWindows ? windowsShells : unixShells;
+
   for (const shell of shellsToTry) {
     try {
       if (shell.checkPath) {
@@ -84,12 +120,15 @@ function findAvailableShell() {
           return cachedShell;
         }
       } else {
-        // Try to execute 'which' to check if command is in PATH
-        const result = cp.spawnSync('which', [shell.cmd], {
+        // On Windows, use 'where' instead of 'which'
+        const whichCmd = isWindows ? 'where' : 'which';
+        const result = cp.spawnSync(whichCmd, [shell.cmd], {
           encoding: 'utf-8',
+          // On Windows, we need shell: true for 'where' to work
+          shell: isWindows,
         });
         if (result.status === 0 && result.stdout) {
-          const shellPath = result.stdout.trim();
+          const shellPath = result.stdout.trim().split('\n')[0]; // Take first result
           trace(
             'ShellDetection',
             () => `Found shell in PATH: ${shell.cmd} => ${shellPath}`
@@ -100,15 +139,27 @@ function findAvailableShell() {
       }
     } catch (e) {
       // Continue to next shell option
+      trace(
+        'ShellDetection',
+        () => `Failed to check shell ${shell.cmd}: ${e.message}`
+      );
     }
   }
 
-  // Final fallback - use absolute path to sh
-  trace(
-    'ShellDetection',
-    () => 'WARNING: No shell found, using /bin/sh as fallback'
-  );
-  cachedShell = { cmd: '/bin/sh', args: ['-l', '-c'] };
+  // Final fallback based on platform
+  if (isWindows) {
+    trace(
+      'ShellDetection',
+      () => 'WARNING: No shell found, using cmd.exe as fallback on Windows'
+    );
+    cachedShell = { cmd: 'cmd.exe', args: ['/c'] };
+  } else {
+    trace(
+      'ShellDetection',
+      () => 'WARNING: No shell found, using /bin/sh as fallback'
+    );
+    cachedShell = { cmd: '/bin/sh', args: ['-l', '-c'] };
+  }
   return cachedShell;
 }
 

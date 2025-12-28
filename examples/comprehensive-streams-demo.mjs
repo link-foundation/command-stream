@@ -96,7 +96,7 @@ async function comprehensiveDemo() {
     `   ✅ Old style works: ${JSON.stringify(oldResult.stdout.trim())}`
   );
 
-  console.log('\\n' + '='.repeat(50));
+  console.log(`\\n${'='.repeat(50)}`);
   console.log('🎉 SUMMARY: Issue #33 Implementation Complete!');
   console.log('');
   console.log(
