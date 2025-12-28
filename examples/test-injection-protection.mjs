@@ -16,7 +16,7 @@ async function testInjection() {
   const output1 = result1.stdout || String(result1);
   console.log('Output:', output1.trim());
   console.log(output1.includes('INJECTED') ? '❌ INJECTION!' : '✅ Protected');
-  
+
   // Test 2: Variable expansion attempt
   console.log('\n2. Variable expansion attempt:');
   const evil2 = '$HOME';
@@ -26,8 +26,12 @@ async function testInjection() {
   const result2 = await cmd2;
   const output2 = (result2.stdout || String(result2)).trim();
   console.log('Output:', output2);
-  console.log(output2 === '$HOME' ? '✅ Protected (literal $HOME)' : '❌ Variable expanded!');
-  
+  console.log(
+    output2 === '$HOME'
+      ? '✅ Protected (literal $HOME)'
+      : '❌ Variable expanded!'
+  );
+
   // Test 3: Command substitution attempt
   console.log('\n3. Command substitution attempt:');
   const evil3 = '$(whoami)';
@@ -37,8 +41,12 @@ async function testInjection() {
   const result3 = await cmd3;
   const output3 = (result3.stdout || String(result3)).trim();
   console.log('Output:', output3);
-  console.log(output3 === '$(whoami)' ? '✅ Protected (literal $(whoami))' : '❌ Command executed!');
-  
+  console.log(
+    output3 === '$(whoami)'
+      ? '✅ Protected (literal $(whoami))'
+      : '❌ Command executed!'
+  );
+
   // Test 4: Safe string - no unnecessary quotes
   console.log('\n4. Safe string (no unnecessary quotes):');
   const safe = 'hello';
@@ -47,15 +55,23 @@ async function testInjection() {
   console.log('Command:', cmd4.spec.command);
   const result4 = await cmd4;
   console.log('Output:', (result4.stdout || String(result4)).trim());
-  console.log(!cmd4.spec.command.includes("'hello'") ? '✅ No unnecessary quotes' : '⚠️  Quoted when not needed');
-  
+  console.log(
+    !cmd4.spec.command.includes("'hello'")
+      ? '✅ No unnecessary quotes'
+      : '⚠️  Quoted when not needed'
+  );
+
   // Test 5: Path without spaces - no unnecessary quotes
   console.log('\n5. Safe path (no unnecessary quotes):');
   const safePath = '/usr/bin/echo';
   const cmd5 = $({ mirror: false })`${safePath} test`;
   console.log('Input:', safePath);
   console.log('Command:', cmd5.spec.command);
-  console.log(!cmd5.spec.command.startsWith("'") ? '✅ Path not unnecessarily quoted' : '⚠️  Path quoted when not needed');
+  console.log(
+    !cmd5.spec.command.startsWith("'")
+      ? '✅ Path not unnecessarily quoted'
+      : '⚠️  Path quoted when not needed'
+  );
 }
 
 testInjection().catch(console.error);

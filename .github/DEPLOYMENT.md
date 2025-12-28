@@ -25,6 +25,7 @@ This is automatically provided by GitHub Actions, no setup required.
 ## How the Deployment Works
 
 ### CI Workflow (`.github/workflows/ci.yml`)
+
 - Runs on every pull request and push to main
 - Tests the code with Bun
 - Checks Node.js compatibility (versions 20, 22, 24)
@@ -32,6 +33,7 @@ This is automatically provided by GitHub Actions, no setup required.
 - Runs coverage tests
 
 ### Deploy Workflow (`.github/workflows/deploy.yml`)
+
 - Runs only on pushes to the `main` branch
 - Only deploys if relevant files have changed:
   - `$.mjs` (main library file)
@@ -41,6 +43,7 @@ This is automatically provided by GitHub Actions, no setup required.
   - `.github/workflows/deploy.yml` (deployment config)
 
 ### Deployment Process
+
 1. **Change Detection**: Checks if relevant files changed
 2. **Testing**: Runs full test suite with coverage
 3. **Version Check**: Verifies if the current version already exists on NPM
@@ -52,18 +55,20 @@ This is automatically provided by GitHub Actions, no setup required.
 To release a new version:
 
 1. Update the version in `package.json`:
+
    ```bash
    # For patch releases (bug fixes)
    npm version patch
-   
+
    # For minor releases (new features)
    npm version minor
-   
+
    # For major releases (breaking changes)
    npm version major
    ```
 
 2. Push to main branch:
+
    ```bash
    git push origin main --tags
    ```

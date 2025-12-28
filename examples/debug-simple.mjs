@@ -10,7 +10,7 @@ console.log('Global config:', getAnsiConfig());
 console.log('\n2. Direct terminal write test:');
 const testStr = '\x1b[31mRed text\x1b[0m normal';
 console.log('Writing directly to terminal:');
-process.stdout.write(testStr + '\n');
+process.stdout.write(`${testStr}\n`);
 
 console.log('\n3. jq command test:');
 const result = await $`echo '{"name": "test"}' | jq --color-output .`;
@@ -27,7 +27,10 @@ const proc = $`echo '{"name": "test"}' | jq --color-output .`;
 proc.on('stdout', (chunk) => {
   console.log('Event chunk type:', typeof chunk);
   console.log('Event chunk constructor:', chunk.constructor.name);
-  console.log('Event chunk raw (first 30 bytes):', Buffer.from(chunk.slice(0, 30)));
+  console.log(
+    'Event chunk raw (first 30 bytes):',
+    Buffer.from(chunk.slice(0, 30))
+  );
   console.log('Writing event chunk directly:');
   process.stdout.write('[EVENT] ');
   process.stdout.write(chunk);

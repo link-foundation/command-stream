@@ -9,7 +9,7 @@ const $combined = $({
   stdin: 'test data for file',
   cwd: '/tmp',
   mirror: false,
-  capture: true
+  capture: true,
 });
 
 const filename = `test-${Date.now()}.txt`;

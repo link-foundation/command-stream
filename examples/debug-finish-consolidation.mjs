@@ -11,13 +11,13 @@ const tests = [
     const result = await $`echo "test"`;
     console.log('Result:', result.stdout);
   },
-  
+
   async () => {
     console.log('\n2. Testing sync mode...');
     const result = $`echo "sync test"`.sync();
     console.log('Result:', result.stdout);
   },
-  
+
   async () => {
     console.log('\n3. Testing error handling...');
     try {
@@ -26,7 +26,7 @@ const tests = [
       console.log('Expected error, code:', error.code);
     }
   },
-  
+
   async () => {
     console.log('\n4. Testing pipeline...');
     try {
@@ -34,7 +34,7 @@ const tests = [
     } catch (error) {
       console.log('Expected pipeline error, code:', error.code);
     }
-  }
+  },
 ];
 
 for (const test of tests) {

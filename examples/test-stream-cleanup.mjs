@@ -15,7 +15,7 @@ for await (const chunk of $`yes "test output"`.stream()) {
 }
 
 // Wait a bit to see if process continues outputting
-await new Promise(resolve => setTimeout(resolve, 100));
+await new Promise((resolve) => setTimeout(resolve, 100));
 
 console.log(`Test completed in ${Date.now() - startTime}ms`);
 console.log('If you see this message quickly without hanging, cleanup worked!');

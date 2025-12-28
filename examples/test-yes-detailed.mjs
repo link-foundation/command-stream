@@ -8,11 +8,11 @@ import yesCommand from '../src/commands/$.yes.mjs';
 
 let cancelled = false;
 const abortController = new AbortController();
-const generator = yesCommand({ 
-  args: ['test'], 
-  stdin: '', 
+const generator = yesCommand({
+  args: ['test'],
+  stdin: '',
   isCancelled: () => cancelled,
-  signal: abortController.signal
+  signal: abortController.signal,
 });
 
 let count = 0;
@@ -46,11 +46,13 @@ for await (const chunk of runner.stream()) {
   }
 }
 
-console.log(`Stream test finished: runner.finished=${runner.finished}, iterations=${iterations}`);
+console.log(
+  `Stream test finished: runner.finished=${runner.finished}, iterations=${iterations}`
+);
 
 // Wait to see if any more output comes
 console.log('\nWaiting 500ms to check for spurious output...');
-await new Promise(resolve => setTimeout(resolve, 500));
+await new Promise((resolve) => setTimeout(resolve, 500));
 
 console.log('All tests complete');
 process.exit(0);

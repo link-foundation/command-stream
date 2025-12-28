@@ -15,7 +15,7 @@ for await (const chunk of cmd.stream()) {
     const elapsed = Date.now() - start;
     const data = chunk.data.toString().trim();
     if (data) {
-      const lines = data.split('\n').filter(l => l);
+      const lines = data.split('\n').filter((l) => l);
       for (const line of lines) {
         console.log(`[${elapsed}ms] ${line}`);
       }
@@ -36,7 +36,7 @@ for await (const chunk of cmd2.stream()) {
     const elapsed = Date.now() - start2;
     const data = chunk.data.toString().trim();
     if (data) {
-      const lines = data.split('\n').filter(l => l);
+      const lines = data.split('\n').filter((l) => l);
       for (const line of lines) {
         console.log(`[${elapsed}ms] ${line}`);
       }

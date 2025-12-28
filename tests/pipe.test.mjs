@@ -1,6 +1,12 @@
 import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
 import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
-import { $, register, unregister, enableVirtualCommands, disableVirtualCommands } from '../src/$.mjs';
+import {
+  $,
+  register,
+  unregister,
+  enableVirtualCommands,
+  disableVirtualCommands,
+} from '../src/$.mjs';
 import { rmSync, existsSync, mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
@@ -10,7 +16,7 @@ const TEST_DIR = 'test-pipe';
 beforeEach(() => {
   // Enable virtual commands for these tests
   enableVirtualCommands();
-  
+
   // Create clean test directory
   if (existsSync(TEST_DIR)) {
     rmSync(TEST_DIR, { recursive: true, force: true });
@@ -34,10 +40,10 @@ describe('Programmatic .pipe() Method', () => {
       });
 
       const result = await $`echo "Hello World"`.pipe($`add-prefix "Piped:"`);
-      
+
       expect(result.code).toBe(0);
       expect(result.stdout).toBe('Piped: Hello World\n');
-      
+
       // Cleanup
       unregister('add-prefix');
     });
@@ -45,7 +51,7 @@ describe('Programmatic .pipe() Method', () => {
     test('should pipe virtual commands', async () => {
       register('double', async ({ args, stdin }) => {
         const lines = stdin.split('\n').filter(Boolean);
-        const doubled = lines.map(line => line + line).join('\n') + '\n';
+        const doubled = `${lines.map((line) => line + line).join('\n')}\n`;
         return { stdout: doubled, code: 0 };
       });
 
@@ -55,10 +61,10 @@ describe('Programmatic .pipe() Method', () => {
       });
 
       const result = await $`echo "hello"`.pipe($`double`).pipe($`count-chars`);
-      
+
       expect(result.code).toBe(0);
       expect(result.stdout).toBe('10\n'); // "hellohello" = 10 chars
-      
+
       // Cleanup
       unregister('double');
       unregister('count-chars');
@@ -68,15 +74,15 @@ describe('Programmatic .pipe() Method', () => {
       register('prefix', async ({ args, stdin }) => {
         const prefix = args[0] || 'PREFIX:';
         const lines = stdin.split('\n').filter(Boolean);
-        const prefixed = lines.map(line => `${prefix} ${line}`).join('\n') + '\n';
+        const prefixed = `${lines.map((line) => `${prefix} ${line}`).join('\n')}\n`;
         return { stdout: prefixed, code: 0 };
       });
 
       const result = await $`echo "test"`.pipe($`prefix "[PIPED]"`);
-      
+
       expect(result.code).toBe(0);
       expect(result.stdout).toBe('[PIPED] test\n');
-      
+
       // Cleanup
       unregister('prefix');
     });
@@ -84,25 +90,33 @@ describe('Programmatic .pipe() Method', () => {
 
   describe('Error Handling', () => {
     test('should propagate errors from source command', async () => {
-      const result = await $`cat nonexistent-file.txt`.pipe($`echo "Should not reach here"`);
-      
+      const result = await $`cat nonexistent-file.txt`.pipe(
+        $`echo "Should not reach here"`
+      );
+
       expect(result.code).toBe(1);
       // More flexible error message checking - different systems may format differently
-      expect(result.stderr).toMatch(/No such file or directory|nonexistent-file\.txt|cannot access|Command failed with exit code 1/i);
+      expect(result.stderr).toMatch(
+        /No such file or directory|nonexistent-file\.txt|cannot access|Command failed with exit code 1/i
+      );
       expect(result.stdout).toBe(''); // Destination should not execute
     });
 
     test('should handle errors in destination command', async () => {
-      register('fail', async ({ args, stdin }) => {
-        return { stdout: '', stderr: 'Virtual command failed', code: 42 };
-      });
+      register('fail', async ({ args, stdin }) => ({
+        stdout: '',
+        stderr: 'Virtual command failed',
+        code: 42,
+      }));
 
       const result = await $`echo "hello"`.pipe($`fail`);
-      
+
       expect(result.code).toBe(42);
       // More flexible error checking - the pipe implementation may wrap errors
-      expect(result.stderr).toMatch(/Virtual command failed|Command failed with exit code 42/i);
-      
+      expect(result.stderr).toMatch(
+        /Virtual command failed|Command failed with exit code 42/i
+      );
+
       // Cleanup
       unregister('fail');
     });
@@ -113,10 +127,10 @@ describe('Programmatic .pipe() Method', () => {
       });
 
       const result = await $`echo "hello"`.pipe($`throw-error`);
-      
+
       expect(result.code).toBe(1);
       expect(result.stderr).toContain('Something went wrong');
-      
+
       // Cleanup
       unregister('throw-error');
     });
@@ -124,27 +138,29 @@ describe('Programmatic .pipe() Method', () => {
 
   describe('Complex Pipelines', () => {
     test('should support multiple pipe operations', async () => {
-      register('uppercase', async ({ args, stdin }) => {
-        return { stdout: stdin.toUpperCase(), code: 0 };
-      });
+      register('uppercase', async ({ args, stdin }) => ({
+        stdout: stdin.toUpperCase(),
+        code: 0,
+      }));
 
       register('reverse', async ({ args, stdin }) => {
         const reversed = stdin.split('').reverse().join('');
         return { stdout: reversed, code: 0 };
       });
 
-      register('add-brackets', async ({ args, stdin }) => {
-        return { stdout: `[${stdin.trim()}]\n`, code: 0 };
-      });
+      register('add-brackets', async ({ args, stdin }) => ({
+        stdout: `[${stdin.trim()}]\n`,
+        code: 0,
+      }));
 
       const result = await $`echo "hello"`
         .pipe($`uppercase`)
         .pipe($`reverse`)
         .pipe($`add-brackets`);
-      
+
       expect(result.code).toBe(0);
       expect(result.stdout).toBe('[OLLEH]\n');
-      
+
       // Cleanup
       unregister('uppercase');
       unregister('reverse');
@@ -152,23 +168,21 @@ describe('Programmatic .pipe() Method', () => {
     });
 
     test('should preserve stderr from all commands', async () => {
-      register('warn-and-pass', async ({ args, stdin }) => {
-        return { 
-          stdout: stdin, 
-          stderr: `Warning from ${args[0]}\n`, 
-          code: 0 
-        };
-      });
+      register('warn-and-pass', async ({ args, stdin }) => ({
+        stdout: stdin,
+        stderr: `Warning from ${args[0]}\n`,
+        code: 0,
+      }));
 
       const result = await $`echo "data"`
         .pipe($`warn-and-pass cmd1`)
         .pipe($`warn-and-pass cmd2`);
-      
+
       expect(result.code).toBe(0);
       expect(result.stdout).toBe('data\n');
       expect(result.stderr).toContain('Warning from cmd1');
       expect(result.stderr).toContain('Warning from cmd2');
-      
+
       // Cleanup
       unregister('warn-and-pass');
     });
@@ -185,10 +199,10 @@ describe('Programmatic .pipe() Method', () => {
       });
 
       const result = await $`cat ${testFile}`.pipe($`count-lines`);
-      
+
       expect(result.code).toBe(0);
       expect(result.stdout).toBe('3\n');
-      
+
       // Cleanup
       unregister('count-lines');
     });
@@ -196,7 +210,7 @@ describe('Programmatic .pipe() Method', () => {
     test('should pipe from virtual to built-in command', async () => {
       register('generate-sequence', async ({ args }) => {
         const count = parseInt(args[0] || 3);
-        const sequence = Array.from({ length: count }, (_, i) => i + 1).join('\n') + '\n';
+        const sequence = `${Array.from({ length: count }, (_, i) => i + 1).join('\n')}\n`;
         return { stdout: sequence, code: 0 };
       });
 
@@ -206,10 +220,10 @@ describe('Programmatic .pipe() Method', () => {
       });
 
       const result = await $`generate-sequence 5`.pipe($`capture-lines`);
-      
+
       expect(result.code).toBe(0);
       expect(result.stdout).toBe('Got 5 lines\n');
-      
+
       // Cleanup
       unregister('generate-sequence');
       unregister('capture-lines');
@@ -234,13 +248,15 @@ describe('Programmatic .pipe() Method', () => {
       });
 
       const start = Date.now();
-      const result = await $`generate-large 100`.pipe($`count-occurrences Line`);
+      const result = await $`generate-large 100`.pipe(
+        $`count-occurrences Line`
+      );
       const elapsed = Date.now() - start;
-      
+
       expect(result.code).toBe(0);
       expect(result.stdout).toBe('100\n');
       expect(elapsed).toBeLessThan(2000); // Should complete within 2 seconds
-      
+
       // Cleanup
       unregister('generate-large');
       unregister('count-occurrences');
@@ -249,20 +265,24 @@ describe('Programmatic .pipe() Method', () => {
 
   describe('Compatibility with Shell Piping', () => {
     test('should work alongside shell pipe syntax', async () => {
-      register('format-output', async ({ args, stdin }) => {
-        return { stdout: `Formatted: ${stdin.trim()}\n`, code: 0 };
-      });
+      register('format-output', async ({ args, stdin }) => ({
+        stdout: `Formatted: ${stdin.trim()}\n`,
+        code: 0,
+      }));
 
-      register('simple-pipe', async ({ args, stdin }) => {
-        return { stdout: `${stdin.trim()} processed\n`, code: 0 };
-      });
+      register('simple-pipe', async ({ args, stdin }) => ({
+        stdout: `${stdin.trim()} processed\n`,
+        code: 0,
+      }));
 
       // Test that programmatic .pipe() works after shell pipe operations
-      const result = await $`echo "hello"`.pipe($`simple-pipe`).pipe($`format-output`);
-      
+      const result = await $`echo "hello"`
+        .pipe($`simple-pipe`)
+        .pipe($`format-output`);
+
       expect(result.code).toBe(0);
       expect(result.stdout).toBe('Formatted: hello processed\n');
-      
+
       // Cleanup
       unregister('format-output');
       unregister('simple-pipe');

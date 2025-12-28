@@ -1,4 +1,3 @@
-
 #!/usr/bin/env node
 let sigintReceived = false;
 process.on('SIGINT', () => {

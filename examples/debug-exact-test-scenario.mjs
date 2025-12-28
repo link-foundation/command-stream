@@ -12,7 +12,7 @@ let cleanupDone = false;
 process.on('SIGINT', async () => {
   console.log('CHILD_CLEANUP_START');
   // Simulate cleanup work
-  await new Promise(resolve => setTimeout(resolve, 100));
+  await new Promise((resolve) => setTimeout(resolve, 100));
   cleanupDone = true;
   console.log('CHILD_CLEANUP_DONE');
   process.exit(0); // Exit cleanly after cleanup
@@ -23,20 +23,20 @@ console.log('CHILD_READY');
 // Run a command that will receive SIGINT forwarding
 try {
   const sleepPromise = $`sleep 5`.start();
-  
+
   // Send SIGINT to ourselves after a short delay (simulating the test)
   setTimeout(() => {
     console.log('Sending SIGINT...');
     process.kill(process.pid, 'SIGINT');
   }, 500);
-  
+
   await sleepPromise;
 } catch (error) {
   console.log('SLEEP_INTERRUPTED');
   console.log('Error details:', {
     message: error.message,
     code: error.code,
-    constructor: error.constructor.name
+    constructor: error.constructor.name,
   });
 }
 

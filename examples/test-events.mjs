@@ -16,7 +16,9 @@ cmd.on('stdout', (data) => {
   const elapsed = Date.now() - start;
   const text = data.toString().trim();
   if (eventCount <= 3 || elapsed < 700) {
-    console.log(`[${elapsed}ms] Event ${eventCount}: ${text.substring(0, 50)}...`);
+    console.log(
+      `[${elapsed}ms] Event ${eventCount}: ${text.substring(0, 50)}...`
+    );
   }
 });
 

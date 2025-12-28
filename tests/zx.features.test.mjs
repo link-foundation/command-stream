@@ -25,7 +25,7 @@ describe('zx Feature Validation (Conceptual)', () => {
       // zx pioneered the $`command` template literal syntax
       // const result = await $`echo "zx template literal"`;
       // expect(result.stdout).toContain('zx template literal');
-      
+
       expect(true).toBe(true); // Placeholder - zx supports this syntax
     });
 
@@ -33,7 +33,7 @@ describe('zx Feature Validation (Conceptual)', () => {
       // const message = 'interpolation';
       // const result = await $`echo ${message}`;
       // expect(result.stdout).toContain('interpolation');
-      
+
       expect(true).toBe(true); // Placeholder
     });
   });
@@ -42,14 +42,14 @@ describe('zx Feature Validation (Conceptual)', () => {
     test('should NOT provide real-time streaming (buffers only)', () => {
       // zx buffers all output and returns it when command completes
       // No real-time streaming or chunk processing capabilities
-      
+
       expect(true).toBe(true); // Placeholder - zx buffers only
     });
 
     test('should return complete buffered output', () => {
       // const result = await $`echo "buffered"`;
       // expect(result.stdout).toBe('buffered\n');
-      
+
       expect(true).toBe(true); // Placeholder
     });
   });
@@ -58,7 +58,7 @@ describe('zx Feature Validation (Conceptual)', () => {
     test('should NOT support for await iteration', () => {
       // zx results are not async iterable
       // No streaming interface available
-      
+
       expect(true).toBe(true); // Placeholder - no async iteration
     });
   });
@@ -67,7 +67,7 @@ describe('zx Feature Validation (Conceptual)', () => {
     test('should NOT support .on() events', () => {
       // zx results don't have EventEmitter interface
       // No event-based processing available
-      
+
       expect(true).toBe(true); // Placeholder - no events
     });
   });
@@ -76,7 +76,7 @@ describe('zx Feature Validation (Conceptual)', () => {
     test('should NOT support events + await (only await)', () => {
       // zx only supports await pattern
       // No event handling capabilities
-      
+
       expect(true).toBe(true); // Placeholder - await only
     });
   });
@@ -86,7 +86,7 @@ describe('zx Feature Validation (Conceptual)', () => {
       // zx automatically quotes variables to prevent injection
       // const dangerous = "'; rm -rf /;";
       // const result = await $`echo ${dangerous}`; // Safe
-      
+
       expect(true).toBe(true); // Placeholder - safe by default
     });
   });
@@ -95,7 +95,7 @@ describe('zx Feature Validation (Conceptual)', () => {
     test('should work cross-platform', () => {
       // zx works on Windows, macOS, and Linux
       // Handles platform differences in shell commands
-      
+
       expect(true).toBe(true); // Placeholder - cross-platform
     });
   });
@@ -105,7 +105,7 @@ describe('zx Feature Validation (Conceptual)', () => {
       // zx is the slowest among the libraries compared
       // Optimized for ease of use over performance
       // Each command spawns a new shell process
-      
+
       expect(true).toBe(true); // Placeholder - slow performance
     });
   });
@@ -114,7 +114,7 @@ describe('zx Feature Validation (Conceptual)', () => {
     test('should buffer in memory', () => {
       // zx buffers all output in memory
       // No streaming capabilities to prevent large buffer accumulation
-      
+
       expect(true).toBe(true); // Placeholder - buffers in memory
     });
   });
@@ -123,14 +123,14 @@ describe('zx Feature Validation (Conceptual)', () => {
     test('should throw exception on error', () => {
       // zx throws exceptions on non-zero exit codes by default
       // try { await $`exit 1`; } catch (error) { /* handle */ }
-      
+
       expect(true).toBe(true); // Placeholder - throws on error
     });
 
     test('should support nothrow mode', () => {
       // zx supports $.nothrow() to prevent exceptions
       // const result = await $.nothrow()`exit 1`;
-      
+
       expect(true).toBe(true); // Placeholder - nothrow available
     });
   });
@@ -139,7 +139,7 @@ describe('zx Feature Validation (Conceptual)', () => {
     test('should support basic stdin', () => {
       // zx supports stdin through pipe operations
       // const result = await $`echo "input" | cat`;
-      
+
       expect(true).toBe(true); // Placeholder - basic stdin support
     });
   });
@@ -148,7 +148,7 @@ describe('zx Feature Validation (Conceptual)', () => {
     test('should NOT have built-in commands', () => {
       // zx uses system shell commands only
       // No built-in command implementations
-      
+
       expect(true).toBe(true); // Placeholder - no built-ins
     });
   });
@@ -157,7 +157,7 @@ describe('zx Feature Validation (Conceptual)', () => {
     test('should have ~50KB bundle size', () => {
       // zx is the largest bundle among compared libraries
       // Includes many utility functions and dependencies
-      
+
       expect(true).toBe(true); // Placeholder - ~50KB estimated
     });
   });
@@ -166,7 +166,7 @@ describe('zx Feature Validation (Conceptual)', () => {
     test('should have full TypeScript support', () => {
       // zx has complete TypeScript definitions
       // Can be used in .ts files with type checking
-      
+
       expect(true).toBe(true); // Placeholder - full TS support
     });
   });
@@ -177,21 +177,21 @@ describe('zx Feature Validation (Conceptual)', () => {
       // import { echo, cd, fs, path, glob } from 'zx';
       // await echo('message');
       // cd('/path');
-      
+
       expect(true).toBe(true); // Placeholder - helper functions
     });
 
     test('should support colorful output', () => {
       // zx includes chalk for colored terminal output
       // Built-in support for pretty logging and output
-      
+
       expect(true).toBe(true); // Placeholder - colored output
     });
 
     test('should support file system utilities', () => {
       // zx includes fs-extra, glob, and other file utilities
       // Makes it a complete shell scripting solution
-      
+
       expect(true).toBe(true); // Placeholder - FS utilities
     });
   });
@@ -200,7 +200,7 @@ describe('zx Feature Validation (Conceptual)', () => {
     test('should have excellent DX for shell scripts', () => {
       // zx is optimized for writing shell scripts in JavaScript
       // Great for automation, build scripts, and devops tasks
-      
+
       expect(true).toBe(true); // Placeholder - great DX
     });
 
@@ -208,7 +208,7 @@ describe('zx Feature Validation (Conceptual)', () => {
       // #!/usr/bin/env zx
       // console.log('This is a zx script');
       // await $`echo "executable"`;
-      
+
       expect(true).toBe(true); // Placeholder - shebang support
     });
   });
@@ -217,7 +217,7 @@ describe('zx Feature Validation (Conceptual)', () => {
     test('should use system shell for all commands', () => {
       // zx executes everything through the system shell
       // This provides full shell compatibility but at performance cost
-      
+
       expect(true).toBe(true); // Placeholder - uses system shell
     });
 
@@ -226,7 +226,7 @@ describe('zx Feature Validation (Conceptual)', () => {
       // - Pipes, redirections, globbing
       // - Shell built-ins and functions
       // - Environment variable expansion
-      
+
       expect(true).toBe(true); // Placeholder - full shell features
     });
   });

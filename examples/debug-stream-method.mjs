@@ -21,17 +21,25 @@ const timeout = setTimeout(() => {
 try {
   for await (const chunk of stream) {
     chunkCount++;
-    console.log(`Chunk ${chunkCount}:`, chunk.type, JSON.stringify(chunk.data.toString().trim()));
-    
-    // Safety break  
+    console.log(
+      `Chunk ${chunkCount}:`,
+      chunk.type,
+      JSON.stringify(chunk.data.toString().trim())
+    );
+
+    // Safety break
     if (chunkCount >= 3) {
       console.log('Safety break after 3 chunks');
       break;
     }
   }
-  
+
   clearTimeout(timeout);
-  console.log('Stream iteration completed naturally with', chunkCount, 'chunks');
+  console.log(
+    'Stream iteration completed naturally with',
+    chunkCount,
+    'chunks'
+  );
 } catch (error) {
   clearTimeout(timeout);
   console.log('Stream iteration error:', error.message);

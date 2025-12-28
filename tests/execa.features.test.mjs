@@ -25,7 +25,7 @@ describe('execa Feature Validation (Conceptual)', () => {
       // execa v8+ supports template literal syntax: $`command`
       // const result = await $`echo "execa template literal"`;
       // expect(result.stdout).toBe('execa template literal');
-      
+
       // Conceptual test - execa does support this syntax
       expect(true).toBe(true); // Placeholder for actual execa test
     });
@@ -34,7 +34,7 @@ describe('execa Feature Validation (Conceptual)', () => {
       // const message = 'interpolation';
       // const result = await $`echo ${message}`;
       // expect(result.stdout).toContain('interpolation');
-      
+
       expect(true).toBe(true); // Placeholder
     });
   });
@@ -45,7 +45,7 @@ describe('execa Feature Validation (Conceptual)', () => {
       // but not as comprehensive as command-stream's real-time iteration
       // const subprocess = execa('echo', ['streaming test']);
       // subprocess.stdout.on('data', chunk => { /* handle chunk */ });
-      
+
       expect(true).toBe(true); // Placeholder - execa has basic streaming
     });
 
@@ -53,7 +53,7 @@ describe('execa Feature Validation (Conceptual)', () => {
       // execa buffers output and returns complete result
       // const result = await execa('echo', ['buffered']);
       // expect(result.stdout).toBe('buffered');
-      
+
       expect(true).toBe(true); // Placeholder
     });
   });
@@ -63,7 +63,7 @@ describe('execa Feature Validation (Conceptual)', () => {
       // execa results are not async iterable
       // The subprocess object might have some iteration capabilities
       // but not the same as command-stream's chunk iteration
-      
+
       expect(true).toBe(true); // Placeholder - execa doesn't have this
     });
   });
@@ -74,7 +74,7 @@ describe('execa Feature Validation (Conceptual)', () => {
       // subprocess.on('exit', code => {});
       // subprocess.stdout.on('data', chunk => {});
       // But not the same comprehensive event interface as command-stream
-      
+
       expect(true).toBe(true); // Placeholder - limited events available
     });
   });
@@ -83,7 +83,7 @@ describe('execa Feature Validation (Conceptual)', () => {
     test('should NOT support events + await on same object', () => {
       // execa subprocess is separate from result object
       // You can listen to subprocess events OR await result, but not both on same object
-      
+
       expect(true).toBe(true); // Placeholder - no mixed patterns
     });
   });
@@ -93,7 +93,7 @@ describe('execa Feature Validation (Conceptual)', () => {
       // execa is safe by default - doesn't use shell unless explicitly requested
       // const result = await execa('echo', [dangerousInput]); // Safe
       // vs const result = await execa('echo ' + dangerousInput, {shell: true}); // Unsafe
-      
+
       expect(true).toBe(true); // Placeholder - execa is safe by default
     });
   });
@@ -102,7 +102,7 @@ describe('execa Feature Validation (Conceptual)', () => {
     test('should work cross-platform', () => {
       // execa has excellent cross-platform support
       // Handles Windows vs Unix differences automatically
-      
+
       expect(true).toBe(true); // Placeholder - execa is cross-platform
     });
   });
@@ -111,7 +111,7 @@ describe('execa Feature Validation (Conceptual)', () => {
     test('should have moderate performance', () => {
       // execa has good performance but not as fast as native Bun.$ or command-stream
       // Optimized for reliability and features over raw speed
-      
+
       expect(true).toBe(true); // Placeholder - moderate performance
     });
   });
@@ -121,7 +121,7 @@ describe('execa Feature Validation (Conceptual)', () => {
       // execa buffers stdout/stderr in memory by default
       // Can stream to avoid memory issues with large outputs
       // const subprocess = execa('command', {stdout: 'pipe'});
-      
+
       expect(true).toBe(true); // Placeholder - buffers by default
     });
   });
@@ -131,7 +131,7 @@ describe('execa Feature Validation (Conceptual)', () => {
       // execa rejects promise on non-zero exit codes by default
       // try { await execa('exit', ['1']); } catch (error) { /* handle */ }
       // Can disable with {reject: false}
-      
+
       expect(true).toBe(true); // Placeholder - promise rejection on error
     });
   });
@@ -141,7 +141,7 @@ describe('execa Feature Validation (Conceptual)', () => {
       // execa has comprehensive stdin/stdout/stderr stream support
       // const result = await execa('cat', {input: 'stdin data'});
       // subprocess.stdin.write('data');
-      
+
       expect(true).toBe(true); // Placeholder - good stream support
     });
   });
@@ -150,7 +150,7 @@ describe('execa Feature Validation (Conceptual)', () => {
     test('should NOT have built-in commands', () => {
       // execa uses system commands only, no built-ins
       // All commands go through the operating system
-      
+
       expect(true).toBe(true); // Placeholder - no built-ins
     });
   });
@@ -159,7 +159,7 @@ describe('execa Feature Validation (Conceptual)', () => {
     test('should have ~25KB bundle size', () => {
       // execa is a moderate-sized package
       // Includes comprehensive features which add to bundle size
-      
+
       expect(true).toBe(true); // Placeholder - ~25KB estimated
     });
   });
@@ -168,7 +168,7 @@ describe('execa Feature Validation (Conceptual)', () => {
     test('should have full TypeScript support', () => {
       // execa has excellent TypeScript definitions
       // Strong typing for all options and return types
-      
+
       expect(true).toBe(true); // Placeholder - full TS support
     });
   });
@@ -177,21 +177,21 @@ describe('execa Feature Validation (Conceptual)', () => {
     test('should support timeout settings', () => {
       // execa supports timeout option to prevent hanging commands
       // const result = await execa('sleep', ['10'], {timeout: 1000});
-      
+
       expect(true).toBe(true); // Placeholder - timeout support
     });
 
     test('should support detailed error information', () => {
       // execa provides detailed error objects with context
       // error.command, error.exitCode, error.stderr, etc.
-      
+
       expect(true).toBe(true); // Placeholder - detailed errors
     });
 
     test('should support verbose and debugging modes', () => {
       // execa has built-in debugging and verbose output options
       // Helpful for development and troubleshooting
-      
+
       expect(true).toBe(true); // Placeholder - debugging features
     });
   });

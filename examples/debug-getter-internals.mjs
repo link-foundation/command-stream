@@ -9,7 +9,7 @@ disableVirtualCommands();
 const virtualCmd = $`echo "virtual test"`;
 virtualCmd.start();
 
-await new Promise(resolve => setTimeout(resolve, 50));
+await new Promise((resolve) => setTimeout(resolve, 50));
 
 console.log('\n--- Virtual Command ---');
 console.log('virtualCmd.child:', virtualCmd.child);
@@ -34,8 +34,10 @@ try {
 
 // Check if there are any property descriptors on the instance
 console.log('\n--- Instance properties ---');
-console.log('Own property descriptor on instance:', 
-  Object.getOwnPropertyDescriptor(virtualCmd, 'stdout'));
+console.log(
+  'Own property descriptor on instance:',
+  Object.getOwnPropertyDescriptor(virtualCmd, 'stdout')
+);
 
 // Check the prototype chain
 console.log('\n--- Prototype chain ---');
@@ -54,6 +56,6 @@ while (currentProto && level < 5) {
 // Property access
 console.log('\n--- Property access ---');
 console.log('virtualCmd.stdout:', virtualCmd.stdout);
-console.log('virtualCmd["stdout"]:', virtualCmd["stdout"]);
+console.log('virtualCmd["stdout"]:', virtualCmd['stdout']);
 
 await virtualCmd;

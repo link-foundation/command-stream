@@ -2,10 +2,10 @@
 
 /**
  * AbortController Tracing Test
- * 
+ *
  * Tests AbortController integration with tracing to debug external
  * signal handling and virtual command cancellation.
- * 
+ *
  * Usage:
  *   COMMAND_STREAM_TRACE=ProcessRunner node examples/trace-abort-controller.mjs
  */

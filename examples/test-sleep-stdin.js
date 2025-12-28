@@ -16,7 +16,7 @@ process.stdin.on('end', async () => {
   try {
     console.error('[test-sleep-stdin] Evaluating module code...');
     // Create an async function to evaluate the code
-    const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
+    const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
     const runTest = new AsyncFunction('require', 'process', moduleCode);
     await runTest(require, process);
   } catch (error) {

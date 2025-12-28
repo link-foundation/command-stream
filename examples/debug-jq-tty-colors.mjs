@@ -8,7 +8,8 @@
 import { $ } from '../src/$.mjs';
 import { spawn } from 'child_process';
 
-const testJson = '{"message": "hello", "number": 42, "active": true, "data": null}';
+const testJson =
+  '{"message": "hello", "number": 42, "active": true, "data": null}';
 
 console.log('='.repeat(60));
 console.log('JQ TTY AND COLOR BEHAVIOR DIAGNOSTIC');
@@ -48,7 +49,10 @@ const hasDefaultColors = /\u001b\[\d+/.test(defaultResult.stdout);
 console.log('Exit code:', defaultResult.code);
 console.log('Has ANSI color codes:', hasDefaultColors);
 console.log('Output length:', defaultResult.stdout.length);
-console.log('First 150 chars (raw):', JSON.stringify(defaultResult.stdout.substring(0, 150)));
+console.log(
+  'First 150 chars (raw):',
+  JSON.stringify(defaultResult.stdout.substring(0, 150))
+);
 
 // 4. Test with explicit color flag
 console.log('\n4. JQ WITH EXPLICIT COLOR FLAG (-C):');
@@ -57,7 +61,10 @@ const colorResult = await $`echo ${testJson} | jq -C .`;
 const hasExplicitColors = /\u001b\[\d+/.test(colorResult.stdout);
 console.log('Has ANSI color codes:', hasExplicitColors);
 console.log('Output length:', colorResult.stdout.length);
-console.log('First 150 chars (raw):', JSON.stringify(colorResult.stdout.substring(0, 150)));
+console.log(
+  'First 150 chars (raw):',
+  JSON.stringify(colorResult.stdout.substring(0, 150))
+);
 
 // 5. Test with explicit no-color flag
 console.log('\n5. JQ WITH EXPLICIT NO-COLOR FLAG (-M):');
@@ -66,7 +73,10 @@ const noColorResult = await $`echo ${testJson} | jq -M .`;
 const hasNoColors = /\u001b\[\d+/.test(noColorResult.stdout);
 console.log('Has ANSI color codes:', hasNoColors);
 console.log('Output length:', noColorResult.stdout.length);
-console.log('First 150 chars (raw):', JSON.stringify(noColorResult.stdout.substring(0, 150)));
+console.log(
+  'First 150 chars (raw):',
+  JSON.stringify(noColorResult.stdout.substring(0, 150))
+);
 
 // 6. Test jq directly with Node's spawn (bypassing command-stream)
 console.log('\n6. JQ DIRECTLY VIA NODE SPAWN:');
@@ -74,19 +84,22 @@ console.log('-'.repeat(40));
 await new Promise((resolve) => {
   const echo = spawn('echo', [testJson]);
   const jq = spawn('jq', ['.']);
-  
+
   let output = '';
   echo.stdout.pipe(jq.stdin);
-  
+
   jq.stdout.on('data', (data) => {
     output += data.toString();
   });
-  
+
   jq.on('close', () => {
     const hasSpawnColors = /\u001b\[\d+/.test(output);
     console.log('Has ANSI color codes:', hasSpawnColors);
     console.log('Output length:', output.length);
-    console.log('First 150 chars (raw):', JSON.stringify(output.substring(0, 150)));
+    console.log(
+      'First 150 chars (raw):',
+      JSON.stringify(output.substring(0, 150))
+    );
     resolve();
   });
 });
@@ -118,15 +131,19 @@ console.log('Explicit -M has colors:', hasNoColors);
 console.log('Direct spawn has colors:', /\u001b\[\d+/.test(''));
 
 if (hasDefaultColors && !process.stdout.isTTY) {
-  console.log('\n⚠️  UNEXPECTED: jq is outputting colors in non-TTY environment by default');
+  console.log(
+    '\n⚠️  UNEXPECTED: jq is outputting colors in non-TTY environment by default'
+  );
   console.log('This might be due to:');
   console.log('  - jq configuration or alias');
   console.log('  - Environment variables affecting color output');
   console.log('  - Different jq version behavior');
 } else if (!hasDefaultColors && process.stdout.isTTY) {
-  console.log('\n⚠️  UNEXPECTED: jq is NOT outputting colors in TTY environment by default');
+  console.log(
+    '\n⚠️  UNEXPECTED: jq is NOT outputting colors in TTY environment by default'
+  );
   console.log('This might be due to:');
-  console.log('  - Pipe detection (jq sees it\'s in a pipe)');
+  console.log("  - Pipe detection (jq sees it's in a pipe)");
   console.log('  - Environment variables suppressing colors');
 } else {
   console.log('\n✅ jq behavior matches expected TTY detection');
@@ -139,9 +156,13 @@ console.log('  1. When jq auto-detects TTY and colors accordingly');
 console.log('  2. When jq is affected by environment variables or config');
 console.log('\nSuggested approach:');
 console.log('  - Test explicit -C and -M flags (predictable behavior)');
-console.log('  - For default behavior, accept both colored and non-colored output');
-console.log('  - Focus on testing that output is valid JSON regardless of colors');
+console.log(
+  '  - For default behavior, accept both colored and non-colored output'
+);
+console.log(
+  '  - Focus on testing that output is valid JSON regardless of colors'
+);
 
-console.log('\n' + '='.repeat(60));
+console.log(`\n${'='.repeat(60)}`);
 console.log('DIAGNOSTIC COMPLETE');
 console.log('='.repeat(60));

@@ -43,5 +43,7 @@ await new Promise((resolve) => {
 });
 
 console.log('\n=== Known Issues ===');
-console.log('⚠️  Pipe syntax (|) breaks streaming - see streaming-bug-report.md');
+console.log(
+  '⚠️  Pipe syntax (|) breaks streaming - see streaming-bug-report.md'
+);
 console.log('⚠️  Use .pipe() method or avoid pipes for realtime streaming');

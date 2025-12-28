@@ -18,7 +18,7 @@ process.on('SIGINT', () => {
   sigintCount++;
   console.log(`\n[PARENT] Received SIGINT signal (count: ${sigintCount})`);
   parentGotSigint = true;
-  
+
   // Exit on second CTRL+C (user really wants to quit)
   if (sigintCount >= 2) {
     console.log('[PARENT] Exiting after second CTRL+C');
@@ -41,7 +41,7 @@ try {
   console.log('Command was interrupted!');
   console.log(`Exit code: ${error.code}`);
   console.log(`Error message: ${error.message}`);
-  
+
   if (error.code === 130 || error.code === -2 || error.code === 2) {
     console.log('✓ SUCCESS: Received expected SIGINT exit code');
   } else {

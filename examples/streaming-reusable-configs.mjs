@@ -28,14 +28,14 @@ try {
   // Quiet mode with post-processing
   console.log('\nQuiet mode with result capture:');
   const runner = $quiet`echo "Result: $(date)"`;
-  
+
   let streamOutput = '';
   for await (const chunk of runner.stream()) {
     if (chunk.type === 'stdout') {
       streamOutput += chunk.data.toString();
     }
   }
-  
+
   const result = await runner;
   console.log(`🤫 Streamed: "${streamOutput.trim()}"`);
   console.log(`💾 Captured: "${result.stdout.trim()}"`);
@@ -47,7 +47,6 @@ try {
       console.log(`📢 Processed: ${chunk.data.toString().trim()}`);
     }
   }
-
 } catch (error) {
   console.log(`Error: ${error.message}`);
 }

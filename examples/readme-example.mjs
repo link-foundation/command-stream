@@ -3,9 +3,10 @@
 import { $, register } from '../src/$.mjs';
 
 // Register a custom virtual command with the new object-based signature
-register('greet', async ({ stdin }) => {
-  return { stdout: `Hello, ${stdin.trim()}!\n`, code: 0 };
-});
+register('greet', async ({ stdin }) => ({
+  stdout: `Hello, ${stdin.trim()}!\n`,
+  code: 0,
+}));
 
 // Example usage: echo "World" | greet
 console.log('Running: echo "World" | greet');
@@ -25,12 +26,12 @@ console.log('Result:', result2.stdout.trim());
 // Example accessing other options
 register('debug', async ({ args, stdin, options }) => {
   const info = {
-    args: args,
+    args,
     stdinLength: stdin ? stdin.length : 0,
     mirror: options.mirror,
-    capture: options.capture
+    capture: options.capture,
   };
-  return { stdout: JSON.stringify(info, null, 2) + '\n', code: 0 };
+  return { stdout: `${JSON.stringify(info, null, 2)}\n`, code: 0 };
 });
 
 console.log('\nRunning: echo "test input" | debug arg1 arg2');

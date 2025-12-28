@@ -9,20 +9,20 @@ import readline from 'readline';
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
-  terminal: false // Don't treat as TTY
+  terminal: false, // Don't treat as TTY
 });
 
 console.log('READY'); // Signal that calculator is ready
 
 rl.on('line', (line) => {
   const input = line.trim();
-  
+
   // Check for exit commands
   if (input === 'exit' || input === '\\q' || input === 'quit') {
     console.log('GOODBYE');
     process.exit(0);
   }
-  
+
   // Try to evaluate the math expression
   try {
     // Parse simple math expressions like "1+2", "3*4", "10/2", "5-3"

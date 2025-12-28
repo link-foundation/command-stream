@@ -16,19 +16,20 @@ console.log();
 async function reproduceOriginalIssue() {
   console.log('1. EXACT CODE FROM ISSUE (test-pipe.mjs):');
   console.log('------------------------------------------');
-  
+
   try {
     // This is the EXACT line that was failing
-    const result = await $`${claude} -p "hi" --output-format stream-json --model sonnet | jq .`;
+    const result =
+      await $`${claude} -p "hi" --output-format stream-json --model sonnet | jq .`;
     console.log('Result:');
     console.log(result.stdout);
   } catch (error) {
     console.error('❌ Error reproduced:', error.message);
-    
+
     // Check if this is the exact error from the issue
     if (error.message.includes("''") && error.message.includes('ENOENT')) {
       console.log('\n✓ THIS IS THE EXACT ERROR FROM ISSUE #12!');
-      console.log('  The path has extra quotes: \'\'...\'\'');
+      console.log("  The path has extra quotes: ''...''");
     }
   }
 }
@@ -36,7 +37,7 @@ async function reproduceOriginalIssue() {
 async function testSimplifiedCase() {
   console.log('\n2. SIMPLIFIED TEST CASE:');
   console.log('------------------------');
-  
+
   try {
     // Simplify to just the command without pipe
     console.log(`Trying: ${claude} --version`);
@@ -44,7 +45,7 @@ async function testSimplifiedCase() {
     console.log('Result:', result);
   } catch (error) {
     console.error('❌ Error:', error.message);
-    
+
     if (error.message.includes("''")) {
       console.log('✓ Double quotes still present in error!');
     }
@@ -54,14 +55,14 @@ async function testSimplifiedCase() {
 async function testQuotingPatterns() {
   console.log('\n3. TESTING QUOTE PATTERNS:');
   console.log('---------------------------');
-  
+
   // Test what happens with already-quoted paths
   const patterns = [
     { desc: 'Plain path', path: claude },
     { desc: 'Single-quoted', path: `'${claude}'` },
     { desc: 'Double-quoted', path: `"${claude}"` },
   ];
-  
+
   for (const { desc, path } of patterns) {
     console.log(`\n${desc}: ${path}`);
     try {
@@ -77,13 +78,13 @@ async function testQuotingPatterns() {
 async function showWorkingPattern() {
   console.log('\n4. CORRECT PATTERN (should work):');
   console.log('----------------------------------');
-  
+
   try {
     // Using a valid command to show proper interpolation
     const testCmd = 'echo';
     const args = `"Testing path: ${claude}"`;
     console.log(`Command: ${testCmd} ${args}`);
-    
+
     const result = await $`${testCmd} ${args}`;
     console.log('✓ Result:', String(result).trim());
   } catch (error) {

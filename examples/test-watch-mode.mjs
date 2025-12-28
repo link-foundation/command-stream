@@ -10,10 +10,14 @@ console.log('=== Testing watch mode ===\n');
 
 // Start the watch process in background
 console.log('Starting watch process...');
-const watchProcess = spawn('node', ['claude-profiles.mjs', '--watch', 'test-watch', '--verbose'], {
-  stdio: 'pipe',
-  env: process.env
-});
+const watchProcess = spawn(
+  'node',
+  ['claude-profiles.mjs', '--watch', 'test-watch', '--verbose'],
+  {
+    stdio: 'pipe',
+    env: process.env,
+  }
+);
 
 let output = '';
 watchProcess.stdout.on('data', (data) => {
@@ -30,7 +34,7 @@ watchProcess.stderr.on('data', (data) => {
 
 // Wait for initial save
 console.log('\nWaiting for initial state...');
-await new Promise(resolve => setTimeout(resolve, 3000));
+await new Promise((resolve) => setTimeout(resolve, 3000));
 
 // Make a change to trigger save
 console.log('\nMaking a change to .claude.json...');
@@ -47,7 +51,7 @@ try {
 
 // Wait for save detection
 console.log('\nWaiting for change detection...');
-await new Promise(resolve => setTimeout(resolve, 8000));
+await new Promise((resolve) => setTimeout(resolve, 8000));
 
 // Check if save was detected
 if (output.includes('Profile auto-saved')) {
@@ -70,7 +74,7 @@ try {
 
 // Wait to see throttling
 console.log('\nWaiting to observe throttling...');
-await new Promise(resolve => setTimeout(resolve, 5000));
+await new Promise((resolve) => setTimeout(resolve, 5000));
 
 // Send SIGINT to test graceful shutdown
 console.log('\nSending SIGINT for graceful shutdown...');

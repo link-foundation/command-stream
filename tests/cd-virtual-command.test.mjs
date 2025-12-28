@@ -1,19 +1,46 @@
 import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
-import { beforeTestCleanup, afterTestCleanup, originalCwd } from './test-cleanup.mjs';
+import {
+  beforeTestCleanup,
+  afterTestCleanup,
+  originalCwd,
+} from './test-cleanup.mjs';
 import { $, shell, enableVirtualCommands } from '../src/$.mjs';
-import { mkdtempSync, rmSync, mkdirSync, writeFileSync, existsSync } from 'fs';
+import {
+  mkdtempSync,
+  rmSync,
+  mkdirSync,
+  writeFileSync,
+  existsSync,
+  realpathSync,
+} from 'fs';
 import { tmpdir, homedir } from 'os';
 import { join, resolve } from 'path';
 
+// Platform detection - Some tests use Unix-specific commands (cat, ln -s, chmod)
+const isWindows = process.platform === 'win32';
+
+// Helper to normalize paths (handles macOS /var -> /private/var symlink)
+const normalizePath = (p) => {
+  try {
+    return realpathSync(p);
+  } catch {
+    return p;
+  }
+};
+
 // Helper function to verify we're in the expected directory
 function verifyCwd(expected, message) {
-  const actual = process.cwd();
-  if (actual !== expected) {
-    throw new Error(`${message}: Expected cwd to be ${expected}, but got ${actual}`);
+  const actual = normalizePath(process.cwd());
+  const expectedNormalized = normalizePath(expected);
+  if (actual !== expectedNormalized) {
+    throw new Error(
+      `${message}: Expected cwd to be ${expectedNormalized}, but got ${actual}`
+    );
   }
 }
 
-describe('cd Virtual Command - Core Behavior', () => {
+// Skip on Windows - uses pwd, cat, ln -s, chmod commands
+describe.skipIf(isWindows)('cd Virtual Command - Core Behavior', () => {
   beforeEach(async () => {
     await beforeTestCleanup();
     shell.errexit(false);
@@ -35,22 +62,22 @@ describe('cd Virtual Command - Core Behavior', () => {
   test('should change to absolute path', async () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'cd-test-'));
     const testStartCwd = process.cwd();
-    
+
     try {
       // Verify we start in the original directory
       verifyCwd(originalCwd, 'Test start');
-      
+
       const result = await $`cd ${tempDir}`;
       expect(result.code).toBe(0);
       expect(result.stdout).toBe(''); // cd should not output anything
       expect(result.stderr).toBe('');
-      
+
       // Verify cd actually changed the directory
       verifyCwd(tempDir, 'After cd to tempDir');
-      
+
       const pwd = await $`pwd`;
-      expect(pwd.stdout.trim()).toBe(tempDir);
-      
+      expect(normalizePath(pwd.stdout.trim())).toBe(normalizePath(tempDir));
+
       // Go back to original
       await $`cd ${testStartCwd}`;
       verifyCwd(testStartCwd, 'After cd back');
@@ -68,17 +95,17 @@ describe('cd Virtual Command - Core Behavior', () => {
     const subDir = join(baseDir, 'subdir');
     mkdirSync(subDir);
     const originalCwd = process.cwd();
-    
+
     try {
       await $`cd ${baseDir}`;
-      
+
       const result = await $`cd subdir`;
       expect(result.code).toBe(0);
       expect(result.stdout).toBe('');
-      
+
       const pwd = await $`pwd`;
-      expect(pwd.stdout.trim()).toBe(subDir);
-      
+      expect(normalizePath(pwd.stdout.trim())).toBe(normalizePath(subDir));
+
       await $`cd ${originalCwd}`;
     } finally {
       rmSync(baseDir, { recursive: true, force: true });
@@ -87,16 +114,16 @@ describe('cd Virtual Command - Core Behavior', () => {
 
   test('should handle cd with no arguments (go to home)', async () => {
     const originalCwd = process.cwd();
-    
+
     try {
       const result = await $`cd`;
       expect(result.code).toBe(0);
       expect(result.stdout).toBe('');
-      
+
       const pwd = await $`pwd`;
       const home = homedir();
       expect(pwd.stdout.trim()).toBe(home);
-      
+
       await $`cd ${originalCwd}`;
     } catch (error) {
       await $`cd ${originalCwd}`;
@@ -108,20 +135,20 @@ describe('cd Virtual Command - Core Behavior', () => {
     const dir1 = mkdtempSync(join(tmpdir(), 'cd-dir1-'));
     const dir2 = mkdtempSync(join(tmpdir(), 'cd-dir2-'));
     const originalCwd = process.cwd();
-    
+
     try {
       await $`cd ${dir1}`;
       const pwd1 = await $`pwd`;
-      expect(pwd1.stdout.trim()).toBe(dir1);
-      
+      expect(normalizePath(pwd1.stdout.trim())).toBe(normalizePath(dir1));
+
       await $`cd ${dir2}`;
       const pwd2 = await $`pwd`;
-      expect(pwd2.stdout.trim()).toBe(dir2);
-      
+      expect(normalizePath(pwd2.stdout.trim())).toBe(normalizePath(dir2));
+
       // Note: cd - might not be implemented in virtual command yet
       // This test documents expected behavior
       const result = await $`cd - 2>&1 || echo "not implemented"`;
-      
+
       await $`cd ${originalCwd}`;
     } finally {
       rmSync(dir1, { recursive: true, force: true });
@@ -134,17 +161,17 @@ describe('cd Virtual Command - Core Behavior', () => {
     const subDir = join(baseDir, 'child');
     mkdirSync(subDir);
     const originalCwd = process.cwd();
-    
+
     try {
       await $`cd ${subDir}`;
-      
+
       const result = await $`cd ..`;
       expect(result.code).toBe(0);
       expect(result.stdout).toBe('');
-      
+
       const pwd = await $`pwd`;
-      expect(pwd.stdout.trim()).toBe(baseDir);
-      
+      expect(normalizePath(pwd.stdout.trim())).toBe(normalizePath(baseDir));
+
       await $`cd ${originalCwd}`;
     } finally {
       rmSync(baseDir, { recursive: true, force: true });
@@ -154,18 +181,18 @@ describe('cd Virtual Command - Core Behavior', () => {
   test('should handle cd . (current directory)', async () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'cd-dot-'));
     const originalCwd = process.cwd();
-    
+
     try {
       await $`cd ${tempDir}`;
       const pwdBefore = await $`pwd`;
-      
+
       const result = await $`cd .`;
       expect(result.code).toBe(0);
       expect(result.stdout).toBe('');
-      
+
       const pwdAfter = await $`pwd`;
       expect(pwdAfter.stdout).toBe(pwdBefore.stdout);
-      
+
       await $`cd ${originalCwd}`;
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
@@ -175,10 +202,10 @@ describe('cd Virtual Command - Core Behavior', () => {
   test('should fail with non-existent directory', async () => {
     const nonExistent = '/this/path/should/not/exist/at/all';
     const originalCwd = process.cwd();
-    
+
     const result = await $`cd ${nonExistent} 2>&1 || echo "failed"`;
     expect(result.stdout).toContain('failed');
-    
+
     // Verify we're still in the same directory
     const pwd = await $`pwd`;
     expect(pwd.stdout.trim()).toBe(originalCwd);
@@ -189,15 +216,17 @@ describe('cd Virtual Command - Core Behavior', () => {
     const dirWithSpaces = join(baseDir, 'my test directory');
     mkdirSync(dirWithSpaces);
     const originalCwd = process.cwd();
-    
+
     try {
       const result = await $`cd ${dirWithSpaces}`;
       expect(result.code).toBe(0);
       expect(result.stdout).toBe('');
-      
+
       const pwd = await $`pwd`;
-      expect(pwd.stdout.trim()).toBe(dirWithSpaces);
-      
+      expect(normalizePath(pwd.stdout.trim())).toBe(
+        normalizePath(dirWithSpaces)
+      );
+
       await $`cd ${originalCwd}`;
     } finally {
       rmSync(baseDir, { recursive: true, force: true });
@@ -207,18 +236,18 @@ describe('cd Virtual Command - Core Behavior', () => {
   test('should handle special characters in paths', async () => {
     const baseDir = mkdtempSync(join(tmpdir(), 'cd-special-'));
     // Create directory with special characters (but valid for filesystem)
-    const specialDir = join(baseDir, "test-dir_123");
+    const specialDir = join(baseDir, 'test-dir_123');
     mkdirSync(specialDir);
     const originalCwd = process.cwd();
-    
+
     try {
       const result = await $`cd ${specialDir}`;
       expect(result.code).toBe(0);
       expect(result.stdout).toBe('');
-      
+
       const pwd = await $`pwd`;
-      expect(pwd.stdout.trim()).toBe(specialDir);
-      
+      expect(normalizePath(pwd.stdout.trim())).toBe(normalizePath(specialDir));
+
       await $`cd ${originalCwd}`;
     } finally {
       rmSync(baseDir, { recursive: true, force: true });
@@ -226,7 +255,8 @@ describe('cd Virtual Command - Core Behavior', () => {
   });
 });
 
-describe('cd Virtual Command - Command Chains', () => {
+// Skip on Windows - uses pwd and cat commands
+describe.skipIf(isWindows)('cd Virtual Command - Command Chains', () => {
   beforeEach(async () => {
     await beforeTestCleanup();
     shell.errexit(false);
@@ -246,16 +276,16 @@ describe('cd Virtual Command - Command Chains', () => {
   test('should persist directory change within command chain', async () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'cd-chain-'));
     const originalCwd = process.cwd();
-    
+
     try {
       // Create a test file in temp directory
       writeFileSync(join(tempDir, 'test.txt'), 'test content');
-      
+
       // cd and run command in same chain
       const result = await $`cd ${tempDir} && cat test.txt`;
       expect(result.code).toBe(0);
       expect(result.stdout.trim()).toBe('test content');
-      
+
       await $`cd ${originalCwd}`;
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
@@ -269,17 +299,18 @@ describe('cd Virtual Command - Command Chains', () => {
     mkdirSync(dir1);
     mkdirSync(dir2);
     const originalCwd = process.cwd();
-    
+
     try {
       writeFileSync(join(dir1, 'file1.txt'), 'content1');
       writeFileSync(join(dir2, 'file2.txt'), 'content2');
-      
+
       // Chain multiple cd commands
-      const result = await $`cd ${dir1} && cat file1.txt && cd ${dir2} && cat file2.txt`;
+      const result =
+        await $`cd ${dir1} && cat file1.txt && cd ${dir2} && cat file2.txt`;
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('content1');
       expect(result.stdout).toContain('content2');
-      
+
       await $`cd ${originalCwd}`;
     } finally {
       rmSync(baseDir, { recursive: true, force: true });
@@ -289,17 +320,17 @@ describe('cd Virtual Command - Command Chains', () => {
   test('should work with git commands in chain', async () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'cd-git-'));
     const originalCwd = process.cwd();
-    
+
     try {
       const result = await $`cd ${tempDir} && git init`;
       expect(result.code).toBe(0);
       // Git init outputs to stderr
       const output = (result.stdout + result.stderr).toLowerCase();
       expect(output).toContain('initialized');
-      
+
       // Verify git repo was created in the right place
       expect(existsSync(join(tempDir, '.git'))).toBe(true);
-      
+
       await $`cd ${originalCwd}`;
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
@@ -310,17 +341,17 @@ describe('cd Virtual Command - Command Chains', () => {
     const dir1 = mkdtempSync(join(tmpdir(), 'cd-ctx1-'));
     const dir2 = mkdtempSync(join(tmpdir(), 'cd-ctx2-'));
     const originalCwd = process.cwd();
-    
+
     try {
       // First command changes to dir1
       await $`cd ${dir1}`;
       const pwd1 = await $`pwd`;
-      expect(pwd1.stdout.trim()).toBe(dir1);
-      
+      expect(normalizePath(pwd1.stdout.trim())).toBe(normalizePath(dir1));
+
       // Second separate command should still be in dir1
       const pwd2 = await $`pwd`;
-      expect(pwd2.stdout.trim()).toBe(dir1);
-      
+      expect(normalizePath(pwd2.stdout.trim())).toBe(normalizePath(dir1));
+
       await $`cd ${originalCwd}`;
     } finally {
       rmSync(dir1, { recursive: true, force: true });
@@ -329,7 +360,8 @@ describe('cd Virtual Command - Command Chains', () => {
   });
 });
 
-describe('cd Virtual Command - Subshell Behavior', () => {
+// Skip on Windows - uses subshells (parentheses) and pwd/cat commands
+describe.skipIf(isWindows)('cd Virtual Command - Subshell Behavior', () => {
   beforeEach(async () => {
     await beforeTestCleanup();
     shell.errexit(false);
@@ -349,11 +381,11 @@ describe('cd Virtual Command - Subshell Behavior', () => {
   test('should not affect parent shell when in subshell', async () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'cd-subshell-'));
     const originalCwd = process.cwd();
-    
+
     try {
       // Run cd in subshell (parentheses)
       await $`(cd ${tempDir})`;
-      
+
       // Parent shell should still be in original directory
       const pwd = await $`pwd`;
       expect(pwd.stdout.trim()).toBe(originalCwd);
@@ -365,15 +397,15 @@ describe('cd Virtual Command - Subshell Behavior', () => {
   test('should work in subshell with other commands', async () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'cd-subshell-cmd-'));
     const originalCwd = process.cwd();
-    
+
     try {
       writeFileSync(join(tempDir, 'test.txt'), 'subshell test');
-      
+
       // Run commands in subshell
       const result = await $`(cd ${tempDir} && cat test.txt)`;
       expect(result.code).toBe(0);
       expect(result.stdout.trim()).toBe('subshell test');
-      
+
       // Verify we're still in original directory
       const pwd = await $`pwd`;
       expect(pwd.stdout.trim()).toBe(originalCwd);
@@ -383,7 +415,8 @@ describe('cd Virtual Command - Subshell Behavior', () => {
   });
 });
 
-describe('cd Virtual Command - Edge Cases', () => {
+// Skip on Windows - uses ln -s, chmod, and pwd commands
+describe.skipIf(isWindows)('cd Virtual Command - Edge Cases', () => {
   beforeEach(async () => {
     await beforeTestCleanup();
     shell.errexit(false);
@@ -406,20 +439,20 @@ describe('cd Virtual Command - Edge Cases', () => {
     const linkDir = join(baseDir, 'link');
     mkdirSync(realDir);
     const originalCwd = process.cwd();
-    
+
     try {
       // Create symlink
       await $`ln -s ${realDir} ${linkDir}`;
-      
+
       // cd through symlink
       const result = await $`cd ${linkDir}`;
       expect(result.code).toBe(0);
-      
+
       // pwd should show the symlink path (default behavior)
       const pwd = await $`pwd`;
       // Note: behavior may vary between pwd and pwd -P
       expect(pwd.stdout.trim()).toBeTruthy();
-      
+
       await $`cd ${originalCwd}`;
     } finally {
       rmSync(baseDir, { recursive: true, force: true });
@@ -429,7 +462,7 @@ describe('cd Virtual Command - Edge Cases', () => {
   test('should handle very long paths', async () => {
     const baseDir = mkdtempSync(join(tmpdir(), 'cd-long-'));
     const originalCwd = process.cwd();
-    
+
     try {
       // Create deeply nested directory
       let currentPath = baseDir;
@@ -437,13 +470,13 @@ describe('cd Virtual Command - Edge Cases', () => {
         currentPath = join(currentPath, `level${i}`);
         mkdirSync(currentPath);
       }
-      
+
       const result = await $`cd ${currentPath}`;
       expect(result.code).toBe(0);
-      
+
       const pwd = await $`pwd`;
-      expect(pwd.stdout.trim()).toBe(currentPath);
-      
+      expect(normalizePath(pwd.stdout.trim())).toBe(normalizePath(currentPath));
+
       await $`cd ${originalCwd}`;
     } finally {
       rmSync(baseDir, { recursive: true, force: true });
@@ -455,19 +488,20 @@ describe('cd Virtual Command - Edge Cases', () => {
     if (process.platform === 'win32') {
       return;
     }
-    
+
     const baseDir = mkdtempSync(join(tmpdir(), 'cd-perm-'));
     const restrictedDir = join(baseDir, 'restricted');
     mkdirSync(restrictedDir);
     const originalCwd = process.cwd();
-    
+
     try {
       // Remove execute permission
       await $`chmod 000 ${restrictedDir}`;
-      
-      const result = await $`cd ${restrictedDir} 2>&1 || echo "permission denied"`;
+
+      const result =
+        await $`cd ${restrictedDir} 2>&1 || echo "permission denied"`;
       expect(result.stdout.toLowerCase()).toContain('denied');
-      
+
       // Should still be in original directory
       const pwd = await $`pwd`;
       expect(pwd.stdout.trim()).toBe(originalCwd);
@@ -487,16 +521,16 @@ describe('cd Virtual Command - Edge Cases', () => {
   test('should handle cd with trailing slash', async () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'cd-slash-'));
     const originalCwd = process.cwd();
-    
+
     try {
       // Test with trailing slash
       const result = await $`cd ${tempDir}/`;
       expect(result.code).toBe(0);
       expect(result.stdout).toBe('');
-      
+
       const pwd = await $`pwd`;
-      expect(pwd.stdout.trim()).toBe(tempDir);
-      
+      expect(normalizePath(pwd.stdout.trim())).toBe(normalizePath(tempDir));
+
       await $`cd ${originalCwd}`;
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
@@ -508,15 +542,15 @@ describe('cd Virtual Command - Edge Cases', () => {
     const subDir = join(baseDir, 'sub');
     mkdirSync(subDir);
     const originalCwd = process.cwd();
-    
+
     try {
       // Test with multiple slashes (should normalize)
       const result = await $`cd ${baseDir}//sub///`;
       expect(result.code).toBe(0);
-      
+
       const pwd = await $`pwd`;
-      expect(pwd.stdout.trim()).toBe(subDir);
-      
+      expect(normalizePath(pwd.stdout.trim())).toBe(normalizePath(subDir));
+
       await $`cd ${originalCwd}`;
     } finally {
       rmSync(baseDir, { recursive: true, force: true });
@@ -524,61 +558,65 @@ describe('cd Virtual Command - Edge Cases', () => {
   });
 });
 
-describe('cd Virtual Command - Platform Compatibility', () => {
-  beforeEach(async () => {
-    await beforeTestCleanup();
-    shell.errexit(false);
-    shell.verbose(false);
-    shell.xtrace(false);
-    shell.pipefail(false);
-    shell.nounset(false);
-    enableVirtualCommands();
-    verifyCwd(originalCwd, 'Before test start');
-  });
+// Skip on Windows - uses pwd command
+describe.skipIf(isWindows)(
+  'cd Virtual Command - Platform Compatibility',
+  () => {
+    beforeEach(async () => {
+      await beforeTestCleanup();
+      shell.errexit(false);
+      shell.verbose(false);
+      shell.xtrace(false);
+      shell.pipefail(false);
+      shell.nounset(false);
+      enableVirtualCommands();
+      verifyCwd(originalCwd, 'Before test start');
+    });
 
-  afterEach(async () => {
-    await afterTestCleanup();
-    verifyCwd(originalCwd, 'After test cleanup');
-  });
+    afterEach(async () => {
+      await afterTestCleanup();
+      verifyCwd(originalCwd, 'After test cleanup');
+    });
 
-  test('should handle platform-specific path separators', async () => {
-    const baseDir = mkdtempSync(join(tmpdir(), 'cd-platform-'));
-    const subDir = join(baseDir, 'cross', 'platform', 'test');
-    mkdirSync(subDir, { recursive: true });
-    const originalCwd = process.cwd();
-    
-    try {
-      // Use platform-specific path
-      const result = await $`cd ${subDir}`;
-      expect(result.code).toBe(0);
-      
-      const pwd = await $`pwd`;
-      expect(pwd.stdout.trim()).toBe(subDir);
-      
-      await $`cd ${originalCwd}`;
-    } finally {
-      rmSync(baseDir, { recursive: true, force: true });
-    }
-  });
+    test('should handle platform-specific path separators', async () => {
+      const baseDir = mkdtempSync(join(tmpdir(), 'cd-platform-'));
+      const subDir = join(baseDir, 'cross', 'platform', 'test');
+      mkdirSync(subDir, { recursive: true });
+      const originalCwd = process.cwd();
 
-  test('should normalize paths correctly', async () => {
-    const baseDir = mkdtempSync(join(tmpdir(), 'cd-normalize-'));
-    const sub1 = join(baseDir, 'sub1');
-    const sub2 = join(sub1, 'sub2');
-    mkdirSync(sub2, { recursive: true });
-    const originalCwd = process.cwd();
-    
-    try {
-      // Test path with ./ and ../
-      await $`cd ${baseDir}`;
-      await $`cd ./sub1/../sub1/sub2`;
-      
-      const pwd = await $`pwd`;
-      expect(pwd.stdout.trim()).toBe(sub2);
-      
-      await $`cd ${originalCwd}`;
-    } finally {
-      rmSync(baseDir, { recursive: true, force: true });
-    }
-  });
-});
+      try {
+        // Use platform-specific path
+        const result = await $`cd ${subDir}`;
+        expect(result.code).toBe(0);
+
+        const pwd = await $`pwd`;
+        expect(normalizePath(pwd.stdout.trim())).toBe(normalizePath(subDir));
+
+        await $`cd ${originalCwd}`;
+      } finally {
+        rmSync(baseDir, { recursive: true, force: true });
+      }
+    });
+
+    test('should normalize paths correctly', async () => {
+      const baseDir = mkdtempSync(join(tmpdir(), 'cd-normalize-'));
+      const sub1 = join(baseDir, 'sub1');
+      const sub2 = join(sub1, 'sub2');
+      mkdirSync(sub2, { recursive: true });
+      const originalCwd = process.cwd();
+
+      try {
+        // Test path with ./ and ../
+        await $`cd ${baseDir}`;
+        await $`cd ./sub1/../sub1/sub2`;
+
+        const pwd = await $`pwd`;
+        expect(normalizePath(pwd.stdout.trim())).toBe(normalizePath(sub2));
+
+        await $`cd ${originalCwd}`;
+      } finally {
+        rmSync(baseDir, { recursive: true, force: true });
+      }
+    });
+  }
+);

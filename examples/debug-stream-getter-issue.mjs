@@ -11,7 +11,7 @@ const process = $`echo "stream test"`;
 process.start();
 
 // Wait longer for child process initialization
-await new Promise(resolve => setTimeout(resolve, 100));
+await new Promise((resolve) => setTimeout(resolve, 100));
 
 console.log('process.child:', process.child);
 console.log('process.child === null:', process.child === null);

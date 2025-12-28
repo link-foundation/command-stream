@@ -19,7 +19,7 @@ console.log('Await completed. End event fired?', endEventFired);
 console.log('2. Testing stream pattern with events:');
 const cmd2 = $`echo "test2"`;
 let streamEndEventFired = false;
-let streamChunks = [];
+const streamChunks = [];
 
 cmd2.on('end', (result) => {
   streamEndEventFired = true;
@@ -32,17 +32,17 @@ try {
   const timeoutPromise = new Promise((_, reject) => {
     setTimeout(() => reject(new Error('Stream timeout')), 2000);
   });
-  
+
   const streamPromise = (async () => {
     for await (const chunk of cmd2.stream()) {
       streamChunks.push(chunk);
       console.log('Stream chunk received:', chunk.type);
-      
+
       // Check if end event fired after receiving chunks
       console.log('End event fired yet?', streamEndEventFired);
     }
   })();
-  
+
   await Promise.race([streamPromise, timeoutPromise]);
   console.log('Stream completed normally');
 } catch (error) {

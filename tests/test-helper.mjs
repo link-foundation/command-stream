@@ -2,6 +2,10 @@ import { beforeEach, afterEach } from 'bun:test';
 import { resetGlobalState } from '../src/$.mjs';
 import { existsSync } from 'fs';
 
+// Platform detection helpers
+export const isWindows = process.platform === 'win32';
+export const isUnix = process.platform !== 'win32';
+
 // Save the original working directory when tests start
 const originalCwd = process.cwd();
 
@@ -50,14 +54,16 @@ beforeEach(async () => {
         process.chdir('/');
       }
     } catch (e2) {
-      console.error('[test-helper] FATAL: Cannot set working directory in beforeEach');
+      console.error(
+        '[test-helper] FATAL: Cannot set working directory in beforeEach'
+      );
       trace('FATAL: Cannot set working directory in beforeEach');
     }
   }
-  
+
   // Call the comprehensive reset
   resetGlobalState();
-  
+
   // Extra safety: ensure we're in a valid directory after reset
   try {
     process.cwd(); // This will throw if we're in a bad state
@@ -65,11 +71,13 @@ beforeEach(async () => {
     // Force to a known good directory
     process.chdir(originalCwd);
   }
-  
+
   // VERIFY: Ensure we actually restored to the original directory
   const finalCwd = process.cwd();
   if (finalCwd !== originalCwd && existsSync(originalCwd)) {
-    console.error(`[test-helper] WARNING: Failed to restore cwd! Expected: ${originalCwd}, Got: ${finalCwd}`);
+    console.error(
+      `[test-helper] WARNING: Failed to restore cwd! Expected: ${originalCwd}, Got: ${finalCwd}`
+    );
     // Try one more time
     try {
       process.chdir(originalCwd);
@@ -77,15 +85,19 @@ beforeEach(async () => {
       if (verifiedCwd === originalCwd) {
         trace('Successfully restored on second attempt');
       } else {
-        throw new Error(`[test-helper] CRITICAL: Cannot restore to original directory ${originalCwd}, stuck in ${verifiedCwd}`);
+        throw new Error(
+          `[test-helper] CRITICAL: Cannot restore to original directory ${originalCwd}, stuck in ${verifiedCwd}`
+        );
       }
     } catch (e) {
-      throw new Error(`[test-helper] CRITICAL: Cannot restore to original directory ${originalCwd}, stuck in ${finalCwd}`);
+      throw new Error(
+        `[test-helper] CRITICAL: Cannot restore to original directory ${originalCwd}, stuck in ${finalCwd}`
+      );
     }
   }
-  
+
   // Give a tiny bit of time for any async cleanup to complete
-  await new Promise(resolve => setTimeout(resolve, 1));
+  await new Promise((resolve) => setTimeout(resolve, 1));
 });
 
 afterEach(async () => {
@@ -110,14 +122,16 @@ afterEach(async () => {
         process.chdir('/');
       }
     } catch (e2) {
-      console.error('[test-helper] FATAL: Cannot set working directory in afterEach');
+      console.error(
+        '[test-helper] FATAL: Cannot set working directory in afterEach'
+      );
       trace('FATAL: Cannot set working directory in afterEach');
     }
   }
-  
+
   // Call the comprehensive reset
   resetGlobalState();
-  
+
   // Extra safety: ensure we're in a valid directory after reset
   try {
     process.cwd(); // This will throw if we're in a bad state
@@ -125,11 +139,13 @@ afterEach(async () => {
     // Force to a known good directory
     process.chdir(originalCwd);
   }
-  
+
   // VERIFY: Ensure we actually restored to the original directory
   const finalCwd = process.cwd();
   if (finalCwd !== originalCwd && existsSync(originalCwd)) {
-    console.error(`[test-helper] WARNING: Failed to restore cwd! Expected: ${originalCwd}, Got: ${finalCwd}`);
+    console.error(
+      `[test-helper] WARNING: Failed to restore cwd! Expected: ${originalCwd}, Got: ${finalCwd}`
+    );
     // Try one more time
     try {
       process.chdir(originalCwd);
@@ -137,15 +153,19 @@ afterEach(async () => {
       if (verifiedCwd === originalCwd) {
         trace('Successfully restored on second attempt');
       } else {
-        throw new Error(`[test-helper] CRITICAL: Cannot restore to original directory ${originalCwd}, stuck in ${verifiedCwd}`);
+        throw new Error(
+          `[test-helper] CRITICAL: Cannot restore to original directory ${originalCwd}, stuck in ${verifiedCwd}`
+        );
       }
     } catch (e) {
-      throw new Error(`[test-helper] CRITICAL: Cannot restore to original directory ${originalCwd}, stuck in ${finalCwd}`);
+      throw new Error(
+        `[test-helper] CRITICAL: Cannot restore to original directory ${originalCwd}, stuck in ${finalCwd}`
+      );
     }
   }
-  
+
   // Give a tiny bit of time for any async cleanup to complete
-  await new Promise(resolve => setTimeout(resolve, 1));
+  await new Promise((resolve) => setTimeout(resolve, 1));
 });
 
 export { resetGlobalState };

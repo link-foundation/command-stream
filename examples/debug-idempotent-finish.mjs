@@ -41,7 +41,7 @@ const result2 = runner.finish({
   code: 0,
   stdout: 'different output',
   stderr: '',
-  stdin: ''
+  stdin: '',
 });
 
 console.log(`\nAfter second finish() call:`);

@@ -25,11 +25,14 @@ echo "INFO: Application ready"
 `;
 
   const runner = $logProcessor`bash -c '${logScript}'`;
-  
+
   const logStats = { info: 0, debug: 0, warn: 0, error: 0 };
-  
+
   runner.on('stdout', (data) => {
-    const lines = data.toString().split('\n').filter(line => line.trim());
+    const lines = data
+      .toString()
+      .split('\n')
+      .filter((line) => line.trim());
     for (const line of lines) {
       if (line.includes('INFO:')) {
         logStats.info++;
@@ -40,9 +43,12 @@ echo "INFO: Application ready"
       }
     }
   });
-  
+
   runner.on('stderr', (data) => {
-    const lines = data.toString().split('\n').filter(line => line.trim());
+    const lines = data
+      .toString()
+      .split('\n')
+      .filter((line) => line.trim());
     for (const line of lines) {
       if (line.includes('WARN:')) {
         logStats.warn++;
@@ -53,11 +59,13 @@ echo "INFO: Application ready"
       }
     }
   });
-  
+
   runner.on('close', (code) => {
-    console.log(`📊 Log summary: ${logStats.info} info, ${logStats.debug} debug, ${logStats.warn} warnings, ${logStats.error} errors`);
+    console.log(
+      `📊 Log summary: ${logStats.info} info, ${logStats.debug} debug, ${logStats.warn} warnings, ${logStats.error} errors`
+    );
   });
-  
+
   await runner;
 } catch (error) {
   console.log(`Error: ${error.message}`);

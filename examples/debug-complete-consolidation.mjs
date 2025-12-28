@@ -6,23 +6,23 @@ console.log('=== Complete Finish Method Consolidation Test ===');
 
 const tests = [
   {
-    name: "Normal completion",
+    name: 'Normal completion',
     test: async () => {
       const result = await $`echo "normal"`;
       return { stdout: result.stdout.trim(), code: result.code };
-    }
+    },
   },
-  
+
   {
-    name: "Sync mode",
+    name: 'Sync mode',
     test: async () => {
       const result = $`echo "sync"`.sync();
       return { stdout: result.stdout.trim(), code: result.code };
-    }
+    },
   },
-  
+
   {
-    name: "Error handling",
+    name: 'Error handling',
     test: async () => {
       try {
         await $`exit 1`;
@@ -30,11 +30,11 @@ const tests = [
       } catch (error) {
         return { code: error.code, stdout: error.stdout.trim() };
       }
-    }
+    },
   },
-  
+
   {
-    name: "Pipeline with error",
+    name: 'Pipeline with error',
     test: async () => {
       try {
         await $`echo "test" | exit 1`;
@@ -42,45 +42,45 @@ const tests = [
       } catch (error) {
         return { code: error.code, stdout: error.stdout.trim() };
       }
-    }
+    },
   },
-  
+
   {
-    name: "Kill scenario",
+    name: 'Kill scenario',
     test: async () => {
       const runner = $`sleep 0.1`;
       const promise = runner.start();
-      
+
       // Let it start
-      await new Promise(resolve => setTimeout(resolve, 10));
-      
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
       runner.kill('SIGTERM');
-      
+
       try {
         await promise;
         return { error: 'Expected error but got success' };
       } catch (error) {
         return { code: error.code, stderr: error.stderr.trim() };
       }
-    }
+    },
   },
-  
+
   {
-    name: "Finally handler",
+    name: 'Finally handler',
     test: async () => {
       let finallyExecuted = false;
-      
+
       const result = await $`echo "finally"`.finally(() => {
         finallyExecuted = true;
       });
-      
-      return { 
-        stdout: result.stdout.trim(), 
+
+      return {
+        stdout: result.stdout.trim(),
         code: result.code,
-        finallyExecuted 
+        finallyExecuted,
       };
-    }
-  }
+    },
+  },
 ];
 
 console.log('\nRunning comprehensive tests...\n');

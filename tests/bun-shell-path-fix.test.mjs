@@ -1,6 +1,6 @@
 /**
  * Tests for Bun runtime shell path issue fix
- * 
+ *
  * This addresses GitHub issue #42: Bun runtime shell path issues
  * The issue was that string interpolation in template literals was incorrectly quoting
  * complete command strings, causing shell commands to fail execution.
@@ -13,7 +13,11 @@ import { $ } from '../src/$.mjs';
 const isBun = typeof globalThis.Bun !== 'undefined';
 const runtime = isBun ? 'Bun' : 'Node.js';
 
-describe(`String interpolation fix for ${runtime}`, () => {
+// Platform detection - Some tests use Unix-specific paths and commands
+const isWindows = process.platform === 'win32';
+
+// Skip on Windows - tests reference /bin/sh and Unix paths
+describe.skipIf(isWindows)(`String interpolation fix for ${runtime}`, () => {
   test('Template literal without interpolation should work', async () => {
     const result = await $`echo hello`;
     expect(result.stdout.toString().trim()).toBe('hello');
@@ -84,8 +88,9 @@ describe(`String interpolation fix for ${runtime}`, () => {
 });
 
 // Additional runtime-specific tests
+// Skip on Windows - uses 'pwd' which outputs Unix-style paths with '/'
 if (isBun) {
-  describe('Bun-specific shell path tests', () => {
+  describe.skipIf(isWindows)('Bun-specific shell path tests', () => {
     test('Bun.spawn compatibility is maintained', async () => {
       const result = await $`pwd`;
       expect(result.stdout.toString().trim()).toContain('/');
@@ -97,7 +102,7 @@ if (isBun) {
     });
   });
 } else {
-  describe('Node.js-specific shell path tests', () => {
+  describe.skipIf(isWindows)('Node.js-specific shell path tests', () => {
     test('Node.js child_process compatibility is maintained', async () => {
       const result = await $`pwd`;
       expect(result.stdout.toString().trim()).toContain('/');

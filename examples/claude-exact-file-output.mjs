@@ -12,8 +12,8 @@ let events = 0;
 for await (const chunk of $`${claude} -p "hi" --output-format stream-json --verbose --model sonnet`.stream()) {
   const data = chunk.data.toString();
   console.log(`📦 Event ${++events}: ${data.trim()}`);
-  
-  // Write to file simultaneously  
+
+  // Write to file simultaneously
   appendFileSync(logFile, `Event ${events}: ${data}`);
 }
 

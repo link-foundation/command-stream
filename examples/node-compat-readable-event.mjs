@@ -11,7 +11,7 @@ let chunkCount = 0;
 
 const proc1 = spawn('bun', ['run', 'examples/emulate-claude-stream.mjs']);
 const proc2 = spawn('jq', ['.'], {
-  stdio: ['pipe', 'pipe', 'pipe']
+  stdio: ['pipe', 'pipe', 'pipe'],
 });
 
 proc1.stdout.pipe(proc2.stdin);
@@ -25,5 +25,5 @@ proc2.stdout.on('readable', () => {
   }
 });
 
-await new Promise(resolve => proc2.on('exit', resolve));
+await new Promise((resolve) => proc2.on('exit', resolve));
 console.log(`Total chunks: ${chunkCount}`);

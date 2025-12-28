@@ -18,7 +18,7 @@ trace(`Original working directory: ${originalCwd}`);
 // Function to set up test hooks
 export function setupTestHooks() {
   trace('Setting up test hooks');
-  
+
   beforeEach(async () => {
     trace('beforeEach hook running');
     // CRITICAL: Restore working directory first - MUST succeed for spawn to work
@@ -41,15 +41,17 @@ export function setupTestHooks() {
             process.chdir('/');
           }
         } catch (e2) {
-          console.error('[test-helper-v2] FATAL: Cannot set working directory in beforeEach');
+          console.error(
+            '[test-helper-v2] FATAL: Cannot set working directory in beforeEach'
+          );
           trace('FATAL: Cannot set working directory in beforeEach');
         }
       }
     }
-    
+
     // Call the comprehensive reset
     resetGlobalState();
-    
+
     // Extra safety: ensure we're in a valid directory after reset
     try {
       process.cwd(); // This will throw if we're in a bad state
@@ -57,9 +59,9 @@ export function setupTestHooks() {
       // Force to a known good directory
       process.chdir(originalCwd);
     }
-    
+
     // Give a tiny bit of time for any async cleanup to complete
-    await new Promise(resolve => setTimeout(resolve, 1));
+    await new Promise((resolve) => setTimeout(resolve, 1));
     trace('beforeEach hook completed');
   });
 
@@ -85,15 +87,17 @@ export function setupTestHooks() {
             process.chdir('/');
           }
         } catch (e2) {
-          console.error('[test-helper-v2] FATAL: Cannot set working directory in afterEach');
+          console.error(
+            '[test-helper-v2] FATAL: Cannot set working directory in afterEach'
+          );
           trace('FATAL: Cannot set working directory in afterEach');
         }
       }
     }
-    
+
     // Call the comprehensive reset
     resetGlobalState();
-    
+
     // Extra safety: ensure we're in a valid directory after reset
     try {
       process.cwd(); // This will throw if we're in a bad state
@@ -101,9 +105,9 @@ export function setupTestHooks() {
       // Force to a known good directory
       process.chdir(originalCwd);
     }
-    
+
     // Give a tiny bit of time for any async cleanup to complete
-    await new Promise(resolve => setTimeout(resolve, 1));
+    await new Promise((resolve) => setTimeout(resolve, 1));
     trace('afterEach hook completed');
   });
 }

@@ -15,7 +15,7 @@ async function testCommands() {
   } catch (error) {
     console.error('✗ Failed:', error.message);
   }
-  
+
   // Test 2: Path with spaces (needs special handling)
   console.log('\n2. Testing path with spaces:');
   const spacePath = '/path with spaces/bin/echo';
@@ -30,7 +30,7 @@ async function testCommands() {
       console.log('⚠️  Double quotes detected in error!');
     }
   }
-  
+
   // Test 3: Command with arguments
   console.log('\n3. Testing command with multiple interpolations:');
   const cmd = 'echo';
@@ -42,7 +42,7 @@ async function testCommands() {
   } catch (error) {
     console.error('✗ Failed:', error.message);
   }
-  
+
   // Test 4: First interpolation is command, should not be quoted
   console.log('\n4. Testing first interpolation as command:');
   const ls = 'ls';
@@ -52,7 +52,7 @@ async function testCommands() {
   } catch (error) {
     console.error('✗ Failed:', error.message);
   }
-  
+
   // Test 5: Complex command construction
   console.log('\n5. Testing complex command:');
   const executable = '/usr/bin/env';

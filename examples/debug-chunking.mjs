@@ -19,7 +19,9 @@ command
     totalData += data;
   })
   .on('end', (result) => {
-    console.log(`\n✅ Done: ${events} chunks, ${totalData.length} total bytes, exit: ${result.code}`);
+    console.log(
+      `\n✅ Done: ${events} chunks, ${totalData.length} total bytes, exit: ${result.code}`
+    );
     process.exit(0);
   })
   .on('error', (error) => {

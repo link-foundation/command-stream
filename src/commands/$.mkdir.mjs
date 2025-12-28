@@ -1,14 +1,16 @@
 import fs from 'fs';
 import { trace, VirtualUtils } from '../$.utils.mjs';
 
-export default async function mkdir({ args, stdin, cwd }) {
+export default async function mkdir({ args, stdin: _stdin, cwd }) {
   const argError = VirtualUtils.validateArgs(args, 1, 'mkdir');
-  if (argError) return argError;
+  if (argError) {
+    return argError;
+  }
 
   // Parse flags and paths
   const flags = new Set();
   const paths = [];
-  
+
   for (const arg of args) {
     if (arg === '-p' || arg === '--parents') {
       flags.add('p');
@@ -26,19 +28,33 @@ export default async function mkdir({ args, stdin, cwd }) {
   }
 
   const recursive = flags.has('p');
-  
+
   try {
     for (const dir of paths) {
       const resolvedPath = VirtualUtils.resolvePath(dir, cwd);
-      trace('VirtualCommand', () => `mkdir: creating | ${JSON.stringify({ dir: resolvedPath, recursive }, null, 2)}`);
+      trace(
+        'VirtualCommand',
+        () =>
+          `mkdir: creating | ${JSON.stringify({ dir: resolvedPath, recursive }, null, 2)}`
+      );
       fs.mkdirSync(resolvedPath, { recursive });
     }
-    trace('VirtualCommand', () => `mkdir: success | ${JSON.stringify({ dirsCreated: paths.length }, null, 2)}`);
+    trace(
+      'VirtualCommand',
+      () =>
+        `mkdir: success | ${JSON.stringify({ dirsCreated: paths.length }, null, 2)}`
+    );
     return VirtualUtils.success();
   } catch (error) {
-    trace('VirtualCommand', () => `mkdir: error | ${JSON.stringify({ error: error.message }, null, 2)}`);
+    trace(
+      'VirtualCommand',
+      () =>
+        `mkdir: error | ${JSON.stringify({ error: error.message }, null, 2)}`
+    );
     if (error.code === 'EEXIST') {
-      return VirtualUtils.error(`mkdir: cannot create directory '${paths[0]}': File exists`);
+      return VirtualUtils.error(
+        `mkdir: cannot create directory '${paths[0]}': File exists`
+      );
     }
     return VirtualUtils.error(`mkdir: ${error.message}`);
   }

@@ -12,7 +12,7 @@ const logFile = 'claude-stream.log';
 for await (const chunk of $`claude hi`.stream()) {
   const data = chunk.data.toString();
   console.log(`📦 Event ${++events}: ${data.trim()}`);
-  
+
   // Write to file simultaneously
   appendFileSync(logFile, `Event ${events}: ${data}`);
 }

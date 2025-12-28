@@ -15,7 +15,7 @@ for (const cmd of tests) {
   console.log(`Command: ${cmd}`);
   const parsed = parseShellCommand(cmd);
   console.log('Parsed:', JSON.stringify(parsed, null, 2));
-  
+
   if (parsed && parsed.type === 'simple' && parsed.args.length > 0) {
     console.log('First arg value:', parsed.args[0].value);
   }

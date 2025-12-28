@@ -9,7 +9,7 @@ try {
   const result = await $`which nonexistent-command-xyz`;
   console.log(`Exit code: ${result.code}`);
   console.log(`Stderr: ${result.stderr.trim()}`);
-  
+
   if (result.code === 1) {
     console.log('✅ SUCCESS: Non-existent command returns exit code 1');
   } else {

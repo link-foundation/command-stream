@@ -7,7 +7,7 @@ console.log('=== Stream Getter Debug ===');
 disableVirtualCommands();
 const cmd = $`echo "test"`;
 cmd.start();
-await new Promise(resolve => setTimeout(resolve, 100));
+await new Promise((resolve) => setTimeout(resolve, 100));
 
 console.log('child:', cmd.child);
 console.log('child type:', typeof cmd.child);

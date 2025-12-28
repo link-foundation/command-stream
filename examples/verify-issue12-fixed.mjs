@@ -43,14 +43,17 @@ await new Promise((resolve) => {
       console.log('   ✅ Clean error message');
     }
   });
-  
+
   child.on('close', resolve);
 });
 
 // 4. Test the original failing scenario
 console.log('\n3. Original issue scenario (with pipe to jq):');
 try {
-  const originalCmd = $({ stdin: 'hi\n', mirror: false })`${claudePath} --output-format stream-json --model sonnet | jq .`;
+  const originalCmd = $({
+    stdin: 'hi\n',
+    mirror: false,
+  })`${claudePath} --output-format stream-json --model sonnet | jq .`;
   console.log('   Command:', originalCmd.spec.command);
   const result = await originalCmd;
   console.log('   Exit code:', result.code);
@@ -65,7 +68,9 @@ try {
 }
 
 console.log('\n=== CONCLUSION ===');
-console.log('Issue #12 is FIXED! The double-quote problem in posix_spawn errors');
+console.log(
+  'Issue #12 is FIXED! The double-quote problem in posix_spawn errors'
+);
 console.log('has been resolved by the improvements to the quote() function.');
 console.log('\nThe fix correctly handles:');
 console.log('- Plain paths: properly quoted');

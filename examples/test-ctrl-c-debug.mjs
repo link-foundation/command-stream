@@ -11,7 +11,7 @@ let parentSigintCount = 0;
 process.on('SIGINT', () => {
   parentSigintCount++;
   console.log(`\n[Parent] Received SIGINT (count: ${parentSigintCount})`);
-  
+
   // Don't exit on first SIGINT to see what happens
   if (parentSigintCount >= 2) {
     console.log('[Parent] Exiting after 2 SIGINTs');
@@ -32,9 +32,9 @@ try {
   console.log('Starting sleep 30...');
   console.log('Process info:', {
     pid: process.pid,
-    ppid: process.ppid
+    ppid: process.ppid,
   });
-  
+
   const result = await $`sleep 30`;
   console.log('Command completed normally');
 } catch (error) {

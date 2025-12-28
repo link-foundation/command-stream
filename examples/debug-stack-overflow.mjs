@@ -2,7 +2,7 @@ import { $ } from '../src/$.mjs';
 
 async function debugStackOverflow() {
   console.log('Testing simple echo command...');
-  
+
   try {
     const result = await $`echo "test"`;
     console.log('Success! Result:', JSON.stringify(result.stdout.trim()));
@@ -10,7 +10,7 @@ async function debugStackOverflow() {
     console.log('Error:', error.message);
     console.log('Stack:', error.stack?.slice(0, 500));
   }
-  
+
   console.log('\nTesting with strings.stdout access...');
   try {
     const cmd = $`echo "String test"`;

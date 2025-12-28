@@ -11,7 +11,7 @@ try {
   await Promise.all([
     $`/bin/sleep 20`,
     $`/sbin/ping -c 50 google.com`,
-    $`/usr/bin/yes > /dev/null`
+    $`/usr/bin/yes > /dev/null`,
   ]);
   console.log('All processes completed');
 } catch (error) {
