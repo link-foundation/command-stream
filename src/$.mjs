@@ -12,14 +12,30 @@ import { parseShellCommand, needsRealShell } from './shell-parser.mjs';
 
 const isBun = typeof globalThis.Bun !== 'undefined';
 
-const VERBOSE =
-  process.env.COMMAND_STREAM_VERBOSE === 'true' || process.env.CI === 'true';
-
 // Trace function for verbose logging
-function trace(category, messageOrFunc) {
+// Can be controlled via COMMAND_STREAM_VERBOSE or COMMAND_STREAM_TRACE env vars
+// Can be disabled per-command via trace: false option
+// CI environment no longer auto-enables tracing
+function trace(category, messageOrFunc, runner = null) {
+  // Check if runner explicitly disabled tracing
+  if (runner && runner.options && runner.options.trace === false) {
+    return;
+  }
+
+  // Check global trace setting (evaluated dynamically for runtime changes)
+  const TRACE_ENV = process.env.COMMAND_STREAM_TRACE;
+  const VERBOSE_ENV = process.env.COMMAND_STREAM_VERBOSE === 'true';
+
+  // COMMAND_STREAM_TRACE=false explicitly disables tracing even if COMMAND_STREAM_VERBOSE=true
+  // COMMAND_STREAM_TRACE=true explicitly enables tracing
+  // Otherwise, use COMMAND_STREAM_VERBOSE
+  const VERBOSE =
+    TRACE_ENV === 'false' ? false : TRACE_ENV === 'true' ? true : VERBOSE_ENV;
+
   if (!VERBOSE) {
     return;
   }
+
   const message =
     typeof messageOrFunc === 'function' ? messageOrFunc() : messageOrFunc;
   const timestamp = new Date().toISOString();

@@ -1,11 +1,23 @@
 import path from 'path';
 
-const VERBOSE = process.env.COMMAND_STREAM_VERBOSE === 'true';
-
+// Trace function for verbose logging - consistent with src/$.mjs
+// Can be controlled via COMMAND_STREAM_VERBOSE or COMMAND_STREAM_TRACE env vars
+// CI environment no longer auto-enables tracing
 export function trace(category, messageOrFunc) {
+  // Check global trace setting (evaluated dynamically for runtime changes)
+  const TRACE_ENV = process.env.COMMAND_STREAM_TRACE;
+  const VERBOSE_ENV = process.env.COMMAND_STREAM_VERBOSE === 'true';
+
+  // COMMAND_STREAM_TRACE=false explicitly disables tracing even if COMMAND_STREAM_VERBOSE=true
+  // COMMAND_STREAM_TRACE=true explicitly enables tracing
+  // Otherwise, use COMMAND_STREAM_VERBOSE
+  const VERBOSE =
+    TRACE_ENV === 'false' ? false : TRACE_ENV === 'true' ? true : VERBOSE_ENV;
+
   if (!VERBOSE) {
     return;
   }
+
   const message =
     typeof messageOrFunc === 'function' ? messageOrFunc() : messageOrFunc;
   const timestamp = new Date().toISOString();
