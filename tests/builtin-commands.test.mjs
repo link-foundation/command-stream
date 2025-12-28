@@ -285,12 +285,15 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
 
   describe('Command Location (which)', () => {
     // Skip on Windows - uses Unix 'which sh' command
-    test.skipIf(isWindows)('which should find existing system commands', async () => {
-      // Test with a command that should definitely exist on all systems
-      const result = await $`which sh`;
-      expect(result.code).toBe(0);
-      expect(result.stdout).toMatch(/\/.*sh/); // Should contain path to sh
-    });
+    test.skipIf(isWindows)(
+      'which should find existing system commands',
+      async () => {
+        // Test with a command that should definitely exist on all systems
+        const result = await $`which sh`;
+        expect(result.code).toBe(0);
+        expect(result.stdout).toMatch(/\/.*sh/); // Should contain path to sh
+      }
+    );
 
     test('which should find node/bun executable', async () => {
       // Test with node or bun depending on the environment

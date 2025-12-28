@@ -33,12 +33,15 @@ describe('Start/Run Edge Cases and Advanced Usage', () => {
   });
 
   // Skip on Windows - uses 'ls -la /tmp' which is Unix-specific
-  test.skipIf(isWindows)('should work with real shell commands that produce large output', async () => {
-    const result = await $`ls -la /tmp`.start({ capture: false });
+  test.skipIf(isWindows)(
+    'should work with real shell commands that produce large output',
+    async () => {
+      const result = await $`ls -la /tmp`.start({ capture: false });
 
-    expect(result.stdout).toBeUndefined();
-    expect(result.code).toBe(0);
-  });
+      expect(result.stdout).toBeUndefined();
+      expect(result.code).toBe(0);
+    }
+  );
 
   test('should handle stderr with capture: false', async () => {
     const result = await $`ls /nonexistent-path-12345`.start({

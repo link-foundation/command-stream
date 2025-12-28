@@ -213,39 +213,42 @@ describe('Shell Settings (set -e / set +e equivalent)', () => {
     });
 
     // Skip on Windows - shell command execution differs
-    test.skipIf(isWindows)('should allow JavaScript control flow with shell semantics', async () => {
-      const results = [];
+    test.skipIf(isWindows)(
+      'should allow JavaScript control flow with shell semantics',
+      async () => {
+        const results = [];
 
-      // Test a list of commands with error handling
-      const commands = [
-        'echo "success1"',
-        'exit 1', // This will fail
-        'echo "success2"',
-      ];
+        // Test a list of commands with error handling
+        const commands = [
+          'echo "success1"',
+          'exit 1', // This will fail
+          'echo "success2"',
+        ];
 
-      for (const cmd of commands) {
-        try {
-          shell.errexit(true);
-          const result = await $`sh -c ${cmd}`;
-          results.push({ cmd, success: true, output: result.stdout.trim() });
-        } catch (error) {
-          results.push({ cmd, success: false, code: error.code });
+        for (const cmd of commands) {
+          try {
+            shell.errexit(true);
+            const result = await $`sh -c ${cmd}`;
+            results.push({ cmd, success: true, output: result.stdout.trim() });
+          } catch (error) {
+            results.push({ cmd, success: false, code: error.code });
 
-          // Decide whether to continue or not
-          if (error.code === 1) {
-            shell.errexit(false); // Continue on this specific error
+            // Decide whether to continue or not
+            if (error.code === 1) {
+              shell.errexit(false); // Continue on this specific error
+            }
           }
         }
-      }
 
-      expect(results).toHaveLength(3);
-      expect(results[0].success).toBe(true);
-      expect(results[0].output).toBe('success1');
-      expect(results[1].success).toBe(false);
-      expect(results[1].code).toBe(1);
-      expect(results[2].success).toBe(true);
-      expect(results[2].output).toBe('success2');
-    });
+        expect(results).toHaveLength(3);
+        expect(results[0].success).toBe(true);
+        expect(results[0].output).toBe('success1');
+        expect(results[1].success).toBe(false);
+        expect(results[1].code).toBe(1);
+        expect(results[2].success).toBe(true);
+        expect(results[2].output).toBe('success2');
+      }
+    );
   });
 
   describe('Real-world Shell Script Pattern', () => {

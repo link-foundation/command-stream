@@ -75,18 +75,21 @@ describe('Options Examples (Feature Demo)', () => {
   });
 
   // Skip on Windows - uses 'ls /tmp' which is Unix-specific
-  test.skipIf(isWindows)('example: real shell command vs virtual command', async () => {
-    // Both work the same way
-    const virtualResult = await $`echo "virtual command"`.start({
-      capture: false,
-    });
-    const realResult = await $`ls /tmp`.start({ capture: false });
+  test.skipIf(isWindows)(
+    'example: real shell command vs virtual command',
+    async () => {
+      // Both work the same way
+      const virtualResult = await $`echo "virtual command"`.start({
+        capture: false,
+      });
+      const realResult = await $`ls /tmp`.start({ capture: false });
 
-    expect(virtualResult.stdout).toBeUndefined();
-    expect(realResult.stdout).toBeUndefined();
-    expect(virtualResult.code).toBe(0);
-    expect(realResult.code).toBe(0);
-  });
+      expect(virtualResult.stdout).toBeUndefined();
+      expect(realResult.stdout).toBeUndefined();
+      expect(virtualResult.code).toBe(0);
+      expect(realResult.code).toBe(0);
+    }
+  );
 
   test('example: chaining still works', async () => {
     // You can still use all other methods after .start() or .run()
