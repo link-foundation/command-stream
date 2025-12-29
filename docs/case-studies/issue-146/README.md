@@ -52,15 +52,17 @@ This document provides a comprehensive analysis of the process, challenges, and 
 ### 1. JavaScript Async to Rust Async
 
 **JavaScript:**
+
 ```javascript
 async function sleep({ args, abortSignal }) {
   const seconds = parseFloat(args[0] || 0);
-  await new Promise(resolve => setTimeout(resolve, seconds * 1000));
+  await new Promise((resolve) => setTimeout(resolve, seconds * 1000));
   return { stdout: '', code: 0 };
 }
 ```
 
 **Rust:**
+
 ```rust
 pub async fn sleep(ctx: CommandContext) -> CommandResult {
     let seconds: f64 = ctx.args.first()
@@ -75,16 +77,20 @@ pub async fn sleep(ctx: CommandContext) -> CommandResult {
 ### 2. JavaScript Object Literals to Rust Structs
 
 **JavaScript:**
+
 ```javascript
 const result = {
   stdout: output,
   stderr: '',
   code: 0,
-  async text() { return this.stdout; }
+  async text() {
+    return this.stdout;
+  },
 };
 ```
 
 **Rust:**
+
 ```rust
 #[derive(Debug, Clone)]
 pub struct CommandResult {
@@ -107,16 +113,17 @@ impl CommandResult {
 ### 3. JavaScript Closures to Rust Trait Objects
 
 **JavaScript:**
+
 ```javascript
 function trace(category, messageOrFunc) {
-  const message = typeof messageOrFunc === 'function'
-    ? messageOrFunc()
-    : messageOrFunc;
+  const message =
+    typeof messageOrFunc === 'function' ? messageOrFunc() : messageOrFunc;
   console.error(`[TRACE] [${category}] ${message}`);
 }
 ```
 
 **Rust:**
+
 ```rust
 pub fn trace_lazy<F>(category: &str, message_fn: F)
 where
@@ -132,6 +139,7 @@ where
 ### 4. JavaScript Error Handling to Rust Result Types
 
 **JavaScript:**
+
 ```javascript
 try {
   const content = fs.readFileSync(path, 'utf8');
@@ -145,6 +153,7 @@ try {
 ```
 
 **Rust:**
+
 ```rust
 match fs::read_to_string(&path) {
     Ok(content) => CommandResult::success(content),
@@ -159,7 +168,7 @@ match fs::read_to_string(&path) {
 
 ### 1. Tagged Template Literals
 
-JavaScript's tagged template literal syntax `$\`echo hello\`` has no direct Rust equivalent. We implemented the `$()` function as a regular function call instead.
+JavaScript's tagged template literal syntax `$\`echo hello\``has no direct Rust equivalent. We implemented the`$()` function as a regular function call instead.
 
 ### 2. Event Emitter Pattern
 
@@ -178,6 +187,7 @@ JavaScript's `for await (const chunk of stream)` was translated to Rust's async 
 ### 1. Type Safety Benefits
 
 Rust's type system caught several edge cases that existed in the JavaScript code:
+
 - Null/undefined handling became explicit with `Option<T>`
 - Error handling became explicit with `Result<T, E>`
 - String encoding issues were caught at compile time
@@ -185,6 +195,7 @@ Rust's type system caught several edge cases that existed in the JavaScript code
 ### 2. Memory Management
 
 Rust's ownership model required explicit decisions about:
+
 - When to clone vs borrow data
 - Lifetime of process handles
 - Cleanup of resources on cancellation
@@ -192,6 +203,7 @@ Rust's ownership model required explicit decisions about:
 ### 3. Cross-Platform Considerations
 
 Both JavaScript and Rust require platform-specific code for:
+
 - Shell detection (Windows vs Unix)
 - Signal handling (SIGINT, SIGTERM)
 - File permissions
@@ -199,21 +211,22 @@ Both JavaScript and Rust require platform-specific code for:
 ### 4. Testing Strategy
 
 Unit tests were essential for:
+
 - Verifying parity with JavaScript behavior
 - Catching edge cases early
 - Documenting expected behavior
 
 ## Architecture Comparison
 
-| Component | JavaScript | Rust |
-|-----------|------------|------|
-| Async Runtime | Node.js/Bun event loop | Tokio |
-| Process Spawn | child_process.spawn | tokio::process::Command |
-| Channels | EventEmitter | mpsc channels |
-| Error Handling | try/catch | Result<T, E> |
-| String Handling | UTF-16 strings | UTF-8 String |
-| File I/O | fs module | std::fs |
-| Signal Handling | process.on('SIGINT') | tokio::signal |
+| Component       | JavaScript             | Rust                    |
+| --------------- | ---------------------- | ----------------------- |
+| Async Runtime   | Node.js/Bun event loop | Tokio                   |
+| Process Spawn   | child_process.spawn    | tokio::process::Command |
+| Channels        | EventEmitter           | mpsc channels           |
+| Error Handling  | try/catch              | Result<T, E>            |
+| String Handling | UTF-16 strings         | UTF-8 String            |
+| File I/O        | fs module              | std::fs                 |
+| Signal Handling | process.on('SIGINT')   | tokio::signal           |
 
 ## Future Improvements
 

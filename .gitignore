@@ -142,4 +142,7 @@ vite.config.ts.timestamp-*
 .persisted-configs
 
 # jscpd reports
-reports/rust/target/
+reports/
+
+# Rust build artifacts
+rust/target/
