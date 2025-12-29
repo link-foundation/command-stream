@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('=== Testing Exact Command from jq-colors-streaming.mjs ===\n');
 

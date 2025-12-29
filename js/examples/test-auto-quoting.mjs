@@ -3,7 +3,7 @@
 // Test: Automatic quoting when user doesn't provide quotes
 // Expected: Smart auto-quoting based on content
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('=== Test: Automatic Smart Quoting ===\n');
 

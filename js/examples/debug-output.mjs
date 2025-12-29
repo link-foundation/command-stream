@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $, shell, enableVirtualCommands } from '../js/src/$.mjs';
+import { $, shell, enableVirtualCommands } from '../src/$.mjs';
 
 enableVirtualCommands();
 shell.verbose(false);

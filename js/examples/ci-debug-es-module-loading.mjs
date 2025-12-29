@@ -10,7 +10,7 @@
  */
 
 import { spawn } from 'child_process';
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Testing ES module loading in child processes');
 
@@ -19,7 +19,7 @@ async function testDirectESModule() {
   console.log('\nTEST 1: Direct ES module import in child process');
 
   const script = `
-    import { $ } from '../js/src/$.mjs';
+    import { $ } from '../src/$.mjs';
     console.log('Module loaded successfully');
     const result = await $\`echo "ES module test"\`;
     console.log('Result:', result.stdout);

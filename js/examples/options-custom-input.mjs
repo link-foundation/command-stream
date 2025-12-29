@@ -2,7 +2,7 @@
 
 // Custom input with options
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Custom input with options:');
 console.log('await $`cat`.start({ stdin: "custom", mirror: false })');

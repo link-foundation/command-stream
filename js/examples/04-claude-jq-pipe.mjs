@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Claude output piped to jq for JSON processing
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Claude → jq pipeline:');
 

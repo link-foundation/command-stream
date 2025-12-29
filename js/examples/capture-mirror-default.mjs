@@ -2,7 +2,7 @@
 
 // Default behavior (capture: true, mirror: true)
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Default behavior (capture: true, mirror: true):');
 console.log('await $`echo "Default: both enabled"`');

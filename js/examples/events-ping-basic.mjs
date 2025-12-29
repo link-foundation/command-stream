@@ -2,7 +2,7 @@
 
 // Basic event-based ping with options
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Basic event-based ping (silent mode):');
 const $silent = $({ mirror: false });

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 async function testNonVirtual() {
   console.log('🧪 Testing with definitely non-virtual command');

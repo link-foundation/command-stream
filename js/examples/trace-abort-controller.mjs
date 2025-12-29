@@ -10,7 +10,7 @@
  *   COMMAND_STREAM_TRACE=ProcessRunner node js/examples/trace-abort-controller.mjs
  */
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Testing AbortController with tracing...');
 

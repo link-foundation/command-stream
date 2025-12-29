@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('=== Listener Lifecycle Debug ===');
 

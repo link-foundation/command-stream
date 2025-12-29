@@ -2,7 +2,7 @@
 
 // Virtual command with pipeline
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Virtual command with jq pipeline:');
 

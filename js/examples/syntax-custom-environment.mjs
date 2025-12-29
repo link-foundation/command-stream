@@ -2,7 +2,7 @@
 
 // Custom environment using $({ options })
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Custom environment:');
 const $withEnv = $({

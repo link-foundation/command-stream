@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 // Test the forceCleanupAll function
 
-import { $, forceCleanupAll } from '../js/src/$.mjs';
+import { $, forceCleanupAll } from '../src/$.mjs';
 
 // Enable verbose mode
 process.env.COMMAND_STREAM_VERBOSE = 'true';

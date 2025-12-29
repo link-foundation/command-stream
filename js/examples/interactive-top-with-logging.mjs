@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';

@@ -2,7 +2,7 @@
 
 // Multiple concurrent event streams
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Multiple concurrent event streams:');
 

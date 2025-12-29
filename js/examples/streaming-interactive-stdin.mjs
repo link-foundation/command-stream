@@ -2,7 +2,7 @@
 
 // Interactive-style streaming with custom stdin
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Interactive streaming with pre-filled input:');
 const commands = 'ls -la\necho "Current directory listing"\nexit\n';

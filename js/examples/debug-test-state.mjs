@@ -1,5 +1,5 @@
 // Debug test to understand why virtual commands get bypassed in full test suite
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 async function debugTestState() {
   console.log('=== Debug Test State ===');

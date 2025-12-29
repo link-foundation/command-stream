@@ -3,7 +3,7 @@
 // Test: User provides double quotes around interpolated value
 // Expected: Preserve double quotes (wrapped in single quotes for shell)
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 const claude = '/Users/konard/.claude/local/claude';
 

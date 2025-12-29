@@ -2,7 +2,7 @@
 
 process.env.COMMAND_STREAM_VERBOSE = 'true';
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('=== StreamEmitter Debug ===');
 

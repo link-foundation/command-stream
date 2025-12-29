@@ -4,7 +4,7 @@
 // Issue: https://github.com/link-foundation/command-stream/issues/12
 // Original error had double quotes: posix_spawn ''/Users/konard/.claude/local/claude''
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 import { spawn } from 'child_process';
 
 console.log('=== Issue #12 Fix Verification ===\n');

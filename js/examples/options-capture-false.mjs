@@ -2,7 +2,7 @@
 
 // Using .start() with capture: false
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Testing $`echo test`.start({ capture: false }):');
 const result = await $`echo "test with capture false"`.start({

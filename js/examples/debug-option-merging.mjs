@@ -2,7 +2,7 @@
 
 // Testing option merging
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Testing option merging:');
 const runner = $`echo "option merge test"`;

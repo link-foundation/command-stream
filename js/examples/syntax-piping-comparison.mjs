@@ -2,7 +2,7 @@
 
 // Command chaining with different options comparison
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Command chaining with different options:');
 

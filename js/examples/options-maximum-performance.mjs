@@ -2,7 +2,7 @@
 
 // Maximum performance - no capture, no mirror
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Maximum performance - no capture, no mirror:');
 console.log('await $`echo "blazing"`.start({ capture: false, mirror: false })');

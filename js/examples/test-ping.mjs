@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Test ping example similar to hive-mind/claude-pipe/test-ping.mjs
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('STARTING_PING');
 try {

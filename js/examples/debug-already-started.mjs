@@ -2,7 +2,7 @@
 
 // Testing already started behavior
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Testing already started behavior:');
 const runner = $`echo "already started"`;

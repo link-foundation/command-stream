@@ -5,7 +5,7 @@
  * not when accessing the parent objects (streams, buffers, strings).
  */
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('=== Testing Auto-Start Behavior Fix ===');
 console.log('');

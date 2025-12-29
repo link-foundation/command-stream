@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 const claude = 'claude';
 console.log('🤖 Claude → jq streaming pipeline');

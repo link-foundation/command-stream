@@ -3,7 +3,7 @@
 // Manual test for CTRL+C handling
 // Run this script and press CTRL+C to test signal propagation
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('=== Manual CTRL+C Test ===\n');
 console.log('This script will run ping continuously.');

@@ -3,7 +3,7 @@
 // Test: Edge cases for quote handling
 // Expected: Proper handling of unusual quoting scenarios
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('=== Test: Quote Edge Cases ===\n');
 

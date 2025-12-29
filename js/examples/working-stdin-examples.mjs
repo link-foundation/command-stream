@@ -4,7 +4,7 @@
  * Working examples of stdin control that account for async process spawning
  */
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('=== Working stdin control examples ===');
 

@@ -2,7 +2,7 @@
 
 // Stream processing with filtering (only error-like output)
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Filtered streaming (only error-like output):');
 const $filtered = $({ mirror: false });

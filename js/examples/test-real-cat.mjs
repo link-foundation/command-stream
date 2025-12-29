@@ -1,4 +1,4 @@
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 async function testRealCat() {
   console.log('Testing real cat (not virtual) with streams.stdin...');

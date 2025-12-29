@@ -1,4 +1,4 @@
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 async function debugStackOverflow() {
   console.log('Testing simple echo command...');

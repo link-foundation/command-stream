@@ -2,7 +2,7 @@
 
 // Multiple configured instances with different options
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Multiple configured instances:');
 const $quiet = $({ mirror: false });

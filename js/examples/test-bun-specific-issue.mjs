@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // More targeted test to find the real Bun shell path issue
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 const isBun = typeof globalThis.Bun !== 'undefined';
 console.log(`=== Bun Runtime Shell Path Test ===`);

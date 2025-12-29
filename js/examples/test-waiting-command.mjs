@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 async function testWaitingCommand() {
   console.log('🧪 Testing with command that truly waits');

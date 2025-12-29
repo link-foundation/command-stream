@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Test the actual buildShellCommand from command-stream
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 // Enable verbose to see buildShellCommand traces
 process.env.COMMAND_STREAM_VERBOSE = 'true';

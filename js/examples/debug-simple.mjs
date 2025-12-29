@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $, getAnsiConfig } from '../js/src/$.mjs';
+import { $, getAnsiConfig } from '../src/$.mjs';
 
 console.log('=== Simple ANSI Debug ===\n');
 

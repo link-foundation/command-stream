@@ -2,7 +2,7 @@
 
 // Using .start() method
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Using .start() method:');
 const result = await $`echo "Using .start() method"`.start({ mirror: false });

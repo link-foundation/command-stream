@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Debug pipeline with cat
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 process.env.COMMAND_STREAM_VERBOSE = 'true';
 

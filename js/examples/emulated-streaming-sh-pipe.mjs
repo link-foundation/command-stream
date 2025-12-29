@@ -2,7 +2,7 @@
 
 // Using sh -c with pipe
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Using sh -c with pipe:');
 const start = Date.now();

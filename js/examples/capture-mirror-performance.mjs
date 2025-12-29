@@ -2,7 +2,7 @@
 
 // capture: false, mirror: false (maximum performance)
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('capture: false, mirror: false:');
 console.log(

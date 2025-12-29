@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 // Debug script to test the exact pattern matching used by the tests
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 // Enable verbose mode
 process.env.COMMAND_STREAM_VERBOSE = 'true';

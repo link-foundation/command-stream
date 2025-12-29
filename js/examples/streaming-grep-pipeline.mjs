@@ -2,7 +2,7 @@
 
 // grep pipeline streaming
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('grep pipeline streaming test:');
 

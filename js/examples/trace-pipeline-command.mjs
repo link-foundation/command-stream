@@ -10,7 +10,7 @@
  *   COMMAND_STREAM_TRACE=ProcessRunner node js/examples/trace-pipeline-command.mjs
  */
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Testing pipeline command with tracing...');
 

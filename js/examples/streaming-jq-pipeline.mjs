@@ -2,7 +2,7 @@
 
 // jq pipeline streaming (critical test)
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('jq pipeline streaming test:');
 

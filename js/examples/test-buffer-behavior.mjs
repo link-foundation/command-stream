@@ -1,4 +1,4 @@
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Testing buffer behavior in stream()...');
 

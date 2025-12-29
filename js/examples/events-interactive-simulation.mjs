@@ -2,7 +2,7 @@
 
 // Interactive command simulation with events
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Interactive command simulation:');
 const $interactive = $({ stdin: 'John\n25\nDeveloper\ny\n', mirror: false });

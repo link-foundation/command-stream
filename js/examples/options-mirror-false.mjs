@@ -2,7 +2,7 @@
 
 // Using .start() with mirror: false
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Testing $`echo test`.start({ mirror: false }):');
 const result = await $`echo "test with mirror false"`.start({ mirror: false });

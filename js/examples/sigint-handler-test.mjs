@@ -2,7 +2,7 @@
 // Test script to verify SIGINT handler cleanup
 // This runs in a subprocess to avoid interfering with the test runner
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 process.env.COMMAND_STREAM_VERBOSE = 'true';
 

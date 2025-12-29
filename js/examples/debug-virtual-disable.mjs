@@ -3,7 +3,7 @@
 // Enable verbose tracing
 process.env.COMMAND_STREAM_VERBOSE = 'true';
 
-import { $, disableVirtualCommands } from '../js/src/$.mjs';
+import { $, disableVirtualCommands } from '../src/$.mjs';
 
 console.log('=== Virtual Disable Debug ===');
 

@@ -2,7 +2,7 @@
 
 // Interruptible ping streaming - shows how to handle CTRL+C gracefully
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('=== Interruptible Ping Streaming ===');
 console.log('Streaming continuous ping - press CTRL+C to stop gracefully...\n');

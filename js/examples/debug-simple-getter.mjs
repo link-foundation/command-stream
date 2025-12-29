@@ -16,7 +16,7 @@ console.log('TestClass stdout:', test.stdout);
 console.log('Should be null:', test.stdout === null);
 
 // Now test with actual ProcessRunner
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 const cmd = $`echo "test"`;
 console.log('ProcessRunner stdout:', cmd.stdout);

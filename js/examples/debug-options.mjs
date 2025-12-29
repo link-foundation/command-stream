@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 // Enable trace to see what's happening
 process.env.COMMAND_STREAM_TRACE = 'ProcessRunner';

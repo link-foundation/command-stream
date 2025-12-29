@@ -2,7 +2,7 @@
 
 // Combined multiple options using $({ options })
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Combined options:');
 const $combined = $({

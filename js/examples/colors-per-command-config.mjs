@@ -2,7 +2,7 @@
 
 // Per-command ANSI configuration
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Per-command ANSI configuration:');
 const colorCommand =

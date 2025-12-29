@@ -10,7 +10,7 @@
  * 4. Handling of both stdout and stderr
  */
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 import { writeFileSync, appendFileSync, existsSync } from 'fs';
 
 // We'll use a command that produces output over time to simulate streaming

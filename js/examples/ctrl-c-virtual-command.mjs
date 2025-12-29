@@ -2,7 +2,7 @@
 
 // Virtual sleep command CTRL+C handling
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Virtual sleep command');
 console.log('Sleeping for 30 seconds - press CTRL+C to interrupt...\n');

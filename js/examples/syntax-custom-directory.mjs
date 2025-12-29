@@ -2,7 +2,7 @@
 
 // Custom working directory using $({ options })
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Custom working directory:');
 const $inTmp = $({ cwd: '/tmp', mirror: false });

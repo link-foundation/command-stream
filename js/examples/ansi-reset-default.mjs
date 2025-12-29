@@ -2,7 +2,7 @@
 
 // Reset to default (preserve ANSI)
 
-import { $, configureAnsi } from '../js/src/$.mjs';
+import { $, configureAnsi } from '../src/$.mjs';
 
 console.log('Reset to default (preserve ANSI):');
 configureAnsi({ preserveAnsi: true });

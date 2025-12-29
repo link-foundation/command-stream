@@ -10,7 +10,7 @@
  * Solution: Force stdout flush in non-TTY environments.
  */
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Testing stdout buffering in CI environment');
 console.log('Is TTY?', process.stdout.isTTY);

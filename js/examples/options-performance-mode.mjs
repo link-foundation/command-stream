@@ -2,7 +2,7 @@
 
 // capture: false and mirror: false together (maximum performance)
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Testing $`echo test`.start({ capture: false, mirror: false }):');
 const result = await $`echo "no capture, no mirror"`.start({

@@ -2,7 +2,7 @@
 
 // Counting responses with statistics
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Counting responses with statistics:');
 console.log('Running ping -c 4 8.8.8.8...\n');

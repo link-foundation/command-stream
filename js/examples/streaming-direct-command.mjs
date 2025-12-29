@@ -2,7 +2,7 @@
 
 // Basic streaming without pipes
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Direct command streaming test:');
 

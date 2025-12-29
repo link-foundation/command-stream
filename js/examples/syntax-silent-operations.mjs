@@ -2,7 +2,7 @@
 
 // Silent operations (no mirror to stdout) using $({ options })
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Silent operation:');
 const $silent = $({ mirror: false });

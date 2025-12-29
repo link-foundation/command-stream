@@ -7,7 +7,7 @@
  * - Testing with commands that actually read stdin
  */
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('=== Testing streams.stdin comprehensive functionality ===');
 console.log('');

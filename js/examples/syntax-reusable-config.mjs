@@ -2,7 +2,7 @@
 
 // Multiple uses of same configured $ verification
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Verifying reusable configurations...');
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Basic streaming example - shows real-time chunk processing
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 let chunkCount = 0;
 

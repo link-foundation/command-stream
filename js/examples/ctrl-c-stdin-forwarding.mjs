@@ -2,7 +2,7 @@
 
 // Command with stdin forwarding and CTRL+C handling
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Command with stdin forwarding');
 console.log(

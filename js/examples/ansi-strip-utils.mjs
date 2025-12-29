@@ -2,7 +2,7 @@
 
 // Using AnsiUtils to strip ANSI from result
 
-import { $, AnsiUtils } from '../js/src/$.mjs';
+import { $, AnsiUtils } from '../src/$.mjs';
 
 console.log('Using AnsiUtils to strip ANSI from result:');
 const colorCommand =

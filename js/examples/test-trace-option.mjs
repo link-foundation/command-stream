@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Test the trace option in $ config
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('=== Test: mirror:false with trace:false in CI environment ===');
 process.env.CI = 'true';

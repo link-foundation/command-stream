@@ -2,7 +2,7 @@
 
 // Network monitoring with multiple hosts using events
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Network monitoring with multiple hosts:');
 

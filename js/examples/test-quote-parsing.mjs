@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { parseShellCommand } from '../js/src/shell-parser.mjs';
+import { parseShellCommand } from '../src/shell-parser.mjs';
 
 const tests = [
   'cd "/tmp/my dir"',

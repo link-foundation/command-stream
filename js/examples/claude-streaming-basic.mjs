@@ -9,7 +9,7 @@
  * 3. Both console display and file writing simultaneously
  */
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 import { writeFileSync, appendFileSync, existsSync } from 'fs';
 
 // Claude command - using a prompt that should generate multiple chunks

@@ -2,7 +2,7 @@
 
 // Filtering only ping replies (no summary)
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Filtering only ping replies (no summary):');
 console.log('Running ping -c 3 1.1.1.1...\n');

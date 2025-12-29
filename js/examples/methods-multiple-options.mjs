@@ -2,7 +2,7 @@
 
 // Both .start() and .run() support all the same options
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Both support all the same options:');
 

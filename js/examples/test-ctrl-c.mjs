@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Testing CTRL+C handling with ping command');
 console.log('Press CTRL+C to interrupt the ping command...');

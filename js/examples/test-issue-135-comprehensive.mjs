@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Comprehensive test for issue #135: Trace logs interfere with output
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log(
   '=== Test 1: Default (no env vars, mirror:false, capture:true) ==='

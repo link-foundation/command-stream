@@ -2,7 +2,7 @@
 
 // Command chaining verification
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Verifying command chaining...');
 

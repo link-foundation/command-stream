@@ -2,7 +2,7 @@
 
 // EventEmitter pattern with pipes
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('EventEmitter pattern with pipes:');
 const start = Date.now();

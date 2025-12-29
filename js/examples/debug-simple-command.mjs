@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 async function debugSimpleCommand() {
   console.log('🐛 Testing with a simple non-builtin command');

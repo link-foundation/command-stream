@@ -2,7 +2,7 @@
 
 // Long-running process with progress events
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Long-running process with progress tracking:');
 const $progress = $({ mirror: false, capture: true });

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $, enableErrExit } from '../js/src/$.mjs';
+import { $, enableErrExit } from '../src/$.mjs';
 
 console.log('=== Errexit Test ===');
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 import { promises as fs } from 'fs';
 import { spawn } from 'child_process';
 import os from 'os';

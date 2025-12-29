@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Testing CTRL+C with sleep command');
 console.log('Press CTRL+C to interrupt the sleep...');

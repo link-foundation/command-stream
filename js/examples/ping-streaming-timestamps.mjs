@@ -2,7 +2,7 @@
 
 // Basic ping streaming with timestamps
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Basic streaming with timestamps:');
 console.log('Running ping -c 5 google.com...\n');

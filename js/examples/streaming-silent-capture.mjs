@@ -2,7 +2,7 @@
 
 // Long-running command with silent capture
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Long-running with silent capture:');
 const $longSilent = $({ mirror: false, capture: true });

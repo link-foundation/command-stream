@@ -12,7 +12,7 @@
  *   node js/examples/test-streaming-interfaces.mjs
  */
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('='.repeat(60));
 console.log('TESTING NEW STREAMING INTERFACES (Issue #33)');

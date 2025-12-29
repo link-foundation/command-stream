@@ -2,7 +2,7 @@
 // Test comprehensive resource cleanup
 // This runs in a subprocess for isolation
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 process.env.COMMAND_STREAM_VERBOSE = 'true';
 

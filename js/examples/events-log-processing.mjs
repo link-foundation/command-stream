@@ -2,7 +2,7 @@
 
 // Real-time log processing with events
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Real-time log processing:');
 const $logProcessor = $({ mirror: false });

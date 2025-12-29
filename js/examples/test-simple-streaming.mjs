@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { $ } from '../js/src/$.mjs';
-import { trace } from '../js/src/$.utils.mjs';
+import { $ } from '../src/$.mjs';
+import { trace } from '../src/$.utils.mjs';
 
 async function testSimpleStreaming() {
   trace('TestExample', '🧪 Testing simple streaming after fix');

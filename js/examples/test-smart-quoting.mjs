@@ -3,7 +3,7 @@
 // Test smart quoting behavior for interpolated strings
 // We need to preserve user-provided quotes while still auto-quoting when necessary
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('=== Smart Quoting Tests ===\n');
 

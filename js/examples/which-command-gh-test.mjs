@@ -2,7 +2,7 @@
 
 // Testing which gh (the command from GitHub issue #7)
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Testing which gh (the command from the GitHub issue):');
 try {

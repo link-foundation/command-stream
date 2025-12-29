@@ -5,7 +5,7 @@
  * This allows parent process to see output, but child doesn't read from parent's stdin
  */
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('=== Testing inherit stdout but not stdin ===');
 console.log('');

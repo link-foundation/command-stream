@@ -2,7 +2,7 @@
 
 // Using .run() method (identical functionality to .start())
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Using .run() method (identical functionality):');
 const result = await $`echo "Using .run() method"`.run({ mirror: false });

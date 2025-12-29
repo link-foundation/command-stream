@@ -1,4 +1,4 @@
-import { $, shell } from '../js/src/$.mjs';
+import { $, shell } from '../src/$.mjs';
 
 const originalLog = console.log;
 const capturedLogs = [];

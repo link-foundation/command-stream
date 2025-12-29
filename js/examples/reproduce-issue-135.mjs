@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Reproducing issue #135: Trace logs interfere with output when CI=true
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 const $silent = $({ mirror: false, capture: true });
 

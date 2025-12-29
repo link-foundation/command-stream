@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 import { appendFileSync } from 'fs';
 
 console.log('🤖 Claude streaming example');

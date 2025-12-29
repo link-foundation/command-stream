@@ -2,7 +2,7 @@
 
 // Global configuration to disable ANSI preservation
 
-import { $, configureAnsi } from '../js/src/$.mjs';
+import { $, configureAnsi } from '../src/$.mjs';
 
 console.log('Global configuration to disable ANSI preservation:');
 configureAnsi({ preserveAnsi: false });

@@ -2,7 +2,7 @@
 
 // Using AnsiUtils.stripAnsi() for clean data processing
 
-import { $, AnsiUtils } from '../js/src/$.mjs';
+import { $, AnsiUtils } from '../src/$.mjs';
 
 console.log('Using AnsiUtils.stripAnsi() for clean data processing:');
 const colorCommand =

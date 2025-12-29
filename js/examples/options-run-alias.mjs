@@ -2,7 +2,7 @@
 
 // Using .run() alias with capture: false
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 console.log('Testing $`echo test`.run({ capture: false }):');
 const result = await $`echo "test with run alias"`.run({ capture: false });

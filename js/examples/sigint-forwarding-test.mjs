@@ -2,7 +2,7 @@
 // Test SIGINT forwarding to child processes
 // This runs in a subprocess to avoid killing the test runner
 
-import { $ } from '../js/src/$.mjs';
+import { $ } from '../src/$.mjs';
 
 process.env.COMMAND_STREAM_VERBOSE = 'true';
 
