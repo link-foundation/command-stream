@@ -116,7 +116,11 @@ describe.skipIf(isWindows)('CTRL+C Signal Handling', () => {
       // Check if file exists first
       const fs = await import('fs');
       const path = await import('path');
-      const scriptPath = path.join(process.cwd(), 'examples', 'test-sleep.mjs');
+      const scriptPath = path.join(
+        process.cwd(),
+        'js/examples',
+        'test-sleep.mjs'
+      );
       trace('SignalTest', () => `Script path: ${scriptPath}`);
       trace('SignalTest', () => `Script exists: ${fs.existsSync(scriptPath)}`);
 
