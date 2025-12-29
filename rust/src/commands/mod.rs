@@ -54,7 +54,6 @@ use std::path::Path;
 use tokio::sync::mpsc;
 
 /// Context for virtual command execution
-#[derive(Debug)]
 pub struct CommandContext {
     /// Command arguments (excluding the command name)
     pub args: Vec<String>,
@@ -68,6 +67,19 @@ pub struct CommandContext {
     pub output_tx: Option<mpsc::Sender<StreamChunk>>,
     /// Cancellation check function
     pub is_cancelled: Option<Box<dyn Fn() -> bool + Send + Sync>>,
+}
+
+impl std::fmt::Debug for CommandContext {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CommandContext")
+            .field("args", &self.args)
+            .field("stdin", &self.stdin)
+            .field("cwd", &self.cwd)
+            .field("env", &self.env)
+            .field("output_tx", &self.output_tx.is_some())
+            .field("is_cancelled", &self.is_cancelled.is_some())
+            .finish()
+    }
 }
 
 /// A chunk of streaming output

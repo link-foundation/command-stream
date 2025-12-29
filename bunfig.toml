@@ -1,8 +1,8 @@
 # Bun configuration file
 
 [test]
-# Only run tests from the tests/ directory
-root = "./tests"
+# Only run tests from the js/tests/ directory
+root = "./js/tests"
 
 # Increase timeout from default 5000ms to 10000ms (2x) for CI stability
 timeout = 10000

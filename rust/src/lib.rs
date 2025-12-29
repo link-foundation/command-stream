@@ -16,12 +16,12 @@
 //! ## Quick Start
 //!
 //! ```rust,no_run
-//! use command_stream::$;
+//! use command_stream::run;
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     // Execute a simple command
-//!     let result = $("echo hello world").await?;
+//!     let result = run("echo hello world").await?;
 //!     println!("{}", result.stdout);
 //!     Ok(())
 //! }
@@ -239,7 +239,7 @@ impl ProcessRunner {
             return Ok(result.clone());
         }
 
-        let child = self.child.take().ok_or_else(|| {
+        let mut child = self.child.take().ok_or_else(|| {
             Error::Io(std::io::Error::new(
                 std::io::ErrorKind::Other,
                 "Process not started",
@@ -248,7 +248,7 @@ impl ProcessRunner {
 
         // Handle stdin content if provided
         if let StdinOption::Content(ref content) = self.options.stdin {
-            if let Some(mut stdin) = child.stdin {
+            if let Some(mut stdin) = child.stdin.take() {
                 let content = content.clone();
                 tokio::spawn(async move {
                     let _ = stdin.write_all(content.as_bytes()).await;
@@ -261,7 +261,7 @@ impl ProcessRunner {
         let mut stdout_content = String::new();
         let mut stderr_content = String::new();
 
-        if let Some(stdout) = child.stdout {
+        if let Some(stdout) = child.stdout.take() {
             let mut reader = BufReader::new(stdout).lines();
             while let Ok(Some(line)) = reader.next_line().await {
                 if self.options.mirror {
@@ -272,7 +272,7 @@ impl ProcessRunner {
             }
         }
 
-        if let Some(stderr) = child.stderr {
+        if let Some(stderr) = child.stderr.take() {
             let mut reader = BufReader::new(stderr).lines();
             while let Ok(Some(line)) = reader.next_line().await {
                 if self.options.mirror {
@@ -425,10 +425,15 @@ fn find_available_shell() -> ShellConfig {
 /// Execute a command and return the result
 ///
 /// This is the main entry point for simple command execution.
-pub async fn $(command: impl Into<String>) -> Result<CommandResult> {
+/// Named `run` instead of `$` since `$` is not a valid Rust identifier.
+pub async fn run(command: impl Into<String>) -> Result<CommandResult> {
     let mut runner = ProcessRunner::new(command, RunOptions::default());
     runner.run().await
 }
+
+/// Alias for `run` function - for JavaScript-like API feel
+/// Since `$` is not valid in Rust, this provides a similar short name
+pub use run as execute;
 
 /// Execute a command with custom options
 pub async fn exec(command: impl Into<String>, options: RunOptions) -> Result<CommandResult> {
@@ -444,7 +449,7 @@ pub fn create(command: impl Into<String>, options: RunOptions) -> ProcessRunner 
 /// Execute a command synchronously (blocking)
 pub fn run_sync(command: impl Into<String>) -> Result<CommandResult> {
     let rt = tokio::runtime::Runtime::new()?;
-    rt.block_on($(command))
+    rt.block_on(run(command))
 }
 
 #[cfg(test)]
@@ -453,7 +458,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_simple_echo() {
-        let result = $("echo hello").await.unwrap();
+        let result = run("echo hello").await.unwrap();
         assert!(result.is_success());
         assert!(result.stdout.contains("hello"));
     }

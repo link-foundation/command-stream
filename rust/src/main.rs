@@ -2,7 +2,7 @@
 //!
 //! A simple CLI wrapper for the command-stream library.
 
-use command_stream::{$, RunOptions, ProcessRunner};
+use command_stream::{run, RunOptions, ProcessRunner};
 use std::env;
 
 #[tokio::main]
@@ -23,7 +23,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let command = args.join(" ");
 
-    let result = $(command).await?;
+    let result = run(command).await?;
 
     // Print any output that wasn't mirrored
     if !result.stdout.is_empty() && !result.stdout.ends_with('\n') {

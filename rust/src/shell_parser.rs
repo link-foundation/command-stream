@@ -242,8 +242,8 @@ impl ShellParser {
         }
     }
 
-    fn current(&self) -> &Token {
-        self.tokens.get(self.pos).unwrap_or(&Token {
+    fn current(&self) -> Token {
+        self.tokens.get(self.pos).cloned().unwrap_or(Token {
             token_type: TokenType::Eof,
             value: String::new(),
         })
