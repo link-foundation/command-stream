@@ -120,7 +120,14 @@ export default [
   },
   {
     // Test files have different requirements
-    files: ['tests/**/*.js', 'tests/**/*.mjs', '**/*.test.js', '**/*.test.mjs'],
+    files: [
+      'tests/**/*.js',
+      'tests/**/*.mjs',
+      'js/tests/**/*.js',
+      'js/tests/**/*.mjs',
+      '**/*.test.js',
+      '**/*.test.mjs',
+    ],
     rules: {
       'no-unused-vars': 'off', // Tests often have unused vars for demonstration or intentional non-use
       'require-await': 'off', // Async functions without await are common in tests
@@ -138,7 +145,13 @@ export default [
   },
   {
     // Example and debug files are more lenient
-    files: ['examples/**/*.js', 'examples/**/*.mjs', 'claude-profiles.mjs'],
+    files: [
+      'examples/**/*.js',
+      'examples/**/*.mjs',
+      'js/examples/**/*.js',
+      'js/examples/**/*.mjs',
+      'claude-profiles.mjs',
+    ],
     rules: {
       'no-unused-vars': 'off', // Examples often have unused vars for demonstration
       'require-await': 'off', // Async functions without await are common in examples
@@ -160,7 +173,7 @@ export default [
   },
   {
     // Virtual command implementations have specific interface requirements
-    files: ['src/commands/**/*.mjs'],
+    files: ['src/commands/**/*.mjs', 'js/src/commands/**/*.mjs'],
     rules: {
       'require-await': 'off', // Commands must be async to match interface even if they don't await
       complexity: 'off', // Commands can be complex due to argument parsing and validation

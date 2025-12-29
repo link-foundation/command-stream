@@ -156,7 +156,7 @@ describe.skipIf(isWindows)('CTRL+C Baseline Tests (Native Spawn)', () => {
     trace('BaselineTest', 'Testing Node.js script file');
 
     // Use the simple-test-sleep.js which doesn't have ES module dependencies
-    const child = spawn('node', ['examples/simple-test-sleep.js'], {
+    const child = spawn('node', ['js/examples/simple-test-sleep.js'], {
       stdio: ['pipe', 'pipe', 'pipe'],
       detached: true,
       cwd: process.cwd(),

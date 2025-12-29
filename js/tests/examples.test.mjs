@@ -6,7 +6,7 @@ import { readdirSync, statSync, readFileSync } from 'fs';
 import { join } from 'path';
 
 // Get all .mjs examples
-const examplesDir = join(process.cwd(), 'examples');
+const examplesDir = join(process.cwd(), 'js/examples');
 const allExamples = readdirSync(examplesDir)
   .filter(
     (file) =>
@@ -24,7 +24,7 @@ describe('Examples Execution Tests', () => {
   // Core functionality test - our main example should work
   // SKIP: May hang when run with full suite
   test.skip('readme-example.mjs should execute and demonstrate new API signature', async () => {
-    const result = await $`node examples/readme-example.mjs`;
+    const result = await $`node js/examples/readme-example.mjs`;
     expect(result.code).toBe(0);
     expect(result.stdout).toContain('Hello, World!');
     expect(result.stdout).toContain('Hello, Mr. Smith!');
@@ -36,7 +36,7 @@ describe('Examples Execution Tests', () => {
   // JSON streaming test - key feature
   // SKIP: This test hangs when run with full test suite due to sleep commands
   test.skip('simple-jq-streaming.mjs should complete successfully', async () => {
-    const result = await $`node examples/simple-jq-streaming.mjs`;
+    const result = await $`node js/examples/simple-jq-streaming.mjs`;
     expect(result.code).toBe(0);
     expect(result.stdout).toContain('✅ Streaming completed successfully!');
     expect(result.stdout).toContain('🎉 All tests passed!');
@@ -67,7 +67,7 @@ describe('Examples Execution Tests', () => {
     if (manualTestExamples.length > 0) {
       trace('ExampleTest', 'Recommended for manual testing:');
       manualTestExamples.forEach((ex) =>
-        trace('ExampleTest', () => `node examples/${ex}`)
+        trace('ExampleTest', () => `node js/examples/${ex}`)
       );
     }
 
@@ -168,7 +168,7 @@ describe('Examples Execution Tests', () => {
       const { spawn } = await import('child_process');
 
       // Start our debug script that imports $ but doesn't run commands
-      const child = spawn('node', ['examples/debug-user-sigint.mjs'], {
+      const child = spawn('node', ['js/examples/debug-user-sigint.mjs'], {
         stdio: ['pipe', 'pipe', 'pipe'],
         detached: true,
       });

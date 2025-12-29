@@ -71,7 +71,7 @@ describe('.text() method for Bun.$ compatibility', () => {
   });
 
   test('.text() should work with ls built-in command', async () => {
-    const result = await $`ls -1 tests/`;
+    const result = await $`ls -1 js/tests/`;
     const text = await result.text();
 
     // Should contain at least this test file

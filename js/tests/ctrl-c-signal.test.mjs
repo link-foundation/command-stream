@@ -826,7 +826,7 @@ describe.skipIf(isWindows)('CTRL+C with Different stdin Modes', () => {
 
       // Test 1: Virtual command cancellation with proper exit codes
       trace('SignalTest', 'Testing virtual command SIGINT cancellation...');
-      const child1 = spawn('node', ['examples/test-sleep.mjs'], {
+      const child1 = spawn('node', ['js/examples/test-sleep.mjs'], {
         stdio: ['pipe', 'pipe', 'pipe'],
         detached: true,
       });

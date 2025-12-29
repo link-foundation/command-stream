@@ -58,7 +58,7 @@ describe.skipIf(isWindows)('CTRL+C Library Tests (command-stream)', () => {
     trace('LibraryTest', 'Testing library via external script');
 
     // Use test-sleep.mjs which imports our library
-    const child = spawn('node', ['examples/test-sleep.mjs'], {
+    const child = spawn('node', ['js/examples/test-sleep.mjs'], {
       stdio: ['pipe', 'pipe', 'pipe'],
       detached: true,
       cwd: process.cwd(),
