@@ -2,7 +2,7 @@
 
 // Automated test for interruption handling
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 async function test() {
   console.log('Testing interruption of virtual sleep command...');

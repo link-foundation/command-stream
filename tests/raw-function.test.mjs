@@ -1,6 +1,6 @@
 import { test, expect, describe, beforeEach } from 'bun:test';
 import './test-helper.mjs';
-import { $, raw, shell, disableVirtualCommands } from '../src/$.mjs';
+import { $, raw, shell, disableVirtualCommands } from '../js/src/$.mjs';
 
 // Disable virtual commands for consistent system command behavior
 beforeEach(() => {

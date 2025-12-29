@@ -2,7 +2,7 @@
 
 // Using AnsiUtils.cleanForProcessing() for Buffer data
 
-import { $, AnsiUtils } from '../src/$.mjs';
+import { $, AnsiUtils } from '../js/src/$.mjs';
 
 console.log('Using AnsiUtils.cleanForProcessing() for Buffer data:');
 const colorCommand =

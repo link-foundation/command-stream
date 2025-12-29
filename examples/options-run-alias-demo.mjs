@@ -2,7 +2,7 @@
 
 // Using .run() alias
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Using .run() alias:');
 console.log('await $`echo "alias"`.run({ capture: true, mirror: false })');

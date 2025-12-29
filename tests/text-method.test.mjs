@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'bun:test';
 import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
-import { $, disableVirtualCommands } from '../src/$.mjs';
+import { $, disableVirtualCommands } from '../js/src/$.mjs';
 
 // Disable virtual commands to ensure we're testing system/built-in commands
 disableVirtualCommands();

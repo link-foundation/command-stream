@@ -10,7 +10,7 @@
  *   COMMAND_STREAM_TRACE=ProcessRunner node examples/trace-simple-command.mjs
  */
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Testing simple command execution with tracing...');
 

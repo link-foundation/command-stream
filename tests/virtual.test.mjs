@@ -8,7 +8,7 @@ import {
   unregister,
   listCommands,
   enableVirtualCommands,
-} from '../src/$.mjs';
+} from '../js/src/$.mjs';
 
 // Helper function to setup shell settings
 function setupShellSettings() {

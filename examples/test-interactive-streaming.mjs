@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 async function testInteractiveStreaming() {
   console.log('Testing Interactive Streaming I/O\n');

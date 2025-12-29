@@ -2,7 +2,7 @@
 
 // Streaming with progress tracking
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Progress tracking with streaming:');
 const $progress = $({ mirror: false });

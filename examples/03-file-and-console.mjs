@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Stream to both console and file simultaneously
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 import { appendFileSync } from 'fs';
 
 const logFile = 'stream-output.log';

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Test script to reproduce Bun shell path detection issues
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('=== Shell Detection Test ===');
 console.log(

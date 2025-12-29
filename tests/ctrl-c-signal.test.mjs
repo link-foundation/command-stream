@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
 import { beforeTestCleanup, afterTestCleanup } from './test-cleanup.mjs';
 import { spawn } from 'child_process';
-import { trace } from '../src/$.utils.mjs';
+import { trace } from '../js/src/$.utils.mjs';
 
 // Platform detection - Windows handles signals differently than Unix
 const isWindows = process.platform === 'win32';
@@ -664,7 +664,7 @@ describe.skipIf(isWindows)('CTRL+C with Different stdin Modes', () => {
         [
           '-e',
           `
-      import { $ } from './src/$.mjs';
+      import { $ } from './js/src/$.mjs';
       
       // Start a long-running command
       const runner = $\`sleep 5\`;
@@ -720,7 +720,7 @@ describe.skipIf(isWindows)('CTRL+C with Different stdin Modes', () => {
         [
           '-e',
           `
-      import { $ } from './src/$.mjs';
+      import { $ } from './js/src/$.mjs';
       
       console.log('STARTING_SLEEP_WITH_CUSTOM_STDIN');
       
@@ -772,7 +772,7 @@ describe.skipIf(isWindows)('CTRL+C with Different stdin Modes', () => {
         [
           '-e',
           `
-      import { $ } from './src/$.mjs';
+      import { $ } from './js/src/$.mjs';
       
       const isBun = typeof globalThis.Bun !== 'undefined';
       console.log('RUNTIME: ' + (isBun ? 'BUN' : 'NODE'));
@@ -857,7 +857,7 @@ describe.skipIf(isWindows)('CTRL+C with Different stdin Modes', () => {
         [
           '-e',
           `
-      import { $ } from './src/$.mjs';
+      import { $ } from './js/src/$.mjs';
       
       // Set up user's SIGINT handler AFTER importing our library
       process.on('SIGINT', () => {

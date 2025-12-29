@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test';
 import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 // Platform detection - Some tests use Unix utilities (cat, grep, sort, sh)
 const isWindows = process.platform === 'win32';

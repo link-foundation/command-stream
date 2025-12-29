@@ -4,7 +4,7 @@
  * Final working examples of streaming interfaces for README
  */
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('🚀 Final Working Examples - Streaming Interfaces');
 console.log('='.repeat(55));

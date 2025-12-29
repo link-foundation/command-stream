@@ -4,7 +4,7 @@
  * Test to verify that streams.stdin can be used to send CTRL+C to interrupt commands
  */
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('=== Testing streams.stdin CTRL+C functionality ===');
 console.log('');

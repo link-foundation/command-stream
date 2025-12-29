@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 async function simpleWorkingStdin() {
   console.log('Simple working stdin test');

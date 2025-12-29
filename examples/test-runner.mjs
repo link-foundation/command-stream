@@ -5,7 +5,7 @@
  * This helps identify test issues and ensures all tests pass in isolation
  */
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 import { readdirSync } from 'fs';
 import { join, basename } from 'path';
 

@@ -2,7 +2,7 @@
 
 // Silent streaming using $({ mirror: false }) syntax
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Silent streaming (mirror: false):');
 const $silent = $({ mirror: false });

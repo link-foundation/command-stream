@@ -2,7 +2,7 @@
 
 // Long-running command that can be interrupted with CTRL+C
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Long-running command (ping)');
 console.log('Press CTRL+C to interrupt...\n');

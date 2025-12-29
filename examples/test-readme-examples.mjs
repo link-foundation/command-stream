@@ -4,7 +4,7 @@
  * Test the README examples to ensure they work correctly
  */
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('🧪 Testing README Examples');
 console.log('='.repeat(40));

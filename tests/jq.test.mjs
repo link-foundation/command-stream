@@ -1,5 +1,5 @@
-import { $ } from '../src/$.mjs';
-import { trace } from '../src/$.utils.mjs';
+import { $ } from '../js/src/$.mjs';
+import { trace } from '../js/src/$.utils.mjs';
 import { describe, test, expect } from 'bun:test';
 import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
 

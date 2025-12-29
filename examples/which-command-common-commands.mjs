@@ -2,7 +2,7 @@
 
 // Testing with other common commands
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Testing with other common commands:');
 const commands = ['sh', 'ls', 'cat', 'grep'];

@@ -2,7 +2,7 @@
 
 // Simple ping streaming example - minimal code, maximum clarity
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Streaming ping output in real-time...\n');
 

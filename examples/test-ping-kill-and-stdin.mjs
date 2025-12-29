@@ -6,7 +6,7 @@
  * 2. kill() method works to interrupt ping commands
  */
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('=== Testing ping kill() and streams.stdin ===');
 console.log('');

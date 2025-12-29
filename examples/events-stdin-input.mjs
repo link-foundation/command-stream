@@ -2,7 +2,7 @@
 
 // Event-based with custom stdin
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Event-based with custom stdin:');
 const $withInput = $({ stdin: 'Hello\nWorld\nTest\n', mirror: false });

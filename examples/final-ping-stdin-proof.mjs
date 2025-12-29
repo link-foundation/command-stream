@@ -5,7 +5,7 @@
  */
 
 import { spawn } from 'child_process';
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('=== FINAL PROOF: ping stdin vs kill() ===');
 

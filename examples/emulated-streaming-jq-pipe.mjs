@@ -2,7 +2,7 @@
 
 // Emulator piped through jq
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Emulator piped through jq:');
 const start = Date.now();

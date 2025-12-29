@@ -18,7 +18,7 @@
  * ```
  */
 
-import { resetGlobalState } from '../src/$.mjs';
+import { resetGlobalState } from '../js/src/$.mjs';
 import { existsSync } from 'fs';
 
 // Save the original working directory when module loads

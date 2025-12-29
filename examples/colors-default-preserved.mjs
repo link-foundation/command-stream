@@ -2,7 +2,7 @@
 
 // Default behavior (ANSI colors preserved)
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Default behavior (ANSI colors preserved):');
 const colorCommand =

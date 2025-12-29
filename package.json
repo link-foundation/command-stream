@@ -3,9 +3,9 @@
   "version": "0.8.3",
   "description": "Modern $ shell utility library with streaming, async iteration, and EventEmitter support, optimized for Bun runtime",
   "type": "module",
-  "main": "src/$.mjs",
+  "main": "js/src/$.mjs",
   "exports": {
-    ".": "./src/$.mjs"
+    ".": "./js/src/$.mjs"
   },
   "repository": {
     "type": "git",
@@ -54,7 +54,8 @@
     "node": ">=20.0.0"
   },
   "files": [
-    "src/",
+    "js/",
+    "rust/",
     "README.md",
     "LICENSE"
   ],

@@ -1,4 +1,4 @@
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 async function testStreaming() {
   console.log('Testing basic cat with streams.stdin...');

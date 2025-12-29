@@ -2,7 +2,7 @@
 
 // Build process simulation with events
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Build process simulation:');
 const $buildProcess = $({ mirror: false });

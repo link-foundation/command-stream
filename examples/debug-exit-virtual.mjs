@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 // Debug the virtual exit command directly
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 // Enable verbose mode
 process.env.COMMAND_STREAM_VERBOSE = 'true';

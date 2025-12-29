@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 function getSigintHandlerCount() {
   const sigintListeners = process.listeners('SIGINT');

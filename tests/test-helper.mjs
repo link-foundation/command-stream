@@ -1,5 +1,5 @@
 import { beforeEach, afterEach } from 'bun:test';
-import { resetGlobalState } from '../src/$.mjs';
+import { resetGlobalState } from '../js/src/$.mjs';
 import { existsSync } from 'fs';
 
 // Platform detection helpers

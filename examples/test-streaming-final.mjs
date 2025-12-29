@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('=== Final Real-Time Streaming Test ===\n');
 

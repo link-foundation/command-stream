@@ -2,7 +2,7 @@
 
 // Streaming ping example - shows real-time output as it arrives
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('=== Real-time Ping Streaming Example ===');
 console.log('Press CTRL+C to stop the ping...\n');

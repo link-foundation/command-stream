@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 async function debugStdin() {
   console.log('🐛 Debugging stdin streams');

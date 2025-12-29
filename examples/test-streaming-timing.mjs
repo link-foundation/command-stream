@@ -1,4 +1,4 @@
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 async function test() {
   console.log('Starting test...');

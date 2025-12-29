@@ -2,7 +2,7 @@
 
 // Mix with regular $ usage
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Mixed usage:');
 console.log('Regular $ (with mirror):');

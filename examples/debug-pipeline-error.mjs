@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 // Debug script to test the specific pipeline error scenario
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 // Enable verbose mode
 process.env.COMMAND_STREAM_VERBOSE = 'true';

@@ -12,7 +12,7 @@ import {
   shell,
   disableVirtualCommands,
   enableVirtualCommands,
-} from '../src/$.mjs';
+} from '../js/src/$.mjs';
 
 // Reset shell settings before each test to prevent interference
 beforeEach(() => {

@@ -1,6 +1,6 @@
 import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
 import { beforeTestCleanup, afterTestCleanup } from './test-cleanup.mjs';
-import { $, shell, enableVirtualCommands } from '../src/$.mjs';
+import { $, shell, enableVirtualCommands } from '../js/src/$.mjs';
 import { mkdtempSync, rmSync, existsSync, realpathSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';

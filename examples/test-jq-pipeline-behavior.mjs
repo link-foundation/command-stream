@@ -4,7 +4,7 @@
  * Test to demonstrate jq's color behavior in different contexts
  */
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 import { execSync } from 'child_process';
 
 const testJson = '{"message": "hello", "number": 42}';

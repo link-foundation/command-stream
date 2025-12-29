@@ -7,7 +7,7 @@ import {
   originalCwd,
 } from './test-cleanup.mjs';
 import { isWindows } from './test-helper.mjs';
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 import { mkdtempSync, rmSync, realpathSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';

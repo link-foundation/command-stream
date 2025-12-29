@@ -3,7 +3,7 @@
 // Test: Mixed quoted and unquoted arguments
 // Expected: Each argument properly handled based on its content
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('=== Test: Mixed Quoting Scenarios ===\n');
 

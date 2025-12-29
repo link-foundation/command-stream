@@ -2,7 +2,7 @@
 
 // Performance optimization - disable capture
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Performance optimization - disable capture:');
 console.log('await $`echo "fast"`.start({ capture: false })');

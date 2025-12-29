@@ -2,7 +2,7 @@
 // This test verifies the main fix: CI=true should NOT cause trace logs
 import { describe, it, beforeEach } from 'bun:test';
 import assert from 'assert';
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 describe('Issue #135: CI environment no longer auto-enables trace logs', () => {
   beforeEach(() => {

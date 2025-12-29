@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Simple Claude test with command-stream
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('=== Simple Claude test with command-stream ===');
 

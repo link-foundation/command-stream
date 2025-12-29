@@ -2,7 +2,7 @@
 
 // Real system command CTRL+C handling
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Real system command (ping)');
 console.log('Starting ping command - press CTRL+C to interrupt...\n');

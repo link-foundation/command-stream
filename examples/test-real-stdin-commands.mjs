@@ -4,7 +4,7 @@
  * Test commands that actually read and respond to stdin
  */
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('=== Testing commands that ACTUALLY read stdin ===');
 console.log('');

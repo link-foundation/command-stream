@@ -10,7 +10,7 @@
  *   COMMAND_STREAM_TRACE=ProcessRunner node examples/trace-error-handling.mjs
  */
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Testing error handling with tracing...');
 

@@ -1,7 +1,7 @@
 import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
 import { beforeTestCleanup, afterTestCleanup } from './test-cleanup.mjs';
 import { isWindows } from './test-helper.mjs';
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 import { promises as fs } from 'fs';
 import path from 'path';
 import os from 'os';

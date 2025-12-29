@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Testing CTRL+C with explicit stdio inherit');
 console.log('Press CTRL+C to interrupt the ping command...');

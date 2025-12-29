@@ -3,7 +3,7 @@
 // Example: Using raw() to disable auto-escape for trusted command strings
 // This demonstrates the solution to issue #139
 
-import { $, raw } from '../src/$.mjs';
+import { $, raw } from '../js/src/$.mjs';
 
 console.log('=== raw() Function Examples ===\n');
 

@@ -1,6 +1,6 @@
 import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
 import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
-import { $, forceCleanupAll } from '../src/$.mjs';
+import { $, forceCleanupAll } from '../js/src/$.mjs';
 import { EventEmitter } from 'events';
 import path from 'path';
 import { fileURLToPath } from 'url';

@@ -5,7 +5,7 @@
  * This helps diagnose why the test behaves differently in different environments
  */
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 import { spawn } from 'child_process';
 
 const testJson =

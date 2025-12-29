@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Verification script that works in both Bun and Node.js
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 const runtime = typeof globalThis.Bun !== 'undefined' ? 'Bun' : 'Node.js';
 console.log(`=== Fix Verification for ${runtime} ===`);

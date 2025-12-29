@@ -4,7 +4,7 @@
 process.env.COMMAND_STREAM_TRACE = 'all';
 process.env.COMMAND_STREAM_VERBOSE = 'true';
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 async function debugWithTrace() {
   console.log('🐛 Testing with full tracing enabled');

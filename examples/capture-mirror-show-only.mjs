@@ -2,7 +2,7 @@
 
 // capture: false, mirror: true (just show output)
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('capture: false, mirror: true:');
 console.log(

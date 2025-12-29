@@ -5,7 +5,7 @@
  * Shows: streams.stdin, streams.stdout, streams.stderr, buffers, strings, kill()
  */
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('🚀 command-stream: Comprehensive Streaming Demo');
 console.log('='.repeat(50));

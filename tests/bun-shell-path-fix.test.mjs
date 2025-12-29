@@ -7,7 +7,7 @@
  */
 
 import { test, expect, describe } from 'bun:test';
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 // Test both Bun and Node.js runtimes
 const isBun = typeof globalThis.Bun !== 'undefined';

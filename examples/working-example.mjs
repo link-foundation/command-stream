@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 // Simple working example - generate numbers with delay to see real streaming
 console.log('🚀 Real streaming example');

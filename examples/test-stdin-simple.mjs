@@ -4,7 +4,7 @@
  * Simple focused test for streams.stdin functionality
  */
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('=== Testing streams.stdin simple functionality ===');
 

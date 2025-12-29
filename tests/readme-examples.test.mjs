@@ -8,7 +8,7 @@ import {
   set,
   unset,
   disableVirtualCommands,
-} from '../src/$.mjs';
+} from '../js/src/$.mjs';
 
 // Helper function to setup shell settings for README tests
 function setupShellForReadme() {

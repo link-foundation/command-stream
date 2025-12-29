@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 // Detailed debug script for pipeline error cleanup
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 // Enable verbose mode for tracing
 process.env.COMMAND_STREAM_VERBOSE = 'true';

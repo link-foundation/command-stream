@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Comprehensive test of the smart quoting behavior
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('=== Smart Quoting Behavior Summary ===\n');
 

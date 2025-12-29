@@ -4,7 +4,7 @@ import {
   afterTestCleanup,
   originalCwd,
 } from './test-cleanup.mjs';
-import { $, shell, enableVirtualCommands } from '../src/$.mjs';
+import { $, shell, enableVirtualCommands } from '../js/src/$.mjs';
 import {
   mkdtempSync,
   rmSync,

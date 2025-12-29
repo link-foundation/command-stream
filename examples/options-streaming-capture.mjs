@@ -2,7 +2,7 @@
 
 // Capture enabled with streaming using $({ capture: true })
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Capture enabled with streaming:');
 const $capture = $({ capture: true, mirror: false });

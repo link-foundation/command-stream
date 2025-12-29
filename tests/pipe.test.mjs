@@ -6,7 +6,7 @@ import {
   unregister,
   enableVirtualCommands,
   disableVirtualCommands,
-} from '../src/$.mjs';
+} from '../js/src/$.mjs';
 import { rmSync, existsSync, mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 

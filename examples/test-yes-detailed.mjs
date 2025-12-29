@@ -1,10 +1,10 @@
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Testing yes command cancellation in detail...');
 
 // Test 1: Direct generator usage
 console.log('\n=== Test 1: Direct generator test ===');
-import yesCommand from '../src/commands/$.yes.mjs';
+import yesCommand from '../js/src/commands/$.yes.mjs';
 
 let cancelled = false;
 const abortController = new AbortController();

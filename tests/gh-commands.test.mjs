@@ -1,6 +1,6 @@
 import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
 import { beforeTestCleanup, afterTestCleanup } from './test-cleanup.mjs';
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 // Platform detection - tests use Unix shell redirection 2>&1 and sh -c
 const isWindows = process.platform === 'win32';

@@ -1,4 +1,4 @@
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Testing stream cleanup...');
 

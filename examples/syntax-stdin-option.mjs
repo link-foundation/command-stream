@@ -2,7 +2,7 @@
 
 // stdin option verification
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Verifying stdin option...');
 

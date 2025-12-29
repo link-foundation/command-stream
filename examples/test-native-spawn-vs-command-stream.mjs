@@ -6,7 +6,7 @@
  */
 
 import { spawn } from 'child_process';
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('=== Testing Native spawn vs command-stream kill capabilities ===');
 console.log('');

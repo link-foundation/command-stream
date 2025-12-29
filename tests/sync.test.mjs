@@ -1,6 +1,6 @@
 import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
 import { isWindows } from './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
-import { $, shell } from '../src/$.mjs';
+import { $, shell } from '../js/src/$.mjs';
 
 // Reset shell settings before each test
 beforeEach(() => {

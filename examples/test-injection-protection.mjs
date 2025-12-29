@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Test shell injection protection with the smart quoting
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('=== Shell Injection Protection Test ===\n');
 

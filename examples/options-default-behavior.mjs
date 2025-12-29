@@ -2,7 +2,7 @@
 
 // Default behavior comparison (direct await)
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Testing default await $`echo test` (for comparison):');
 const result = await $`echo "test default behavior"`;

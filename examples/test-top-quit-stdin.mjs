@@ -5,7 +5,7 @@
  * This demonstrates stdin control for interactive commands that actually read stdin
  */
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('=== Testing top command quit via streams.stdin ===');
 console.log('');

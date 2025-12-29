@@ -2,7 +2,7 @@
 
 // Multi-stage pipeline with streaming
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Multi-stage pipeline with streaming:');
 const start = Date.now();

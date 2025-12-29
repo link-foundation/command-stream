@@ -2,7 +2,7 @@
 
 // Comparing with system /usr/bin/which
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Comparing with system /usr/bin/which:');
 try {

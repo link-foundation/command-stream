@@ -2,7 +2,7 @@
 
 // Multiple event listeners comparison
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Multiple event listeners comparison:');
 

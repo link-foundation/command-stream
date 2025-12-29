@@ -2,7 +2,7 @@
 
 // This file documents how cd SHOULD behave to match shell behavior
 
-import { $, shell, enableVirtualCommands } from '../src/$.mjs';
+import { $, shell, enableVirtualCommands } from '../js/src/$.mjs';
 
 enableVirtualCommands();
 shell.verbose(false);

@@ -4,7 +4,7 @@
  * Test different stdio combinations with streams interface
  */
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('=== Testing stdio combinations with streams interface ===');
 console.log('');

@@ -5,7 +5,7 @@
  * This demonstrates the key requirement: inherit stdout but control stdin independently
  */
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('=== Testing top with inherit stdout + streams.stdin control ===');
 console.log('');

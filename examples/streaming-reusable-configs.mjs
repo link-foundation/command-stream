@@ -2,7 +2,7 @@
 
 // Reusable streaming configurations
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Reusable streaming configurations:');
 

@@ -2,7 +2,7 @@
 
 // Basic streaming comparison: regular $ vs $({ options })
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Basic streaming comparison:');
 

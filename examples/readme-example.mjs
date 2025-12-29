@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $, register } from '../src/$.mjs';
+import { $, register } from '../js/src/$.mjs';
 
 // Register a custom virtual command with the new object-based signature
 register('greet', async ({ stdin }) => ({

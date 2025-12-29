@@ -2,7 +2,7 @@
 
 import { test, expect, describe } from 'bun:test';
 import { isWindows } from './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 describe('Options Examples (Feature Demo)', () => {
   test('example: disable capture for performance', async () => {

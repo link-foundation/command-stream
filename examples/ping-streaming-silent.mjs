@@ -2,7 +2,7 @@
 
 // Silent streaming (no mirror to terminal)
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Silent streaming (no mirror to terminal):');
 console.log('Running ping -c 3 127.0.0.1 with mirror: false...\n');

@@ -2,7 +2,7 @@
 
 // Mixed with regular $ verification
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Verifying mixed with regular $...');
 

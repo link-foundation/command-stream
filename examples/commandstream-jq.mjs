@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 import { appendFileSync } from 'fs';
 
 console.log('🤖 Command-stream: Claude → jq pipeline');

@@ -4,7 +4,7 @@
  * Examples for README - using manual timing approach until async streams are perfected
  */
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('📖 README Examples - Streaming Interfaces');
 console.log('='.repeat(50));

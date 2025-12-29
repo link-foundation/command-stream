@@ -2,7 +2,7 @@
 
 // File monitoring simulation with events
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('File monitoring simulation:');
 const $fileMonitor = $({ mirror: false, capture: true });

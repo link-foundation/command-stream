@@ -2,7 +2,7 @@
 
 // Testing non-existent command
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Testing non-existent command:');
 try {

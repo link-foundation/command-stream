@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Test: Prevent double-quoting when user provides quotes on strings that need quoting
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('=== Double-Quoting Prevention Test ===\n');
 

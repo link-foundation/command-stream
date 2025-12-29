@@ -2,7 +2,7 @@
 
 import { describe, it, expect } from 'bun:test';
 import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 

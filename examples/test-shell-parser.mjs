@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { parseShellCommand, needsRealShell } from '../src/shell-parser.mjs';
+import { parseShellCommand, needsRealShell } from '../js/src/shell-parser.mjs';
 
 const testCases = [
   'cd /tmp',

@@ -2,7 +2,7 @@
 
 // Streaming with custom stdin using $({ stdin }) syntax
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Streaming with custom stdin:');
 const $withStdin = $({ stdin: 'Hello\nWorld\n', mirror: false });

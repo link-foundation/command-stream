@@ -5,7 +5,7 @@
 // Issue: https://github.com/link-foundation/command-stream/issues/12
 // Error: ENOENT: no such file or directory, posix_spawn ''/Users/konard/.claude/local/claude''
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 const claude = process.env.CLAUDE_PATH || '/Users/konard/.claude/local/claude';
 

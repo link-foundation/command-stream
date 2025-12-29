@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Debug execution path to see exactly what's happening
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 // Enable verbose mode to see detailed tracing
 process.env.COMMAND_STREAM_VERBOSE = 'true';

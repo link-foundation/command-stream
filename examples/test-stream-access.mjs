@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 async function testStreamAccess() {
   console.log('Testing event-driven stream access (no setTimeout)...\n');

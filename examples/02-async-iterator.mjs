@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Async iterator pattern - process chunks as they arrive
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Using async iteration:');
 

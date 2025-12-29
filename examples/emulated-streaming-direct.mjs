@@ -2,7 +2,7 @@
 
 // Direct execution of emulator
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Direct execution of emulator:');
 const start = Date.now();

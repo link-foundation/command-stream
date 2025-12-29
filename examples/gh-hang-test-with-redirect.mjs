@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 import { promises as fs } from 'fs';
 
 console.log('Testing gh gist create WITH 2>&1 (should work)');

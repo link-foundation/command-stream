@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $, disableVirtualCommands } from '../src/$.mjs';
+import { $, disableVirtualCommands } from '../js/src/$.mjs';
 
 console.log('=== Stream Getter Debug ===');
 

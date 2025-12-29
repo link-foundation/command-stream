@@ -1,7 +1,7 @@
 import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
 import { isWindows } from './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
-import { $, register, unregister, enableVirtualCommands } from '../src/$.mjs';
-import { trace } from '../src/$.utils.mjs';
+import { $, register, unregister, enableVirtualCommands } from '../js/src/$.mjs';
+import { trace } from '../js/src/$.utils.mjs';
 import { rmSync, existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
 import { join } from 'path';
 

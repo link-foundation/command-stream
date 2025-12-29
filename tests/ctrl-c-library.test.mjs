@@ -1,8 +1,8 @@
 import { describe, it, expect, afterEach } from 'bun:test';
 import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
 import { spawn } from 'child_process';
-import { $ } from '../src/$.mjs';
-import { trace } from '../src/$.utils.mjs';
+import { $ } from '../js/src/$.mjs';
+import { trace } from '../js/src/$.utils.mjs';
 
 // Platform detection - Windows handles signals differently than Unix
 const isWindows = process.platform === 'win32';

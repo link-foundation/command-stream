@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 import fs from 'fs/promises';
 
 console.log('=== Minimal gh gist create test ===\n');

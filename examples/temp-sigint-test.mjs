@@ -2,7 +2,7 @@
 
 // Temporary test file for SIGINT handling - can be used for debugging user signal handlers
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 let sigintReceived = false;
 

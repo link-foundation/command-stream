@@ -2,7 +2,7 @@
 
 // Summary comparison of all capture/mirror combinations
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('📊 Capture/Mirror Combinations Summary:');
 console.log('┌─────────┬────────┬─────────────┬──────────────┐');

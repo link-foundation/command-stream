@@ -1,7 +1,7 @@
 import { test, expect, describe } from 'bun:test';
 import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
-import { $ } from '../src/$.mjs';
-import { trace } from '../src/$.utils.mjs';
+import { $ } from '../js/src/$.mjs';
+import { trace } from '../js/src/$.utils.mjs';
 
 describe('Yes Command Cleanup Tests', () => {
   test('should stop yes command when breaking from async iteration', async () => {
@@ -152,7 +152,7 @@ describe('Yes Command Cleanup Tests', () => {
   test('should cleanup yes command in subprocess', async () => {
     // Create a test script that runs yes and should exit cleanly
     const script = `
-      import { $ } from './src/$.mjs';
+      import { $ } from './js/src/$.mjs';
       
       const runner = $({ mirror: false })\`yes "subprocess test"\`;
       let count = 0;

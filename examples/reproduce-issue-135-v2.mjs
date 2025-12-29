@@ -4,7 +4,7 @@
 
 process.env.CI = 'true';
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('=== Test with CI=true set BEFORE import ===');
 const $silent = $({ mirror: false, capture: true });

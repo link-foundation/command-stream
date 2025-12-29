@@ -1,6 +1,6 @@
 import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
 import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
-import { $, shell, disableVirtualCommands } from '../src/$.mjs';
+import { $, shell, disableVirtualCommands } from '../js/src/$.mjs';
 
 // Reset shell settings before each test to prevent interference
 beforeEach(() => {

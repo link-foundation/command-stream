@@ -2,7 +2,7 @@
 
 // Multiple concurrent processes CTRL+C handling
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Multiple concurrent processes');
 console.log('Starting 3 processes - press CTRL+C to interrupt all...\n');

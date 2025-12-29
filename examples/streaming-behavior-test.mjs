@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { $, register } from '../src/$.mjs';
+import { $, register } from '../js/src/$.mjs';
 
 console.log('=== Comprehensive Streaming Behavior Test ===\n');
 console.log(

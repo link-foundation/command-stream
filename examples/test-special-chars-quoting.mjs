@@ -3,7 +3,7 @@
 // Test: Quoting strings with special characters
 // Expected: Proper escaping and quoting for shell safety
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('=== Test: Special Characters Quoting ===\n');
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Test the difference between template literals and string interpolation
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 // Enable verbose mode
 process.env.COMMAND_STREAM_VERBOSE = 'true';

@@ -10,7 +10,7 @@
  */
 
 import { spawn } from 'child_process';
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Testing baseline vs library behavior');
 

@@ -2,7 +2,7 @@
 
 // Test that parent process continues after child is interrupted
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 async function test() {
   console.log('Testing that parent continues after child interruption...\n');

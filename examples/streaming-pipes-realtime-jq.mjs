@@ -2,7 +2,7 @@
 
 // Real-time streaming through jq pipe
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Real-time streaming with delays through jq:');
 console.log('Each line should appear immediately, not all at once\n');

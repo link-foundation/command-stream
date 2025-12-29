@@ -2,7 +2,7 @@
 
 // Multi-stage pipeline streaming (cat | jq)
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Multi-stage pipeline streaming test:');
 

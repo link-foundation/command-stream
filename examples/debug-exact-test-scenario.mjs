@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 // Exact replica of the failing test scenario
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 // Enable verbose mode
 process.env.COMMAND_STREAM_VERBOSE = 'true';

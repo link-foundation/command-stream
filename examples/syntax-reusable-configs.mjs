@@ -2,7 +2,7 @@
 
 // Reusable configurations using $({ options })
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Reusable configurations:');
 const $debug = $({

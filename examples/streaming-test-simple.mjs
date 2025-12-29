@@ -5,7 +5,7 @@
  * Uses 'echo' and 'seq' commands that are guaranteed to exist
  */
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 import { writeFileSync, appendFileSync, existsSync } from 'fs';
 
 console.log('🧪 Testing streaming with simple commands...\n');

@@ -2,7 +2,7 @@
 
 // Using .run() alias with both mirror and capture options
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Testing $`echo test`.run({ mirror: false, capture: true }):');
 const result = await $`echo "test with both options"`.run({

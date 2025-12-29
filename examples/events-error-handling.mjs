@@ -2,7 +2,7 @@
 
 // Error handling and recovery with events
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('Error handling and recovery:');
 const $errorTest = $({ mirror: false });

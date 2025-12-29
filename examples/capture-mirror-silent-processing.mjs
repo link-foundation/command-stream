@@ -2,7 +2,7 @@
 
 // capture: true, mirror: false (silent data processing)
 
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('capture: true, mirror: false:');
 console.log(

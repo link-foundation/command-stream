@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Test quoting edge cases for issue #12
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 console.log('=== Testing Quote Edge Cases for Issue #12 ===\n');
 
