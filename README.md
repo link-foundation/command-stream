@@ -254,6 +254,60 @@ await $`echo ${userInput}`; // ✅ Safe - auto-escaped
 - ❌ Any untrusted source
 - ❌ When you're unsure - use normal interpolation instead
 
+### Preserving Apostrophes with `literal()` (Advanced)
+
+When passing text to programs that store it literally (like API calls via CLI tools), apostrophes can appear corrupted as triple quotes (`'''`). This happens because the default `quote()` function uses Bash's `'\''` escaping pattern for apostrophes.
+
+Use `literal()` to preserve apostrophes when the receiving program stores text literally:
+
+```javascript
+import { $, literal } from 'command-stream';
+
+// Problem: Default escaping uses '\'' pattern for apostrophes
+const releaseNotes = "Fix bug when dependencies didn't exist";
+await $`gh release create v1.0.0 --notes ${releaseNotes}`;
+// Apostrophe may appear as ''' in GitHub if the API stores it literally
+
+// Solution: Use literal() to preserve apostrophes
+await $`gh release create v1.0.0 --notes ${literal(releaseNotes)}`;
+// Apostrophe stays as ' - text displays correctly on GitHub
+
+// literal() still escapes shell-dangerous characters
+const text = "User's input with $variable and `backticks`";
+await $`command ${literal(text)}`;
+// $ and ` are escaped, but apostrophe stays as-is
+```
+
+**How `literal()` differs from `raw()` and default quoting:**
+
+| Function    | Apostrophe `'` | Shell Chars `$ \` "` | Safety Level |
+| ----------- | -------------- | -------------------- | ------------ |
+| Default     | `'\''` escaped | Safely quoted        | ✅ Maximum   |
+| `literal()` | Preserved      | Escaped              | ✅ Safe      |
+| `raw()`     | Preserved      | NOT escaped          | ⚠️ Dangerous |
+
+**When to use `literal()`:**
+
+- ✅ Text for APIs via CLI tools (GitHub, cloud CLIs)
+- ✅ Release notes, commit messages, descriptions
+- ✅ Any text that will be stored/displayed literally
+- ✅ When apostrophes appear as `'''` in the output
+
+**Recommended Alternative: Use stdin for APIs**
+
+For API calls, the safest approach is to pass data via stdin:
+
+```javascript
+const payload = JSON.stringify({
+  tag_name: 'v1.0.0',
+  body: releaseNotes, // No escaping issues!
+});
+
+await $`gh api repos/owner/repo/releases -X POST --input -`.run({
+  stdin: payload,
+});
+```
+
 ## Usage Patterns
 
 ### Classic Await (Backward Compatible)
@@ -1113,6 +1167,36 @@ await $`${raw(trustedCommand)}`;
 // → Executes: echo "hello" && ls -la (without escaping)
 
 // ⚠️ NEVER use with untrusted input - shell injection risk!
+```
+
+#### literal() - Preserve Apostrophes for Literal Storage
+
+Use when passing text to programs that store it literally (APIs, databases). Preserves apostrophes while still escaping shell-dangerous characters.
+
+```javascript
+import { $, literal } from 'command-stream';
+
+// Apostrophes preserved for API storage
+const notes = "Dependencies didn't exist";
+await $`gh release create v1.0.0 --notes ${literal(notes)}`;
+// → Apostrophe displays correctly on GitHub
+
+// Still safe: $ ` \ " are escaped
+const text = "User's $variable";
+await $`command ${literal(text)}`;
+// → $ is escaped, apostrophe preserved
+```
+
+#### quoteLiteral() - Low-level Double-Quote Escaping
+
+Low-level function for manual command building. Uses double quotes, preserving apostrophes.
+
+```javascript
+import { quoteLiteral } from 'command-stream';
+
+quoteLiteral("didn't"); // → "didn't"
+quoteLiteral('say "hello"'); // → "say \"hello\""
+quoteLiteral('$100'); // → "\$100"
 ```
 
 ### Built-in Commands
