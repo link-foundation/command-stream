@@ -1194,9 +1194,9 @@ Low-level function for manual command building. Uses double quotes, preserving a
 ```javascript
 import { quoteLiteral } from 'command-stream';
 
-quoteLiteral("didn't");      // → "didn't"
+quoteLiteral("didn't"); // → "didn't"
 quoteLiteral('say "hello"'); // → "say \"hello\""
-quoteLiteral('$100');        // → "\$100"
+quoteLiteral('$100'); // → "\$100"
 ```
 
 ### Built-in Commands

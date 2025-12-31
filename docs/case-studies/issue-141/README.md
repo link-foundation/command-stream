@@ -44,11 +44,13 @@ For input `didn't`, this produces `'didn'\''t'`, which is the correct Bash escap
 ### The Double-Quoting Issue
 
 When users write:
+
 ```javascript
 await $`command "${text}"`;
 ```
 
 The template literal contains `"` characters as static strings. The `buildShellCommand()` function then:
+
 1. Adds the static string `command "`
 2. Calls `quote(text)` which wraps in single quotes
 3. Adds the closing static string `"`
@@ -76,6 +78,7 @@ Result: [Dependencies didn't exist] ✅
 ### Why Triple Quotes Appear
 
 When a program receives `'didn'\''t'`:
+
 1. If it **interprets** as shell → expands to `didn't` ✅
 2. If it **stores literally** → keeps as `'didn'\''t'` which displays as `didn'''t` ❌
 
@@ -107,6 +110,7 @@ await $`gh release create --notes ${literal(releaseNotes)}`;
 ```
 
 This would:
+
 - Apply only the minimal escaping needed for argument boundaries
 - Not apply Bash-specific patterns like `'\''`
 - Be useful when the receiving program stores text literally
@@ -155,11 +159,11 @@ Based on the issue suggestions and analysis:
 
 A proper fix should handle:
 
-| Input | Expected Output |
-|-------|-----------------|
-| `didn't` | `didn't` |
+| Input                | Expected Output      |
+| -------------------- | -------------------- |
+| `didn't`             | `didn't`             |
 | `it's user's choice` | `it's user's choice` |
-| `text is "quoted"` | `text is "quoted"` |
-| `it's "great"` | `it's "great"` |
-| `` use `npm` `` | `` use `npm` `` |
-| `Line 1\nLine 2` | `Line 1\nLine 2` |
+| `text is "quoted"`   | `text is "quoted"`   |
+| `it's "great"`       | `it's "great"`       |
+| `` use `npm` ``      | `` use `npm` ``      |
+| `Line 1\nLine 2`     | `Line 1\nLine 2`     |
