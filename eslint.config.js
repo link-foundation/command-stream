@@ -144,12 +144,14 @@ export default [
     },
   },
   {
-    // Example and debug files are more lenient
+    // Example, experiment, and debug files are more lenient
     files: [
       'examples/**/*.js',
       'examples/**/*.mjs',
       'js/examples/**/*.js',
       'js/examples/**/*.mjs',
+      'experiments/**/*.js',
+      'experiments/**/*.mjs',
       'claude-profiles.mjs',
     ],
     rules: {

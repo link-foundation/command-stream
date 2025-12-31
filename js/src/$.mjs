@@ -1099,6 +1099,52 @@ function quote(value) {
   return `'${value.replace(/'/g, "'\\''")}'`;
 }
 
+/**
+ * Quote a value using double quotes - preserves apostrophes as-is.
+ *
+ * Use this when the text will be passed to programs that store it literally
+ * (like API calls via CLI tools) rather than interpreting it as shell commands.
+ *
+ * In double quotes, we only need to escape: $ ` \ " and newlines
+ * Apostrophes (') are preserved without escaping.
+ *
+ * @param {*} value - The value to quote
+ * @returns {string} - The double-quoted string with proper escaping
+ */
+function quoteLiteral(value) {
+  if (value == null) {
+    return '""';
+  }
+  if (Array.isArray(value)) {
+    return value.map(quoteLiteral).join(' ');
+  }
+  if (typeof value !== 'string') {
+    value = String(value);
+  }
+  if (value === '') {
+    return '""';
+  }
+
+  // Check if the string needs quoting at all
+  // Safe characters: alphanumeric, dash, underscore, dot, slash, colon, equals, comma, plus
+  const safePattern = /^[a-zA-Z0-9_\-./=,+@:]+$/;
+
+  if (safePattern.test(value)) {
+    // The string is safe and doesn't need quoting
+    return value;
+  }
+
+  // Escape characters that are special inside double quotes: \ $ ` "
+  // Apostrophes (') do NOT need escaping in double quotes
+  const escaped = value
+    .replace(/\\/g, '\\\\') // Escape backslashes first
+    .replace(/\$/g, '\\$') // Escape dollar signs (prevent variable expansion)
+    .replace(/`/g, '\\`') // Escape backticks (prevent command substitution)
+    .replace(/"/g, '\\"'); // Escape double quotes
+
+  return `"${escaped}"`;
+}
+
 function buildShellCommand(strings, values) {
   trace(
     'Utils',
@@ -1151,6 +1197,19 @@ function buildShellCommand(strings, values) {
             `BRANCH: buildShellCommand => RAW_VALUE | ${JSON.stringify({ value: String(v.raw) }, null, 2)}`
         );
         out += String(v.raw);
+      } else if (
+        v &&
+        typeof v === 'object' &&
+        Object.prototype.hasOwnProperty.call(v, 'literal')
+      ) {
+        // Use double-quote escaping which preserves apostrophes
+        const literalQuoted = quoteLiteral(v.literal);
+        trace(
+          'Utils',
+          () =>
+            `BRANCH: buildShellCommand => LITERAL_VALUE | ${JSON.stringify({ original: v.literal, quoted: literalQuoted }, null, 2)}`
+        );
+        out += literalQuoted;
       } else {
         const quoted = quote(v);
         trace(
@@ -6474,6 +6533,34 @@ function raw(value) {
   return { raw: String(value) };
 }
 
+/**
+ * Mark a value as literal text that should use double-quote escaping.
+ *
+ * Use this when passing text to programs that store it literally (like API calls
+ * via CLI tools) rather than interpreting it as shell commands. This preserves
+ * apostrophes as-is instead of using the '\'' escape pattern.
+ *
+ * Unlike raw(), literal() still provides proper shell escaping for special
+ * characters like $, `, \, and ", but apostrophes pass through unchanged.
+ *
+ * @example
+ * // Problem: apostrophe gets escaped as '\''
+ * await $`gh release create --notes ${text}`;  // "didn't" → "didn'\''t" → appears as "didn'''t"
+ *
+ * // Solution: use literal() to preserve apostrophes
+ * await $`gh release create --notes ${literal(text)}`;  // "didn't" stays "didn't"
+ *
+ * @param {*} value - The value to mark as literal
+ * @returns {{ literal: string }} - Object with literal property for buildShellCommand
+ */
+function literal(value) {
+  trace(
+    'API',
+    () => `literal() called with value: ${String(value).slice(0, 50)}`
+  );
+  return { literal: String(value) };
+}
+
 function set(option) {
   trace('API', () => `set() called with option: ${option}`);
   const mapping = {
@@ -6744,8 +6831,10 @@ export {
   exec,
   run,
   quote,
+  quoteLiteral,
   create,
   raw,
+  literal,
   ProcessRunner,
   shell,
   set,
