@@ -14,7 +14,7 @@
  * - Verbose logging and file logging support
  */
 
-import { $ } from './src/$.mjs';
+import { $ } from './js/src/$.mjs';
 import fs, { createWriteStream, promises as fsPromises } from 'fs';
 import path from 'path';
 import os from 'os';

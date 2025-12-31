@@ -3,9 +3,9 @@
   "version": "0.8.3",
   "description": "Modern $ shell utility library with streaming, async iteration, and EventEmitter support, optimized for Bun runtime",
   "type": "module",
-  "main": "src/$.mjs",
+  "main": "js/src/$.mjs",
   "exports": {
-    ".": "./src/$.mjs"
+    ".": "./js/src/$.mjs"
   },
   "repository": {
     "type": "git",
@@ -16,14 +16,14 @@
     "url": "https://github.com/link-foundation/command-stream/issues"
   },
   "scripts": {
-    "test": "bun test tests/",
-    "test:coverage": "bun test tests/ --coverage",
-    "test:features": "bun test tests/*.features.test.mjs",
-    "test:comparison": "bun test tests/*.features.test.mjs --reporter=verbose",
-    "test:readme": "bun test tests/readme-examples.test.mjs",
-    "test:sync": "bun test tests/sync.test.mjs",
-    "test:builtin": "bun test tests/builtin-commands.test.mjs",
-    "test:pipe": "bun test tests/pipe.test.mjs",
+    "test": "bun test js/tests/",
+    "test:coverage": "bun test js/tests/ --coverage",
+    "test:features": "bun test js/tests/*.features.test.mjs",
+    "test:comparison": "bun test js/tests/*.features.test.mjs --reporter=verbose",
+    "test:readme": "bun test js/tests/readme-examples.test.mjs",
+    "test:sync": "bun test js/tests/sync.test.mjs",
+    "test:builtin": "bun test js/tests/builtin-commands.test.mjs",
+    "test:pipe": "bun test js/tests/pipe.test.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
@@ -54,7 +54,8 @@
     "node": ">=20.0.0"
   },
   "files": [
-    "src/",
+    "js/",
+    "rust/",
     "README.md",
     "LICENSE"
   ],

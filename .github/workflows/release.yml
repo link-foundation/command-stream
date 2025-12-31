@@ -151,7 +151,7 @@ jobs:
 
       - name: Run tests (Bun)
         if: matrix.runtime == 'bun'
-        run: bun test tests/
+        run: bun test js/tests/
         env:
           COMMAND_STREAM_VERBOSE: true
 
@@ -166,7 +166,7 @@ jobs:
         run: |
           node -e "
           try {
-            const { $ } = require('./src/\$.mjs');
+            const { $ } = require('./js/src/\$.mjs');
             console.log('✅ Module loads successfully in Node.js ${{ matrix.node-version }}');
           } catch (error) {
             console.error('❌ Module failed to load:', error.message);
