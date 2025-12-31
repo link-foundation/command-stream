@@ -13,20 +13,23 @@ const testCases = [
   { input: "didn't", description: 'Basic apostrophe' },
   { input: "it's user's choice", description: 'Multiple apostrophes' },
   { input: 'text is "quoted"', description: 'Double quotes' },
-  { input: "it's \"great\"", description: 'Mixed quotes' },
-  { input: "use `npm install`", description: 'Backticks' },
-  { input: "Line 1\nLine 2", description: 'Newlines' },
-  { input: "price is $100", description: 'Dollar sign' },
-  { input: "path\\to\\file", description: 'Backslashes' },
+  { input: 'it\'s "great"', description: 'Mixed quotes' },
+  { input: 'use `npm install`', description: 'Backticks' },
+  { input: 'Line 1\nLine 2', description: 'Newlines' },
+  { input: 'price is $100', description: 'Dollar sign' },
+  { input: 'path\\to\\file', description: 'Backslashes' },
 ];
 
 // Create a script that echoes its arguments exactly
 const scriptPath = '/tmp/show-args.sh';
-await fs.writeFile(scriptPath, `#!/bin/bash
+await fs.writeFile(
+  scriptPath,
+  `#!/bin/bash
 for arg in "$@"; do
     echo "$arg"
 done
-`);
+`
+);
 await fs.chmod(scriptPath, '755');
 
 console.log('Testing quoteLiteral() function directly:\n');
@@ -89,11 +92,14 @@ const comparisonText = "Dependencies didn't exist";
 console.log(`Text: "${comparisonText}"`);
 
 // Create script again for comparison
-await fs.writeFile(scriptPath, `#!/bin/bash
+await fs.writeFile(
+  scriptPath,
+  `#!/bin/bash
 for arg in "$@"; do
     echo "$arg"
 done
-`);
+`
+);
 await fs.chmod(scriptPath, '755');
 
 const regularResult = await $`/tmp/show-args.sh ${comparisonText}`.run({
@@ -103,10 +109,12 @@ const regularResult = await $`/tmp/show-args.sh ${comparisonText}`.run({
 console.log(`\nWith regular quote() (default):`);
 console.log(`  Result: "${regularResult.stdout.trim()}"`);
 
-const literalResult = await $`/tmp/show-args.sh ${literal(comparisonText)}`.run({
-  capture: true,
-  mirror: false,
-});
+const literalResult = await $`/tmp/show-args.sh ${literal(comparisonText)}`.run(
+  {
+    capture: true,
+    mirror: false,
+  }
+);
 console.log(`\nWith literal():`);
 console.log(`  Result: "${literalResult.stdout.trim()}"`);
 
