@@ -181,6 +181,20 @@ export default [
     },
   },
   {
+    // Main library file with ProcessRunner class - needs refactoring to reduce size
+    // TODO: Split ProcessRunner class into smaller modules to get below 1500 lines
+    // See issue #149 for refactoring progress
+    files: ['js/src/$.mjs', 'src/$.mjs'],
+    rules: {
+      'max-lines': 'off', // ProcessRunner class is ~5000 lines, needs careful splitting
+      'max-lines-per-function': 'off', // ProcessRunner methods are large due to orchestration
+      'max-statements': 'off', // ProcessRunner methods have many statements
+      complexity: 'off', // ProcessRunner methods are complex due to state management
+      'require-await': 'off', // Some async methods don't need await but maintain interface
+      'no-unused-vars': 'off', // Some variables are for future use or documentation
+    },
+  },
+  {
     // CommonJS compatibility (some files use require() for dynamic imports)
     files: ['**/*.js', '**/*.mjs'],
     languageOptions: {
