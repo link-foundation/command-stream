@@ -2,10 +2,7 @@
 // Handles registration of built-in and custom virtual commands
 
 import { trace } from './$.trace.mjs';
-import {
-  virtualCommands,
-  getShellSettings,
-} from './$.state.mjs';
+import { virtualCommands, getShellSettings } from './$.state.mjs';
 
 // Import virtual command implementations
 import cdCommand from './commands/$.cd.mjs';
