@@ -78,8 +78,7 @@ export function extendWithPipelineMethods(ProcessRunner, deps) {
   ProcessRunner.prototype._runPipeline = async function (commands) {
     trace(
       'ProcessRunner',
-      () =>
-        `_runPipeline ENTER | commandsCount: ${commands.length}`
+      () => `_runPipeline ENTER | commandsCount: ${commands.length}`
     );
 
     if (commands.length === 0) {
@@ -549,7 +548,9 @@ export function extendWithPipelineMethods(ProcessRunner, deps) {
           try {
             while (true) {
               const { done, value } = await reader.read();
-              if (done) break;
+              if (done) {
+                break;
+              }
               inputData += new TextDecoder().decode(value);
             }
           } finally {
@@ -666,7 +667,9 @@ export function extendWithPipelineMethods(ProcessRunner, deps) {
             try {
               while (true) {
                 const { done, value } = await reader.read();
-                if (done) break;
+                if (done) {
+                  break;
+                }
                 if (writer.write) {
                   try {
                     await writer.write(value);
@@ -760,8 +763,7 @@ export function extendWithPipelineMethods(ProcessRunner, deps) {
 
     trace(
       'ProcessRunner',
-      () =>
-        `_runPipelineNonStreaming ENTER | commandsCount: ${commands.length}`
+      () => `_runPipelineNonStreaming ENTER | commandsCount: ${commands.length}`
     );
 
     let currentOutput = '';
