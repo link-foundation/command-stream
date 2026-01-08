@@ -115,7 +115,7 @@ export default [
       ],
       'max-params': ['warn', 6], // Maximum function parameters - slightly more lenient than strict 5
       'max-statements': ['warn', 60], // Maximum statements per function - reasonable limit for orchestration functions
-      'max-lines': ['warn', 1500], // Maximum lines per file - set to warn for existing large files
+      'max-lines': ['error', 1500], // Maximum lines per file - enforced for all source files
     },
   },
   {
@@ -191,6 +191,28 @@ export default [
         __dirname: 'readonly',
         __filename: 'readonly',
       },
+    },
+  },
+  {
+    // ProcessRunner modular architecture uses attachment pattern
+    // where methods are attached to prototypes within wrapper functions.
+    // These wrapper functions are larger than typical functions but contain
+    // method definitions themselves, not complex logic.
+    files: [
+      'js/src/$.process-runner-execution.mjs',
+      'js/src/$.process-runner-pipeline.mjs',
+      'src/$.process-runner-execution.mjs',
+      'src/$.process-runner-pipeline.mjs',
+    ],
+    rules: {
+      'max-lines-per-function': [
+        'warn',
+        {
+          max: 450,
+          skipBlankLines: true,
+          skipComments: true,
+        },
+      ],
     },
   },
   {

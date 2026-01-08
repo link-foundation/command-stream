@@ -23,6 +23,119 @@ const TokenType = {
 };
 
 /**
+ * Parse a word token from the command string, handling quotes and escapes
+ * @param {string} command - The command string
+ * @param {number} startIndex - Starting position
+ * @returns {{word: string, endIndex: number}} Parsed word and end position
+ */
+function parseWord(command, startIndex) {
+  let word = '';
+  let i = startIndex;
+  let inQuote = false;
+  let quoteChar = '';
+
+  while (i < command.length) {
+    const char = command[i];
+
+    if (!inQuote) {
+      const result = parseUnquotedChar(command, i, char, word);
+      if (result.done) {
+        return { word: result.word, endIndex: i };
+      }
+      word = result.word;
+      i = result.index;
+      if (result.startQuote) {
+        inQuote = true;
+        quoteChar = result.startQuote;
+      }
+    } else {
+      const result = parseQuotedChar(command, i, char, word, quoteChar);
+      word = result.word;
+      i = result.index;
+      if (result.endQuote) {
+        inQuote = false;
+        quoteChar = '';
+      }
+    }
+  }
+
+  return { word, endIndex: i };
+}
+
+/**
+ * Parse a character when not inside quotes
+ */
+function parseUnquotedChar(command, i, char, word) {
+  if (char === '"' || char === "'") {
+    return { word: word + char, index: i + 1, startQuote: char };
+  }
+  if (/\s/.test(char) || '&|;()<>'.includes(char)) {
+    return { word, done: true };
+  }
+  if (char === '\\' && i + 1 < command.length) {
+    const escaped = command[i + 1];
+    return { word: word + char + escaped, index: i + 2 };
+  }
+  return { word: word + char, index: i + 1 };
+}
+
+/**
+ * Parse a character when inside quotes
+ */
+function parseQuotedChar(command, i, char, word, quoteChar) {
+  if (char === quoteChar && command[i - 1] !== '\\') {
+    return { word: word + char, index: i + 1, endQuote: true };
+  }
+  if (
+    char === '\\' &&
+    i + 1 < command.length &&
+    (command[i + 1] === quoteChar || command[i + 1] === '\\')
+  ) {
+    const escaped = command[i + 1];
+    return { word: word + char + escaped, index: i + 2 };
+  }
+  return { word: word + char, index: i + 1 };
+}
+
+/**
+ * Try to match an operator at the current position
+ * @returns {{type: string, value: string, length: number} | null}
+ */
+function matchOperator(command, i) {
+  const twoChar = command.slice(i, i + 2);
+  const oneChar = command[i];
+
+  if (twoChar === '&&') {
+    return { type: TokenType.AND, value: '&&', length: 2 };
+  }
+  if (twoChar === '||') {
+    return { type: TokenType.OR, value: '||', length: 2 };
+  }
+  if (twoChar === '>>') {
+    return { type: TokenType.REDIRECT_APPEND, value: '>>', length: 2 };
+  }
+  if (oneChar === '|') {
+    return { type: TokenType.PIPE, value: '|', length: 1 };
+  }
+  if (oneChar === ';') {
+    return { type: TokenType.SEMICOLON, value: ';', length: 1 };
+  }
+  if (oneChar === '(') {
+    return { type: TokenType.LPAREN, value: '(', length: 1 };
+  }
+  if (oneChar === ')') {
+    return { type: TokenType.RPAREN, value: ')', length: 1 };
+  }
+  if (oneChar === '>') {
+    return { type: TokenType.REDIRECT_OUT, value: '>', length: 1 };
+  }
+  if (oneChar === '<') {
+    return { type: TokenType.REDIRECT_IN, value: '<', length: 1 };
+  }
+  return null;
+}
+
+/**
  * Tokenize a shell command string
  */
 function tokenize(command) {
@@ -40,90 +153,19 @@ function tokenize(command) {
     }
 
     // Check for operators
-    if (command[i] === '&' && command[i + 1] === '&') {
-      tokens.push({ type: TokenType.AND, value: '&&' });
-      i += 2;
-    } else if (command[i] === '|' && command[i + 1] === '|') {
-      tokens.push({ type: TokenType.OR, value: '||' });
-      i += 2;
-    } else if (command[i] === '|') {
-      tokens.push({ type: TokenType.PIPE, value: '|' });
-      i++;
-    } else if (command[i] === ';') {
-      tokens.push({ type: TokenType.SEMICOLON, value: ';' });
-      i++;
-    } else if (command[i] === '(') {
-      tokens.push({ type: TokenType.LPAREN, value: '(' });
-      i++;
-    } else if (command[i] === ')') {
-      tokens.push({ type: TokenType.RPAREN, value: ')' });
-      i++;
-    } else if (command[i] === '>' && command[i + 1] === '>') {
-      tokens.push({ type: TokenType.REDIRECT_APPEND, value: '>>' });
-      i += 2;
-    } else if (command[i] === '>') {
-      tokens.push({ type: TokenType.REDIRECT_OUT, value: '>' });
-      i++;
-    } else if (command[i] === '<') {
-      tokens.push({ type: TokenType.REDIRECT_IN, value: '<' });
-      i++;
-    } else {
-      // Parse word (respecting quotes)
-      let word = '';
-      let inQuote = false;
-      let quoteChar = '';
+    const operator = matchOperator(command, i);
+    if (operator) {
+      tokens.push({ type: operator.type, value: operator.value });
+      i += operator.length;
+      continue;
+    }
 
-      while (i < command.length) {
-        const char = command[i];
+    // Parse word (respecting quotes)
+    const { word, endIndex } = parseWord(command, i);
+    i = endIndex;
 
-        if (!inQuote) {
-          if (char === '"' || char === "'") {
-            inQuote = true;
-            quoteChar = char;
-            word += char;
-            i++;
-          } else if (/\s/.test(char) || '&|;()<>'.includes(char)) {
-            break;
-          } else if (char === '\\' && i + 1 < command.length) {
-            // Handle escape sequences
-            word += char;
-            i++;
-            if (i < command.length) {
-              word += command[i];
-              i++;
-            }
-          } else {
-            word += char;
-            i++;
-          }
-        } else {
-          if (char === quoteChar && command[i - 1] !== '\\') {
-            inQuote = false;
-            quoteChar = '';
-            word += char;
-            i++;
-          } else if (
-            char === '\\' &&
-            i + 1 < command.length &&
-            (command[i + 1] === quoteChar || command[i + 1] === '\\')
-          ) {
-            // Handle escaped quotes and backslashes inside quotes
-            word += char;
-            i++;
-            if (i < command.length) {
-              word += command[i];
-              i++;
-            }
-          } else {
-            word += char;
-            i++;
-          }
-        }
-      }
-
-      if (word) {
-        tokens.push({ type: TokenType.WORD, value: word });
-      }
+    if (word) {
+      tokens.push({ type: TokenType.WORD, value: word });
     }
   }
 

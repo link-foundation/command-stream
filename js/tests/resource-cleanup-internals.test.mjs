@@ -8,19 +8,27 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Helper to check if a listener is a command-stream SIGINT handler
+function isCommandStreamListener(l) {
+  const str = l.toString();
+  return (
+    str.includes('findActiveRunners') ||
+    str.includes('forwardSigintToRunners') ||
+    str.includes('handleSigintExit') ||
+    str.includes('activeProcessRunners') ||
+    str.includes('ProcessRunner') ||
+    str.includes('activeChildren')
+  );
+}
+
 // Helper to access internal state for testing
 // This is a testing-only approach to verify cleanup
 function getInternalState() {
   // We'll use process listeners as a proxy for internal state
   const sigintListeners = process.listeners('SIGINT');
-  const commandStreamListeners = sigintListeners.filter((l) => {
-    const str = l.toString();
-    return (
-      str.includes('activeProcessRunners') ||
-      str.includes('ProcessRunner') ||
-      str.includes('activeChildren')
-    );
-  });
+  const commandStreamListeners = sigintListeners.filter(
+    isCommandStreamListener
+  );
 
   return {
     sigintHandlerCount: commandStreamListeners.length,
@@ -50,14 +58,9 @@ describe('Resource Cleanup Internal Verification', () => {
 
       // Force remove any command-stream SIGINT listeners
       const sigintListeners = process.listeners('SIGINT');
-      const commandStreamListeners = sigintListeners.filter((l) => {
-        const str = l.toString();
-        return (
-          str.includes('activeProcessRunners') ||
-          str.includes('ProcessRunner') ||
-          str.includes('activeChildren')
-        );
-      });
+      const commandStreamListeners = sigintListeners.filter(
+        isCommandStreamListener
+      );
 
       commandStreamListeners.forEach((listener) => {
         process.removeListener('SIGINT', listener);
@@ -431,14 +434,9 @@ describe('Resource Cleanup Internal Verification', () => {
           `Pipeline error test left behind ${state.sigintHandlerCount - initialState.sigintHandlerCount} handlers, forcing cleanup...`
         );
         const sigintListeners = process.listeners('SIGINT');
-        const commandStreamListeners = sigintListeners.filter((l) => {
-          const str = l.toString();
-          return (
-            str.includes('activeProcessRunners') ||
-            str.includes('ProcessRunner') ||
-            str.includes('activeChildren')
-          );
-        });
+        const commandStreamListeners = sigintListeners.filter(
+          isCommandStreamListener
+        );
 
         commandStreamListeners.forEach((listener) => {
           process.removeListener('SIGINT', listener);
