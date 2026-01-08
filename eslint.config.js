@@ -115,7 +115,7 @@ export default [
       ],
       'max-params': ['warn', 6], // Maximum function parameters - slightly more lenient than strict 5
       'max-statements': ['warn', 60], // Maximum statements per function - reasonable limit for orchestration functions
-      'max-lines': ['warn', 1500], // Maximum lines per file - set to warn for existing large files
+      'max-lines': ['error', 1500], // Maximum lines per file - enforced for all source files
     },
   },
   {
@@ -181,9 +181,8 @@ export default [
     },
   },
   {
-    // ProcessRunner module files and state management - large by design due to process management complexity
-    // The main $.mjs file is now under 500 lines after modular refactoring (issue #149)
-    // The process-runner-*.mjs modules contain the ProcessRunner class methods
+    // ProcessRunner module files and state management - process orchestration has complex logic
+    // All modules are now under 1500 lines after refactoring (issue #149)
     files: [
       'js/src/$.process-runner-*.mjs',
       'src/$.process-runner-*.mjs',
@@ -191,7 +190,6 @@ export default [
       'src/$.state.mjs',
     ],
     rules: {
-      'max-lines': 'off', // Modules can be large due to process orchestration logic
       'max-lines-per-function': 'off', // ProcessRunner methods are large due to orchestration
       'max-statements': 'off', // ProcessRunner methods have many statements
       complexity: 'off', // ProcessRunner methods are complex due to state management

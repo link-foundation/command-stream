@@ -23,6 +23,7 @@ import {
 import { ProcessRunner } from './$.process-runner-base.mjs';
 import { attachExecutionMethods } from './$.process-runner-execution.mjs';
 import { attachPipelineMethods } from './$.process-runner-pipeline.mjs';
+import { attachOrchestrationMethods } from './$.process-runner-orchestration.mjs';
 import { attachVirtualCommandMethods } from './$.process-runner-virtual.mjs';
 import { attachStreamKillMethods } from './$.process-runner-stream-kill.mjs';
 
@@ -36,6 +37,7 @@ const deps = {
 // Attach all methods to ProcessRunner prototype using mixin pattern
 attachExecutionMethods(ProcessRunner, deps);
 attachPipelineMethods(ProcessRunner, deps);
+attachOrchestrationMethods(ProcessRunner, deps);
 attachVirtualCommandMethods(ProcessRunner, deps);
 attachStreamKillMethods(ProcessRunner, deps);
 
