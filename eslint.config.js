@@ -181,24 +181,6 @@ export default [
     },
   },
   {
-    // ProcessRunner module files and state management - process orchestration has complex logic
-    // All modules are now under 1500 lines after refactoring (issue #149)
-    files: [
-      'js/src/$.process-runner-*.mjs',
-      'src/$.process-runner-*.mjs',
-      'js/src/$.state.mjs',
-      'src/$.state.mjs',
-    ],
-    rules: {
-      'max-lines-per-function': 'off', // ProcessRunner methods are large due to orchestration
-      'max-statements': 'off', // ProcessRunner methods have many statements
-      complexity: 'off', // ProcessRunner methods are complex due to state management
-      'require-await': 'off', // Some async methods don't need await but maintain interface
-      'no-unused-vars': 'off', // Some variables are for future use or documentation
-      'no-constant-binary-expression': 'off', // Some expressions are for fallback chains
-    },
-  },
-  {
     // CommonJS compatibility (some files use require() for dynamic imports)
     files: ['**/*.js', '**/*.mjs'],
     languageOptions: {
@@ -209,6 +191,28 @@ export default [
         __dirname: 'readonly',
         __filename: 'readonly',
       },
+    },
+  },
+  {
+    // ProcessRunner modular architecture uses attachment pattern
+    // where methods are attached to prototypes within wrapper functions.
+    // These wrapper functions are larger than typical functions but contain
+    // method definitions themselves, not complex logic.
+    files: [
+      'js/src/$.process-runner-execution.mjs',
+      'js/src/$.process-runner-pipeline.mjs',
+      'src/$.process-runner-execution.mjs',
+      'src/$.process-runner-pipeline.mjs',
+    ],
+    rules: {
+      'max-lines-per-function': [
+        'warn',
+        {
+          max: 450,
+          skipBlankLines: true,
+          skipComments: true,
+        },
+      ],
     },
   },
   {

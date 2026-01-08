@@ -5,6 +5,227 @@ import { trace } from './$.trace.mjs';
 import { safeWrite } from './$.stream-utils.mjs';
 
 /**
+ * Get stdin data from options
+ * @param {object} options - Runner options
+ * @returns {string} Stdin data
+ */
+function getStdinData(options) {
+  if (options.stdin && typeof options.stdin === 'string') {
+    return options.stdin;
+  }
+  if (options.stdin && Buffer.isBuffer(options.stdin)) {
+    return options.stdin.toString('utf8');
+  }
+  return '';
+}
+
+/**
+ * Get exit code for cancellation signal
+ * @param {string} signal - Cancellation signal
+ * @returns {number} Exit code
+ */
+function getCancellationExitCode(signal) {
+  if (signal === 'SIGINT') {
+    return 130;
+  }
+  if (signal === 'SIGTERM') {
+    return 143;
+  }
+  return 1;
+}
+
+/**
+ * Create abort promise for non-generator handlers
+ * @param {AbortController} abortController - Abort controller
+ * @returns {Promise} Promise that rejects on abort
+ */
+function createAbortPromise(abortController) {
+  return new Promise((_, reject) => {
+    if (abortController && abortController.signal.aborted) {
+      reject(new Error('Command cancelled'));
+    }
+    if (abortController) {
+      abortController.signal.addEventListener('abort', () => {
+        reject(new Error('Command cancelled'));
+      });
+    }
+  });
+}
+
+/**
+ * Emit output and mirror if needed
+ * @param {object} runner - ProcessRunner instance
+ * @param {string} type - Output type (stdout/stderr)
+ * @param {string} data - Output data
+ */
+function emitOutput(runner, type, data) {
+  if (!data) {
+    return;
+  }
+  const buf = Buffer.from(data);
+  const stream = type === 'stdout' ? process.stdout : process.stderr;
+  if (runner.options.mirror) {
+    safeWrite(stream, buf);
+  }
+  runner._emitProcessedData(type, buf);
+}
+
+/**
+ * Handle error in virtual command
+ * @param {object} runner - ProcessRunner instance
+ * @param {Error} error - Error that occurred
+ * @param {object} shellSettings - Global shell settings
+ * @returns {object} Result object
+ */
+function handleVirtualError(runner, error, shellSettings) {
+  let exitCode = error.code ?? 1;
+  if (runner._cancelled && runner._cancellationSignal) {
+    exitCode = getCancellationExitCode(runner._cancellationSignal);
+  }
+
+  const result = {
+    code: exitCode,
+    stdout: error.stdout ?? '',
+    stderr: error.stderr ?? error.message,
+    stdin: '',
+  };
+
+  emitOutput(runner, 'stderr', result.stderr);
+  runner.finish(result);
+
+  if (shellSettings.errexit) {
+    error.result = result;
+    throw error;
+  }
+
+  return result;
+}
+
+/**
+ * Run async generator handler
+ * @param {object} runner - ProcessRunner instance
+ * @param {Function} handler - Generator handler
+ * @param {Array} argValues - Argument values
+ * @param {string} stdinData - Stdin data
+ * @returns {Promise<object>} Result object
+ */
+async function runGeneratorHandler(runner, handler, argValues, stdinData) {
+  const chunks = [];
+  const commandOptions = {
+    cwd: runner.options.cwd,
+    env: runner.options.env,
+    options: runner.options,
+    isCancelled: () => runner._cancelled,
+  };
+
+  const generator = handler({
+    args: argValues,
+    stdin: stdinData,
+    abortSignal: runner._abortController?.signal,
+    ...commandOptions,
+  });
+  runner._virtualGenerator = generator;
+
+  const cancelPromise = new Promise((resolve) => {
+    runner._cancelResolve = resolve;
+  });
+
+  try {
+    const iterator = generator[Symbol.asyncIterator]();
+    let done = false;
+
+    while (!done && !runner._cancelled) {
+      const result = await Promise.race([
+        iterator.next(),
+        cancelPromise.then(() => ({ done: true, cancelled: true })),
+      ]);
+
+      if (result.cancelled || runner._cancelled) {
+        if (iterator.return) {
+          await iterator.return();
+        }
+        break;
+      }
+
+      done = result.done;
+
+      if (!done && !runner._cancelled && !runner._streamBreaking) {
+        const buf = Buffer.from(result.value);
+        chunks.push(buf);
+
+        if (runner.options.mirror) {
+          safeWrite(process.stdout, buf);
+        }
+        runner._emitProcessedData('stdout', buf);
+      }
+    }
+  } finally {
+    runner._virtualGenerator = null;
+    runner._cancelResolve = null;
+  }
+
+  return {
+    code: 0,
+    stdout: runner.options.capture
+      ? Buffer.concat(chunks).toString('utf8')
+      : undefined,
+    stderr: runner.options.capture ? '' : undefined,
+    stdin: runner.options.capture ? stdinData : undefined,
+  };
+}
+
+/**
+ * Run regular (non-generator) handler
+ * @param {object} runner - ProcessRunner instance
+ * @param {Function} handler - Handler function
+ * @param {Array} argValues - Argument values
+ * @param {string} stdinData - Stdin data
+ * @returns {Promise<object>} Result object
+ */
+async function runRegularHandler(runner, handler, argValues, stdinData) {
+  const commandOptions = {
+    cwd: runner.options.cwd,
+    env: runner.options.env,
+    options: runner.options,
+    isCancelled: () => runner._cancelled,
+  };
+
+  const handlerPromise = handler({
+    args: argValues,
+    stdin: stdinData,
+    abortSignal: runner._abortController?.signal,
+    ...commandOptions,
+  });
+
+  const abortPromise = createAbortPromise(runner._abortController);
+  let result;
+
+  try {
+    result = await Promise.race([handlerPromise, abortPromise]);
+  } catch (err) {
+    if (err.message === 'Command cancelled') {
+      const exitCode = getCancellationExitCode(runner._cancellationSignal);
+      result = { code: exitCode, stdout: '', stderr: '' };
+    } else {
+      throw err;
+    }
+  }
+
+  result = {
+    ...result,
+    code: result.code ?? 0,
+    stdout: runner.options.capture ? (result.stdout ?? '') : undefined,
+    stderr: runner.options.capture ? (result.stderr ?? '') : undefined,
+    stdin: runner.options.capture ? stdinData : undefined,
+  };
+
+  emitOutput(runner, 'stdout', result.stdout);
+  emitOutput(runner, 'stderr', result.stderr);
+
+  return result;
+}
+
+/**
  * Attach virtual command methods to ProcessRunner prototype
  * @param {Function} ProcessRunner - The ProcessRunner class
  * @param {Object} deps - Dependencies
@@ -17,45 +238,16 @@ export function attachVirtualCommandMethods(ProcessRunner, deps) {
     args,
     originalCommand = null
   ) {
-    trace(
-      'ProcessRunner',
-      () =>
-        `_runVirtual ENTER | ${JSON.stringify({ cmd, args, originalCommand }, null, 2)}`
-    );
+    trace('ProcessRunner', () => `_runVirtual | cmd=${cmd}`);
 
     const handler = virtualCommands.get(cmd);
     if (!handler) {
-      trace(
-        'ProcessRunner',
-        () => `Virtual command not found | ${JSON.stringify({ cmd }, null, 2)}`
-      );
       throw new Error(`Virtual command not found: ${cmd}`);
     }
 
-    trace(
-      'ProcessRunner',
-      () =>
-        `Found virtual command handler | ${JSON.stringify(
-          {
-            cmd,
-            isGenerator: handler.constructor.name === 'AsyncGeneratorFunction',
-          },
-          null,
-          2
-        )}`
-    );
-
     try {
-      let stdinData = '';
-
       // Special handling for streaming mode (stdin: "pipe")
       if (this.options.stdin === 'pipe') {
-        trace(
-          'ProcessRunner',
-          () =>
-            `Virtual command fallback for streaming | ${JSON.stringify({ cmd }, null, 2)}`
-        );
-
         const modifiedOptions = {
           ...this.options,
           stdin: 'pipe',
@@ -67,12 +259,9 @@ export function attachVirtualCommandMethods(ProcessRunner, deps) {
           modifiedOptions
         );
         return await realRunner._doStartAsync();
-      } else if (this.options.stdin && typeof this.options.stdin === 'string') {
-        stdinData = this.options.stdin;
-      } else if (this.options.stdin && Buffer.isBuffer(this.options.stdin)) {
-        stdinData = this.options.stdin.toString('utf8');
       }
 
+      const stdinData = getStdinData(this.options);
       const argValues = args.map((arg) =>
         arg.value !== undefined ? arg.value : arg
       );
@@ -84,255 +273,10 @@ export function attachVirtualCommandMethods(ProcessRunner, deps) {
         console.log(`${originalCommand || `${cmd} ${argValues.join(' ')}`}`);
       }
 
-      let result;
-
-      if (handler.constructor.name === 'AsyncGeneratorFunction') {
-        const chunks = [];
-
-        const commandOptions = {
-          cwd: this.options.cwd,
-          env: this.options.env,
-          options: this.options,
-          isCancelled: () => this._cancelled,
-        };
-
-        trace(
-          'ProcessRunner',
-          () =>
-            `_runVirtual signal details | ${JSON.stringify(
-              {
-                cmd,
-                hasAbortController: !!this._abortController,
-                signalAborted: this._abortController?.signal?.aborted,
-                optionsSignalExists: !!this.options.signal,
-                optionsSignalAborted: this.options.signal?.aborted,
-              },
-              null,
-              2
-            )}`
-        );
-
-        const generator = handler({
-          args: argValues,
-          stdin: stdinData,
-          abortSignal: this._abortController?.signal,
-          ...commandOptions,
-        });
-        this._virtualGenerator = generator;
-
-        const cancelPromise = new Promise((resolve) => {
-          this._cancelResolve = resolve;
-        });
-
-        try {
-          const iterator = generator[Symbol.asyncIterator]();
-          let done = false;
-
-          while (!done && !this._cancelled) {
-            trace(
-              'ProcessRunner',
-              () =>
-                `Virtual command iteration starting | ${JSON.stringify(
-                  {
-                    cancelled: this._cancelled,
-                    streamBreaking: this._streamBreaking,
-                  },
-                  null,
-                  2
-                )}`
-            );
-
-            const result = await Promise.race([
-              iterator.next(),
-              cancelPromise.then(() => ({ done: true, cancelled: true })),
-            ]);
-
-            trace(
-              'ProcessRunner',
-              () =>
-                `Virtual command iteration result | ${JSON.stringify(
-                  {
-                    hasValue: !!result.value,
-                    done: result.done,
-                    cancelled: result.cancelled || this._cancelled,
-                  },
-                  null,
-                  2
-                )}`
-            );
-
-            if (result.cancelled || this._cancelled) {
-              trace(
-                'ProcessRunner',
-                () =>
-                  `Virtual command cancelled - closing generator | ${JSON.stringify(
-                    {
-                      resultCancelled: result.cancelled,
-                      thisCancelled: this._cancelled,
-                    },
-                    null,
-                    2
-                  )}`
-              );
-              if (iterator.return) {
-                await iterator.return();
-              }
-              break;
-            }
-
-            done = result.done;
-
-            if (!done) {
-              if (this._cancelled) {
-                trace(
-                  'ProcessRunner',
-                  () => 'Skipping chunk processing - cancelled during iteration'
-                );
-                break;
-              }
-
-              const chunk = result.value;
-              const buf = Buffer.from(chunk);
-
-              if (this._cancelled || this._streamBreaking) {
-                trace(
-                  'ProcessRunner',
-                  () =>
-                    `Cancelled or stream breaking before output - skipping | ${JSON.stringify(
-                      {
-                        cancelled: this._cancelled,
-                        streamBreaking: this._streamBreaking,
-                      },
-                      null,
-                      2
-                    )}`
-                );
-                break;
-              }
-
-              chunks.push(buf);
-
-              if (
-                !this._cancelled &&
-                !this._streamBreaking &&
-                this.options.mirror
-              ) {
-                trace(
-                  'ProcessRunner',
-                  () =>
-                    `Mirroring virtual command output | ${JSON.stringify(
-                      {
-                        chunkSize: buf.length,
-                      },
-                      null,
-                      2
-                    )}`
-                );
-                safeWrite(process.stdout, buf);
-              }
-
-              this._emitProcessedData('stdout', buf);
-            }
-          }
-        } finally {
-          this._virtualGenerator = null;
-          this._cancelResolve = null;
-        }
-
-        result = {
-          code: 0,
-          stdout: this.options.capture
-            ? Buffer.concat(chunks).toString('utf8')
-            : undefined,
-          stderr: this.options.capture ? '' : undefined,
-          stdin: this.options.capture ? stdinData : undefined,
-        };
-      } else {
-        const commandOptions = {
-          cwd: this.options.cwd,
-          env: this.options.env,
-          options: this.options,
-          isCancelled: () => this._cancelled,
-        };
-
-        trace(
-          'ProcessRunner',
-          () =>
-            `_runVirtual signal details (non-generator) | ${JSON.stringify(
-              {
-                cmd,
-                hasAbortController: !!this._abortController,
-                signalAborted: this._abortController?.signal?.aborted,
-                optionsSignalExists: !!this.options.signal,
-                optionsSignalAborted: this.options.signal?.aborted,
-              },
-              null,
-              2
-            )}`
-        );
-
-        const handlerPromise = handler({
-          args: argValues,
-          stdin: stdinData,
-          abortSignal: this._abortController?.signal,
-          ...commandOptions,
-        });
-
-        const abortPromise = new Promise((_, reject) => {
-          if (this._abortController && this._abortController.signal.aborted) {
-            reject(new Error('Command cancelled'));
-          }
-          if (this._abortController) {
-            this._abortController.signal.addEventListener('abort', () => {
-              reject(new Error('Command cancelled'));
-            });
-          }
-        });
-
-        try {
-          result = await Promise.race([handlerPromise, abortPromise]);
-        } catch (err) {
-          if (err.message === 'Command cancelled') {
-            const exitCode = this._cancellationSignal === 'SIGINT' ? 130 : 143;
-            trace(
-              'ProcessRunner',
-              () =>
-                `Virtual command cancelled with signal ${this._cancellationSignal}, exit code: ${exitCode}`
-            );
-            result = {
-              code: exitCode,
-              stdout: '',
-              stderr: '',
-            };
-          } else {
-            throw err;
-          }
-        }
-
-        result = {
-          ...result,
-          code: result.code ?? 0,
-          stdout: this.options.capture ? (result.stdout ?? '') : undefined,
-          stderr: this.options.capture ? (result.stderr ?? '') : undefined,
-          stdin: this.options.capture ? stdinData : undefined,
-        };
-
-        if (result.stdout) {
-          const buf = Buffer.from(result.stdout);
-          if (this.options.mirror) {
-            safeWrite(process.stdout, buf);
-          }
-          this._emitProcessedData('stdout', buf);
-        }
-
-        if (result.stderr) {
-          const buf = Buffer.from(result.stderr);
-          if (this.options.mirror) {
-            safeWrite(process.stderr, buf);
-          }
-          this._emitProcessedData('stderr', buf);
-        }
-      }
+      const isGenerator = handler.constructor.name === 'AsyncGeneratorFunction';
+      const result = isGenerator
+        ? await runGeneratorHandler(this, handler, argValues, stdinData)
+        : await runRegularHandler(this, handler, argValues, stdinData);
 
       this.finish(result);
 
@@ -347,44 +291,7 @@ export function attachVirtualCommandMethods(ProcessRunner, deps) {
 
       return result;
     } catch (error) {
-      let exitCode = error.code ?? 1;
-      if (this._cancelled && this._cancellationSignal) {
-        exitCode =
-          this._cancellationSignal === 'SIGINT'
-            ? 130
-            : this._cancellationSignal === 'SIGTERM'
-              ? 143
-              : 1;
-        trace(
-          'ProcessRunner',
-          () =>
-            `Virtual command error during cancellation, using signal-based exit code: ${exitCode}`
-        );
-      }
-
-      const result = {
-        code: exitCode,
-        stdout: error.stdout ?? '',
-        stderr: error.stderr ?? error.message,
-        stdin: '',
-      };
-
-      if (result.stderr) {
-        const buf = Buffer.from(result.stderr);
-        if (this.options.mirror) {
-          safeWrite(process.stderr, buf);
-        }
-        this._emitProcessedData('stderr', buf);
-      }
-
-      this.finish(result);
-
-      if (globalShellSettings.errexit) {
-        error.result = result;
-        throw error;
-      }
-
-      return result;
+      return handleVirtualError(this, error, globalShellSettings);
     }
   };
 }

@@ -28,7 +28,9 @@ export default function createWhichCommand(virtualCommands) {
           if (fs.statSync(fullPath).isFile()) {
             return VirtualUtils.success(`${fullPath}\n`);
           }
-        } catch {}
+        } catch {
+          // File doesn't exist or isn't accessible, continue searching
+        }
       }
     }
 

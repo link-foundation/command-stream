@@ -4,6 +4,100 @@
 import { trace } from './$.trace.mjs';
 
 /**
+ * Execute a command based on its type
+ * @param {object} runner - The ProcessRunner instance
+ * @param {object} command - Command to execute
+ * @returns {Promise<object>} Command result
+ */
+function executeCommand(runner, command) {
+  if (command.type === 'subshell') {
+    return runner._runSubshell(command);
+  } else if (command.type === 'pipeline') {
+    return runner._runPipeline(command.commands);
+  } else if (command.type === 'sequence') {
+    return runner._runSequence(command);
+  } else if (command.type === 'simple') {
+    return runner._runSimpleCommand(command);
+  }
+  return Promise.resolve({ code: 0, stdout: '', stderr: '' });
+}
+
+/**
+ * Restore working directory after subshell execution
+ * @param {string} savedCwd - Directory to restore
+ */
+async function restoreCwd(savedCwd) {
+  trace(
+    'ProcessRunner',
+    () => `Restoring cwd from ${process.cwd()} to ${savedCwd}`
+  );
+  const fs = await import('fs');
+  if (fs.existsSync(savedCwd)) {
+    process.chdir(savedCwd);
+  } else {
+    const fallbackDir = process.env.HOME || process.env.USERPROFILE || '/';
+    trace(
+      'ProcessRunner',
+      () =>
+        `Saved directory ${savedCwd} no longer exists, falling back to ${fallbackDir}`
+    );
+    try {
+      process.chdir(fallbackDir);
+    } catch (e) {
+      trace('ProcessRunner', () => `Failed to restore directory: ${e.message}`);
+    }
+  }
+}
+
+/**
+ * Handle file redirections for virtual command output
+ * @param {object} result - Command result
+ * @param {Array} redirects - Redirect specifications
+ */
+async function handleRedirects(result, redirects) {
+  if (!redirects || redirects.length === 0) {
+    return;
+  }
+  for (const redirect of redirects) {
+    if (redirect.type === '>' || redirect.type === '>>') {
+      const fs = await import('fs');
+      if (redirect.type === '>') {
+        fs.writeFileSync(redirect.target, result.stdout);
+      } else {
+        fs.appendFileSync(redirect.target, result.stdout);
+      }
+      result.stdout = '';
+    }
+  }
+}
+
+/**
+ * Build command string from parsed command parts
+ * @param {string} cmd - Command name
+ * @param {Array} args - Command arguments
+ * @param {Array} redirects - Redirect specifications
+ * @returns {string} Assembled command string
+ */
+function buildCommandString(cmd, args, redirects) {
+  let commandStr = cmd;
+  for (const arg of args) {
+    if (arg.quoted && arg.quoteChar) {
+      commandStr += ` ${arg.quoteChar}${arg.value}${arg.quoteChar}`;
+    } else if (arg.value !== undefined) {
+      commandStr += ` ${arg.value}`;
+    } else {
+      commandStr += ` ${arg}`;
+    }
+  }
+  if (redirects) {
+    for (const redirect of redirects) {
+      commandStr += ` ${redirect.type} ${redirect.target}`;
+    }
+  }
+  return commandStr;
+}
+
+/**
  * Attach orchestration methods to ProcessRunner prototype
  * @param {Function} ProcessRunner - The ProcessRunner class
  * @param {Object} deps - Dependencies
@@ -15,14 +109,7 @@ export function attachOrchestrationMethods(ProcessRunner, deps) {
     trace(
       'ProcessRunner',
       () =>
-        `_runSequence ENTER | ${JSON.stringify(
-          {
-            commandCount: sequence.commands.length,
-            operators: sequence.operators,
-          },
-          null,
-          2
-        )}`
+        `_runSequence ENTER | ${JSON.stringify({ commandCount: sequence.commands.length, operators: sequence.operators }, null, 2)}`
     );
 
     let lastResult = { code: 0, stdout: '', stderr: '' };
@@ -36,15 +123,7 @@ export function attachOrchestrationMethods(ProcessRunner, deps) {
       trace(
         'ProcessRunner',
         () =>
-          `Executing command ${i} | ${JSON.stringify(
-            {
-              command: command.type,
-              operator,
-              lastCode: lastResult.code,
-            },
-            null,
-            2
-          )}`
+          `Executing command ${i} | ${JSON.stringify({ command: command.type, operator, lastCode: lastResult.code }, null, 2)}`
       );
 
       if (operator === '&&' && lastResult.code !== 0) {
@@ -62,16 +141,7 @@ export function attachOrchestrationMethods(ProcessRunner, deps) {
         continue;
       }
 
-      if (command.type === 'subshell') {
-        lastResult = await this._runSubshell(command);
-      } else if (command.type === 'pipeline') {
-        lastResult = await this._runPipeline(command.commands);
-      } else if (command.type === 'sequence') {
-        lastResult = await this._runSequence(command);
-      } else if (command.type === 'simple') {
-        lastResult = await this._runSimpleCommand(command);
-      }
-
+      lastResult = await executeCommand(this, command);
       combinedStdout += lastResult.stdout;
       combinedStderr += lastResult.stderr;
     }
@@ -80,8 +150,8 @@ export function attachOrchestrationMethods(ProcessRunner, deps) {
       code: lastResult.code,
       stdout: combinedStdout,
       stderr: combinedStderr,
-      async text() {
-        return combinedStdout;
+      text() {
+        return Promise.resolve(combinedStdout);
       },
     };
   };
@@ -90,54 +160,13 @@ export function attachOrchestrationMethods(ProcessRunner, deps) {
     trace(
       'ProcessRunner',
       () =>
-        `_runSubshell ENTER | ${JSON.stringify(
-          {
-            commandType: subshell.command.type,
-          },
-          null,
-          2
-        )}`
+        `_runSubshell ENTER | ${JSON.stringify({ commandType: subshell.command.type }, null, 2)}`
     );
-
     const savedCwd = process.cwd();
-
     try {
-      let result;
-      if (subshell.command.type === 'sequence') {
-        result = await this._runSequence(subshell.command);
-      } else if (subshell.command.type === 'pipeline') {
-        result = await this._runPipeline(subshell.command.commands);
-      } else if (subshell.command.type === 'simple') {
-        result = await this._runSimpleCommand(subshell.command);
-      } else {
-        result = { code: 0, stdout: '', stderr: '' };
-      }
-
-      return result;
+      return await executeCommand(this, subshell.command);
     } finally {
-      trace(
-        'ProcessRunner',
-        () => `Restoring cwd from ${process.cwd()} to ${savedCwd}`
-      );
-      const fs = await import('fs');
-      if (fs.existsSync(savedCwd)) {
-        process.chdir(savedCwd);
-      } else {
-        const fallbackDir = process.env.HOME || process.env.USERPROFILE || '/';
-        trace(
-          'ProcessRunner',
-          () =>
-            `Saved directory ${savedCwd} no longer exists, falling back to ${fallbackDir}`
-        );
-        try {
-          process.chdir(fallbackDir);
-        } catch (e) {
-          trace(
-            'ProcessRunner',
-            () => `Failed to restore directory: ${e.message}`
-          );
-        }
-      }
+      await restoreCwd(savedCwd);
     }
   };
 
@@ -145,15 +174,7 @@ export function attachOrchestrationMethods(ProcessRunner, deps) {
     trace(
       'ProcessRunner',
       () =>
-        `_runSimpleCommand ENTER | ${JSON.stringify(
-          {
-            cmd: command.cmd,
-            argsCount: command.args?.length || 0,
-            hasRedirects: !!command.redirects,
-          },
-          null,
-          2
-        )}`
+        `_runSimpleCommand ENTER | ${JSON.stringify({ cmd: command.cmd, argsCount: command.args?.length || 0, hasRedirects: !!command.redirects }, null, 2)}`
     );
 
     const { cmd, args, redirects } = command;
@@ -162,41 +183,11 @@ export function attachOrchestrationMethods(ProcessRunner, deps) {
       trace('ProcessRunner', () => `Using virtual command: ${cmd}`);
       const argValues = args.map((a) => a.value || a);
       const result = await this._runVirtual(cmd, argValues);
-
-      if (redirects && redirects.length > 0) {
-        for (const redirect of redirects) {
-          if (redirect.type === '>' || redirect.type === '>>') {
-            const fs = await import('fs');
-            if (redirect.type === '>') {
-              fs.writeFileSync(redirect.target, result.stdout);
-            } else {
-              fs.appendFileSync(redirect.target, result.stdout);
-            }
-            result.stdout = '';
-          }
-        }
-      }
-
+      await handleRedirects(result, redirects);
       return result;
     }
 
-    let commandStr = cmd;
-    for (const arg of args) {
-      if (arg.quoted && arg.quoteChar) {
-        commandStr += ` ${arg.quoteChar}${arg.value}${arg.quoteChar}`;
-      } else if (arg.value !== undefined) {
-        commandStr += ` ${arg.value}`;
-      } else {
-        commandStr += ` ${arg}`;
-      }
-    }
-
-    if (redirects) {
-      for (const redirect of redirects) {
-        commandStr += ` ${redirect.type} ${redirect.target}`;
-      }
-    }
-
+    const commandStr = buildCommandString(cmd, args, redirects);
     trace('ProcessRunner', () => `Executing real command: ${commandStr}`);
 
     const ProcessRunnerRef = this.constructor;
@@ -212,14 +203,7 @@ export function attachOrchestrationMethods(ProcessRunner, deps) {
     trace(
       'ProcessRunner',
       () =>
-        `pipe ENTER | ${JSON.stringify(
-          {
-            hasDestination: !!destination,
-            destinationType: destination?.constructor?.name,
-          },
-          null,
-          2
-        )}`
+        `pipe ENTER | ${JSON.stringify({ hasDestination: !!destination, destinationType: destination?.constructor?.name }, null, 2)}`
     );
 
     const ProcessRunnerRef = this.constructor;
@@ -230,17 +214,11 @@ export function attachOrchestrationMethods(ProcessRunner, deps) {
         () =>
           `BRANCH: pipe => PROCESS_RUNNER_DEST | ${JSON.stringify({}, null, 2)}`
       );
-      const pipeSpec = {
-        mode: 'pipeline',
-        source: this,
-        destination,
-      };
-
+      const pipeSpec = { mode: 'pipeline', source: this, destination };
       const pipeRunner = new ProcessRunnerRef(pipeSpec, {
         ...this.options,
         capture: destination.options.capture ?? true,
       });
-
       trace(
         'ProcessRunner',
         () => `pipe EXIT | ${JSON.stringify({ mode: 'pipeline' }, null, 2)}`

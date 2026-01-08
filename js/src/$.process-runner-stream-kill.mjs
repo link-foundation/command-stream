@@ -7,6 +7,227 @@ import { createResult } from './$.result.mjs';
 const isBun = typeof globalThis.Bun !== 'undefined';
 
 /**
+ * Send a signal to a process and its group
+ * @param {number} pid - Process ID
+ * @param {string} sig - Signal name (e.g., 'SIGTERM', 'SIGKILL')
+ * @param {string} runtime - Runtime identifier for logging
+ * @returns {string[]} List of successful operations
+ */
+function sendSignalToProcess(pid, sig, runtime) {
+  const operations = [];
+  const prefix = runtime === 'Bun' ? 'Bun ' : '';
+
+  try {
+    process.kill(pid, sig);
+    trace('ProcessRunner', () => `Sent ${sig} to ${prefix}process ${pid}`);
+    operations.push(`${sig} to process`);
+  } catch (err) {
+    trace(
+      'ProcessRunner',
+      () => `Error sending ${sig} to ${prefix}process: ${err.message}`
+    );
+  }
+
+  try {
+    process.kill(-pid, sig);
+    trace(
+      'ProcessRunner',
+      () => `Sent ${sig} to ${prefix}process group -${pid}`
+    );
+    operations.push(`${sig} to group`);
+  } catch (err) {
+    trace(
+      'ProcessRunner',
+      () => `${prefix}process group ${sig} failed: ${err.message}`
+    );
+  }
+
+  return operations;
+}
+
+/**
+ * Kill a child process with escalating signals
+ * @param {object} child - Child process object
+ */
+function killChildProcess(child) {
+  if (!child || !child.pid) {
+    return;
+  }
+
+  const runtime = isBun ? 'Bun' : 'Node';
+  trace(
+    'ProcessRunner',
+    () =>
+      `Killing ${runtime} process | ${JSON.stringify({ pid: child.pid }, null, 2)}`
+  );
+
+  const killOperations = [];
+  killOperations.push(...sendSignalToProcess(child.pid, 'SIGTERM', runtime));
+  killOperations.push(...sendSignalToProcess(child.pid, 'SIGKILL', runtime));
+
+  trace(
+    'ProcessRunner',
+    () => `${runtime} kill operations attempted: ${killOperations.join(', ')}`
+  );
+
+  if (isBun) {
+    try {
+      child.kill();
+      trace(
+        'ProcessRunner',
+        () => `Called child.kill() for Bun process ${child.pid}`
+      );
+    } catch (err) {
+      trace(
+        'ProcessRunner',
+        () => `Error calling child.kill(): ${err.message}`
+      );
+    }
+  }
+
+  child.removeAllListeners?.();
+}
+
+/**
+ * Kill pipeline components (source and destination)
+ * @param {object} spec - Process runner spec
+ * @param {string} signal - Kill signal
+ */
+function killPipelineComponents(spec, signal) {
+  if (spec?.mode !== 'pipeline') {
+    return;
+  }
+  trace('ProcessRunner', () => 'Killing pipeline components');
+  if (spec.source && typeof spec.source.kill === 'function') {
+    spec.source.kill(signal);
+  }
+  if (spec.destination && typeof spec.destination.kill === 'function') {
+    spec.destination.kill(signal);
+  }
+}
+
+/**
+ * Handle abort controller during kill
+ * @param {AbortController} controller - The abort controller
+ */
+function abortController(controller) {
+  if (!controller) {
+    trace('ProcessRunner', () => 'No abort controller to abort');
+    return;
+  }
+  trace(
+    'ProcessRunner',
+    () =>
+      `Aborting internal controller | ${JSON.stringify({ wasAborted: controller?.signal?.aborted }, null, 2)}`
+  );
+  controller.abort();
+  trace(
+    'ProcessRunner',
+    () =>
+      `Internal controller aborted | ${JSON.stringify({ nowAborted: controller?.signal?.aborted }, null, 2)}`
+  );
+}
+
+/**
+ * Handle virtual generator cleanup during kill
+ * @param {object} generator - The virtual generator
+ * @param {string} signal - Kill signal
+ */
+function cleanupVirtualGenerator(generator, signal) {
+  if (!generator) {
+    trace(
+      'ProcessRunner',
+      () =>
+        `No virtual generator to cleanup | ${JSON.stringify({ hasVirtualGenerator: false }, null, 2)}`
+    );
+    return;
+  }
+
+  trace(
+    'ProcessRunner',
+    () =>
+      `Virtual generator found for cleanup | ${JSON.stringify(
+        {
+          hasReturn: typeof generator.return === 'function',
+          hasThrow: typeof generator.throw === 'function',
+          signal,
+        },
+        null,
+        2
+      )}`
+  );
+
+  if (generator.return) {
+    trace('ProcessRunner', () => 'Closing virtual generator with return()');
+    try {
+      generator.return();
+      trace('ProcessRunner', () => 'Virtual generator closed successfully');
+    } catch (err) {
+      trace(
+        'ProcessRunner',
+        () =>
+          `Error closing generator | ${JSON.stringify({ error: err.message, stack: err.stack?.slice(0, 200) }, null, 2)}`
+      );
+    }
+  } else {
+    trace('ProcessRunner', () => 'Virtual generator has no return() method');
+  }
+}
+
+/**
+ * Get exit code for signal
+ * @param {string} signal - Signal name
+ * @returns {number} Exit code
+ */
+function getSignalExitCode(signal) {
+  if (signal === 'SIGKILL') {
+    return 137;
+  }
+  if (signal === 'SIGTERM') {
+    return 143;
+  }
+  return 130;
+}
+
+/**
+ * Kill the runner and create result
+ * @param {object} runner - ProcessRunner instance
+ * @param {string} signal - Kill signal
+ */
+function killRunner(runner, signal) {
+  runner._cancelled = true;
+  runner._cancellationSignal = signal;
+  killPipelineComponents(runner.spec, signal);
+
+  if (runner._cancelResolve) {
+    trace('ProcessRunner', () => 'Resolving cancel promise');
+    runner._cancelResolve();
+  }
+
+  abortController(runner._abortController);
+  cleanupVirtualGenerator(runner._virtualGenerator, signal);
+
+  if (runner.child && !runner.finished) {
+    trace('ProcessRunner', () => `Killing child process ${runner.child.pid}`);
+    try {
+      killChildProcess(runner.child);
+      runner.child = null;
+    } catch (err) {
+      trace('ProcessRunner', () => `Error killing process: ${err.message}`);
+      console.error('Error killing process:', err.message);
+    }
+  }
+
+  const result = createResult({
+    code: getSignalExitCode(signal),
+    stdout: '',
+    stderr: `Process killed with ${signal}`,
+    stdin: '',
+  });
+  runner.finish(result);
+}
+
+/**
  * Attach stream and kill methods to ProcessRunner prototype
  * @param {Function} ProcessRunner - The ProcessRunner class
  * @param {Object} deps - Dependencies (not used but kept for consistency)
@@ -17,34 +238,15 @@ export function attachStreamKillMethods(ProcessRunner) {
   };
 
   ProcessRunner.prototype.stream = async function* () {
-    trace(
-      'ProcessRunner',
-      () =>
-        `stream ENTER | ${JSON.stringify(
-          {
-            started: this.started,
-            finished: this.finished,
-            command: this.spec?.command?.slice(0, 100),
-          },
-          null,
-          2
-        )}`
-    );
-
+    trace('ProcessRunner', () => `stream ENTER | started=${this.started}`);
     this._isStreaming = true;
-
     if (!this.started) {
-      trace(
-        'ProcessRunner',
-        () => 'Auto-starting async process from stream() with streaming mode'
-      );
       this._startAsync();
     }
 
     let buffer = [];
-    let resolve, reject;
+    let resolve, _reject;
     let ended = false;
-    let cleanedUp = false;
     let killed = false;
 
     const onData = (chunk) => {
@@ -52,7 +254,7 @@ export function attachStreamKillMethods(ProcessRunner) {
         buffer.push(chunk);
         if (resolve) {
           resolve();
-          resolve = reject = null;
+          resolve = _reject = null;
         }
       }
     };
@@ -61,7 +263,7 @@ export function attachStreamKillMethods(ProcessRunner) {
       ended = true;
       if (resolve) {
         resolve();
-        resolve = reject = null;
+        resolve = _reject = null;
       }
     };
 
@@ -71,7 +273,6 @@ export function attachStreamKillMethods(ProcessRunner) {
     try {
       while (!ended || buffer.length > 0) {
         if (killed) {
-          trace('ProcessRunner', () => 'Stream killed, stopping iteration');
           break;
         }
         if (buffer.length > 0) {
@@ -82,15 +283,13 @@ export function attachStreamKillMethods(ProcessRunner) {
         } else if (!ended) {
           await new Promise((res, rej) => {
             resolve = res;
-            reject = rej;
+            _reject = rej;
           });
         }
       }
     } finally {
-      cleanedUp = true;
       this.off('data', onData);
       this.off('end', onEnd);
-
       if (!this.finished) {
         killed = true;
         buffer = [];
@@ -103,347 +302,11 @@ export function attachStreamKillMethods(ProcessRunner) {
   ProcessRunner.prototype.kill = function (signal = 'SIGTERM') {
     trace(
       'ProcessRunner',
-      () =>
-        `kill ENTER | ${JSON.stringify(
-          {
-            signal,
-            cancelled: this._cancelled,
-            finished: this.finished,
-            hasChild: !!this.child,
-            hasVirtualGenerator: !!this._virtualGenerator,
-            command: this.spec?.command?.slice(0, 50) || 'unknown',
-          },
-          null,
-          2
-        )}`
+      () => `kill | signal=${signal} finished=${this.finished}`
     );
-
     if (this.finished) {
-      trace('ProcessRunner', () => 'Already finished, skipping kill');
       return;
     }
-
-    trace(
-      'ProcessRunner',
-      () =>
-        `Marking as cancelled | ${JSON.stringify(
-          {
-            signal,
-            previouslyCancelled: this._cancelled,
-            previousSignal: this._cancellationSignal,
-          },
-          null,
-          2
-        )}`
-    );
-    this._cancelled = true;
-    this._cancellationSignal = signal;
-
-    if (this.spec?.mode === 'pipeline') {
-      trace('ProcessRunner', () => 'Killing pipeline components');
-      if (this.spec.source && typeof this.spec.source.kill === 'function') {
-        this.spec.source.kill(signal);
-      }
-      if (
-        this.spec.destination &&
-        typeof this.spec.destination.kill === 'function'
-      ) {
-        this.spec.destination.kill(signal);
-      }
-    }
-
-    if (this._cancelResolve) {
-      trace('ProcessRunner', () => 'Resolving cancel promise');
-      this._cancelResolve();
-      trace('ProcessRunner', () => 'Cancel promise resolved');
-    } else {
-      trace('ProcessRunner', () => 'No cancel promise to resolve');
-    }
-
-    if (this._abortController) {
-      trace(
-        'ProcessRunner',
-        () =>
-          `Aborting internal controller | ${JSON.stringify(
-            {
-              wasAborted: this._abortController?.signal?.aborted,
-            },
-            null,
-            2
-          )}`
-      );
-      this._abortController.abort();
-      trace(
-        'ProcessRunner',
-        () =>
-          `Internal controller aborted | ${JSON.stringify(
-            {
-              nowAborted: this._abortController?.signal?.aborted,
-            },
-            null,
-            2
-          )}`
-      );
-    } else {
-      trace('ProcessRunner', () => 'No abort controller to abort');
-    }
-
-    if (this._virtualGenerator) {
-      trace(
-        'ProcessRunner',
-        () =>
-          `Virtual generator found for cleanup | ${JSON.stringify(
-            {
-              hasReturn: typeof this._virtualGenerator.return === 'function',
-              hasThrow: typeof this._virtualGenerator.throw === 'function',
-              cancelled: this._cancelled,
-              signal,
-            },
-            null,
-            2
-          )}`
-      );
-
-      if (this._virtualGenerator.return) {
-        trace('ProcessRunner', () => 'Closing virtual generator with return()');
-        try {
-          this._virtualGenerator.return();
-          trace('ProcessRunner', () => 'Virtual generator closed successfully');
-        } catch (err) {
-          trace(
-            'ProcessRunner',
-            () =>
-              `Error closing generator | ${JSON.stringify(
-                {
-                  error: err.message,
-                  stack: err.stack?.slice(0, 200),
-                },
-                null,
-                2
-              )}`
-          );
-        }
-      } else {
-        trace(
-          'ProcessRunner',
-          () => 'Virtual generator has no return() method'
-        );
-      }
-    } else {
-      trace(
-        'ProcessRunner',
-        () =>
-          `No virtual generator to cleanup | ${JSON.stringify(
-            {
-              hasVirtualGenerator: !!this._virtualGenerator,
-            },
-            null,
-            2
-          )}`
-      );
-    }
-
-    if (this.child && !this.finished) {
-      trace(
-        'ProcessRunner',
-        () =>
-          `BRANCH: hasChild => killing | ${JSON.stringify({ pid: this.child.pid }, null, 2)}`
-      );
-      try {
-        if (this.child.pid) {
-          if (isBun) {
-            trace(
-              'ProcessRunner',
-              () =>
-                `Killing Bun process | ${JSON.stringify({ pid: this.child.pid }, null, 2)}`
-            );
-
-            const killOperations = [];
-
-            try {
-              process.kill(this.child.pid, 'SIGTERM');
-              trace(
-                'ProcessRunner',
-                () => `Sent SIGTERM to Bun process ${this.child.pid}`
-              );
-              killOperations.push('SIGTERM to process');
-            } catch (err) {
-              trace(
-                'ProcessRunner',
-                () => `Error sending SIGTERM to Bun process: ${err.message}`
-              );
-            }
-
-            try {
-              process.kill(-this.child.pid, 'SIGTERM');
-              trace(
-                'ProcessRunner',
-                () => `Sent SIGTERM to Bun process group -${this.child.pid}`
-              );
-              killOperations.push('SIGTERM to group');
-            } catch (err) {
-              trace(
-                'ProcessRunner',
-                () => `Bun process group SIGTERM failed: ${err.message}`
-              );
-            }
-
-            try {
-              process.kill(this.child.pid, 'SIGKILL');
-              trace(
-                'ProcessRunner',
-                () => `Sent SIGKILL to Bun process ${this.child.pid}`
-              );
-              killOperations.push('SIGKILL to process');
-            } catch (err) {
-              trace(
-                'ProcessRunner',
-                () => `Error sending SIGKILL to Bun process: ${err.message}`
-              );
-            }
-
-            try {
-              process.kill(-this.child.pid, 'SIGKILL');
-              trace(
-                'ProcessRunner',
-                () => `Sent SIGKILL to Bun process group -${this.child.pid}`
-              );
-              killOperations.push('SIGKILL to group');
-            } catch (err) {
-              trace(
-                'ProcessRunner',
-                () => `Bun process group SIGKILL failed: ${err.message}`
-              );
-            }
-
-            trace(
-              'ProcessRunner',
-              () =>
-                `Bun kill operations attempted: ${killOperations.join(', ')}`
-            );
-
-            try {
-              this.child.kill();
-              trace(
-                'ProcessRunner',
-                () => `Called child.kill() for Bun process ${this.child.pid}`
-              );
-            } catch (err) {
-              trace(
-                'ProcessRunner',
-                () => `Error calling child.kill(): ${err.message}`
-              );
-            }
-
-            if (this.child) {
-              this.child.removeAllListeners?.();
-              this.child = null;
-            }
-          } else {
-            trace(
-              'ProcessRunner',
-              () =>
-                `Killing Node process | ${JSON.stringify({ pid: this.child.pid }, null, 2)}`
-            );
-
-            const killOperations = [];
-
-            try {
-              process.kill(this.child.pid, 'SIGTERM');
-              trace(
-                'ProcessRunner',
-                () => `Sent SIGTERM to process ${this.child.pid}`
-              );
-              killOperations.push('SIGTERM to process');
-            } catch (err) {
-              trace(
-                'ProcessRunner',
-                () => `Error sending SIGTERM to process: ${err.message}`
-              );
-            }
-
-            try {
-              process.kill(-this.child.pid, 'SIGTERM');
-              trace(
-                'ProcessRunner',
-                () => `Sent SIGTERM to process group -${this.child.pid}`
-              );
-              killOperations.push('SIGTERM to group');
-            } catch (err) {
-              trace(
-                'ProcessRunner',
-                () => `Process group SIGTERM failed: ${err.message}`
-              );
-            }
-
-            try {
-              process.kill(this.child.pid, 'SIGKILL');
-              trace(
-                'ProcessRunner',
-                () => `Sent SIGKILL to process ${this.child.pid}`
-              );
-              killOperations.push('SIGKILL to process');
-            } catch (err) {
-              trace(
-                'ProcessRunner',
-                () => `Error sending SIGKILL to process: ${err.message}`
-              );
-            }
-
-            try {
-              process.kill(-this.child.pid, 'SIGKILL');
-              trace(
-                'ProcessRunner',
-                () => `Sent SIGKILL to process group -${this.child.pid}`
-              );
-              killOperations.push('SIGKILL to group');
-            } catch (err) {
-              trace(
-                'ProcessRunner',
-                () => `Process group SIGKILL failed: ${err.message}`
-              );
-            }
-
-            trace(
-              'ProcessRunner',
-              () => `Kill operations attempted: ${killOperations.join(', ')}`
-            );
-
-            if (this.child) {
-              this.child.removeAllListeners?.();
-              this.child = null;
-            }
-          }
-        }
-      } catch (err) {
-        trace(
-          'ProcessRunner',
-          () =>
-            `Error killing process | ${JSON.stringify({ error: err.message }, null, 2)}`
-        );
-        console.error('Error killing process:', err.message);
-      }
-    }
-
-    const result = createResult({
-      code: signal === 'SIGKILL' ? 137 : signal === 'SIGTERM' ? 143 : 130,
-      stdout: '',
-      stderr: `Process killed with ${signal}`,
-      stdin: '',
-    });
-    this.finish(result);
-
-    trace(
-      'ProcessRunner',
-      () =>
-        `kill EXIT | ${JSON.stringify(
-          {
-            cancelled: this._cancelled,
-            finished: this.finished,
-          },
-          null,
-          2
-        )}`
-    );
+    killRunner(this, signal);
   };
 }

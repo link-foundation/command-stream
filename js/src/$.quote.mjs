@@ -9,7 +9,7 @@ import { trace } from './$.trace.mjs';
  * @returns {string} Safely quoted string
  */
 export function quote(value) {
-  if (value == null) {
+  if (value === null || value === undefined) {
     return "''";
   }
   if (Array.isArray(value)) {

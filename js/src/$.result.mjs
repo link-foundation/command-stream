@@ -16,8 +16,8 @@ export function createResult({ code, stdout = '', stderr = '', stdin = '' }) {
     stdout,
     stderr,
     stdin,
-    async text() {
-      return stdout;
+    text() {
+      return Promise.resolve(stdout);
     },
   };
 }

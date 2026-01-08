@@ -369,7 +369,7 @@ export function safeWrite(
  * @returns {Buffer} The data as a Buffer
  */
 export function asBuffer(chunk) {
-  if (chunk == null) {
+  if (chunk === null || chunk === undefined) {
     return Buffer.alloc(0);
   }
   if (Buffer.isBuffer(chunk)) {

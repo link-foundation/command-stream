@@ -93,238 +93,125 @@ export function disableVirtualCommands() {
 }
 
 /**
+ * Find active runners (child processes and virtual commands)
+ * @returns {Array} Active runners
+ */
+function findActiveRunners() {
+  const activeChildren = [];
+  for (const runner of activeProcessRunners) {
+    if (!runner.finished) {
+      if (runner.child && runner.child.pid) {
+        activeChildren.push(runner);
+      } else if (!runner.child) {
+        activeChildren.push(runner);
+      }
+    }
+  }
+  return activeChildren;
+}
+
+/**
+ * Send SIGINT to a child process
+ * @param {object} runner - ProcessRunner instance
+ */
+function sendSigintToChild(runner) {
+  trace('ProcessRunner', () => `Sending SIGINT to child ${runner.child.pid}`);
+  if (isBun) {
+    runner.child.kill('SIGINT');
+  } else {
+    try {
+      process.kill(-runner.child.pid, 'SIGINT');
+    } catch (_err) {
+      process.kill(runner.child.pid, 'SIGINT');
+    }
+  }
+}
+
+/**
+ * Forward SIGINT to all active runners
+ * @param {Array} activeChildren - Active runners to signal
+ */
+function forwardSigintToRunners(activeChildren) {
+  for (const runner of activeChildren) {
+    try {
+      if (runner.child && runner.child.pid) {
+        sendSigintToChild(runner);
+      } else {
+        trace('ProcessRunner', () => 'Cancelling virtual command');
+        runner.kill('SIGINT');
+      }
+    } catch (err) {
+      trace('ProcessRunner', () => `Error forwarding SIGINT: ${err.message}`);
+    }
+  }
+}
+
+/**
+ * Handle exit after SIGINT forwarding
+ * @param {boolean} hasOtherHandlers - Whether other handlers exist
+ * @param {number} activeCount - Number of active children
+ */
+function handleSigintExit(hasOtherHandlers, activeCount) {
+  trace('ProcessRunner', () => `SIGINT forwarded to ${activeCount} processes`);
+  if (!hasOtherHandlers) {
+    trace('ProcessRunner', () => 'No other handlers, exiting with code 130');
+    if (process.stdout && typeof process.stdout.write === 'function') {
+      process.stdout.write('', () => process.exit(130));
+    } else {
+      process.exit(130);
+    }
+  }
+}
+
+/**
+ * Check if our handler is installed
+ * @returns {boolean}
+ */
+function isOurHandlerInstalled() {
+  const currentListeners = process.listeners('SIGINT');
+  return currentListeners.some((l) => {
+    const str = l.toString();
+    // Look for our unique marker or helper function names
+    return (
+      str.includes('findActiveRunners') ||
+      str.includes('forwardSigintToRunners') ||
+      str.includes('handleSigintExit') ||
+      // Legacy detection for backwards compatibility
+      (str.includes('activeProcessRunners') &&
+        str.includes('ProcessRunner') &&
+        str.includes('activeChildren'))
+    );
+  });
+}
+
+/**
  * Install SIGINT handler for graceful shutdown
  */
 export function installSignalHandlers() {
-  // Check if our handler is actually installed (not just the flag)
-  // This is more robust against test cleanup that manually removes listeners
-  const currentListeners = process.listeners('SIGINT');
-  const hasOurHandler = currentListeners.some((l) => {
-    const str = l.toString();
-    return (
-      str.includes('activeProcessRunners') &&
-      str.includes('ProcessRunner') &&
-      str.includes('activeChildren')
-    );
-  });
+  const hasOurHandler = isOurHandlerInstalled();
 
   if (sigintHandlerInstalled && hasOurHandler) {
-    trace('SignalHandler', () => 'SIGINT handler already installed, skipping');
     return;
   }
 
-  // Reset flag if handler was removed externally
   if (sigintHandlerInstalled && !hasOurHandler) {
-    trace(
-      'SignalHandler',
-      () => 'SIGINT handler flag was set but handler missing, resetting'
-    );
     sigintHandlerInstalled = false;
     sigintHandler = null;
   }
 
-  trace(
-    'SignalHandler',
-    () =>
-      `Installing SIGINT handler | ${JSON.stringify({ activeRunners: activeProcessRunners.size })}`
-  );
+  trace('SignalHandler', () => `Installing SIGINT handler`);
   sigintHandlerInstalled = true;
 
-  // Forward SIGINT to all active child processes
-  // The parent process continues running - it's up to the parent to decide what to do
   sigintHandler = () => {
-    // Check for other handlers immediately at the start, before doing any processing
-    const currentListeners = process.listeners('SIGINT');
-    const hasOtherHandlers = currentListeners.length > 1;
+    const hasOtherHandlers = process.listeners('SIGINT').length > 1;
+    const activeChildren = findActiveRunners();
 
-    trace(
-      'ProcessRunner',
-      () => `SIGINT handler triggered - checking active processes`
-    );
-
-    // Count active processes (both child processes and virtual commands)
-    const activeChildren = [];
-    for (const runner of activeProcessRunners) {
-      if (!runner.finished) {
-        // Real child process
-        if (runner.child && runner.child.pid) {
-          activeChildren.push(runner);
-          trace(
-            'ProcessRunner',
-            () =>
-              `Found active child: PID ${runner.child.pid}, command: ${runner.spec?.command || 'unknown'}`
-          );
-        }
-        // Virtual command (no child process but still active)
-        else if (!runner.child) {
-          activeChildren.push(runner);
-          trace(
-            'ProcessRunner',
-            () =>
-              `Found active virtual command: ${runner.spec?.command || 'unknown'}`
-          );
-        }
-      }
-    }
-
-    trace(
-      'ProcessRunner',
-      () =>
-        `Parent received SIGINT | ${JSON.stringify(
-          {
-            activeChildrenCount: activeChildren.length,
-            hasOtherHandlers,
-            platform: process.platform,
-            pid: process.pid,
-            ppid: process.ppid,
-            activeCommands: activeChildren.map((r) => ({
-              hasChild: !!r.child,
-              childPid: r.child?.pid,
-              hasVirtualGenerator: !!r._virtualGenerator,
-              finished: r.finished,
-              command: r.spec?.command?.slice(0, 30),
-            })),
-          },
-          null,
-          2
-        )}`
-    );
-
-    // Only handle SIGINT if we have active child processes
-    // Otherwise, let other handlers or default behavior handle it
     if (activeChildren.length === 0) {
-      trace(
-        'ProcessRunner',
-        () =>
-          `No active children - skipping SIGINT forwarding, letting other handlers handle it`
-      );
-      return; // Let other handlers or default behavior handle it
+      return;
     }
 
-    trace(
-      'ProcessRunner',
-      () =>
-        `Beginning SIGINT forwarding to ${activeChildren.length} active processes`
-    );
-
-    // Forward signal to all active processes (child processes and virtual commands)
-    for (const runner of activeChildren) {
-      try {
-        if (runner.child && runner.child.pid) {
-          // Real child process - send SIGINT to it
-          trace(
-            'ProcessRunner',
-            () =>
-              `Sending SIGINT to child process | ${JSON.stringify(
-                {
-                  pid: runner.child.pid,
-                  killed: runner.child.killed,
-                  runtime: isBun ? 'Bun' : 'Node.js',
-                  command: runner.spec?.command?.slice(0, 50),
-                },
-                null,
-                2
-              )}`
-          );
-
-          if (isBun) {
-            runner.child.kill('SIGINT');
-            trace(
-              'ProcessRunner',
-              () => `Bun: SIGINT sent to PID ${runner.child.pid}`
-            );
-          } else {
-            // Send to process group if detached, otherwise to process directly
-            try {
-              process.kill(-runner.child.pid, 'SIGINT');
-              trace(
-                'ProcessRunner',
-                () =>
-                  `Node.js: SIGINT sent to process group -${runner.child.pid}`
-              );
-            } catch (err) {
-              trace(
-                'ProcessRunner',
-                () =>
-                  `Node.js: Process group kill failed, trying direct: ${err.message}`
-              );
-              process.kill(runner.child.pid, 'SIGINT');
-              trace(
-                'ProcessRunner',
-                () => `Node.js: SIGINT sent directly to PID ${runner.child.pid}`
-              );
-            }
-          }
-        } else {
-          // Virtual command - cancel it using the runner's kill method
-          trace(
-            'ProcessRunner',
-            () =>
-              `Cancelling virtual command | ${JSON.stringify(
-                {
-                  hasChild: !!runner.child,
-                  hasVirtualGenerator: !!runner._virtualGenerator,
-                  finished: runner.finished,
-                  cancelled: runner._cancelled,
-                  command: runner.spec?.command?.slice(0, 50),
-                },
-                null,
-                2
-              )}`
-          );
-          runner.kill('SIGINT');
-          trace('ProcessRunner', () => `Virtual command kill() called`);
-        }
-      } catch (err) {
-        trace(
-          'ProcessRunner',
-          () =>
-            `Error in SIGINT handler for runner | ${JSON.stringify(
-              {
-                error: err.message,
-                stack: err.stack?.slice(0, 300),
-                hasPid: !!(runner.child && runner.child.pid),
-                pid: runner.child?.pid,
-                command: runner.spec?.command?.slice(0, 50),
-              },
-              null,
-              2
-            )}`
-        );
-      }
-    }
-
-    // We've forwarded SIGINT to all active processes/commands
-    // Use the hasOtherHandlers flag we calculated at the start (before any processing)
-    trace(
-      'ProcessRunner',
-      () =>
-        `SIGINT forwarded to ${activeChildren.length} active processes, other handlers: ${hasOtherHandlers}`
-    );
-
-    if (!hasOtherHandlers) {
-      // No other handlers - we should exit like a proper shell
-      trace(
-        'ProcessRunner',
-        () => `No other SIGINT handlers, exiting with code 130`
-      );
-      // Ensure stdout/stderr are flushed before exiting
-      if (process.stdout && typeof process.stdout.write === 'function') {
-        process.stdout.write('', () => {
-          process.exit(130); // 128 + 2 (SIGINT)
-        });
-      } else {
-        process.exit(130); // 128 + 2 (SIGINT)
-      }
-    } else {
-      // Other handlers exist - let them handle the exit completely
-      // Do NOT call process.exit() ourselves when other handlers are present
-      trace(
-        'ProcessRunner',
-        () =>
-          `Other SIGINT handlers present, letting them handle the exit completely`
-      );
-    }
+    forwardSigintToRunners(activeChildren);
+    handleSigintExit(hasOtherHandlers, activeChildren.length);
   };
 
   process.on('SIGINT', sigintHandler);
@@ -353,36 +240,40 @@ export function uninstallSignalHandlers() {
 }
 
 /**
+ * Check if a listener is a command-stream SIGINT handler
+ * @param {Function} listener - Listener function
+ * @returns {boolean}
+ */
+function isCommandStreamListener(listener) {
+  const str = listener.toString();
+  return (
+    str.includes('findActiveRunners') ||
+    str.includes('forwardSigintToRunners') ||
+    str.includes('handleSigintExit') ||
+    str.includes('activeProcessRunners') ||
+    str.includes('ProcessRunner') ||
+    str.includes('activeChildren')
+  );
+}
+
+/**
  * Force cleanup of all command-stream SIGINT handlers and state - for testing
  */
 export function forceCleanupAll() {
-  // Remove all command-stream SIGINT handlers
   const sigintListeners = process.listeners('SIGINT');
-  const commandStreamListeners = sigintListeners.filter((l) => {
-    const str = l.toString();
-    return (
-      str.includes('activeProcessRunners') ||
-      str.includes('ProcessRunner') ||
-      str.includes('activeChildren')
-    );
-  });
+  const commandStreamListeners = sigintListeners.filter(
+    isCommandStreamListener
+  );
 
   commandStreamListeners.forEach((listener) => {
     process.removeListener('SIGINT', listener);
   });
 
-  // Clear activeProcessRunners
   activeProcessRunners.clear();
-
-  // Reset signal handler flags
   sigintHandlerInstalled = false;
   sigintHandler = null;
 
-  trace(
-    'SignalHandler',
-    () =>
-      `Force cleanup completed - removed ${commandStreamListeners.length} handlers`
-  );
+  trace('SignalHandler', () => `Force cleanup completed`);
 }
 
 /**
@@ -425,133 +316,85 @@ export function resetParentStreamMonitoring() {
 }
 
 /**
- * Complete global state reset for testing - clears all library state
+ * Get a valid fallback directory
+ * @returns {string} Fallback directory path
  */
-export function resetGlobalState() {
-  // CRITICAL: Restore working directory first before anything else
-  // This MUST succeed or tests will fail with spawn errors
+function getFallbackDirectory() {
+  if (process.env.HOME && fs.existsSync(process.env.HOME)) {
+    return process.env.HOME;
+  }
+  if (fs.existsSync('/workspace/command-stream')) {
+    return '/workspace/command-stream';
+  }
+  return '/';
+}
+
+/**
+ * Restore working directory to initial or fallback
+ */
+function restoreWorkingDirectory() {
   try {
-    // Try to get current directory - this might fail if we're in a deleted directory
     let currentDir;
     try {
       currentDir = process.cwd();
-    } catch (_cwdError) {
-      // Can't even get cwd, we're in a deleted directory
+    } catch (_e) {
       currentDir = null;
     }
 
-    // Always try to restore to initial directory
-    if (!currentDir || currentDir !== initialWorkingDirectory) {
-      // Check if initial directory still exists
-      if (fs.existsSync(initialWorkingDirectory)) {
-        process.chdir(initialWorkingDirectory);
-        trace(
-          'GlobalState',
-          () =>
-            `Restored working directory from ${currentDir} to ${initialWorkingDirectory}`
-        );
-      } else {
-        // Initial directory is gone, use fallback
-        // Try HOME first, then known workspace path, then root as last resort
-        const fallback =
-          process.env.HOME ||
-          (fs.existsSync('/workspace/command-stream')
-            ? '/workspace/command-stream'
-            : '/');
-        if (fs.existsSync(fallback)) {
-          process.chdir(fallback);
-          trace(
-            'GlobalState',
-            () => `Initial directory gone, changed to fallback: ${fallback}`
-          );
-        } else {
-          // Last resort - try root
-          process.chdir('/');
-          trace('GlobalState', () => `Emergency fallback to root directory`);
-        }
-      }
+    if (currentDir && currentDir === initialWorkingDirectory) {
+      return;
     }
-  } catch (e) {
-    trace(
-      'GlobalState',
-      () => `Critical error restoring working directory: ${e.message}`
-    );
-    // This is critical - we MUST have a valid working directory
+
+    if (fs.existsSync(initialWorkingDirectory)) {
+      process.chdir(initialWorkingDirectory);
+    } else {
+      const fallback = getFallbackDirectory();
+      process.chdir(fallback);
+    }
+  } catch (_e) {
     try {
-      // Try home directory
-      if (process.env.HOME && fs.existsSync(process.env.HOME)) {
-        process.chdir(process.env.HOME);
-      } else {
-        // Last resort - root
-        process.chdir('/');
-      }
+      process.chdir(getFallbackDirectory());
     } catch (e2) {
       console.error('FATAL: Cannot set any working directory!', e2);
     }
   }
+}
 
-  // First, properly clean up all active ProcessRunners
+/**
+ * Cleanup all active runners
+ */
+function cleanupActiveRunners() {
   for (const runner of activeProcessRunners) {
-    if (runner) {
-      try {
-        // If the runner was never started, clean it up
-        if (!runner.started) {
-          trace(
-            'resetGlobalState',
-            () =>
-              `Cleaning up unstarted ProcessRunner: ${runner.spec?.command?.slice(0, 50)}`
-          );
-          // Call the cleanup method to properly release resources
-          if (runner._cleanup) {
-            runner._cleanup();
-          }
-        } else if (runner.kill) {
-          // For started runners, kill them
-          runner.kill();
-        }
-      } catch (e) {
-        // Ignore errors
-        trace('resetGlobalState', () => `Error during cleanup: ${e.message}`);
+    if (!runner) {
+      continue;
+    }
+    try {
+      if (!runner.started && runner._cleanup) {
+        runner._cleanup();
+      } else if (runner.kill) {
+        runner.kill();
       }
+    } catch (_e) {
+      // Ignore errors
     }
   }
+}
 
-  // Call existing cleanup
+/**
+ * Complete global state reset for testing - clears all library state
+ */
+export function resetGlobalState() {
+  restoreWorkingDirectory();
+  cleanupActiveRunners();
   forceCleanupAll();
-
-  // Clear shell cache to force re-detection with our fixed logic
   clearShellCache();
-
-  // Reset parent stream monitoring
   parentStreamsMonitored = false;
-
-  // Reset shell settings to defaults
   resetShellSettings();
-
-  // Don't clear virtual commands - they should persist across tests
-  // Just make sure they're enabled
   virtualCommandsEnabled = true;
-
-  // Reset ANSI config to defaults
   resetAnsiConfig();
 
-  // Make sure built-in virtual commands are registered
   if (virtualCommands.size === 0) {
-    // Re-import to re-register commands (synchronously if possible)
-    trace('GlobalState', () => 'Re-registering virtual commands');
-    import('./commands/index.mjs')
-      .then(() => {
-        trace(
-          'GlobalState',
-          () => `Virtual commands re-registered, count: ${virtualCommands.size}`
-        );
-      })
-      .catch((e) => {
-        trace(
-          'GlobalState',
-          () => `Error re-registering virtual commands: ${e.message}`
-        );
-      });
+    import('./commands/index.mjs').catch(() => {});
   }
 
   trace('GlobalState', () => 'Global state reset completed');

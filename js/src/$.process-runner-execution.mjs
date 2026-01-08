@@ -12,13 +12,1017 @@ import { parseShellCommand, needsRealShell } from './shell-parser.mjs';
 const isBun = typeof globalThis.Bun !== 'undefined';
 
 /**
+ * Check for shell operators in command
+ * @param {string} command - Command to check
+ * @returns {boolean}
+ */
+function hasShellOperators(command) {
+  return (
+    command.includes('&&') ||
+    command.includes('||') ||
+    command.includes('(') ||
+    command.includes(';') ||
+    (command.includes('cd ') && command.includes('&&'))
+  );
+}
+
+/**
+ * Check if command is a streaming pattern
+ * @param {string} command - Command to check
+ * @returns {boolean}
+ */
+function isStreamingPattern(command) {
+  return (
+    command.includes('sleep') &&
+    command.includes(';') &&
+    (command.includes('echo') || command.includes('printf'))
+  );
+}
+
+/**
+ * Determine if shell operators should be used
+ * @param {object} runner - ProcessRunner instance
+ * @param {string} command - Command to check
+ * @returns {boolean}
+ */
+function shouldUseShellOperators(runner, command) {
+  const hasOps = hasShellOperators(command);
+  const isStreaming = isStreamingPattern(command);
+  return (
+    runner.options.shellOperators &&
+    hasOps &&
+    !isStreaming &&
+    !runner._isStreaming
+  );
+}
+
+/**
+ * Check if stdin is interactive
+ * @param {string} stdin - Stdin option
+ * @param {object} options - Runner options
+ * @returns {boolean}
+ */
+function isInteractiveMode(stdin, options) {
+  return (
+    stdin === 'inherit' &&
+    process.stdin.isTTY === true &&
+    process.stdout.isTTY === true &&
+    process.stderr.isTTY === true &&
+    options.interactive === true
+  );
+}
+
+/**
+ * Spawn process using Bun
+ * @param {Array} argv - Command arguments
+ * @param {object} config - Spawn configuration
+ * @returns {object} Child process
+ */
+function spawnWithBun(argv, config) {
+  const { cwd, env, isInteractive } = config;
+
+  trace(
+    'ProcessRunner',
+    () =>
+      `spawnBun: Creating process | ${JSON.stringify({
+        command: argv[0],
+        args: argv.slice(1),
+        isInteractive,
+        cwd,
+        platform: process.platform,
+      })}`
+  );
+
+  if (isInteractive) {
+    trace(
+      'ProcessRunner',
+      () => `spawnBun: Using interactive mode with inherited stdio`
+    );
+    return Bun.spawn(argv, {
+      cwd,
+      env,
+      stdin: 'inherit',
+      stdout: 'inherit',
+      stderr: 'inherit',
+    });
+  }
+
+  trace(
+    'ProcessRunner',
+    () =>
+      `spawnBun: Using non-interactive mode with pipes and detached=${process.platform !== 'win32'}`
+  );
+
+  return Bun.spawn(argv, {
+    cwd,
+    env,
+    stdin: 'pipe',
+    stdout: 'pipe',
+    stderr: 'pipe',
+    detached: process.platform !== 'win32',
+  });
+}
+
+/**
+ * Spawn process using Node
+ * @param {Array} argv - Command arguments
+ * @param {object} config - Spawn configuration
+ * @returns {object} Child process
+ */
+function spawnWithNode(argv, config) {
+  const { cwd, env, isInteractive } = config;
+
+  trace(
+    'ProcessRunner',
+    () =>
+      `spawnNode: Creating process | ${JSON.stringify({
+        command: argv[0],
+        args: argv.slice(1),
+        isInteractive,
+        cwd,
+        platform: process.platform,
+      })}`
+  );
+
+  if (isInteractive) {
+    return cp.spawn(argv[0], argv.slice(1), {
+      cwd,
+      env,
+      stdio: 'inherit',
+    });
+  }
+
+  const child = cp.spawn(argv[0], argv.slice(1), {
+    cwd,
+    env,
+    stdio: ['pipe', 'pipe', 'pipe'],
+    detached: process.platform !== 'win32',
+  });
+
+  trace(
+    'ProcessRunner',
+    () =>
+      `spawnNode: Process created | ${JSON.stringify({
+        pid: child.pid,
+        killed: child.killed,
+        hasStdout: !!child.stdout,
+        hasStderr: !!child.stderr,
+        hasStdin: !!child.stdin,
+      })}`
+  );
+
+  return child;
+}
+
+/**
+ * Spawn child process with appropriate runtime
+ * @param {Array} argv - Command arguments
+ * @param {object} config - Spawn configuration
+ * @returns {object} Child process
+ */
+function spawnChild(argv, config) {
+  const { stdin } = config;
+  const needsExplicitPipe = stdin !== 'inherit' && stdin !== 'ignore';
+  const preferNodeForInput = isBun && needsExplicitPipe;
+
+  trace(
+    'ProcessRunner',
+    () =>
+      `About to spawn process | ${JSON.stringify({
+        needsExplicitPipe,
+        preferNodeForInput,
+        runtime: isBun ? 'Bun' : 'Node',
+        command: argv[0],
+        args: argv.slice(1),
+      })}`
+  );
+
+  if (preferNodeForInput) {
+    return spawnWithNode(argv, config);
+  }
+  return isBun ? spawnWithBun(argv, config) : spawnWithNode(argv, config);
+}
+
+/**
+ * Setup child process event listeners
+ * @param {object} runner - ProcessRunner instance
+ */
+function setupChildEventListeners(runner) {
+  if (!runner.child || typeof runner.child.on !== 'function') {
+    return;
+  }
+
+  runner.child.on('spawn', () => {
+    trace(
+      'ProcessRunner',
+      () =>
+        `Child process spawned successfully | ${JSON.stringify({
+          pid: runner.child.pid,
+          command: runner.spec?.command?.slice(0, 50),
+        })}`
+    );
+  });
+
+  runner.child.on('error', (error) => {
+    trace(
+      'ProcessRunner',
+      () =>
+        `Child process error event | ${JSON.stringify({
+          pid: runner.child?.pid,
+          error: error.message,
+          code: error.code,
+          errno: error.errno,
+          syscall: error.syscall,
+          command: runner.spec?.command?.slice(0, 50),
+        })}`
+    );
+  });
+}
+
+/**
+ * Create stdout pump
+ * @param {object} runner - ProcessRunner instance
+ * @param {number} childPid - Child process PID
+ * @returns {Promise}
+ */
+function createStdoutPump(runner, childPid) {
+  if (!runner.child.stdout) {
+    return Promise.resolve();
+  }
+
+  return pumpReadable(runner.child.stdout, (buf) => {
+    trace(
+      'ProcessRunner',
+      () =>
+        `stdout data received | ${JSON.stringify({
+          pid: childPid,
+          bufferLength: buf.length,
+          capture: runner.options.capture,
+          mirror: runner.options.mirror,
+          preview: buf.toString().slice(0, 100),
+        })}`
+    );
+
+    if (runner.options.capture) {
+      runner.outChunks.push(buf);
+    }
+    if (runner.options.mirror) {
+      safeWrite(process.stdout, buf);
+    }
+
+    runner._emitProcessedData('stdout', buf);
+  });
+}
+
+/**
+ * Create stderr pump
+ * @param {object} runner - ProcessRunner instance
+ * @param {number} childPid - Child process PID
+ * @returns {Promise}
+ */
+function createStderrPump(runner, childPid) {
+  if (!runner.child.stderr) {
+    return Promise.resolve();
+  }
+
+  return pumpReadable(runner.child.stderr, (buf) => {
+    trace(
+      'ProcessRunner',
+      () =>
+        `stderr data received | ${JSON.stringify({
+          pid: childPid,
+          bufferLength: buf.length,
+          capture: runner.options.capture,
+          mirror: runner.options.mirror,
+          preview: buf.toString().slice(0, 100),
+        })}`
+    );
+
+    if (runner.options.capture) {
+      runner.errChunks.push(buf);
+    }
+    if (runner.options.mirror) {
+      safeWrite(process.stderr, buf);
+    }
+
+    runner._emitProcessedData('stderr', buf);
+  });
+}
+
+/**
+ * Handle stdin for inherit mode
+ * @param {object} runner - ProcessRunner instance
+ * @param {boolean} isInteractive - Is interactive mode
+ * @returns {Promise}
+ */
+function handleInheritStdin(runner, isInteractive) {
+  if (isInteractive) {
+    trace(
+      'ProcessRunner',
+      () => `stdin: Using inherit mode for interactive command`
+    );
+    return Promise.resolve();
+  }
+
+  const isPipedIn = process.stdin && process.stdin.isTTY === false;
+  trace(
+    'ProcessRunner',
+    () =>
+      `stdin: Non-interactive inherit mode | ${JSON.stringify({
+        isPipedIn,
+        stdinTTY: process.stdin.isTTY,
+      })}`
+  );
+
+  if (isPipedIn) {
+    trace('ProcessRunner', () => `stdin: Pumping piped input to child process`);
+    return runner._pumpStdinTo(
+      runner.child,
+      runner.options.capture ? runner.inChunks : null
+    );
+  }
+
+  trace(
+    'ProcessRunner',
+    () => `stdin: Forwarding TTY stdin for non-interactive command`
+  );
+  return runner._forwardTTYStdin();
+}
+
+/**
+ * Handle stdin based on configuration
+ * @param {object} runner - ProcessRunner instance
+ * @param {string|Buffer} stdin - Stdin configuration
+ * @param {boolean} isInteractive - Is interactive mode
+ * @returns {Promise}
+ */
+function handleStdin(runner, stdin, isInteractive) {
+  trace(
+    'ProcessRunner',
+    () =>
+      `Setting up stdin handling | ${JSON.stringify({
+        stdinType: typeof stdin,
+        stdin:
+          stdin === 'inherit'
+            ? 'inherit'
+            : stdin === 'ignore'
+              ? 'ignore'
+              : typeof stdin === 'string'
+                ? `string(${stdin.length})`
+                : 'other',
+        isInteractive,
+        hasChildStdin: !!runner.child?.stdin,
+        processTTY: process.stdin.isTTY,
+      })}`
+  );
+
+  if (stdin === 'inherit') {
+    return handleInheritStdin(runner, isInteractive);
+  }
+
+  if (stdin === 'ignore') {
+    trace('ProcessRunner', () => `stdin: Ignoring and closing stdin`);
+    if (runner.child.stdin && typeof runner.child.stdin.end === 'function') {
+      runner.child.stdin.end();
+    }
+    return Promise.resolve();
+  }
+
+  if (stdin === 'pipe') {
+    trace(
+      'ProcessRunner',
+      () => `stdin: Using pipe mode - leaving stdin open for manual control`
+    );
+    return Promise.resolve();
+  }
+
+  if (typeof stdin === 'string' || Buffer.isBuffer(stdin)) {
+    const buf = Buffer.isBuffer(stdin) ? stdin : Buffer.from(stdin);
+    trace(
+      'ProcessRunner',
+      () =>
+        `stdin: Writing buffer to child | ${JSON.stringify({
+          bufferLength: buf.length,
+          willCapture: runner.options.capture && !!runner.inChunks,
+        })}`
+    );
+    if (runner.options.capture && runner.inChunks) {
+      runner.inChunks.push(Buffer.from(buf));
+    }
+    return runner._writeToStdin(buf);
+  }
+
+  return Promise.resolve();
+}
+
+/**
+ * Create promise for child exit
+ * @param {object} child - Child process
+ * @returns {Promise}
+ */
+function createExitPromise(child) {
+  if (isBun) {
+    return child.exited;
+  }
+
+  return new Promise((resolve) => {
+    trace(
+      'ProcessRunner',
+      () => `Setting up child process event listeners for PID ${child.pid}`
+    );
+
+    child.on('close', (code, signal) => {
+      trace(
+        'ProcessRunner',
+        () =>
+          `Child process close event | ${JSON.stringify({
+            pid: child.pid,
+            code,
+            signal,
+            killed: child.killed,
+            exitCode: child.exitCode,
+            signalCode: child.signalCode,
+          })}`
+      );
+      resolve(code);
+    });
+
+    child.on('exit', (code, signal) => {
+      trace(
+        'ProcessRunner',
+        () =>
+          `Child process exit event | ${JSON.stringify({
+            pid: child.pid,
+            code,
+            signal,
+            killed: child.killed,
+            exitCode: child.exitCode,
+            signalCode: child.signalCode,
+          })}`
+      );
+    });
+  });
+}
+
+/**
+ * Determine final exit code
+ * @param {number|null|undefined} code - Raw exit code
+ * @param {boolean} cancelled - Was process cancelled
+ * @returns {number}
+ */
+function determineFinalExitCode(code, cancelled) {
+  trace(
+    'ProcessRunner',
+    () =>
+      `Raw exit code from child | ${JSON.stringify({
+        code,
+        codeType: typeof code,
+        cancelled,
+        isBun,
+      })}`
+  );
+
+  if (code !== undefined && code !== null) {
+    return code;
+  }
+
+  if (cancelled) {
+    trace(
+      'ProcessRunner',
+      () => `Process was killed, using SIGTERM exit code 143`
+    );
+    return 143;
+  }
+
+  trace('ProcessRunner', () => `Process exited without code, defaulting to 0`);
+  return 0;
+}
+
+/**
+ * Build result data from runner state
+ * @param {object} runner - ProcessRunner instance
+ * @param {number} exitCode - Exit code
+ * @returns {object}
+ */
+function buildResultData(runner, exitCode) {
+  return {
+    code: exitCode,
+    stdout: runner.options.capture
+      ? runner.outChunks && runner.outChunks.length > 0
+        ? Buffer.concat(runner.outChunks).toString('utf8')
+        : ''
+      : undefined,
+    stderr: runner.options.capture
+      ? runner.errChunks && runner.errChunks.length > 0
+        ? Buffer.concat(runner.errChunks).toString('utf8')
+        : ''
+      : undefined,
+    stdin:
+      runner.options.capture && runner.inChunks
+        ? Buffer.concat(runner.inChunks).toString('utf8')
+        : undefined,
+    child: runner.child,
+  };
+}
+
+/**
+ * Throw errexit error if needed
+ * @param {object} runner - ProcessRunner instance
+ * @param {object} globalShellSettings - Shell settings
+ */
+function throwErrexitIfNeeded(runner, globalShellSettings) {
+  if (!globalShellSettings.errexit || runner.result.code === 0) {
+    return;
+  }
+
+  trace('ProcessRunner', () => `Errexit mode: throwing error`);
+
+  const error = new Error(
+    `Command failed with exit code ${runner.result.code}`
+  );
+  error.code = runner.result.code;
+  error.stdout = runner.result.stdout;
+  error.stderr = runner.result.stderr;
+  error.result = runner.result;
+
+  throw error;
+}
+
+/**
+ * Get stdin input for sync spawn
+ * @param {string|Buffer} stdin - Stdin option
+ * @returns {Buffer|undefined}
+ */
+function getSyncStdinInput(stdin) {
+  if (typeof stdin === 'string') {
+    return Buffer.from(stdin);
+  }
+  if (Buffer.isBuffer(stdin)) {
+    return stdin;
+  }
+  return undefined;
+}
+
+/**
+ * Get stdin string for result
+ * @param {string|Buffer} stdin - Stdin option
+ * @returns {string}
+ */
+function getStdinString(stdin) {
+  if (typeof stdin === 'string') {
+    return stdin;
+  }
+  if (Buffer.isBuffer(stdin)) {
+    return stdin.toString('utf8');
+  }
+  return '';
+}
+
+/**
+ * Execute sync process using Bun
+ * @param {Array} argv - Command arguments
+ * @param {object} options - Spawn options
+ * @returns {object} Result object
+ */
+function executeSyncBun(argv, options) {
+  const { cwd, env, stdin } = options;
+  const proc = Bun.spawnSync(argv, {
+    cwd,
+    env,
+    stdin: getSyncStdinInput(stdin),
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
+
+  const result = createResult({
+    code: proc.exitCode || 0,
+    stdout: proc.stdout?.toString('utf8') || '',
+    stderr: proc.stderr?.toString('utf8') || '',
+    stdin: getStdinString(stdin),
+  });
+  result.child = proc;
+  return result;
+}
+
+/**
+ * Execute sync process using Node
+ * @param {Array} argv - Command arguments
+ * @param {object} options - Spawn options
+ * @returns {object} Result object
+ */
+function executeSyncNode(argv, options) {
+  const { cwd, env, stdin } = options;
+  const proc = cp.spawnSync(argv[0], argv.slice(1), {
+    cwd,
+    env,
+    input: getSyncStdinInput(stdin),
+    encoding: 'utf8',
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
+
+  const result = createResult({
+    code: proc.status || 0,
+    stdout: proc.stdout || '',
+    stderr: proc.stderr || '',
+    stdin: getStdinString(stdin),
+  });
+  result.child = proc;
+  return result;
+}
+
+/**
+ * Execute sync process with appropriate runtime
+ * @param {Array} argv - Command arguments
+ * @param {object} options - Spawn options
+ * @returns {object} Result object
+ */
+function executeSyncProcess(argv, options) {
+  return isBun ? executeSyncBun(argv, options) : executeSyncNode(argv, options);
+}
+
+/**
+ * Handle sync result processing
+ * @param {object} runner - ProcessRunner instance
+ * @param {object} result - Result object
+ * @param {object} globalShellSettings - Shell settings
+ * @returns {object} Result
+ */
+function processSyncResult(runner, result, globalShellSettings) {
+  if (runner.options.mirror) {
+    if (result.stdout) {
+      safeWrite(process.stdout, result.stdout);
+    }
+    if (result.stderr) {
+      safeWrite(process.stderr, result.stderr);
+    }
+  }
+
+  runner.outChunks = result.stdout ? [Buffer.from(result.stdout)] : [];
+  runner.errChunks = result.stderr ? [Buffer.from(result.stderr)] : [];
+
+  if (result.stdout) {
+    runner._emitProcessedData('stdout', Buffer.from(result.stdout));
+  }
+  if (result.stderr) {
+    runner._emitProcessedData('stderr', Buffer.from(result.stderr));
+  }
+
+  runner.finish(result);
+
+  if (globalShellSettings.errexit && result.code !== 0) {
+    const error = new Error(`Command failed with exit code ${result.code}`);
+    error.code = result.code;
+    error.stdout = result.stdout;
+    error.stderr = result.stderr;
+    error.result = result;
+    throw error;
+  }
+
+  return result;
+}
+
+/**
+ * Setup external abort signal listener
+ * @param {object} runner - ProcessRunner instance
+ */
+function setupExternalAbortSignal(runner) {
+  const signal = runner.options.signal;
+  if (!signal || typeof signal.addEventListener !== 'function') {
+    return;
+  }
+
+  trace(
+    'ProcessRunner',
+    () =>
+      `Setting up external abort signal listener | ${JSON.stringify({
+        hasSignal: !!signal,
+        signalAborted: signal.aborted,
+        hasInternalController: !!runner._abortController,
+        internalAborted: runner._abortController?.signal.aborted,
+      })}`
+  );
+
+  signal.addEventListener('abort', () => {
+    trace(
+      'ProcessRunner',
+      () =>
+        `External abort signal triggered | ${JSON.stringify({
+          externalSignalAborted: signal.aborted,
+          hasInternalController: !!runner._abortController,
+          internalAborted: runner._abortController?.signal.aborted,
+          command: runner.spec?.command?.slice(0, 50),
+        })}`
+    );
+
+    runner.kill('SIGTERM');
+    trace(
+      'ProcessRunner',
+      () => 'Process kill initiated due to external abort signal'
+    );
+
+    if (runner._abortController && !runner._abortController.signal.aborted) {
+      trace(
+        'ProcessRunner',
+        () => 'Aborting internal controller due to external signal'
+      );
+      runner._abortController.abort();
+    }
+  });
+
+  if (signal.aborted) {
+    trace(
+      'ProcessRunner',
+      () =>
+        `External signal already aborted, killing process and aborting internal controller`
+    );
+    runner.kill('SIGTERM');
+    if (runner._abortController && !runner._abortController.signal.aborted) {
+      runner._abortController.abort();
+    }
+  }
+}
+
+/**
+ * Reinitialize capture chunks when capture option changes
+ * @param {object} runner - ProcessRunner instance
+ */
+function reinitCaptureChunks(runner) {
+  trace(
+    'ProcessRunner',
+    () =>
+      `BRANCH: capture => REINIT_CHUNKS | ${JSON.stringify({
+        capture: runner.options.capture,
+      })}`
+  );
+
+  runner.outChunks = runner.options.capture ? [] : null;
+  runner.errChunks = runner.options.capture ? [] : null;
+  runner.inChunks =
+    runner.options.capture && runner.options.stdin === 'inherit'
+      ? []
+      : runner.options.capture &&
+          (typeof runner.options.stdin === 'string' ||
+            Buffer.isBuffer(runner.options.stdin))
+        ? [Buffer.from(runner.options.stdin)]
+        : [];
+}
+
+/**
+ * Try running command via enhanced shell parser
+ * @param {object} runner - ProcessRunner instance
+ * @param {string} command - Command to parse
+ * @returns {Promise<object>|null} Result if handled, null if not
+ */
+async function tryEnhancedShellParser(runner, command) {
+  const enhancedParsed = parseShellCommand(command);
+  if (!enhancedParsed || enhancedParsed.type === 'simple') {
+    return null;
+  }
+
+  trace(
+    'ProcessRunner',
+    () =>
+      `Using enhanced parser for shell operators | ${JSON.stringify({
+        type: enhancedParsed.type,
+        command: command.slice(0, 50),
+      })}`
+  );
+
+  if (enhancedParsed.type === 'sequence') {
+    return await runner._runSequence(enhancedParsed);
+  }
+  if (enhancedParsed.type === 'subshell') {
+    return await runner._runSubshell(enhancedParsed);
+  }
+  if (enhancedParsed.type === 'pipeline') {
+    return await runner._runPipeline(enhancedParsed.commands);
+  }
+
+  return null;
+}
+
+/**
+ * Try running command as virtual command
+ * @param {object} runner - ProcessRunner instance
+ * @param {object} parsed - Parsed command
+ * @param {object} deps - Dependencies
+ * @returns {Promise<object>|null} Result if handled, null if not
+ */
+async function tryVirtualCommand(runner, parsed, deps) {
+  const { virtualCommands, isVirtualCommandsEnabled } = deps;
+
+  if (
+    parsed.type !== 'simple' ||
+    !isVirtualCommandsEnabled() ||
+    !virtualCommands.has(parsed.cmd) ||
+    runner.options._bypassVirtual
+  ) {
+    return null;
+  }
+
+  const hasCustomStdin =
+    runner.options.stdin &&
+    runner.options.stdin !== 'inherit' &&
+    runner.options.stdin !== 'ignore';
+
+  const commandsThatNeedRealStdin = ['sleep', 'cat'];
+  const shouldBypassVirtual =
+    hasCustomStdin && commandsThatNeedRealStdin.includes(parsed.cmd);
+
+  if (shouldBypassVirtual) {
+    trace(
+      'ProcessRunner',
+      () =>
+        `Bypassing built-in virtual command due to custom stdin | ${JSON.stringify(
+          {
+            cmd: parsed.cmd,
+            stdin: typeof runner.options.stdin,
+          }
+        )}`
+    );
+    return null;
+  }
+
+  trace(
+    'ProcessRunner',
+    () =>
+      `BRANCH: virtualCommand => ${parsed.cmd} | ${JSON.stringify({
+        isVirtual: true,
+        args: parsed.args,
+      })}`
+  );
+
+  return await runner._runVirtual(parsed.cmd, parsed.args, runner.spec.command);
+}
+
+/**
+ * Log xtrace/verbose if enabled
+ * @param {object} globalShellSettings - Shell settings
+ * @param {string} command - Command or argv
+ */
+function logShellTrace(globalShellSettings, command) {
+  if (globalShellSettings.xtrace) {
+    console.log(`+ ${command}`);
+  }
+  if (globalShellSettings.verbose) {
+    console.log(command);
+  }
+}
+
+/**
+ * Handle shell mode execution
+ * @param {object} runner - ProcessRunner instance
+ * @param {object} deps - Dependencies
+ * @returns {Promise<object>|null} Result if handled by special cases
+ */
+async function handleShellMode(runner, deps) {
+  const { virtualCommands, isVirtualCommandsEnabled } = deps;
+  const command = runner.spec.command;
+
+  trace(
+    'ProcessRunner',
+    () => `BRANCH: spec.mode => shell | ${JSON.stringify({})}`
+  );
+
+  const useShellOps = shouldUseShellOperators(runner, command);
+
+  trace(
+    'ProcessRunner',
+    () =>
+      `Shell operator detection | ${JSON.stringify({
+        hasShellOperators: hasShellOperators(command),
+        shellOperatorsEnabled: runner.options.shellOperators,
+        isStreamingPattern: isStreamingPattern(command),
+        isStreaming: runner._isStreaming,
+        shouldUseShellOperators: useShellOps,
+        command: command.slice(0, 100),
+      })}`
+  );
+
+  if (
+    !runner.options._bypassVirtual &&
+    useShellOps &&
+    !needsRealShell(command)
+  ) {
+    const result = await tryEnhancedShellParser(runner, command);
+    if (result) {
+      return result;
+    }
+  }
+
+  const parsed = runner._parseCommand(command);
+  trace(
+    'ProcessRunner',
+    () =>
+      `Parsed command | ${JSON.stringify({
+        type: parsed?.type,
+        cmd: parsed?.cmd,
+        argsCount: parsed?.args?.length,
+      })}`
+  );
+
+  if (parsed) {
+    if (parsed.type === 'pipeline') {
+      trace(
+        'ProcessRunner',
+        () =>
+          `BRANCH: parsed.type => pipeline | ${JSON.stringify({
+            commandCount: parsed.commands?.length,
+          })}`
+      );
+      return await runner._runPipeline(parsed.commands);
+    }
+
+    const virtualResult = await tryVirtualCommand(runner, parsed, {
+      virtualCommands,
+      isVirtualCommandsEnabled,
+    });
+    if (virtualResult) {
+      return virtualResult;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Execute child process and collect results
+ * @param {object} runner - ProcessRunner instance
+ * @param {Array} argv - Command arguments
+ * @param {object} config - Spawn configuration
+ * @returns {Promise<object>} Result
+ */
+async function executeChildProcess(runner, argv, config) {
+  const { stdin, isInteractive } = config;
+
+  runner.child = spawnChild(argv, config);
+
+  if (runner.child) {
+    trace(
+      'ProcessRunner',
+      () =>
+        `Child process created | ${JSON.stringify({
+          pid: runner.child.pid,
+          detached: runner.child.options?.detached,
+          killed: runner.child.killed,
+          hasStdout: !!runner.child.stdout,
+          hasStderr: !!runner.child.stderr,
+          hasStdin: !!runner.child.stdin,
+          platform: process.platform,
+          command: runner.spec?.command?.slice(0, 100),
+        })}`
+    );
+    setupChildEventListeners(runner);
+  }
+
+  const childPid = runner.child?.pid;
+  const outPump = createStdoutPump(runner, childPid);
+  const errPump = createStderrPump(runner, childPid);
+  const stdinPumpPromise = handleStdin(runner, stdin, isInteractive);
+  const exited = createExitPromise(runner.child);
+
+  const code = await exited;
+  await Promise.all([outPump, errPump, stdinPumpPromise]);
+
+  const finalExitCode = determineFinalExitCode(code, runner._cancelled);
+  const resultData = buildResultData(runner, finalExitCode);
+
+  trace(
+    'ProcessRunner',
+    () =>
+      `Process completed | ${JSON.stringify({
+        command: runner.command,
+        finalExitCode,
+        captured: runner.options.capture,
+        hasStdout: !!resultData.stdout,
+        hasStderr: !!resultData.stderr,
+        stdoutLength: resultData.stdout?.length || 0,
+        stderrLength: resultData.stderr?.length || 0,
+        stdoutPreview: resultData.stdout?.slice(0, 100),
+        stderrPreview: resultData.stderr?.slice(0, 100),
+        childPid: runner.child?.pid,
+        cancelled: runner._cancelled,
+        cancellationSignal: runner._cancellationSignal,
+        platform: process.platform,
+        runtime: isBun ? 'Bun' : 'Node.js',
+      })}`
+  );
+
+  return {
+    ...resultData,
+    text() {
+      return Promise.resolve(resultData.stdout || '');
+    },
+  };
+}
+
+/**
  * Attach execution methods to ProcessRunner prototype
  * @param {Function} ProcessRunner - The ProcessRunner class
  * @param {Object} deps - Dependencies (virtualCommands, globalShellSettings, isVirtualCommandsEnabled)
  */
 export function attachExecutionMethods(ProcessRunner, deps) {
-  const { virtualCommands, globalShellSettings, isVirtualCommandsEnabled } =
-    deps;
+  const { globalShellSettings } = deps;
 
   // Unified start method
   ProcessRunner.prototype.start = function (options = {}) {
@@ -27,152 +1031,47 @@ export function attachExecutionMethods(ProcessRunner, deps) {
     trace(
       'ProcessRunner',
       () =>
-        `start ENTER | ${JSON.stringify(
-          {
-            mode,
-            options,
-            started: this.started,
-            hasPromise: !!this.promise,
-            hasChild: !!this.child,
-            command: this.spec?.command?.slice(0, 50),
-          },
-          null,
-          2
-        )}`
+        `start ENTER | ${JSON.stringify({
+          mode,
+          options,
+          started: this.started,
+          hasPromise: !!this.promise,
+          hasChild: !!this.child,
+          command: this.spec?.command?.slice(0, 50),
+        })}`
     );
 
     if (Object.keys(options).length > 0 && !this.started) {
       trace(
         'ProcessRunner',
         () =>
-          `BRANCH: options => MERGE | ${JSON.stringify(
-            {
-              oldOptions: this.options,
-              newOptions: options,
-            },
-            null,
-            2
-          )}`
+          `BRANCH: options => MERGE | ${JSON.stringify({
+            oldOptions: this.options,
+            newOptions: options,
+          })}`
       );
 
       this.options = { ...this.options, ...options };
-
-      if (
-        this.options.signal &&
-        typeof this.options.signal.addEventListener === 'function'
-      ) {
-        trace(
-          'ProcessRunner',
-          () =>
-            `Setting up external abort signal listener | ${JSON.stringify(
-              {
-                hasSignal: !!this.options.signal,
-                signalAborted: this.options.signal.aborted,
-                hasInternalController: !!this._abortController,
-                internalAborted: this._abortController?.signal.aborted,
-              },
-              null,
-              2
-            )}`
-        );
-
-        this.options.signal.addEventListener('abort', () => {
-          trace(
-            'ProcessRunner',
-            () =>
-              `External abort signal triggered | ${JSON.stringify(
-                {
-                  externalSignalAborted: this.options.signal.aborted,
-                  hasInternalController: !!this._abortController,
-                  internalAborted: this._abortController?.signal.aborted,
-                  command: this.spec?.command?.slice(0, 50),
-                },
-                null,
-                2
-              )}`
-          );
-
-          this.kill('SIGTERM');
-          trace(
-            'ProcessRunner',
-            () => 'Process kill initiated due to external abort signal'
-          );
-
-          if (this._abortController && !this._abortController.signal.aborted) {
-            trace(
-              'ProcessRunner',
-              () => 'Aborting internal controller due to external signal'
-            );
-            this._abortController.abort();
-          }
-        });
-
-        if (this.options.signal.aborted) {
-          trace(
-            'ProcessRunner',
-            () =>
-              `External signal already aborted, killing process and aborting internal controller`
-          );
-
-          this.kill('SIGTERM');
-
-          if (this._abortController && !this._abortController.signal.aborted) {
-            this._abortController.abort();
-          }
-        }
-      }
+      setupExternalAbortSignal(this);
 
       if ('capture' in options) {
-        trace(
-          'ProcessRunner',
-          () =>
-            `BRANCH: capture => REINIT_CHUNKS | ${JSON.stringify(
-              {
-                capture: this.options.capture,
-              },
-              null,
-              2
-            )}`
-        );
-
-        this.outChunks = this.options.capture ? [] : null;
-        this.errChunks = this.options.capture ? [] : null;
-        this.inChunks =
-          this.options.capture && this.options.stdin === 'inherit'
-            ? []
-            : this.options.capture &&
-                (typeof this.options.stdin === 'string' ||
-                  Buffer.isBuffer(this.options.stdin))
-              ? [Buffer.from(this.options.stdin)]
-              : [];
+        reinitCaptureChunks(this);
       }
 
       trace(
         'ProcessRunner',
         () =>
-          `OPTIONS_MERGED | ${JSON.stringify(
-            {
-              finalOptions: this.options,
-            },
-            null,
-            2
-          )}`
+          `OPTIONS_MERGED | ${JSON.stringify({ finalOptions: this.options })}`
       );
     }
 
     if (mode === 'sync') {
-      trace(
-        'ProcessRunner',
-        () => `BRANCH: mode => sync | ${JSON.stringify({}, null, 2)}`
-      );
+      trace('ProcessRunner', () => `BRANCH: mode => sync`);
       return this._startSync();
-    } else {
-      trace(
-        'ProcessRunner',
-        () => `BRANCH: mode => async | ${JSON.stringify({}, null, 2)}`
-      );
-      return this._startAsync();
     }
+
+    trace('ProcessRunner', () => `BRANCH: mode => async`);
+    return this._startAsync();
   };
 
   ProcessRunner.prototype.sync = function () {
@@ -191,7 +1090,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
     return this.start(options);
   };
 
-  ProcessRunner.prototype._startAsync = async function () {
+  ProcessRunner.prototype._startAsync = function () {
     if (this.started) {
       return this.promise;
     }
@@ -207,14 +1106,10 @@ export function attachExecutionMethods(ProcessRunner, deps) {
     trace(
       'ProcessRunner',
       () =>
-        `_doStartAsync ENTER | ${JSON.stringify(
-          {
-            mode: this.spec.mode,
-            command: this.spec.command?.slice(0, 100),
-          },
-          null,
-          2
-        )}`
+        `_doStartAsync ENTER | ${JSON.stringify({
+          mode: this.spec.mode,
+          command: this.spec.command?.slice(0, 100),
+        })}`
     );
 
     this.started = true;
@@ -223,18 +1118,15 @@ export function attachExecutionMethods(ProcessRunner, deps) {
     try {
       const { cwd, env, stdin } = this.options;
 
+      // Handle pipeline mode
       if (this.spec.mode === 'pipeline') {
         trace(
           'ProcessRunner',
           () =>
-            `BRANCH: spec.mode => pipeline | ${JSON.stringify(
-              {
-                hasSource: !!this.spec.source,
-                hasDestination: !!this.spec.destination,
-              },
-              null,
-              2
-            )}`
+            `BRANCH: spec.mode => pipeline | ${JSON.stringify({
+              hasSource: !!this.spec.source,
+              hasDestination: !!this.spec.destination,
+            })}`
         );
         return await this._runProgrammaticPipeline(
           this.spec.source,
@@ -242,159 +1134,15 @@ export function attachExecutionMethods(ProcessRunner, deps) {
         );
       }
 
+      // Handle shell mode special cases
       if (this.spec.mode === 'shell') {
-        trace(
-          'ProcessRunner',
-          () => `BRANCH: spec.mode => shell | ${JSON.stringify({}, null, 2)}`
-        );
-
-        const hasShellOperators =
-          this.spec.command.includes('&&') ||
-          this.spec.command.includes('||') ||
-          this.spec.command.includes('(') ||
-          this.spec.command.includes(';') ||
-          (this.spec.command.includes('cd ') &&
-            this.spec.command.includes('&&'));
-
-        const isStreamingPattern =
-          this.spec.command.includes('sleep') &&
-          this.spec.command.includes(';') &&
-          (this.spec.command.includes('echo') ||
-            this.spec.command.includes('printf'));
-
-        const shouldUseShellOperators =
-          this.options.shellOperators &&
-          hasShellOperators &&
-          !isStreamingPattern &&
-          !this._isStreaming;
-
-        trace(
-          'ProcessRunner',
-          () =>
-            `Shell operator detection | ${JSON.stringify(
-              {
-                hasShellOperators,
-                shellOperatorsEnabled: this.options.shellOperators,
-                isStreamingPattern,
-                isStreaming: this._isStreaming,
-                shouldUseShellOperators,
-                command: this.spec.command.slice(0, 100),
-              },
-              null,
-              2
-            )}`
-        );
-
-        if (
-          !this.options._bypassVirtual &&
-          shouldUseShellOperators &&
-          !needsRealShell(this.spec.command)
-        ) {
-          const enhancedParsed = parseShellCommand(this.spec.command);
-          if (enhancedParsed && enhancedParsed.type !== 'simple') {
-            trace(
-              'ProcessRunner',
-              () =>
-                `Using enhanced parser for shell operators | ${JSON.stringify(
-                  {
-                    type: enhancedParsed.type,
-                    command: this.spec.command.slice(0, 50),
-                  },
-                  null,
-                  2
-                )}`
-            );
-
-            if (enhancedParsed.type === 'sequence') {
-              return await this._runSequence(enhancedParsed);
-            } else if (enhancedParsed.type === 'subshell') {
-              return await this._runSubshell(enhancedParsed);
-            } else if (enhancedParsed.type === 'pipeline') {
-              return await this._runPipeline(enhancedParsed.commands);
-            }
-          }
-        }
-
-        const parsed = this._parseCommand(this.spec.command);
-        trace(
-          'ProcessRunner',
-          () =>
-            `Parsed command | ${JSON.stringify(
-              {
-                type: parsed?.type,
-                cmd: parsed?.cmd,
-                argsCount: parsed?.args?.length,
-              },
-              null,
-              2
-            )}`
-        );
-
-        if (parsed) {
-          if (parsed.type === 'pipeline') {
-            trace(
-              'ProcessRunner',
-              () =>
-                `BRANCH: parsed.type => pipeline | ${JSON.stringify(
-                  {
-                    commandCount: parsed.commands?.length,
-                  },
-                  null,
-                  2
-                )}`
-            );
-            return await this._runPipeline(parsed.commands);
-          } else if (
-            parsed.type === 'simple' &&
-            isVirtualCommandsEnabled() &&
-            virtualCommands.has(parsed.cmd) &&
-            !this.options._bypassVirtual
-          ) {
-            const hasCustomStdin =
-              this.options.stdin &&
-              this.options.stdin !== 'inherit' &&
-              this.options.stdin !== 'ignore';
-
-            const commandsThatNeedRealStdin = ['sleep', 'cat'];
-            const shouldBypassVirtual =
-              hasCustomStdin && commandsThatNeedRealStdin.includes(parsed.cmd);
-
-            if (shouldBypassVirtual) {
-              trace(
-                'ProcessRunner',
-                () =>
-                  `Bypassing built-in virtual command due to custom stdin | ${JSON.stringify(
-                    {
-                      cmd: parsed.cmd,
-                      stdin: typeof this.options.stdin,
-                    },
-                    null,
-                    2
-                  )}`
-              );
-            } else {
-              trace(
-                'ProcessRunner',
-                () =>
-                  `BRANCH: virtualCommand => ${parsed.cmd} | ${JSON.stringify(
-                    {
-                      isVirtual: true,
-                      args: parsed.args,
-                    },
-                    null,
-                    2
-                  )}`
-              );
-              return await this._runVirtual(
-                parsed.cmd,
-                parsed.args,
-                this.spec.command
-              );
-            }
-          }
+        const shellResult = await handleShellMode(this, deps);
+        if (shellResult) {
+          return shellResult;
         }
       }
 
+      // Build command arguments
       const shell = findAvailableShell();
       const argv =
         this.spec.mode === 'shell'
@@ -404,567 +1152,67 @@ export function attachExecutionMethods(ProcessRunner, deps) {
       trace(
         'ProcessRunner',
         () =>
-          `Constructed argv | ${JSON.stringify(
-            {
-              mode: this.spec.mode,
-              argv,
-              originalCommand: this.spec.command,
-            },
-            null,
-            2
-          )}`
+          `Constructed argv | ${JSON.stringify({
+            mode: this.spec.mode,
+            argv,
+            originalCommand: this.spec.command,
+          })}`
       );
 
-      if (globalShellSettings.xtrace) {
-        const traceCmd =
-          this.spec.mode === 'shell' ? this.spec.command : argv.join(' ');
-        console.log(`+ ${traceCmd}`);
-      }
+      // Log command if tracing enabled
+      const traceCmd =
+        this.spec.mode === 'shell' ? this.spec.command : argv.join(' ');
+      logShellTrace(globalShellSettings, traceCmd);
 
-      if (globalShellSettings.verbose) {
-        const verboseCmd =
-          this.spec.mode === 'shell' ? this.spec.command : argv.join(' ');
-        console.log(verboseCmd);
-      }
-
-      const isInteractive =
-        stdin === 'inherit' &&
-        process.stdin.isTTY === true &&
-        process.stdout.isTTY === true &&
-        process.stderr.isTTY === true &&
-        this.options.interactive === true;
+      // Detect interactive mode
+      const isInteractive = isInteractiveMode(stdin, this.options);
 
       trace(
         'ProcessRunner',
         () =>
-          `Interactive command detection | ${JSON.stringify(
-            {
-              isInteractive,
-              stdinInherit: stdin === 'inherit',
-              stdinTTY: process.stdin.isTTY,
-              stdoutTTY: process.stdout.isTTY,
-              stderrTTY: process.stderr.isTTY,
-              interactiveOption: this.options.interactive,
-            },
-            null,
-            2
-          )}`
+          `Interactive command detection | ${JSON.stringify({
+            isInteractive,
+            stdinInherit: stdin === 'inherit',
+            stdinTTY: process.stdin.isTTY,
+            stdoutTTY: process.stdout.isTTY,
+            stderrTTY: process.stderr.isTTY,
+            interactiveOption: this.options.interactive,
+          })}`
       );
 
-      const spawnBun = (argv) => {
-        trace(
-          'ProcessRunner',
-          () =>
-            `spawnBun: Creating process | ${JSON.stringify(
-              {
-                command: argv[0],
-                args: argv.slice(1),
-                isInteractive,
-                cwd,
-                platform: process.platform,
-              },
-              null,
-              2
-            )}`
-        );
-
-        if (isInteractive) {
-          trace(
-            'ProcessRunner',
-            () => `spawnBun: Using interactive mode with inherited stdio`
-          );
-          const child = Bun.spawn(argv, {
-            cwd,
-            env,
-            stdin: 'inherit',
-            stdout: 'inherit',
-            stderr: 'inherit',
-          });
-          return child;
-        }
-
-        trace(
-          'ProcessRunner',
-          () =>
-            `spawnBun: Using non-interactive mode with pipes and detached=${process.platform !== 'win32'}`
-        );
-
-        const child = Bun.spawn(argv, {
-          cwd,
-          env,
-          stdin: 'pipe',
-          stdout: 'pipe',
-          stderr: 'pipe',
-          detached: process.platform !== 'win32',
-        });
-        return child;
-      };
-
-      const spawnNode = async (argv) => {
-        trace(
-          'ProcessRunner',
-          () =>
-            `spawnNode: Creating process | ${JSON.stringify({
-              command: argv[0],
-              args: argv.slice(1),
-              isInteractive,
-              cwd,
-              platform: process.platform,
-            })}`
-        );
-
-        if (isInteractive) {
-          return cp.spawn(argv[0], argv.slice(1), {
-            cwd,
-            env,
-            stdio: 'inherit',
-          });
-        }
-
-        const child = cp.spawn(argv[0], argv.slice(1), {
-          cwd,
-          env,
-          stdio: ['pipe', 'pipe', 'pipe'],
-          detached: process.platform !== 'win32',
-        });
-
-        trace(
-          'ProcessRunner',
-          () =>
-            `spawnNode: Process created | ${JSON.stringify({
-              pid: child.pid,
-              killed: child.killed,
-              hasStdout: !!child.stdout,
-              hasStderr: !!child.stderr,
-              hasStdin: !!child.stdin,
-            })}`
-        );
-
-        return child;
-      };
-
-      const needsExplicitPipe = stdin !== 'inherit' && stdin !== 'ignore';
-      const preferNodeForInput = isBun && needsExplicitPipe;
-
-      trace(
-        'ProcessRunner',
-        () =>
-          `About to spawn process | ${JSON.stringify(
-            {
-              needsExplicitPipe,
-              preferNodeForInput,
-              runtime: isBun ? 'Bun' : 'Node',
-              command: argv[0],
-              args: argv.slice(1),
-            },
-            null,
-            2
-          )}`
-      );
-
-      this.child = preferNodeForInput
-        ? await spawnNode(argv)
-        : isBun
-          ? spawnBun(argv)
-          : await spawnNode(argv);
-
-      if (this.child) {
-        trace(
-          'ProcessRunner',
-          () =>
-            `Child process created | ${JSON.stringify(
-              {
-                pid: this.child.pid,
-                detached: this.child.options?.detached,
-                killed: this.child.killed,
-                hasStdout: !!this.child.stdout,
-                hasStderr: !!this.child.stderr,
-                hasStdin: !!this.child.stdin,
-                platform: process.platform,
-                command: this.spec?.command?.slice(0, 100),
-              },
-              null,
-              2
-            )}`
-        );
-
-        if (this.child && typeof this.child.on === 'function') {
-          this.child.on('spawn', () => {
-            trace(
-              'ProcessRunner',
-              () =>
-                `Child process spawned successfully | ${JSON.stringify(
-                  {
-                    pid: this.child.pid,
-                    command: this.spec?.command?.slice(0, 50),
-                  },
-                  null,
-                  2
-                )}`
-            );
-          });
-
-          this.child.on('error', (error) => {
-            trace(
-              'ProcessRunner',
-              () =>
-                `Child process error event | ${JSON.stringify(
-                  {
-                    pid: this.child?.pid,
-                    error: error.message,
-                    code: error.code,
-                    errno: error.errno,
-                    syscall: error.syscall,
-                    command: this.spec?.command?.slice(0, 50),
-                  },
-                  null,
-                  2
-                )}`
-            );
-          });
-        }
-      }
-
-      const childPid = this.child?.pid;
-
-      const outPump = this.child.stdout
-        ? pumpReadable(this.child.stdout, async (buf) => {
-            trace(
-              'ProcessRunner',
-              () =>
-                `stdout data received | ${JSON.stringify({
-                  pid: childPid,
-                  bufferLength: buf.length,
-                  capture: this.options.capture,
-                  mirror: this.options.mirror,
-                  preview: buf.toString().slice(0, 100),
-                })}`
-            );
-
-            if (this.options.capture) {
-              this.outChunks.push(buf);
-            }
-            if (this.options.mirror) {
-              safeWrite(process.stdout, buf);
-            }
-
-            this._emitProcessedData('stdout', buf);
-          })
-        : Promise.resolve();
-
-      const errPump = this.child.stderr
-        ? pumpReadable(this.child.stderr, async (buf) => {
-            trace(
-              'ProcessRunner',
-              () =>
-                `stderr data received | ${JSON.stringify({
-                  pid: childPid,
-                  bufferLength: buf.length,
-                  capture: this.options.capture,
-                  mirror: this.options.mirror,
-                  preview: buf.toString().slice(0, 100),
-                })}`
-            );
-
-            if (this.options.capture) {
-              this.errChunks.push(buf);
-            }
-            if (this.options.mirror) {
-              safeWrite(process.stderr, buf);
-            }
-
-            this._emitProcessedData('stderr', buf);
-          })
-        : Promise.resolve();
-
-      let stdinPumpPromise = Promise.resolve();
-
-      trace(
-        'ProcessRunner',
-        () =>
-          `Setting up stdin handling | ${JSON.stringify(
-            {
-              stdinType: typeof stdin,
-              stdin:
-                stdin === 'inherit'
-                  ? 'inherit'
-                  : stdin === 'ignore'
-                    ? 'ignore'
-                    : typeof stdin === 'string'
-                      ? `string(${stdin.length})`
-                      : 'other',
-              isInteractive,
-              hasChildStdin: !!this.child?.stdin,
-              processTTY: process.stdin.isTTY,
-            },
-            null,
-            2
-          )}`
-      );
-
-      if (stdin === 'inherit') {
-        if (isInteractive) {
-          trace(
-            'ProcessRunner',
-            () => `stdin: Using inherit mode for interactive command`
-          );
-          stdinPumpPromise = Promise.resolve();
-        } else {
-          const isPipedIn = process.stdin && process.stdin.isTTY === false;
-          trace(
-            'ProcessRunner',
-            () =>
-              `stdin: Non-interactive inherit mode | ${JSON.stringify(
-                {
-                  isPipedIn,
-                  stdinTTY: process.stdin.isTTY,
-                },
-                null,
-                2
-              )}`
-          );
-          if (isPipedIn) {
-            trace(
-              'ProcessRunner',
-              () => `stdin: Pumping piped input to child process`
-            );
-            stdinPumpPromise = this._pumpStdinTo(
-              this.child,
-              this.options.capture ? this.inChunks : null
-            );
-          } else {
-            trace(
-              'ProcessRunner',
-              () => `stdin: Forwarding TTY stdin for non-interactive command`
-            );
-            stdinPumpPromise = this._forwardTTYStdin();
-          }
-        }
-      } else if (stdin === 'ignore') {
-        trace('ProcessRunner', () => `stdin: Ignoring and closing stdin`);
-        if (this.child.stdin && typeof this.child.stdin.end === 'function') {
-          this.child.stdin.end();
-        }
-      } else if (stdin === 'pipe') {
-        trace(
-          'ProcessRunner',
-          () => `stdin: Using pipe mode - leaving stdin open for manual control`
-        );
-        stdinPumpPromise = Promise.resolve();
-      } else if (typeof stdin === 'string' || Buffer.isBuffer(stdin)) {
-        const buf = Buffer.isBuffer(stdin) ? stdin : Buffer.from(stdin);
-        trace(
-          'ProcessRunner',
-          () =>
-            `stdin: Writing buffer to child | ${JSON.stringify(
-              {
-                bufferLength: buf.length,
-                willCapture: this.options.capture && !!this.inChunks,
-              },
-              null,
-              2
-            )}`
-        );
-        if (this.options.capture && this.inChunks) {
-          this.inChunks.push(Buffer.from(buf));
-        }
-        stdinPumpPromise = this._writeToStdin(buf);
-      }
-
-      const exited = isBun
-        ? this.child.exited
-        : new Promise((resolve) => {
-            trace(
-              'ProcessRunner',
-              () =>
-                `Setting up child process event listeners for PID ${this.child.pid}`
-            );
-            this.child.on('close', (code, signal) => {
-              trace(
-                'ProcessRunner',
-                () =>
-                  `Child process close event | ${JSON.stringify(
-                    {
-                      pid: this.child.pid,
-                      code,
-                      signal,
-                      killed: this.child.killed,
-                      exitCode: this.child.exitCode,
-                      signalCode: this.child.signalCode,
-                      command: this.command,
-                    },
-                    null,
-                    2
-                  )}`
-              );
-              resolve(code);
-            });
-            this.child.on('exit', (code, signal) => {
-              trace(
-                'ProcessRunner',
-                () =>
-                  `Child process exit event | ${JSON.stringify(
-                    {
-                      pid: this.child.pid,
-                      code,
-                      signal,
-                      killed: this.child.killed,
-                      exitCode: this.child.exitCode,
-                      signalCode: this.child.signalCode,
-                      command: this.command,
-                    },
-                    null,
-                    2
-                  )}`
-              );
-            });
-          });
-
-      const code = await exited;
-      await Promise.all([outPump, errPump, stdinPumpPromise]);
-
-      trace(
-        'ProcessRunner',
-        () =>
-          `Raw exit code from child | ${JSON.stringify(
-            {
-              code,
-              codeType: typeof code,
-              childExitCode: this.child?.exitCode,
-              isBun,
-            },
-            null,
-            2
-          )}`
-      );
-
-      let finalExitCode = code;
-
-      if (finalExitCode === undefined || finalExitCode === null) {
-        if (this._cancelled) {
-          finalExitCode = 143;
-          trace(
-            'ProcessRunner',
-            () => `Process was killed, using SIGTERM exit code 143`
-          );
-        } else {
-          finalExitCode = 0;
-          trace(
-            'ProcessRunner',
-            () => `Process exited without code, defaulting to 0`
-          );
-        }
-      }
-
-      const resultData = {
-        code: finalExitCode,
-        stdout: this.options.capture
-          ? this.outChunks && this.outChunks.length > 0
-            ? Buffer.concat(this.outChunks).toString('utf8')
-            : ''
-          : undefined,
-        stderr: this.options.capture
-          ? this.errChunks && this.errChunks.length > 0
-            ? Buffer.concat(this.errChunks).toString('utf8')
-            : ''
-          : undefined,
-        stdin:
-          this.options.capture && this.inChunks
-            ? Buffer.concat(this.inChunks).toString('utf8')
-            : undefined,
-        child: this.child,
-      };
-
-      trace(
-        'ProcessRunner',
-        () =>
-          `Process completed | ${JSON.stringify(
-            {
-              command: this.command,
-              finalExitCode,
-              captured: this.options.capture,
-              hasStdout: !!resultData.stdout,
-              hasStderr: !!resultData.stderr,
-              stdoutLength: resultData.stdout?.length || 0,
-              stderrLength: resultData.stderr?.length || 0,
-              stdoutPreview: resultData.stdout?.slice(0, 100),
-              stderrPreview: resultData.stderr?.slice(0, 100),
-              childPid: this.child?.pid,
-              cancelled: this._cancelled,
-              cancellationSignal: this._cancellationSignal,
-              platform: process.platform,
-              runtime: isBun ? 'Bun' : 'Node.js',
-            },
-            null,
-            2
-          )}`
-      );
-
-      const result = {
-        ...resultData,
-        async text() {
-          return resultData.stdout || '';
-        },
-      };
+      // Execute child process
+      const result = await executeChildProcess(this, argv, {
+        cwd,
+        env,
+        stdin,
+        isInteractive,
+      });
 
       this.finish(result);
 
       trace(
         'ProcessRunner',
         () =>
-          `Process finished, result set | ${JSON.stringify(
-            {
-              finished: this.finished,
-              resultCode: this.result?.code,
-            },
-            null,
-            2
-          )}`
+          `Process finished, result set | ${JSON.stringify({
+            finished: this.finished,
+            resultCode: this.result?.code,
+          })}`
       );
 
-      if (globalShellSettings.errexit && this.result.code !== 0) {
-        trace(
-          'ProcessRunner',
-          () =>
-            `Errexit mode: throwing error for non-zero exit code | ${JSON.stringify(
-              {
-                exitCode: this.result.code,
-                errexit: globalShellSettings.errexit,
-                hasStdout: !!this.result.stdout,
-                hasStderr: !!this.result.stderr,
-              },
-              null,
-              2
-            )}`
-        );
-
-        const error = new Error(
-          `Command failed with exit code ${this.result.code}`
-        );
-        error.code = this.result.code;
-        error.stdout = this.result.stdout;
-        error.stderr = this.result.stderr;
-        error.result = this.result;
-
-        throw error;
-      }
+      throwErrexitIfNeeded(this, globalShellSettings);
 
       return this.result;
     } catch (error) {
       trace(
         'ProcessRunner',
         () =>
-          `Caught error in _doStartAsync | ${JSON.stringify(
-            {
-              errorMessage: error.message,
-              errorCode: error.code,
-              isCommandError: error.isCommandError,
-              hasResult: !!error.result,
-              command: this.spec?.command?.slice(0, 100),
-            },
-            null,
-            2
-          )}`
+          `Caught error in _doStartAsync | ${JSON.stringify({
+            errorMessage: error.message,
+            errorCode: error.code,
+            isCommandError: error.isCommandError,
+            hasResult: !!error.result,
+            command: this.spec?.command?.slice(0, 100),
+          })}`
       );
 
       if (!this.finished) {
@@ -974,7 +1222,6 @@ export function attachExecutionMethods(ProcessRunner, deps) {
           stderr: error.stderr ?? error.message ?? '',
           stdin: '',
         });
-
         this.finish(errorResult);
       }
 
@@ -983,22 +1230,8 @@ export function attachExecutionMethods(ProcessRunner, deps) {
   };
 
   ProcessRunner.prototype._pumpStdinTo = async function (child, captureChunks) {
-    trace(
-      'ProcessRunner',
-      () =>
-        `_pumpStdinTo ENTER | ${JSON.stringify(
-          {
-            hasChildStdin: !!child?.stdin,
-            willCapture: !!captureChunks,
-            isBun,
-          },
-          null,
-          2
-        )}`
-    );
-
+    trace('ProcessRunner', () => `_pumpStdinTo ENTER`);
     if (!child.stdin) {
-      trace('ProcessRunner', () => 'No child stdin to pump to');
       return;
     }
 
@@ -1028,19 +1261,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
   };
 
   ProcessRunner.prototype._writeToStdin = async function (buf) {
-    trace(
-      'ProcessRunner',
-      () =>
-        `_writeToStdin ENTER | ${JSON.stringify(
-          {
-            bufferLength: buf?.length || 0,
-            hasChildStdin: !!this.child?.stdin,
-          },
-          null,
-          2
-        )}`
-    );
-
+    trace('ProcessRunner', () => `_writeToStdin | len=${buf?.length || 0}`);
     const bytes =
       buf instanceof Uint8Array
         ? buf
@@ -1061,25 +1282,9 @@ export function attachExecutionMethods(ProcessRunner, deps) {
     }
   };
 
-  ProcessRunner.prototype._forwardTTYStdin = async function () {
-    trace(
-      'ProcessRunner',
-      () =>
-        `_forwardTTYStdin ENTER | ${JSON.stringify(
-          {
-            isTTY: process.stdin.isTTY,
-            hasChildStdin: !!this.child?.stdin,
-          },
-          null,
-          2
-        )}`
-    );
-
+  ProcessRunner.prototype._forwardTTYStdin = function () {
+    trace('ProcessRunner', () => `_forwardTTYStdin ENTER`);
     if (!process.stdin.isTTY || !this.child.stdin) {
-      trace(
-        'ProcessRunner',
-        () => 'TTY forwarding skipped - no TTY or no child stdin'
-      );
       return;
     }
 
@@ -1091,28 +1296,15 @@ export function attachExecutionMethods(ProcessRunner, deps) {
 
       const onData = (chunk) => {
         if (chunk[0] === 3) {
-          trace(
-            'ProcessRunner',
-            () => 'CTRL+C detected, sending SIGINT to child process'
-          );
           this._sendSigintToChild();
           return;
         }
-
-        if (this.child.stdin) {
-          if (isBun && this.child.stdin.write) {
-            this.child.stdin.write(chunk);
-          } else if (this.child.stdin.write) {
-            this.child.stdin.write(chunk);
-          }
+        if (this.child.stdin?.write) {
+          this.child.stdin.write(chunk);
         }
       };
 
       const cleanup = () => {
-        trace(
-          'ProcessRunner',
-          () => 'TTY stdin cleanup - restoring terminal mode'
-        );
         process.stdin.removeListener('data', onData);
         if (process.stdin.setRawMode) {
           process.stdin.setRawMode(false);
@@ -1132,52 +1324,33 @@ export function attachExecutionMethods(ProcessRunner, deps) {
       childExit.then(cleanup).catch(cleanup);
 
       return childExit;
-    } catch (error) {
-      trace(
-        'ProcessRunner',
-        () =>
-          `TTY stdin forwarding error | ${JSON.stringify({ error: error.message }, null, 2)}`
-      );
+    } catch (_error) {
+      // TTY forwarding error - ignore
     }
   };
 
-  // Helper to send SIGINT to child process - reduces nesting depth
   ProcessRunner.prototype._sendSigintToChild = function () {
-    if (!this.child || !this.child.pid) {
+    if (!this.child?.pid) {
       return;
     }
     try {
       if (isBun) {
         this.child.kill('SIGINT');
-      } else if (this.child.pid > 0) {
+      } else {
         try {
           process.kill(-this.child.pid, 'SIGINT');
-        } catch (_groupErr) {
+        } catch (_e) {
           process.kill(this.child.pid, 'SIGINT');
         }
       }
-    } catch (err) {
-      trace('ProcessRunner', () => `Error sending SIGINT: ${err.message}`);
+    } catch (_err) {
+      // Error sending SIGINT - ignore
     }
   };
 
   ProcessRunner.prototype._parseCommand = function (command) {
-    trace(
-      'ProcessRunner',
-      () =>
-        `_parseCommand ENTER | ${JSON.stringify(
-          {
-            commandLength: command?.length || 0,
-            preview: command?.slice(0, 50),
-          },
-          null,
-          2
-        )}`
-    );
-
     const trimmed = command.trim();
     if (!trimmed) {
-      trace('ProcessRunner', () => 'Empty command after trimming');
       return null;
     }
 
@@ -1205,19 +1378,6 @@ export function attachExecutionMethods(ProcessRunner, deps) {
   };
 
   ProcessRunner.prototype._parsePipeline = function (command) {
-    trace(
-      'ProcessRunner',
-      () =>
-        `_parsePipeline ENTER | ${JSON.stringify(
-          {
-            commandLength: command?.length || 0,
-            hasPipe: command?.includes('|'),
-          },
-          null,
-          2
-        )}`
-    );
-
     const segments = [];
     let current = '';
     let inQuotes = false;
@@ -1273,25 +1433,9 @@ export function attachExecutionMethods(ProcessRunner, deps) {
 
   // Sync execution
   ProcessRunner.prototype._startSync = function () {
-    trace(
-      'ProcessRunner',
-      () =>
-        `_startSync ENTER | ${JSON.stringify(
-          {
-            started: this.started,
-            spec: this.spec,
-          },
-          null,
-          2
-        )}`
-    );
+    trace('ProcessRunner', () => `_startSync ENTER`);
 
     if (this.started) {
-      trace(
-        'ProcessRunner',
-        () =>
-          `BRANCH: _startSync => ALREADY_STARTED | ${JSON.stringify({}, null, 2)}`
-      );
       throw new Error(
         'Command already started - cannot run sync after async start'
       );
@@ -1307,128 +1451,16 @@ export function attachExecutionMethods(ProcessRunner, deps) {
         ? [shell.cmd, ...shell.args, this.spec.command]
         : [this.spec.file, ...this.spec.args];
 
-    if (globalShellSettings.xtrace) {
-      const traceCmd =
-        this.spec.mode === 'shell' ? this.spec.command : argv.join(' ');
-      console.log(`+ ${traceCmd}`);
-    }
+    const traceCmd =
+      this.spec.mode === 'shell' ? this.spec.command : argv.join(' ');
+    logShellTrace(globalShellSettings, traceCmd);
 
-    if (globalShellSettings.verbose) {
-      const verboseCmd =
-        this.spec.mode === 'shell' ? this.spec.command : argv.join(' ');
-      console.log(verboseCmd);
-    }
-
-    let result;
-
-    if (isBun) {
-      const proc = Bun.spawnSync(argv, {
-        cwd,
-        env,
-        stdin:
-          typeof stdin === 'string'
-            ? Buffer.from(stdin)
-            : Buffer.isBuffer(stdin)
-              ? stdin
-              : stdin === 'ignore'
-                ? undefined
-                : undefined,
-        stdout: 'pipe',
-        stderr: 'pipe',
-      });
-
-      result = createResult({
-        code: proc.exitCode || 0,
-        stdout: proc.stdout?.toString('utf8') || '',
-        stderr: proc.stderr?.toString('utf8') || '',
-        stdin:
-          typeof stdin === 'string'
-            ? stdin
-            : Buffer.isBuffer(stdin)
-              ? stdin.toString('utf8')
-              : '',
-      });
-      result.child = proc;
-    } else {
-      const proc = cp.spawnSync(argv[0], argv.slice(1), {
-        cwd,
-        env,
-        input:
-          typeof stdin === 'string'
-            ? stdin
-            : Buffer.isBuffer(stdin)
-              ? stdin
-              : undefined,
-        encoding: 'utf8',
-        stdio: ['pipe', 'pipe', 'pipe'],
-      });
-
-      result = createResult({
-        code: proc.status || 0,
-        stdout: proc.stdout || '',
-        stderr: proc.stderr || '',
-        stdin:
-          typeof stdin === 'string'
-            ? stdin
-            : Buffer.isBuffer(stdin)
-              ? stdin.toString('utf8')
-              : '',
-      });
-      result.child = proc;
-    }
-
-    if (this.options.mirror) {
-      if (result.stdout) {
-        safeWrite(process.stdout, result.stdout);
-      }
-      if (result.stderr) {
-        safeWrite(process.stderr, result.stderr);
-      }
-    }
-
-    this.outChunks = result.stdout ? [Buffer.from(result.stdout)] : [];
-    this.errChunks = result.stderr ? [Buffer.from(result.stderr)] : [];
-
-    if (result.stdout) {
-      const stdoutBuf = Buffer.from(result.stdout);
-      this._emitProcessedData('stdout', stdoutBuf);
-    }
-
-    if (result.stderr) {
-      const stderrBuf = Buffer.from(result.stderr);
-      this._emitProcessedData('stderr', stderrBuf);
-    }
-
-    this.finish(result);
-
-    if (globalShellSettings.errexit && result.code !== 0) {
-      const error = new Error(`Command failed with exit code ${result.code}`);
-      error.code = result.code;
-      error.stdout = result.stdout;
-      error.stderr = result.stderr;
-      error.result = result;
-      throw error;
-    }
-
-    return result;
+    const result = executeSyncProcess(argv, { cwd, env, stdin });
+    return processSyncResult(this, result, globalShellSettings);
   };
 
   // Promise interface
   ProcessRunner.prototype.then = function (onFulfilled, onRejected) {
-    trace(
-      'ProcessRunner',
-      () =>
-        `then() called | ${JSON.stringify(
-          {
-            hasPromise: !!this.promise,
-            started: this.started,
-            finished: this.finished,
-          },
-          null,
-          2
-        )}`
-    );
-
     if (!this.promise) {
       this.promise = this._startAsync();
     }
@@ -1436,20 +1468,6 @@ export function attachExecutionMethods(ProcessRunner, deps) {
   };
 
   ProcessRunner.prototype.catch = function (onRejected) {
-    trace(
-      'ProcessRunner',
-      () =>
-        `catch() called | ${JSON.stringify(
-          {
-            hasPromise: !!this.promise,
-            started: this.started,
-            finished: this.finished,
-          },
-          null,
-          2
-        )}`
-    );
-
     if (!this.promise) {
       this.promise = this._startAsync();
     }
@@ -1457,33 +1475,19 @@ export function attachExecutionMethods(ProcessRunner, deps) {
   };
 
   ProcessRunner.prototype.finally = function (onFinally) {
-    trace(
-      'ProcessRunner',
-      () =>
-        `finally() called | ${JSON.stringify(
-          {
-            hasPromise: !!this.promise,
-            started: this.started,
-            finished: this.finished,
-          },
-          null,
-          2
-        )}`
-    );
-
     if (!this.promise) {
       this.promise = this._startAsync();
     }
     return this.promise.finally(() => {
       if (!this.finished) {
-        trace('ProcessRunner', () => 'Finally handler ensuring cleanup');
-        const fallbackResult = createResult({
-          code: 1,
-          stdout: '',
-          stderr: 'Process terminated unexpectedly',
-          stdin: '',
-        });
-        this.finish(fallbackResult);
+        this.finish(
+          createResult({
+            code: 1,
+            stdout: '',
+            stderr: 'Process terminated unexpectedly',
+            stdin: '',
+          })
+        );
       }
       if (onFinally) {
         onFinally();
