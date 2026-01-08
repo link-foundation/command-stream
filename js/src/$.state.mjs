@@ -21,14 +21,17 @@ export const activeProcessRunners = new Set();
 let sigintHandlerInstalled = false;
 let sigintHandler = null; // Store reference to remove it later
 
-// Global shell settings
-let globalShellSettings = {
+// Global shell settings (use a proxy for modules that need direct property access)
+const globalShellSettings = {
   errexit: false, // set -e equivalent: exit on error
   verbose: false, // set -v equivalent: print commands
   xtrace: false, // set -x equivalent: trace execution
   pipefail: false, // set -o pipefail equivalent: pipe failure detection
   nounset: false, // set -u equivalent: error on undefined variables
 };
+
+// Export the globalShellSettings object
+export { globalShellSettings };
 
 // Virtual commands registry
 export const virtualCommands = new Map();
@@ -47,22 +50,20 @@ export function getShellSettings() {
  * @param {object} settings - Settings to apply
  */
 export function setShellSettings(settings) {
-  globalShellSettings = { ...globalShellSettings, ...settings };
+  Object.assign(globalShellSettings, settings);
 }
 
 /**
  * Reset shell settings to defaults
  */
 export function resetShellSettings() {
-  globalShellSettings = {
-    errexit: false,
-    verbose: false,
-    xtrace: false,
-    pipefail: false,
-    nounset: false,
-    noglob: false,
-    allexport: false,
-  };
+  globalShellSettings.errexit = false;
+  globalShellSettings.verbose = false;
+  globalShellSettings.xtrace = false;
+  globalShellSettings.pipefail = false;
+  globalShellSettings.nounset = false;
+  globalShellSettings.noglob = false;
+  globalShellSettings.allexport = false;
 }
 
 /**
@@ -434,7 +435,7 @@ export function resetGlobalState() {
     let currentDir;
     try {
       currentDir = process.cwd();
-    } catch (e) {
+    } catch (_cwdError) {
       // Can't even get cwd, we're in a deleted directory
       currentDir = null;
     }
@@ -451,7 +452,12 @@ export function resetGlobalState() {
         );
       } else {
         // Initial directory is gone, use fallback
-        const fallback = process.env.HOME || '/workspace/command-stream' || '/';
+        // Try HOME first, then known workspace path, then root as last resort
+        const fallback =
+          process.env.HOME ||
+          (fs.existsSync('/workspace/command-stream')
+            ? '/workspace/command-stream'
+            : '/');
         if (fs.existsSync(fallback)) {
           process.chdir(fallback);
           trace(
