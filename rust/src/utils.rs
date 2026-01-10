@@ -1,55 +1,25 @@
 //! Utility functions and types for command-stream
 //!
-//! This module provides helper functions for tracing, error handling,
-//! and common file system operations used by virtual commands.
+//! This module provides helper functions for command results, virtual command
+//! utilities, and re-exports from specialized utility modules.
+//!
+//! ## Module Organization
+//!
+//! The utilities are organized into focused modules following the same
+//! modular pattern as the JavaScript implementation:
+//!
+//! - `trace` - Logging and tracing utilities
+//! - `ansi` - ANSI escape code handling
+//! - `quote` - Shell quoting utilities
+//! - `utils` (this module) - Command results and virtual command helpers
 
 use std::env;
 use std::path::{Path, PathBuf};
 
-/// Check if tracing is enabled via environment variables
-///
-/// Tracing can be controlled via:
-/// - COMMAND_STREAM_TRACE=true/false (explicit control)
-/// - COMMAND_STREAM_VERBOSE=true (enables tracing unless TRACE=false)
-pub fn is_trace_enabled() -> bool {
-    let trace_env = env::var("COMMAND_STREAM_TRACE").ok();
-    let verbose_env = env::var("COMMAND_STREAM_VERBOSE")
-        .map(|v| v == "true")
-        .unwrap_or(false);
-
-    match trace_env.as_deref() {
-        Some("false") => false,
-        Some("true") => true,
-        _ => verbose_env,
-    }
-}
-
-/// Trace function for verbose logging
-///
-/// Outputs trace messages to stderr when tracing is enabled.
-/// Messages are prefixed with timestamp and category.
-pub fn trace(category: &str, message: &str) {
-    if !is_trace_enabled() {
-        return;
-    }
-
-    let timestamp = chrono::Utc::now().to_rfc3339();
-    eprintln!("[TRACE {}] [{}] {}", timestamp, category, message);
-}
-
-/// Trace function with lazy message evaluation
-///
-/// Only evaluates the message function if tracing is enabled.
-pub fn trace_lazy<F>(category: &str, message_fn: F)
-where
-    F: FnOnce() -> String,
-{
-    if !is_trace_enabled() {
-        return;
-    }
-
-    trace(category, &message_fn());
-}
+// Re-export from specialized modules for backwards compatibility
+pub use crate::trace::{is_trace_enabled, trace, trace_lazy};
+pub use crate::ansi::{AnsiConfig, AnsiUtils};
+pub use crate::quote::quote;
 
 /// Result type for virtual command operations
 #[derive(Debug, Clone)]
@@ -167,101 +137,6 @@ impl VirtualUtils {
     }
 }
 
-/// ANSI control character utilities
-pub struct AnsiUtils;
-
-impl AnsiUtils {
-    /// Strip ANSI escape sequences from text
-    pub fn strip_ansi(text: &str) -> String {
-        let re = regex::Regex::new(r"\x1b\[[0-9;]*[mGKHFJ]").unwrap();
-        re.replace_all(text, "").to_string()
-    }
-
-    /// Strip control characters from text, preserving newlines, carriage returns, and tabs
-    pub fn strip_control_chars(text: &str) -> String {
-        text.chars()
-            .filter(|c| {
-                // Preserve newlines (\n = \x0A), carriage returns (\r = \x0D), and tabs (\t = \x09)
-                !matches!(*c as u32,
-                    0x00..=0x08 | 0x0B | 0x0C | 0x0E..=0x1F | 0x7F
-                )
-            })
-            .collect()
-    }
-
-    /// Strip both ANSI sequences and control characters
-    pub fn strip_all(text: &str) -> String {
-        Self::strip_control_chars(&Self::strip_ansi(text))
-    }
-
-    /// Clean data for processing (strips ANSI and control chars)
-    pub fn clean_for_processing(data: &str) -> String {
-        Self::strip_all(data)
-    }
-}
-
-/// Configuration for ANSI handling
-#[derive(Debug, Clone)]
-pub struct AnsiConfig {
-    pub preserve_ansi: bool,
-    pub preserve_control_chars: bool,
-}
-
-impl Default for AnsiConfig {
-    fn default() -> Self {
-        AnsiConfig {
-            preserve_ansi: true,
-            preserve_control_chars: true,
-        }
-    }
-}
-
-impl AnsiConfig {
-    /// Process output according to config settings
-    pub fn process_output(&self, data: &str) -> String {
-        if !self.preserve_ansi && !self.preserve_control_chars {
-            AnsiUtils::clean_for_processing(data)
-        } else if !self.preserve_ansi {
-            AnsiUtils::strip_ansi(data)
-        } else if !self.preserve_control_chars {
-            AnsiUtils::strip_control_chars(data)
-        } else {
-            data.to_string()
-        }
-    }
-}
-
-/// Quote a value for safe shell usage
-pub fn quote(value: &str) -> String {
-    if value.is_empty() {
-        return "''".to_string();
-    }
-
-    // If already properly quoted, check if we can use as-is
-    if value.starts_with('\'') && value.ends_with('\'') && value.len() >= 2 {
-        let inner = &value[1..value.len() - 1];
-        if !inner.contains('\'') {
-            return value.to_string();
-        }
-    }
-
-    if value.starts_with('"') && value.ends_with('"') && value.len() > 2 {
-        // If already double-quoted, wrap in single quotes
-        return format!("'{}'", value);
-    }
-
-    // Check if the string needs quoting at all
-    // Safe characters: alphanumeric, dash, underscore, dot, slash, colon, equals, comma, plus
-    let safe_pattern = regex::Regex::new(r"^[a-zA-Z0-9_\-./=,+@:]+$").unwrap();
-
-    if safe_pattern.is_match(value) {
-        return value.to_string();
-    }
-
-    // Default behavior: wrap in single quotes and escape any internal single quotes
-    format!("'{}'", value.replace('\'', "'\\''"))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -285,6 +160,13 @@ mod tests {
     }
 
     #[test]
+    fn test_command_result_error_with_code() {
+        let result = CommandResult::error_with_code("permission denied", 126);
+        assert!(!result.is_success());
+        assert_eq!(result.code, 126);
+    }
+
+    #[test]
     fn test_resolve_path_absolute() {
         let path = VirtualUtils::resolve_path("/absolute/path", None);
         assert_eq!(path, PathBuf::from("/absolute/path"));
@@ -298,38 +180,51 @@ mod tests {
     }
 
     #[test]
-    fn test_strip_ansi() {
+    fn test_validate_args_success() {
+        let args = vec!["arg1".to_string()];
+        assert!(VirtualUtils::validate_args(&args, 1, "cmd").is_none());
+    }
+
+    #[test]
+    fn test_validate_args_missing() {
+        let args = vec!["arg1".to_string()];
+        let result = VirtualUtils::validate_args(&args, 2, "cmd");
+        assert!(result.is_some());
+    }
+
+    #[test]
+    fn test_missing_operand_error() {
+        let result = VirtualUtils::missing_operand_error("cat");
+        assert!(!result.is_success());
+        assert!(result.stderr.contains("missing operand"));
+    }
+
+    #[test]
+    fn test_invalid_argument_error() {
+        let result = VirtualUtils::invalid_argument_error("ls", "invalid option");
+        assert!(!result.is_success());
+        assert!(result.stderr.contains("invalid option"));
+    }
+
+    // Re-exported module tests are in their respective modules
+    // These tests verify the re-exports work correctly
+
+    #[test]
+    fn test_reexported_quote() {
+        assert_eq!(quote("hello"), "hello");
+        assert_eq!(quote("hello world"), "'hello world'");
+    }
+
+    #[test]
+    fn test_reexported_ansi_utils() {
         let text = "\x1b[31mRed text\x1b[0m";
         assert_eq!(AnsiUtils::strip_ansi(text), "Red text");
     }
 
     #[test]
-    fn test_strip_control_chars() {
-        let text = "Hello\x00World\nNew line\tTab";
-        assert_eq!(AnsiUtils::strip_control_chars(text), "HelloWorld\nNew line\tTab");
-    }
-
-    #[test]
-    fn test_quote_empty() {
-        assert_eq!(quote(""), "''");
-    }
-
-    #[test]
-    fn test_quote_safe_chars() {
-        assert_eq!(quote("hello"), "hello");
-        assert_eq!(quote("/path/to/file"), "/path/to/file");
-    }
-
-    #[test]
-    fn test_quote_special_chars() {
-        assert_eq!(quote("hello world"), "'hello world'");
-        assert_eq!(quote("it's"), "'it'\\''s'");
-    }
-
-    #[test]
-    fn test_validate_args() {
-        let args = vec!["arg1".to_string()];
-        assert!(VirtualUtils::validate_args(&args, 1, "cmd").is_none());
-        assert!(VirtualUtils::validate_args(&args, 2, "cmd").is_some());
+    fn test_reexported_ansi_config() {
+        let config = AnsiConfig::default();
+        assert!(config.preserve_ansi);
+        assert!(config.preserve_control_chars);
     }
 }

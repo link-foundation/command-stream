@@ -9,40 +9,93 @@
 //!
 //! - Async command execution with tokio
 //! - Streaming output via async iterators
+//! - Event-based output handling (on, once, emit)
 //! - Virtual commands for common operations (cat, ls, mkdir, etc.)
 //! - Shell operator support (&&, ||, ;, |)
+//! - Pipeline support with `.pipe()` method and `Pipeline` builder
+//! - Global state management for shell settings
+//! - `cmd!` macro for ergonomic command creation (similar to JS `$` tagged template literals)
 //! - Cross-platform support
+//!
+//! ## Module Organization
+//!
+//! The codebase follows a modular architecture similar to the JavaScript implementation:
+//!
+//! - `ansi` - ANSI escape code handling utilities
+//! - `commands` - Virtual command implementations
+//! - `events` - Event emitter for stream events
+//! - `macros` - The `cmd!` macro for ergonomic command creation
+//! - `pipeline` - Pipeline execution support
+//! - `quote` - Shell quoting utilities
+//! - `shell_parser` - Shell command parsing
+//! - `state` - Global state management
+//! - `stream` - Async streaming and iteration support
+//! - `trace` - Logging and tracing utilities
+//! - `utils` - Command results and virtual command helpers
 //!
 //! ## Quick Start
 //!
 //! ```rust,no_run
-//! use command_stream::run;
+//! use command_stream::{run, cmd};
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     // Execute a simple command
 //!     let result = run("echo hello world").await?;
 //!     println!("{}", result.stdout);
+//!
+//!     // Using the cmd! macro (similar to JS $ tagged template)
+//!     let name = "world";
+//!     let result = cmd!("echo hello {}", name).await?;
+//!     println!("{}", result.stdout);
+//!
+//!     // Using pipelines
+//!     use command_stream::Pipeline;
+//!     let result = Pipeline::new()
+//!         .add("echo hello world")
+//!         .add("grep world")
+//!         .run()
+//!         .await?;
+//!
 //!     Ok(())
 //! }
 //! ```
 
+// Modular utility modules (following JavaScript modular pattern)
+pub mod ansi;
+pub mod events;
+#[doc(hidden)]
+pub mod macros;
+pub mod pipeline;
+pub mod quote;
+pub mod state;
+pub mod stream;
+pub mod trace;
+
+// Core modules
 pub mod commands;
 pub mod shell_parser;
 pub mod utils;
 
 use std::collections::HashMap;
-use std::env;
 use std::path::PathBuf;
 use std::process::Stdio;
-use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, Command};
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::mpsc;
 
 pub use commands::{CommandContext, StreamChunk};
 pub use shell_parser::{parse_shell_command, needs_real_shell, ParsedCommand};
-pub use utils::{AnsiConfig, AnsiUtils, CommandResult, VirtualUtils, quote, trace};
+pub use utils::{CommandResult, VirtualUtils};
+
+// Re-export modular utilities at crate root for convenient access
+pub use ansi::{AnsiConfig, AnsiUtils};
+pub use events::{EventData, EventType, StreamEmitter};
+pub use pipeline::{Pipeline, PipelineExt, PipelineBuilder};
+pub use quote::quote;
+pub use state::{global_state, reset_global_state, get_shell_settings, set_shell_option, unset_shell_option, GlobalState, ShellSettings};
+pub use stream::{StreamingRunner, OutputStream, OutputChunk, AsyncIterator, IntoStream};
+pub use trace::trace;
 
 /// Error type for command-stream operations
 #[derive(Debug, thiserror::Error)]
@@ -65,21 +118,6 @@ pub enum Error {
 
 /// Result type for command-stream operations
 pub type Result<T> = std::result::Result<T, Error>;
-
-/// Shell settings for controlling execution behavior
-#[derive(Debug, Clone, Default)]
-pub struct ShellSettings {
-    /// Exit immediately if a command exits with non-zero status (set -e)
-    pub errexit: bool,
-    /// Print commands as they are executed (set -v)
-    pub verbose: bool,
-    /// Print trace of commands (set -x)
-    pub xtrace: bool,
-    /// Return value of a pipeline is the status of the last command to exit with non-zero (set -o pipefail)
-    pub pipefail: bool,
-    /// Treat unset variables as an error (set -u)
-    pub nounset: bool,
-}
 
 /// Options for command execution
 #[derive(Debug, Clone)]
@@ -179,8 +217,8 @@ impl ProcessRunner {
             return Ok(());
         }
 
-        // Parse command for shell operators
-        let parsed = if self.options.shell_operators && !needs_real_shell(&self.command) {
+        // Parse command for shell operators (for future use with virtual command pipelines)
+        let _parsed = if self.options.shell_operators && !needs_real_shell(&self.command) {
             parse_shell_command(&self.command)
         } else {
             None
@@ -364,6 +402,16 @@ impl ProcessRunner {
     pub fn result(&self) -> Option<&CommandResult> {
         self.result.as_ref()
     }
+
+    /// Get the command string
+    pub fn command(&self) -> &str {
+        &self.command
+    }
+
+    /// Get the options
+    pub fn options(&self) -> &RunOptions {
+        &self.options
+    }
 }
 
 /// Shell configuration
@@ -452,41 +500,4 @@ pub fn run_sync(command: impl Into<String>) -> Result<CommandResult> {
     rt.block_on(run(command))
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_simple_echo() {
-        let result = run("echo hello").await.unwrap();
-        assert!(result.is_success());
-        assert!(result.stdout.contains("hello"));
-    }
-
-    #[tokio::test]
-    async fn test_virtual_echo() {
-        let mut runner = ProcessRunner::new("echo test virtual", RunOptions::default());
-        let result = runner.run().await.unwrap();
-        assert!(result.is_success());
-        assert!(result.stdout.contains("test virtual"));
-    }
-
-    #[tokio::test]
-    async fn test_process_runner() {
-        let mut runner = ProcessRunner::new("echo hello world", RunOptions {
-            mirror: false,
-            ..Default::default()
-        });
-
-        let result = runner.run().await.unwrap();
-        assert!(result.is_success());
-    }
-
-    #[tokio::test]
-    async fn test_virtual_pwd() {
-        let mut runner = ProcessRunner::new("pwd", RunOptions::default());
-        let result = runner.run().await.unwrap();
-        assert!(result.is_success());
-        assert!(!result.stdout.is_empty());
-    }
-}
+// Tests are located in tests/ directory for better organization
