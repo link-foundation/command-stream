@@ -1,6 +1,6 @@
-//! Tests for the cmd! macro
+//! Tests for the cmd! macro and its aliases (s!, sh!, cs!)
 
-use command_stream::{cmd, RunOptions, ProcessRunner};
+use command_stream::{cmd, sh, s, cs};
 
 #[tokio::test]
 async fn test_cmd_macro_simple() {
@@ -40,10 +40,32 @@ async fn test_cmd_macro_with_special_chars() {
 
 #[tokio::test]
 async fn test_sh_macro_alias() {
-    use command_stream::sh;
     let result = sh!("echo hello from sh").await.unwrap();
     assert!(result.is_success());
     assert!(result.stdout.contains("hello from sh"));
+}
+
+#[tokio::test]
+async fn test_s_macro_alias() {
+    let result = s!("echo hello from s").await.unwrap();
+    assert!(result.is_success());
+    assert!(result.stdout.contains("hello from s"));
+}
+
+#[tokio::test]
+async fn test_cs_macro_alias() {
+    let result = cs!("echo hello from cs").await.unwrap();
+    assert!(result.is_success());
+    assert!(result.stdout.contains("hello from cs"));
+}
+
+#[tokio::test]
+async fn test_s_macro_with_interpolation() {
+    let name = "world";
+    let result = s!("echo hello {}", name).await.unwrap();
+    assert!(result.is_success());
+    assert!(result.stdout.contains("hello"));
+    assert!(result.stdout.contains("world"));
 }
 
 #[tokio::test]

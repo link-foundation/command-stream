@@ -1,26 +1,35 @@
 //! Macros for ergonomic command execution
 //!
-//! This module provides the `cmd!` macro which offers a similar experience
+//! This module provides command execution macros that offer a similar experience
 //! to JavaScript's `$` tagged template literal for shell command execution.
+//!
+//! ## Available Macros
+//!
+//! - `s!` - Short, concise macro (recommended for most use cases)
+//! - `sh!` - Shell macro (alternative short form)
+//! - `cmd!` - Command macro (explicit name)
+//! - `cs!` - Command-stream macro (another alternative)
+//!
+//! All macros are aliases and provide identical functionality.
 //!
 //! ## Usage
 //!
 //! ```rust,no_run
-//! use command_stream::cmd;
+//! use command_stream::s;
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     // Simple command
-//!     let result = cmd!("echo hello world").await?;
+//!     let result = s!("echo hello world").await?;
 //!
 //!     // With interpolation (values are automatically quoted for safety)
 //!     let name = "John Doe";
-//!     let result = cmd!("echo Hello, {}", name).await?;
+//!     let result = s!("echo Hello, {}", name).await?;
 //!
 //!     // Multiple arguments
 //!     let file = "test.txt";
 //!     let dir = "/tmp";
-//!     let result = cmd!("cp {} {}", file, dir).await?;
+//!     let result = s!("cp {} {}", file, dir).await?;
 //!
 //!     Ok(())
 //! }
@@ -62,27 +71,29 @@ pub fn create_runner_with_options(command: String, options: crate::RunOptions) -
 /// This macro provides a similar experience to JavaScript's `$` tagged template literal.
 /// Values interpolated into the command are automatically quoted for shell safety.
 ///
+/// Note: Consider using the shorter `s!` or `sh!` aliases for more concise code.
+///
 /// # Examples
 ///
 /// ```rust,no_run
-/// use command_stream::cmd;
+/// use command_stream::s;
 ///
 /// # async fn example() -> Result<(), command_stream::Error> {
 /// // Simple command (returns a future that can be awaited)
-/// let result = cmd!("echo hello").await?;
+/// let result = s!("echo hello").await?;
 ///
 /// // With string interpolation
 /// let name = "world";
-/// let result = cmd!("echo hello {}", name).await?;
+/// let result = s!("echo hello {}", name).await?;
 ///
 /// // With multiple values
 /// let src = "source.txt";
 /// let dst = "dest.txt";
-/// let result = cmd!("cp {} {}", src, dst).await?;
+/// let result = s!("cp {} {}", src, dst).await?;
 ///
 /// // Values with special characters are automatically quoted
 /// let filename = "file with spaces.txt";
-/// let result = cmd!("cat {}", filename).await?; // Safely handles spaces
+/// let result = s!("cat {}", filename).await?; // Safely handles spaces
 /// # Ok(())
 /// # }
 /// ```
@@ -126,6 +137,28 @@ macro_rules! cmd {
 /// more intuitive for shell command execution.
 #[macro_export]
 macro_rules! sh {
+    ($($args:tt)*) => {
+        $crate::cmd!($($args)*)
+    };
+}
+
+/// The `s!` macro - short alias for `cmd!`
+///
+/// This is a concise alternative to `cmd!` for quick shell command execution.
+/// Recommended for use in documentation and examples.
+#[macro_export]
+macro_rules! s {
+    ($($args:tt)*) => {
+        $crate::cmd!($($args)*)
+    };
+}
+
+/// The `cs!` macro - alias for `cmd!`
+///
+/// Short for "command-stream", this provides another alternative
+/// for shell command execution.
+#[macro_export]
+macro_rules! cs {
     ($($args:tt)*) => {
         $crate::cmd!($($args)*)
     };
