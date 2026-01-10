@@ -13,6 +13,17 @@
 //! - Shell operator support (&&, ||, ;, |)
 //! - Cross-platform support
 //!
+//! ## Module Organization
+//!
+//! The codebase follows a modular architecture similar to the JavaScript implementation:
+//!
+//! - `ansi` - ANSI escape code handling utilities
+//! - `commands` - Virtual command implementations
+//! - `quote` - Shell quoting utilities
+//! - `shell_parser` - Shell command parsing
+//! - `trace` - Logging and tracing utilities
+//! - `utils` - Command results and virtual command helpers
+//!
 //! ## Quick Start
 //!
 //! ```rust,no_run
@@ -27,6 +38,12 @@
 //! }
 //! ```
 
+// Modular utility modules (following JavaScript modular pattern)
+pub mod ansi;
+pub mod quote;
+pub mod trace;
+
+// Core modules
 pub mod commands;
 pub mod shell_parser;
 pub mod utils;
@@ -42,7 +59,12 @@ use tokio::sync::{mpsc, Mutex};
 
 pub use commands::{CommandContext, StreamChunk};
 pub use shell_parser::{parse_shell_command, needs_real_shell, ParsedCommand};
-pub use utils::{AnsiConfig, AnsiUtils, CommandResult, VirtualUtils, quote, trace};
+pub use utils::{CommandResult, VirtualUtils};
+
+// Re-export modular utilities at crate root for convenient access
+pub use ansi::{AnsiConfig, AnsiUtils};
+pub use quote::quote;
+pub use trace::trace;
 
 /// Error type for command-stream operations
 #[derive(Debug, thiserror::Error)]
