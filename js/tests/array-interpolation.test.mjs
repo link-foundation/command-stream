@@ -7,8 +7,8 @@
  * before passing, the entire string becomes a single argument.
  *
  * @see https://github.com/link-foundation/command-stream/issues/153
- * @see docs/case-studies/issue-153/README.md
- * @see BEST-PRACTICES.md
+ * @see js/docs/case-studies/issue-153/README.md
+ * @see js/BEST-PRACTICES.md
  */
 
 import { $, quote } from '../src/$.mjs';

@@ -1395,7 +1395,7 @@ if (verbose) allArgs.push('--verbose');
 await $`command ${allArgs}`;
 ```
 
-See [BEST-PRACTICES.md](BEST-PRACTICES.md) for more detailed guidance.
+See [js/BEST-PRACTICES.md](js/BEST-PRACTICES.md) for more detailed guidance.
 
 ## Testing
 

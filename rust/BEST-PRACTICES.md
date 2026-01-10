@@ -377,6 +377,6 @@ async fn good_example() {
 
 ## See Also
 
-- [../BEST-PRACTICES.md](../BEST-PRACTICES.md) - JavaScript best practices
+- [../js/BEST-PRACTICES.md](../js/BEST-PRACTICES.md) - JavaScript best practices
 - [src/quote.rs](src/quote.rs) - Quote function implementation
 - [src/macros.rs](src/macros.rs) - Macro implementations

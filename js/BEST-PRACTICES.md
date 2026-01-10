@@ -266,7 +266,7 @@ await $`cmd ${args.join(' ')}`; // 1 argument: "file.txt --flag"
 await $`cmd ${args}`; // 2 arguments: "file.txt", "--flag"
 ```
 
-See [Case Study: Issue #153](docs/case-studies/issue-153/README.md) for detailed analysis.
+See [Case Study: Issue #153](./docs/case-studies/issue-153/README.md) for detailed analysis.
 
 ### 2. Template String Concatenation
 
@@ -371,6 +371,6 @@ if (result.code === 0) {
 
 ## See Also
 
-- [README.md](README.md) - Main documentation
-- [docs/case-studies/issue-153/README.md](docs/case-studies/issue-153/README.md) - Array.join() pitfall case study
-- [js/src/$.quote.mjs](js/src/$.quote.mjs) - Quote function implementation
+- [README.md](../README.md) - Main documentation
+- [docs/case-studies/issue-153/README.md](./docs/case-studies/issue-153/README.md) - Array.join() pitfall case study
+- [src/$.quote.mjs](./src/$.quote.mjs) - Quote function implementation
