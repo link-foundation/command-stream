@@ -1334,6 +1334,69 @@ const quickResult = $`pwd`.sync();
 $`npm install`.on('stdout', showProgress).start();
 ```
 
+## Common Pitfalls
+
+### Array Argument Handling
+
+When passing multiple arguments, pass the array directly - **never use `.join(' ')`** before interpolation:
+
+```javascript
+import { $ } from 'command-stream';
+
+// WRONG - entire string becomes ONE argument
+const args = ['file.txt', '--public', '--verbose'];
+await $`command ${args.join(' ')}`;
+// Shell receives: command 'file.txt --public --verbose' (1 argument!)
+// Error: File does not exist: "file.txt --public --verbose"
+
+// CORRECT - each element becomes separate argument
+await $`command ${args}`;
+// Shell receives: command file.txt --public --verbose (3 arguments)
+```
+
+This is a common mistake that causes errors like:
+
+```
+Error: File does not exist: "/path/to/file.txt --flag --option"
+```
+
+### Why This Happens
+
+The `$` template tag handles arrays specially - each element is quoted separately:
+
+```javascript
+if (Array.isArray(value)) {
+  return value.map(quote).join(' '); // Each element quoted individually
+}
+```
+
+But when you call `.join(' ')` first:
+
+1. The array becomes a string: `"file.txt --public --verbose"`
+2. Template receives a **string**, not an array
+3. The entire string gets quoted as one argument
+4. Command receives one argument containing spaces
+
+### Recommended Patterns
+
+```javascript
+// Pattern 1: Direct array passing
+const args = ['file.txt', '--verbose'];
+await $`command ${args}`;
+
+// Pattern 2: Separate interpolations
+const file = 'file.txt';
+const flags = ['--verbose', '--force'];
+await $`command ${file} ${flags}`;
+
+// Pattern 3: Build array dynamically
+const allArgs = ['input.txt'];
+if (verbose) allArgs.push('--verbose');
+await $`command ${allArgs}`;
+```
+
+See [js/BEST-PRACTICES.md](js/BEST-PRACTICES.md) for more detailed guidance.
+
 ## Testing
 
 ```bash
