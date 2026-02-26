@@ -76,8 +76,12 @@ try {
   console.log('No changes — exit code was 0');
 } catch (err) {
   if (err.code === 1) {
-    console.log('✅ Changes detected (exit code 1) — catch block correctly reached');
-    console.log('   This is the CORRECT way to use try/catch with command-stream');
+    console.log(
+      '✅ Changes detected (exit code 1) — catch block correctly reached'
+    );
+    console.log(
+      '   This is the CORRECT way to use try/catch with command-stream'
+    );
   }
 }
 
@@ -91,10 +95,13 @@ shell.errexit(true); // Start strict
 // Temporarily relax for a detection command
 shell.errexit(false);
 const diff = await $`false`; // Simulates: git diff --cached --quiet
-shell.errexit(true);          // Back to strict
+shell.errexit(true); // Back to strict
 
 if (diff.code !== 0) {
-  console.log('✅ Changes detected via explicit code check (code:', diff.code + ')');
+  console.log(
+    '✅ Changes detected via explicit code check (code:',
+    `${diff.code})`
+  );
   console.log('   Proceeding with commit...');
   // await $`git commit -m "Release"`;  // Would proceed here
 } else {

@@ -101,8 +101,8 @@ import { $ } from 'command-stream';
 
 // Default (errexit: false) — like bash without set -e
 const result = await $`false`;
-console.log('Continued after failure');  // ALWAYS prints
-console.log('Exit code:', result.code);  // Prints "1"
+console.log('Continued after failure'); // ALWAYS prints
+console.log('Exit code:', result.code); // Prints "1"
 // Does NOT throw — result.code carries the failure
 
 // With errexit enabled — like bash with set -e
@@ -111,19 +111,19 @@ shell.errexit(true);
 try {
   await $`false`;
 } catch (err) {
-  console.log('Caught:', err.code);  // Prints "1"
+  console.log('Caught:', err.code); // Prints "1"
 }
 ```
 
 ### Behavior Comparison Table
 
-| Scenario | bash default | bash with `set -e` | command-stream default | command-stream with `shell.errexit(true)` |
-|---|---|---|---|---|
-| `false` exits with code 1 | Continues | **Aborts** | Continues | **Throws** |
-| Next line after `false` | Executes | Does NOT execute | Executes | Does NOT execute (caught by catch) |
-| `try/catch` around `false` | N/A | N/A | catch NOT reached | catch IS reached |
-| Script final exit code | 0 (if last cmd succeeds) | 1 | 0 (no throw) | Depends on catch |
-| Result object available | N/A | N/A | ✅ `result.code` | ✅ `error.code` |
+| Scenario                   | bash default             | bash with `set -e` | command-stream default | command-stream with `shell.errexit(true)` |
+| -------------------------- | ------------------------ | ------------------ | ---------------------- | ----------------------------------------- |
+| `false` exits with code 1  | Continues                | **Aborts**         | Continues              | **Throws**                                |
+| Next line after `false`    | Executes                 | Does NOT execute   | Executes               | Does NOT execute (caught by catch)        |
+| `try/catch` around `false` | N/A                      | N/A                | catch NOT reached      | catch IS reached                          |
+| Script final exit code     | 0 (if last cmd succeeds) | 1                  | 0 (no throw)           | Depends on catch                          |
+| Result object available    | N/A                      | N/A                | ✅ `result.code`       | ✅ `error.code`                           |
 
 ### The Anti-Pattern: try/catch for Exit Code Detection
 
@@ -133,7 +133,7 @@ The broken pattern in `calculator/scripts/version-and-commit.mjs`:
 // ❌ WRONG: Relies on exception being thrown, but errexit=false by default
 try {
   await $`git diff --cached --quiet`;
-  console.log('No changes to commit');  // Always runs with errexit=false
+  console.log('No changes to commit'); // Always runs with errexit=false
   return;
 } catch {
   // NEVER reached when errexit=false
@@ -172,20 +172,20 @@ The design choice to default `errexit: false` is intentional and follows the con
 import { $, shell, set, unset } from 'command-stream';
 
 // Method 1: shell object API (recommended)
-shell.errexit(true);   // Enable — throws on non-zero exit codes
-shell.errexit(false);  // Disable — only check result.code
+shell.errexit(true); // Enable — throws on non-zero exit codes
+shell.errexit(false); // Disable — only check result.code
 
 // Method 2: bash-compatible set/unset API
-set('e');       // Same as shell.errexit(true)
-unset('e');     // Same as shell.errexit(false)
+set('e'); // Same as shell.errexit(true)
+unset('e'); // Same as shell.errexit(false)
 
 // Method 3: Full option names
 set('errexit');
 
 // Combined settings
-shell.errexit(true);   // Like set -e
-shell.pipefail(true);  // Like set -o pipefail
-shell.nounset(true);   // Like set -u
+shell.errexit(true); // Like set -e
+shell.pipefail(true); // Like set -o pipefail
+shell.nounset(true); // Like set -u
 
 // Check current settings
 const settings = shell.settings();
@@ -199,7 +199,7 @@ const settings = shell.settings();
 ```javascript
 import { $, shell } from 'command-stream';
 
-shell.errexit(true);   // All failures throw
+shell.errexit(true); // All failures throw
 
 await $`git add .`;
 await $`git commit -m "Release v1.0.0"`;
@@ -211,11 +211,11 @@ await $`git push origin main`;
 ```javascript
 import { $, shell } from 'command-stream';
 
-shell.errexit(true);   // Strict by default
+shell.errexit(true); // Strict by default
 
 // Enable optional section
 shell.errexit(false);
-const result = await $`git diff --cached --quiet`;  // May exit with 1
+const result = await $`git diff --cached --quiet`; // May exit with 1
 shell.errexit(true);
 
 // Use result.code explicitly
@@ -278,7 +278,7 @@ Add prominent documentation explaining `errexit: false` default and the correct 
 
 ```javascript
 // Hypothetical warning mode
-shell.warnOnFailure(true);  // Log warning when non-zero exit code ignored
+shell.warnOnFailure(true); // Log warning when non-zero exit code ignored
 ```
 
 **Pros:** Visible signal that something failed.
@@ -307,15 +307,15 @@ const result = await $`git diff --cached --quiet`.run({ errexit: false });
 
 ## Comparison with Similar Libraries
 
-| Library | Default on non-zero exit | Configuration |
-|---|---|---|
-| `bash` (no flags) | Continue silently | `set -e` to throw |
-| `bash -e` | Exit immediately | Default when using `bash -e` |
-| `child_process.spawn` | Continue (emit 'exit') | No built-in throw |
-| `child_process.exec` | Callback with error | Always errors on non-zero |
-| `execa` | **Throw** | `{ reject: false }` to suppress |
-| `zx` | **Throw** | `$.verbose`, `nothrow()`, `quiet()` |
-| `command-stream` | **Continue** (errexit=false) | `shell.errexit(true)` |
+| Library               | Default on non-zero exit     | Configuration                       |
+| --------------------- | ---------------------------- | ----------------------------------- |
+| `bash` (no flags)     | Continue silently            | `set -e` to throw                   |
+| `bash -e`             | Exit immediately             | Default when using `bash -e`        |
+| `child_process.spawn` | Continue (emit 'exit')       | No built-in throw                   |
+| `child_process.exec`  | Callback with error          | Always errors on non-zero           |
+| `execa`               | **Throw**                    | `{ reject: false }` to suppress     |
+| `zx`                  | **Throw**                    | `$.verbose`, `nothrow()`, `quiet()` |
+| `command-stream`      | **Continue** (errexit=false) | `shell.errexit(true)`               |
 
 ---
 

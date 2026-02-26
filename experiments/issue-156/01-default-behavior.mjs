@@ -18,7 +18,9 @@ console.log('Default shell settings:', settings);
 console.log('errexit is:', settings.errexit, '(should be false)\n');
 
 // 2. Run a failing command — should NOT throw
-console.log('--- Test: running "false" (exit code 1) with default settings ---');
+console.log(
+  '--- Test: running "false" (exit code 1) with default settings ---'
+);
 try {
   const result = await $`false`;
   console.log('✅ No exception thrown (errexit=false default)');
@@ -59,5 +61,11 @@ const r1 = await $`false`;
 const r2 = await $`echo "still running"`;
 const r3 = await $`false`;
 const r4 = await $`echo "also running"`;
-console.log('All 4 commands executed. Exit codes:', r1.code, r2.code, r3.code, r4.code);
+console.log(
+  'All 4 commands executed. Exit codes:',
+  r1.code,
+  r2.code,
+  r3.code,
+  r4.code
+);
 console.log('(bash without set -e behaves the same way)\n');

@@ -33,7 +33,7 @@ try {
   await $`false`; // Simulates: git diff --cached --quiet (returns 1 = changes exist)
   // NEVER should reach here when exit code is 1
   // BUT with errexit=false, no exception is thrown!
-  console.log('No changes to commit');  // ← Always executes! BUG!
+  console.log('No changes to commit'); // ← Always executes! BUG!
   // return;  // ← Would return early here, skipping the commit
 } catch {
   // Intended: only run when staged changes exist (exit code 1)
@@ -50,7 +50,7 @@ if (!commitAttempted) {
   console.log('   CI log showed: "No changes to commit" every single run.');
 }
 
-console.log('\n' + '='.repeat(60) + '\n');
+console.log(`\n${'='.repeat(60)}\n`);
 
 // =============================================================
 // FIXED VERSION (what calculator has after PR #79)
@@ -64,13 +64,13 @@ if (diffResult.code === 0) {
   // process.exit(0);
 } else {
   // diffResult.code === 1: staged changes exist
-  console.log('✅ Changes detected (exit code:', diffResult.code + ')');
+  console.log('✅ Changes detected (exit code:', `${diffResult.code})`);
   console.log('   Proceeding with git commit...');
   // await $`git commit -m "Automated version bump"`;
   console.log('   Commit would be made here.');
 }
 
-console.log('\n' + '='.repeat(60) + '\n');
+console.log(`\n${'='.repeat(60)}\n`);
 
 // =============================================================
 // ALTERNATIVE FIX: Use errexit=true
@@ -81,10 +81,10 @@ shell.errexit(true);
 
 try {
   await $`false`; // Now throws because errexit=true
-  console.log('No changes to commit');  // Would NOT reach here
+  console.log('No changes to commit'); // Would NOT reach here
 } catch (err) {
   if (err.code === 1) {
-    console.log('✅ Changes detected via exception (code:', err.code + ')');
+    console.log('✅ Changes detected via exception (code:', `${err.code})`);
     console.log('   Proceeding with git commit...');
     // await $`git commit -m "Automated version bump"`;
     console.log('   Commit would be made here.');
@@ -95,7 +95,11 @@ shell.errexit(false); // Reset
 
 console.log('\n=== Reproduction complete ===');
 console.log('\nConclusion:');
-console.log('- The bug was a try/catch used with the assumption that errexit=true');
-console.log('- command-stream defaults to errexit=false (like bash without set -e)');
+console.log(
+  '- The bug was a try/catch used with the assumption that errexit=true'
+);
+console.log(
+  '- command-stream defaults to errexit=false (like bash without set -e)'
+);
 console.log('- Fix: use explicit result.code check instead of try/catch');
 console.log('- Or: enable shell.errexit(true) before using try/catch pattern');
