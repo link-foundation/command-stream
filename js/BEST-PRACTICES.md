@@ -10,6 +10,7 @@ This document covers best practices, common patterns, and pitfalls to avoid when
 - [Error Handling](#error-handling)
 - [Performance Tips](#performance-tips)
 - [Common Pitfalls](#common-pitfalls)
+  - [7. try/catch for Exit Code Detection (Silent Bug)](#7-trycatch-for-exit-code-detection-silent-bug)
 
 ---
 
@@ -346,6 +347,51 @@ if (result.code === 0) {
 }
 ```
 
+### 7. try/catch for Exit Code Detection (Silent Bug)
+
+**Problem:** Using `try/catch` to detect non-zero exit codes when `errexit` is `false` (the default). Since `command-stream` defaults to `errexit: false`, commands **never throw** on non-zero exit codes unless you explicitly enable it. The `catch` block is silently never reached.
+
+This is the root cause of the bug in [link-assistant/calculator#78](https://github.com/link-assistant/calculator/issues/78), where a CI auto-release pipeline silently skipped commits for every run.
+
+```javascript
+// WRONG: catch is NEVER reached with errexit=false (the default)
+try {
+  await $`git diff --cached --quiet`; // exits with code 1 when changes exist
+  console.log('No changes to commit'); // ← ALWAYS runs (silent bug!)
+  return;
+} catch {
+  // NEVER reached — no exception is thrown with errexit=false
+  await $`git commit -m "Release"`;
+}
+
+// CORRECT: Always use explicit exit code check
+const result = await $`git diff --cached --quiet`;
+if (result.code === 0) {
+  console.log('No changes to commit');
+  return;
+}
+// code === 1: staged changes exist
+await $`git commit -m "Release"`;
+```
+
+If you prefer the `try/catch` pattern, enable `errexit` first:
+
+```javascript
+import { $, shell } from 'command-stream';
+
+shell.errexit(true); // Now commands throw on non-zero exit code
+
+try {
+  await $`git diff --cached --quiet`; // Now throws when exit code is 1
+  console.log('No changes to commit');
+} catch (err) {
+  // Now correctly reached when exit code !== 0
+  await $`git commit -m "Release"`;
+}
+```
+
+See [Case Study: Issue #156](./docs/case-studies/issue-156/README.md) for detailed analysis.
+
 ---
 
 ## Quick Reference
@@ -366,6 +412,7 @@ if (result.code === 0) {
 - Don't forget `await` on commands
 - Don't assume success without checking
 - Don't ignore stderr output
+- Don't use `try/catch` to detect non-zero exit codes with default settings (use `result.code` instead)
 
 ---
 
@@ -373,4 +420,5 @@ if (result.code === 0) {
 
 - [README.md](../README.md) - Main documentation
 - [docs/case-studies/issue-153/README.md](./docs/case-studies/issue-153/README.md) - Array.join() pitfall case study
+- [docs/case-studies/issue-156/README.md](./docs/case-studies/issue-156/README.md) - try/catch anti-pattern and errexit default behavior
 - [src/$.quote.mjs](./src/$.quote.mjs) - Quote function implementation
