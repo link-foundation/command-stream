@@ -33,6 +33,18 @@ describe('repository language layout', () => {
     expect(existsFromRepo('js/scripts/publish-to-npm.mjs')).toBe(true);
   });
 
+  test('does not keep language release scripts at the repository root', () => {
+    expect(existsFromRepo('scripts')).toBe(false);
+    expect(existsFromRepo('scripts/publish-to-npm.mjs')).toBe(false);
+    expect(existsFromRepo('scripts/publish-to-crates.mjs')).toBe(false);
+    expect(existsFromRepo('scripts/sync-rust-version.mjs')).toBe(false);
+
+    expect(existsFromRepo('js/scripts/version-and-commit.mjs')).toBe(true);
+    expect(existsFromRepo('js/scripts/publish-to-npm.mjs')).toBe(true);
+    expect(existsFromRepo('rust/scripts/version-and-commit.rs')).toBe(true);
+    expect(existsFromRepo('rust/scripts/publish-crate.rs')).toBe(true);
+  });
+
   test('keeps Rust package release files inside rust/', () => {
     expect(existsFromRepo('rust/Cargo.toml')).toBe(true);
     expect(existsFromRepo('rust/Cargo.lock')).toBe(true);

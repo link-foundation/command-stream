@@ -54,6 +54,12 @@ repository, those same conventions were translated into `js/` so package-local
 commands still run from the JavaScript package root while CI triggers remain
 language-scoped.
 
+The former repository-root `scripts/` directory was fully removed. JavaScript
+release scripts were moved to `js/scripts/`; `scripts/publish-to-crates.mjs`
+was replaced by `rust/scripts/publish-crate.rs`; and
+`scripts/sync-rust-version.mjs` was removed because JavaScript and Rust now use
+independent release versions handled by their own version-and-commit scripts.
+
 The Rust template keeps `Cargo.toml`, `CHANGELOG.md`, `changelog.d/`, and
 `scripts/*.rs` together. This repository already had the Rust crate under
 `rust/`, so the template scripts were copied into `rust/scripts/` and adapted
