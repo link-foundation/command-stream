@@ -1,101 +1,81 @@
 # Deployment Setup
 
-This repository releases both packages from `.github/workflows/release.yml`:
+This repository has separate release workflows for each language package:
 
-- npm package: `command-stream`
-- Rust crate: `command-stream`
+- JavaScript npm package: `.github/workflows/js.yml`
+- Rust crates.io package: `.github/workflows/rust.yml`
 
-The workflow runs checks on pull requests and publishes on pushes to `main` after
-the checks pass.
+The workflows run independently on pull requests and pushes that touch their
+language folders, workflow files, or shared repository files.
 
-## Required Publishing Setup
+## JavaScript Publishing
 
-### npm
+The JavaScript package lives in `js/` and is published to npm as
+`command-stream`.
 
-npm publishing uses trusted publishing through GitHub Actions OIDC. Do not add
-or rotate an `NPM_TOKEN` for this workflow.
-
-Configure the trusted publisher in npm for:
+npm publishing uses trusted publishing through GitHub Actions OIDC. Configure
+the trusted publisher in npm for:
 
 - Repository: `link-foundation/command-stream`
-- Workflow file: `.github/workflows/release.yml`
+- Workflow file: `.github/workflows/js.yml`
 - Environment: none, unless the npm package is configured to require one
 
-The workflow updates npm to a trusted-publishing compatible version before
-running `changeset publish`.
+The JavaScript workflow uses `id-token: write`, runs npm release scripts from
+`js/`, and creates GitHub releases tagged as `js-v<version>`.
 
-### crates.io
+JavaScript PRs that change package code must add exactly one changeset in
+`js/.changeset/`.
 
-Rust publishing uses Cargo token authentication. Configure one of these GitHub
-Actions secrets at the repository or organization level:
+## Rust Publishing
+
+The Rust crate lives in `rust/` and is published to crates.io as
+`command-stream`.
+
+Configure one of these GitHub Actions secrets at the repository or organization
+level:
 
 - `CARGO_REGISTRY_TOKEN` - Cargo's native environment variable name, preferred
 - `CARGO_TOKEN` - backwards-compatible fallback used by older organization
   workflows
 
-The release workflow maps both names:
+The Rust workflow maps both names and runs Rust release scripts from
+`rust/scripts/`. Rust GitHub releases are tagged as `rust-v<version>`.
 
-```yaml
-CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN || secrets.CARGO_TOKEN }}
-CARGO_TOKEN: ${{ secrets.CARGO_TOKEN }}
-```
+Rust PRs that change crate code must add a changelog fragment in
+`rust/changelog.d/`.
 
-The crates publisher first checks whether the current `rust/Cargo.toml` version
-already exists on crates.io. If it exists, the step reports success and does not
-require a token. If it is missing, the step requires a token and runs
-`cargo publish`.
+## Local Release Checks
 
-## Pull Request Checks
-
-Pull requests must add exactly one changeset file in `.changeset/`. CI then runs:
-
-- changeset validation
-- ESLint, Prettier, and duplication checks
-- Bun tests on Ubuntu, macOS, and Windows
-- Node.js module loading checks on Node 20, 22, and 24
-- Rust formatting, Clippy, tests, doc tests, and `cargo package`
-
-Command-stream trace output is off by default in CI. Set the repository variable
-`COMMAND_STREAM_TRACE=true` only when a diagnostic rerun needs full tracing.
-
-## Release Flow
-
-On push to `main`:
-
-1. CI verifies JavaScript and Rust checks.
-2. Changesets bump the npm package version, update changelog files, and sync
-   `rust/Cargo.toml` plus `rust/Cargo.lock` to the same version.
-3. The workflow publishes the npm package with trusted publishing.
-4. The workflow publishes `rust/Cargo.toml` to crates.io if that crate version is
-   not already published.
-5. The workflow creates and formats the GitHub release.
-
-Manual instant releases use the same publishing steps through
-`workflow_dispatch`.
-
-## Manual Publishing
-
-Use manual publishing only for emergency recovery:
+JavaScript:
 
 ```bash
-# npm, after logging in locally
-npm publish --access public
-
-# crates.io, after logging in locally
-cargo publish --manifest-path rust/Cargo.toml
+cd js
+bun install
+bun run lint
+bun run format:check
+bun run check:duplication
+bun run test
 ```
 
-Prefer rerunning the GitHub Actions release workflow so npm, crates.io, and the
-GitHub release stay aligned.
+Rust:
+
+```bash
+cd rust
+cargo fmt --all -- --check
+cargo clippy --all-targets --all-features
+cargo test --all-features --verbose
+cargo test --doc --all-features --verbose
+cargo package --allow-dirty
+```
 
 ## Troubleshooting
 
-- Missing changeset: add one `.changeset/*.md` file to the PR.
+- Missing JavaScript changeset: add one `js/.changeset/*.md` file.
+- Missing Rust changelog: add one `rust/changelog.d/*.md` file.
 - npm trusted publishing failure: verify npm trusted publisher settings match
-  `.github/workflows/release.yml`.
+  `.github/workflows/js.yml`.
 - crates.io authentication failure: verify `CARGO_REGISTRY_TOKEN` or
   `CARGO_TOKEN` is available to Actions.
-- crate version already exists: bump `rust/Cargo.toml` before trying to publish
-  new Rust crate contents, or rerun the normal release flow so
-  `scripts/sync-rust-version.mjs` syncs Cargo metadata from `package.json`.
-- tests are too noisy: leave `COMMAND_STREAM_TRACE` unset or set it to `false`.
+- crate version already exists: rerun the Rust workflow if a previous release
+  partially completed; the Rust scripts check crates.io and GitHub release
+  artifacts before deciding whether to bump.
