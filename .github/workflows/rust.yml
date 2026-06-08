@@ -172,7 +172,15 @@ jobs:
   release:
     name: Release Rust crate
     needs: [lint, test, build]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.lint.result == 'success' && needs.test.result == 'success' && needs.build.result == 'success'
+    # Required because lint/test depend on the pull-request-only changelog job,
+    # which is skipped on push events.
+    if: |
+      always() && !cancelled() &&
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'push' &&
+      needs.lint.result == 'success' &&
+      needs.test.result == 'success' &&
+      needs.build.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
