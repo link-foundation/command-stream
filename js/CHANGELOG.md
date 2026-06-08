@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.6
+
+### Patch Changes
+
+- Ensure the JavaScript release job still evaluates on main pushes after the
+  pull-request-only changeset gate is skipped.
+
+  Separate JavaScript package metadata, scripts, documentation, and release tags
+  from the Rust crate release path.
+
 ## 0.9.5
 
 ### Patch Changes
