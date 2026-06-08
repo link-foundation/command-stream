@@ -4,11 +4,7 @@ use command_stream::{Pipeline, PipelineExt, ProcessRunner, RunOptions};
 
 #[tokio::test]
 async fn test_pipeline_simple() {
-    let result = Pipeline::new()
-        .add("echo hello world")
-        .run()
-        .await
-        .unwrap();
+    let result = Pipeline::new().add("echo hello world").run().await.unwrap();
 
     assert!(result.is_success());
     assert!(result.stdout.contains("hello world"));
@@ -70,7 +66,7 @@ async fn test_pipeline_empty() {
 async fn test_pipeline_failure_propagation() {
     let result = Pipeline::new()
         .add("echo hello")
-        .add("false")  // This command always fails
+        .add("false") // This command always fails
         .add("echo should not reach here")
         .run()
         .await

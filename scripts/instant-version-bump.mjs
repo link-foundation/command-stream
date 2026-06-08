@@ -66,6 +66,9 @@ try {
   const newVersion = updatedPackageJson.version;
   console.log(`New version: ${newVersion}`);
 
+  console.log('\nSynchronizing Rust crate version...');
+  await $`bun scripts/sync-rust-version.mjs --version ${newVersion}`;
+
   // Update CHANGELOG.md
   console.log('\nUpdating CHANGELOG.md...');
   const changelogPath = 'CHANGELOG.md';

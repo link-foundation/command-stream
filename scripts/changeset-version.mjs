@@ -25,6 +25,9 @@ try {
   console.log('Running changeset version...');
   await $`bunx changeset version`;
 
+  console.log('\nSynchronizing Rust crate version...');
+  await $`bun scripts/sync-rust-version.mjs`;
+
   console.log('\nSynchronizing package-lock.json...');
   try {
     await $`npm install --package-lock-only`;

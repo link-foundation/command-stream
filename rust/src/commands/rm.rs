@@ -48,7 +48,10 @@ pub async fn rm(ctx: CommandContext) -> CommandResult {
         let resolved_path = VirtualUtils::resolve_path(&path_str, Some(&cwd));
 
         trace_lazy("VirtualCommand", || {
-            format!("rm: removing {:?}, recursive: {}, force: {}", resolved_path, recursive, force)
+            format!(
+                "rm: removing {:?}, recursive: {}, force: {}",
+                resolved_path, recursive, force
+            )
         });
 
         if !resolved_path.exists() {
@@ -117,10 +120,7 @@ mod tests {
         fs::create_dir(&dir).unwrap();
         fs::write(dir.join("file.txt"), "test").unwrap();
 
-        let ctx = CommandContext::new(vec![
-            "-r".to_string(),
-            dir.to_string_lossy().to_string(),
-        ]);
+        let ctx = CommandContext::new(vec!["-r".to_string(), dir.to_string_lossy().to_string()]);
         let result = rm(ctx).await;
 
         assert!(result.is_success());
@@ -140,9 +140,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rm_nonexistent_no_force() {
-        let ctx = CommandContext::new(vec![
-            "/nonexistent/file/12345".to_string()
-        ]);
+        let ctx = CommandContext::new(vec!["/nonexistent/file/12345".to_string()]);
         let result = rm(ctx).await;
 
         assert!(!result.is_success());

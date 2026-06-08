@@ -48,10 +48,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_basename_with_suffix() {
-        let ctx = CommandContext::new(vec![
-            "/path/to/file.txt".to_string(),
-            ".txt".to_string(),
-        ]);
+        let ctx = CommandContext::new(vec!["/path/to/file.txt".to_string(), ".txt".to_string()]);
         let result = basename(ctx).await;
 
         assert!(result.is_success());

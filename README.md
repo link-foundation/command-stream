@@ -1,4 +1,5 @@
 [![npm](https://img.shields.io/npm/v/command-stream.svg)](https://npmjs.com/command-stream)
+[![crates.io](https://img.shields.io/crates/v/command-stream.svg)](https://crates.io/crates/command-stream)
 [![License](https://img.shields.io/badge/license-Unlicense-blue.svg)](https://github.com/link-foundation/command-stream/blob/main/LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/link-foundation/command-stream?style=social)](https://github.com/link-foundation/command-stream/stargazers)
 

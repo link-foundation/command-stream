@@ -36,7 +36,10 @@ pub async fn mkdir(ctx: CommandContext) -> CommandResult {
         let resolved_path = VirtualUtils::resolve_path(&dir, Some(&cwd));
 
         trace_lazy("VirtualCommand", || {
-            format!("mkdir: creating directory {:?}, parents: {}", resolved_path, create_parents)
+            format!(
+                "mkdir: creating directory {:?}, parents: {}",
+                resolved_path, create_parents
+            )
         });
 
         let result = if create_parents {
@@ -46,7 +49,10 @@ pub async fn mkdir(ctx: CommandContext) -> CommandResult {
         };
 
         if let Err(e) = result {
-            return CommandResult::error(format!("mkdir: cannot create directory '{}': {}\n", dir, e));
+            return CommandResult::error(format!(
+                "mkdir: cannot create directory '{}': {}\n",
+                dir, e
+            ));
         }
     }
 
@@ -63,9 +69,7 @@ mod tests {
         let temp = tempdir().unwrap();
         let new_dir = temp.path().join("new_directory");
 
-        let ctx = CommandContext::new(vec![
-            new_dir.to_string_lossy().to_string()
-        ]);
+        let ctx = CommandContext::new(vec![new_dir.to_string_lossy().to_string()]);
         let result = mkdir(ctx).await;
 
         assert!(result.is_success());

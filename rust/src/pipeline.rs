@@ -133,13 +133,21 @@ impl Pipeline {
             let is_last = i == self.commands.len() - 1;
 
             trace_lazy("Pipeline", || {
-                format!("Executing command {}/{}: {}", i + 1, self.commands.len(), cmd_str)
+                format!(
+                    "Executing command {}/{}: {}",
+                    i + 1,
+                    self.commands.len(),
+                    cmd_str
+                )
             });
 
             // Check if this is a virtual command
             let first_word = cmd_str.split_whitespace().next().unwrap_or("");
             if crate::commands::are_virtual_commands_enabled() {
-                if let Some(result) = self.try_virtual_command(first_word, cmd_str, &current_stdin).await {
+                if let Some(result) = self
+                    .try_virtual_command(first_word, cmd_str, &current_stdin)
+                    .await
+                {
                     if result.code != 0 {
                         return Ok(CommandResult {
                             stdout: result.stdout,

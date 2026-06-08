@@ -17,9 +17,9 @@ use std::env;
 use std::path::{Path, PathBuf};
 
 // Re-export from specialized modules for backwards compatibility
-pub use crate::trace::{is_trace_enabled, trace, trace_lazy};
 pub use crate::ansi::{AnsiConfig, AnsiUtils};
 pub use crate::quote::quote;
+pub use crate::trace::{is_trace_enabled, trace, trace_lazy};
 
 /// Result type for virtual command operations
 #[derive(Debug, Clone)]
@@ -82,10 +82,7 @@ impl VirtualUtils {
     }
 
     /// Create standardized error response for missing operands with custom message
-    pub fn missing_operand_error_with_message(
-        command_name: &str,
-        message: &str,
-    ) -> CommandResult {
+    pub fn missing_operand_error_with_message(command_name: &str, message: &str) -> CommandResult {
         CommandResult::error(format!("{}: {}", command_name, message))
     }
 
@@ -129,9 +126,9 @@ impl VirtualUtils {
         if path.is_absolute() {
             path.to_path_buf()
         } else {
-            let base_path = cwd.map(|p| p.to_path_buf()).unwrap_or_else(|| {
-                env::current_dir().unwrap_or_else(|_| PathBuf::from("/"))
-            });
+            let base_path = cwd
+                .map(|p| p.to_path_buf())
+                .unwrap_or_else(|| env::current_dir().unwrap_or_else(|_| PathBuf::from("/")));
             base_path.join(path)
         }
     }

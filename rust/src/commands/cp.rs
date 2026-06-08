@@ -42,10 +42,7 @@ pub async fn cp(ctx: CommandContext) -> CommandResult {
     let multiple_sources = paths.len() > 1;
 
     if multiple_sources && !dest_is_dir {
-        return CommandResult::error(format!(
-            "cp: target '{}' is not a directory\n",
-            dest
-        ));
+        return CommandResult::error(format!("cp: target '{}' is not a directory\n", dest));
     }
 
     for source in paths {
@@ -77,10 +74,7 @@ pub async fn cp(ctx: CommandContext) -> CommandResult {
             }
 
             if let Err(e) = copy_dir_recursive(&source_path, &final_dest) {
-                return CommandResult::error(format!(
-                    "cp: cannot copy '{}': {}\n",
-                    source, e
-                ));
+                return CommandResult::error(format!("cp: cannot copy '{}': {}\n", source, e));
             }
         } else {
             if let Some(parent) = final_dest.parent() {
@@ -88,17 +82,15 @@ pub async fn cp(ctx: CommandContext) -> CommandResult {
                     if let Err(e) = fs::create_dir_all(parent) {
                         return CommandResult::error(format!(
                             "cp: cannot create directory '{}': {}\n",
-                            parent.display(), e
+                            parent.display(),
+                            e
                         ));
                     }
                 }
             }
 
             if let Err(e) = fs::copy(&source_path, &final_dest) {
-                return CommandResult::error(format!(
-                    "cp: cannot copy '{}': {}\n",
-                    source, e
-                ));
+                return CommandResult::error(format!("cp: cannot copy '{}': {}\n", source, e));
             }
         }
     }

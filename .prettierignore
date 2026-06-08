@@ -5,3 +5,6 @@ dist
 package-lock.json
 .eslintcache
 CLAUDE.md
+docs/case-studies/**/data/**
+docs/case-studies/**/log-excerpts/**
+docs/case-studies/**/templates/**

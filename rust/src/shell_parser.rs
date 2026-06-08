@@ -7,12 +7,12 @@ use std::fmt;
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
     Word(String),
-    And,        // &&
-    Or,         // ||
-    Semicolon,  // ;
-    Pipe,       // |
-    LParen,     // (
-    RParen,     // )
+    And,            // &&
+    Or,             // ||
+    Semicolon,      // ;
+    Pipe,           // |
+    LParen,         // (
+    RParen,         // )
     RedirectOut,    // >
     RedirectAppend, // >>
     RedirectIn,     // <
@@ -74,13 +74,9 @@ pub enum ParsedCommand {
         operators: Vec<TokenType>,
     },
     /// A pipeline of commands connected by |
-    Pipeline {
-        commands: Vec<ParsedCommand>,
-    },
+    Pipeline { commands: Vec<ParsedCommand> },
     /// A subshell (commands in parentheses)
-    Subshell {
-        command: Box<ParsedCommand>,
-    },
+    Subshell { command: Box<ParsedCommand> },
 }
 
 /// Tokenize a shell command string
@@ -541,10 +537,7 @@ mod tests {
                 assert_eq!(cmd, "echo");
                 assert_eq!(args.len(), 1);
                 assert_eq!(redirects.len(), 1);
-                assert!(matches!(
-                    redirects[0].redirect_type,
-                    TokenType::RedirectOut
-                ));
+                assert!(matches!(redirects[0].redirect_type, TokenType::RedirectOut));
                 assert_eq!(redirects[0].target, "output.txt");
             }
             _ => panic!("Expected Simple command with redirect"),

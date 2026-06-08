@@ -2,7 +2,7 @@
 //!
 //! These tests mirror the JavaScript $.test.mjs tests
 
-use command_stream::{run, create, exec, ProcessRunner, RunOptions, StdinOption};
+use command_stream::{create, exec, run, ProcessRunner, RunOptions, StdinOption};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use tempfile::TempDir;

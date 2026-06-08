@@ -2,7 +2,9 @@
 //!
 //! These tests mirror the JavaScript shell parser tests
 
-use command_stream::shell_parser::{needs_real_shell, parse_shell_command, tokenize, ParsedCommand, TokenType};
+use command_stream::shell_parser::{
+    needs_real_shell, parse_shell_command, tokenize, ParsedCommand, TokenType,
+};
 
 // ============================================================================
 // Tokenizer Tests
@@ -21,7 +23,9 @@ fn test_tokenize_simple_command() {
 #[test]
 fn test_tokenize_with_and_operator() {
     let tokens = tokenize("cmd1 && cmd2");
-    assert!(tokens.iter().any(|t| matches!(t.token_type, TokenType::And)));
+    assert!(tokens
+        .iter()
+        .any(|t| matches!(t.token_type, TokenType::And)));
 }
 
 #[test]
@@ -33,38 +37,52 @@ fn test_tokenize_with_or_operator() {
 #[test]
 fn test_tokenize_with_pipe() {
     let tokens = tokenize("ls | grep foo");
-    assert!(tokens.iter().any(|t| matches!(t.token_type, TokenType::Pipe)));
+    assert!(tokens
+        .iter()
+        .any(|t| matches!(t.token_type, TokenType::Pipe)));
 }
 
 #[test]
 fn test_tokenize_with_semicolon() {
     let tokens = tokenize("cmd1 ; cmd2");
-    assert!(tokens.iter().any(|t| matches!(t.token_type, TokenType::Semicolon)));
+    assert!(tokens
+        .iter()
+        .any(|t| matches!(t.token_type, TokenType::Semicolon)));
 }
 
 #[test]
 fn test_tokenize_with_parentheses() {
     let tokens = tokenize("(echo hello)");
-    assert!(tokens.iter().any(|t| matches!(t.token_type, TokenType::LParen)));
-    assert!(tokens.iter().any(|t| matches!(t.token_type, TokenType::RParen)));
+    assert!(tokens
+        .iter()
+        .any(|t| matches!(t.token_type, TokenType::LParen)));
+    assert!(tokens
+        .iter()
+        .any(|t| matches!(t.token_type, TokenType::RParen)));
 }
 
 #[test]
 fn test_tokenize_with_redirect() {
     let tokens = tokenize("echo hello > file.txt");
-    assert!(tokens.iter().any(|t| matches!(t.token_type, TokenType::RedirectOut)));
+    assert!(tokens
+        .iter()
+        .any(|t| matches!(t.token_type, TokenType::RedirectOut)));
 }
 
 #[test]
 fn test_tokenize_with_append_redirect() {
     let tokens = tokenize("echo hello >> file.txt");
-    assert!(tokens.iter().any(|t| matches!(t.token_type, TokenType::RedirectAppend)));
+    assert!(tokens
+        .iter()
+        .any(|t| matches!(t.token_type, TokenType::RedirectAppend)));
 }
 
 #[test]
 fn test_tokenize_with_input_redirect() {
     let tokens = tokenize("cat < file.txt");
-    assert!(tokens.iter().any(|t| matches!(t.token_type, TokenType::RedirectIn)));
+    assert!(tokens
+        .iter()
+        .any(|t| matches!(t.token_type, TokenType::RedirectIn)));
 }
 
 #[test]
@@ -94,7 +112,12 @@ fn test_tokenize_mixed_operators() {
     let tokens = tokenize("cmd1 && cmd2 || cmd3 ; cmd4");
     let ops: Vec<_> = tokens
         .iter()
-        .filter(|t| matches!(t.token_type, TokenType::And | TokenType::Or | TokenType::Semicolon))
+        .filter(|t| {
+            matches!(
+                t.token_type,
+                TokenType::And | TokenType::Or | TokenType::Semicolon
+            )
+        })
         .collect();
     assert_eq!(ops.len(), 3);
 }
@@ -146,7 +169,10 @@ fn test_parse_pipeline() {
 fn test_parse_sequence_with_and() {
     let cmd = parse_shell_command("cmd1 && cmd2").unwrap();
     match cmd {
-        ParsedCommand::Sequence { commands, operators } => {
+        ParsedCommand::Sequence {
+            commands,
+            operators,
+        } => {
             assert_eq!(commands.len(), 2);
             assert_eq!(operators.len(), 1);
             assert!(matches!(operators[0], TokenType::And));
@@ -159,7 +185,10 @@ fn test_parse_sequence_with_and() {
 fn test_parse_sequence_with_or() {
     let cmd = parse_shell_command("cmd1 || cmd2").unwrap();
     match cmd {
-        ParsedCommand::Sequence { commands, operators } => {
+        ParsedCommand::Sequence {
+            commands,
+            operators,
+        } => {
             assert_eq!(commands.len(), 2);
             assert_eq!(operators.len(), 1);
             assert!(matches!(operators[0], TokenType::Or));
@@ -172,7 +201,10 @@ fn test_parse_sequence_with_or() {
 fn test_parse_sequence_mixed() {
     let cmd = parse_shell_command("cmd1 && cmd2 || cmd3").unwrap();
     match cmd {
-        ParsedCommand::Sequence { commands, operators } => {
+        ParsedCommand::Sequence {
+            commands,
+            operators,
+        } => {
             assert_eq!(commands.len(), 3);
             assert_eq!(operators.len(), 2);
             assert!(matches!(operators[0], TokenType::And));
@@ -186,7 +218,11 @@ fn test_parse_sequence_mixed() {
 fn test_parse_with_redirect_out() {
     let cmd = parse_shell_command("echo hello > output.txt").unwrap();
     match cmd {
-        ParsedCommand::Simple { cmd, args, redirects } => {
+        ParsedCommand::Simple {
+            cmd,
+            args,
+            redirects,
+        } => {
             assert_eq!(cmd, "echo");
             assert_eq!(args.len(), 1);
             assert_eq!(redirects.len(), 1);
@@ -203,7 +239,10 @@ fn test_parse_with_redirect_append() {
     match cmd {
         ParsedCommand::Simple { redirects, .. } => {
             assert_eq!(redirects.len(), 1);
-            assert!(matches!(redirects[0].redirect_type, TokenType::RedirectAppend));
+            assert!(matches!(
+                redirects[0].redirect_type,
+                TokenType::RedirectAppend
+            ));
         }
         _ => panic!("Expected Simple command with redirect"),
     }
@@ -213,14 +252,12 @@ fn test_parse_with_redirect_append() {
 fn test_parse_subshell() {
     let cmd = parse_shell_command("(echo hello)").unwrap();
     match cmd {
-        ParsedCommand::Subshell { command } => {
-            match *command {
-                ParsedCommand::Simple { cmd, .. } => {
-                    assert_eq!(cmd, "echo");
-                }
-                _ => panic!("Expected Simple command inside subshell"),
+        ParsedCommand::Subshell { command } => match *command {
+            ParsedCommand::Simple { cmd, .. } => {
+                assert_eq!(cmd, "echo");
             }
-        }
+            _ => panic!("Expected Simple command inside subshell"),
+        },
         _ => panic!("Expected Subshell"),
     }
 }
@@ -242,7 +279,10 @@ fn test_parse_complex_pipeline_and_sequence() {
     let cmd = parse_shell_command("ls | grep foo && cat file | wc").unwrap();
     // This should be: (ls | grep foo) && (cat file | wc)
     match cmd {
-        ParsedCommand::Sequence { commands, operators } => {
+        ParsedCommand::Sequence {
+            commands,
+            operators,
+        } => {
             assert_eq!(commands.len(), 2);
             assert_eq!(operators.len(), 1);
             // Both commands should be pipelines

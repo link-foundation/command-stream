@@ -1,6 +1,6 @@
 //! Tests for the cmd! macro and its aliases (s!, sh!, cs!)
 
-use command_stream::{cmd, sh, s, cs};
+use command_stream::{cmd, cs, s, sh};
 
 #[tokio::test]
 async fn test_cmd_macro_simple() {

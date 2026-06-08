@@ -1,107 +1,101 @@
 # Deployment Setup
 
-This document explains how to set up automated deployment to NPM using GitHub Actions.
+This repository releases both packages from `.github/workflows/release.yml`:
 
-## Required Secrets
+- npm package: `command-stream`
+- Rust crate: `command-stream`
 
-To enable automatic NPM publishing, you need to configure the following secrets in your GitHub repository:
+The workflow runs checks on pull requests and publishes on pushes to `main` after
+the checks pass.
 
-### 1. NPM_TOKEN
+## Required Publishing Setup
 
-1. Go to [npmjs.com](https://www.npmjs.com) and log in to your account
-2. Navigate to "Access Tokens" in your account settings
-3. Click "Generate New Token" → "Classic Token"
-4. Select "Automation" (for publishing from CI/CD)
-5. Copy the generated token
-6. In your GitHub repository, go to Settings → Secrets and variables → Actions
-7. Click "New repository secret"
-8. Name: `NPM_TOKEN`
-9. Value: paste your NPM token
+### npm
 
-### 2. GITHUB_TOKEN
+npm publishing uses trusted publishing through GitHub Actions OIDC. Do not add
+or rotate an `NPM_TOKEN` for this workflow.
 
-This is automatically provided by GitHub Actions, no setup required.
+Configure the trusted publisher in npm for:
 
-## How the Deployment Works
+- Repository: `link-foundation/command-stream`
+- Workflow file: `.github/workflows/release.yml`
+- Environment: none, unless the npm package is configured to require one
 
-### CI Workflow (`.github/workflows/ci.yml`)
+The workflow updates npm to a trusted-publishing compatible version before
+running `changeset publish`.
 
-- Runs on every pull request and push to main
-- Tests the code with Bun
-- Checks Node.js compatibility (versions 20, 22, 24)
-- Validates package.json and required files
-- Runs coverage tests
+### crates.io
 
-### Deploy Workflow (`.github/workflows/deploy.yml`)
+Rust publishing uses Cargo token authentication. Configure one of these GitHub
+Actions secrets at the repository or organization level:
 
-- Runs only on pushes to the `main` branch
-- Only deploys if relevant files have changed:
-  - `$.mjs` (main library file)
-  - `$.test.mjs` (test file)
-  - `package.json` (package configuration)
-  - `README.md` (documentation)
-  - `.github/workflows/deploy.yml` (deployment config)
+- `CARGO_REGISTRY_TOKEN` - Cargo's native environment variable name, preferred
+- `CARGO_TOKEN` - backwards-compatible fallback used by older organization
+  workflows
 
-### Deployment Process
+The release workflow maps both names:
 
-1. **Change Detection**: Checks if relevant files changed
-2. **Testing**: Runs full test suite with coverage
-3. **Version Check**: Verifies if the current version already exists on NPM
-4. **Publishing**: If version doesn't exist, publishes to NPM
-5. **Release Creation**: Creates a GitHub release with changelog
+```yaml
+CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN || secrets.CARGO_TOKEN }}
+CARGO_TOKEN: ${{ secrets.CARGO_TOKEN }}
+```
 
-## Version Management
+The crates publisher first checks whether the current `rust/Cargo.toml` version
+already exists on crates.io. If it exists, the step reports success and does not
+require a token. If it is missing, the step requires a token and runs
+`cargo publish`.
 
-To release a new version:
+## Pull Request Checks
 
-1. Update the version in `package.json`:
+Pull requests must add exactly one changeset file in `.changeset/`. CI then runs:
 
-   ```bash
-   # For patch releases (bug fixes)
-   npm version patch
+- changeset validation
+- ESLint, Prettier, and duplication checks
+- Bun tests on Ubuntu, macOS, and Windows
+- Node.js module loading checks on Node 20, 22, and 24
+- Rust formatting, Clippy, tests, doc tests, and `cargo package`
 
-   # For minor releases (new features)
-   npm version minor
+Command-stream trace output is off by default in CI. Set the repository variable
+`COMMAND_STREAM_TRACE=true` only when a diagnostic rerun needs full tracing.
 
-   # For major releases (breaking changes)
-   npm version major
-   ```
+## Release Flow
 
-2. Push to main branch:
+On push to `main`:
 
-   ```bash
-   git push origin main --tags
-   ```
+1. CI verifies JavaScript and Rust checks.
+2. Changesets bump the npm package version, update changelog files, and sync
+   `rust/Cargo.toml` plus `rust/Cargo.lock` to the same version.
+3. The workflow publishes the npm package with trusted publishing.
+4. The workflow publishes `rust/Cargo.toml` to crates.io if that crate version is
+   not already published.
+5. The workflow creates and formats the GitHub release.
 
-3. The GitHub Action will automatically:
-   - Run tests
-   - Check if the version exists on NPM
-   - Publish if it's a new version
-   - Create a GitHub release
+Manual instant releases use the same publishing steps through
+`workflow_dispatch`.
 
 ## Manual Publishing
 
-If you need to publish manually:
+Use manual publishing only for emergency recovery:
 
 ```bash
-# Make sure you're logged in to NPM
-npm login
-
-# Publish the package
+# npm, after logging in locally
 npm publish --access public
+
+# crates.io, after logging in locally
+cargo publish --manifest-path rust/Cargo.toml
 ```
+
+Prefer rerunning the GitHub Actions release workflow so npm, crates.io, and the
+GitHub release stay aligned.
 
 ## Troubleshooting
 
-### Common Issues
-
-1. **NPM_TOKEN expired**: Generate a new token and update the secret
-2. **Permission denied**: Ensure your NPM account has publish permissions for the package
-3. **Version already exists**: Update the version in package.json
-4. **Tests failing**: Fix the tests before the deployment will proceed
-
-### Checking Deployment Status
-
-- View workflow runs in the "Actions" tab of your GitHub repository
-- Check NPM package status at: https://www.npmjs.com/package/command-stream
-- Monitor GitHub releases in the "Releases" section of your repository
+- Missing changeset: add one `.changeset/*.md` file to the PR.
+- npm trusted publishing failure: verify npm trusted publisher settings match
+  `.github/workflows/release.yml`.
+- crates.io authentication failure: verify `CARGO_REGISTRY_TOKEN` or
+  `CARGO_TOKEN` is available to Actions.
+- crate version already exists: bump `rust/Cargo.toml` before trying to publish
+  new Rust crate contents, or rerun the normal release flow so
+  `scripts/sync-rust-version.mjs` syncs Cargo metadata from `package.json`.
+- tests are too noisy: leave `COMMAND_STREAM_TRACE` unset or set it to `false`.

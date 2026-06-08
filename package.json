@@ -34,7 +34,9 @@
     "changeset": "changeset",
     "changeset:version": "bun scripts/changeset-version.mjs",
     "changeset:publish": "changeset publish",
-    "changeset:status": "changeset status --since=origin/main"
+    "changeset:status": "changeset status --since=origin/main",
+    "publish:crates": "bun scripts/publish-to-crates.mjs --working-dir rust",
+    "sync:rust-version": "bun scripts/sync-rust-version.mjs"
   },
   "keywords": [
     "shell",
@@ -71,7 +73,7 @@
   },
   "lint-staged": {
     "*.{js,mjs,cjs}": [
-      "eslint --fix --max-warnings 0",
+      "eslint --fix --max-warnings 0 --no-warn-ignored",
       "prettier --write",
       "prettier --check"
     ],

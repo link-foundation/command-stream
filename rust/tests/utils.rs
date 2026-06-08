@@ -2,7 +2,7 @@
 //!
 //! These tests mirror the JavaScript utility tests
 
-use command_stream::utils::{AnsiConfig, AnsiUtils, CommandResult, VirtualUtils, quote};
+use command_stream::utils::{quote, AnsiConfig, AnsiUtils, CommandResult, VirtualUtils};
 use std::path::PathBuf;
 
 // ============================================================================

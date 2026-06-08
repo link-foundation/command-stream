@@ -1,6 +1,6 @@
 //! Tests for the streaming module
 
-use command_stream::{StreamingRunner, OutputChunk, AsyncIterator};
+use command_stream::{AsyncIterator, OutputChunk, StreamingRunner};
 
 #[tokio::test]
 async fn test_streaming_runner_basic() {
@@ -13,8 +13,7 @@ async fn test_streaming_runner_basic() {
 
 #[tokio::test]
 async fn test_streaming_runner_with_stdin() {
-    let runner = StreamingRunner::new("cat")
-        .stdin("test input");
+    let runner = StreamingRunner::new("cat").stdin("test input");
     let result = runner.collect().await.unwrap();
 
     assert!(result.is_success());
@@ -78,8 +77,7 @@ async fn test_streaming_exit_code() {
 
 #[tokio::test]
 async fn test_streaming_runner_cwd() {
-    let runner = StreamingRunner::new("pwd")
-        .cwd("/tmp");
+    let runner = StreamingRunner::new("pwd").cwd("/tmp");
     let result = runner.collect().await.unwrap();
 
     assert!(result.is_success());
@@ -93,8 +91,7 @@ async fn test_streaming_runner_env() {
     let mut env = HashMap::new();
     env.insert("TEST_VAR".to_string(), "test_value".to_string());
 
-    let runner = StreamingRunner::new("sh -c 'echo $TEST_VAR'")
-        .env(env);
+    let runner = StreamingRunner::new("sh -c 'echo $TEST_VAR'").env(env);
     let result = runner.collect().await.unwrap();
 
     assert!(result.is_success());
