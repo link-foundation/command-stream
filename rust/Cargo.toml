@@ -1,6 +1,6 @@
 [package]
 name = "command-stream"
-version = "0.9.4"
+version = "0.9.5"
 edition = "2021"
 authors = ["link-foundation"]
 description = "Modern shell command execution library with streaming, async iteration, and event support"
