@@ -7,26 +7,36 @@ use command_stream::commands::{
     CommandContext, VirtualCommandRegistry,
 };
 use command_stream::{run, ProcessRunner, RunOptions};
+use tokio::sync::{Mutex, MutexGuard};
+
+static VIRTUAL_COMMANDS_TEST_LOCK: Mutex<()> = Mutex::const_new(());
+
+async fn lock_virtual_commands() -> MutexGuard<'static, ()> {
+    VIRTUAL_COMMANDS_TEST_LOCK.lock().await
+}
 
 // ============================================================================
 // Virtual Commands Enable/Disable Tests
 // ============================================================================
 
-#[test]
-fn test_virtual_commands_default_enabled() {
+#[tokio::test]
+async fn test_virtual_commands_default_enabled() {
+    let _guard = lock_virtual_commands().await;
     assert!(are_virtual_commands_enabled());
 }
 
-#[test]
-fn test_disable_virtual_commands() {
+#[tokio::test]
+async fn test_disable_virtual_commands() {
+    let _guard = lock_virtual_commands().await;
     enable_virtual_commands(); // Ensure enabled first
     disable_virtual_commands();
     assert!(!are_virtual_commands_enabled());
     enable_virtual_commands(); // Restore
 }
 
-#[test]
-fn test_enable_virtual_commands() {
+#[tokio::test]
+async fn test_enable_virtual_commands() {
+    let _guard = lock_virtual_commands().await;
     disable_virtual_commands();
     enable_virtual_commands();
     assert!(are_virtual_commands_enabled());
@@ -105,6 +115,7 @@ fn test_command_context_is_cancelled_with_fn() {
 
 #[tokio::test]
 async fn test_execute_virtual_echo() {
+    let _guard = lock_virtual_commands().await;
     enable_virtual_commands();
     let result = run("echo Hello World").await.unwrap();
     assert!(result.is_success());
@@ -113,6 +124,7 @@ async fn test_execute_virtual_echo() {
 
 #[tokio::test]
 async fn test_execute_virtual_pwd() {
+    let _guard = lock_virtual_commands().await;
     enable_virtual_commands();
     let result = run("pwd").await.unwrap();
     assert!(result.is_success());
@@ -121,6 +133,7 @@ async fn test_execute_virtual_pwd() {
 
 #[tokio::test]
 async fn test_execute_virtual_true() {
+    let _guard = lock_virtual_commands().await;
     enable_virtual_commands();
     let result = run("true").await.unwrap();
     assert!(result.is_success());
@@ -129,6 +142,7 @@ async fn test_execute_virtual_true() {
 
 #[tokio::test]
 async fn test_execute_virtual_false() {
+    let _guard = lock_virtual_commands().await;
     enable_virtual_commands();
     let result = run("false").await.unwrap();
     assert!(!result.is_success());
@@ -137,6 +151,7 @@ async fn test_execute_virtual_false() {
 
 #[tokio::test]
 async fn test_execute_virtual_exit() {
+    let _guard = lock_virtual_commands().await;
     enable_virtual_commands();
 
     let result = run("exit 0").await.unwrap();
@@ -148,6 +163,7 @@ async fn test_execute_virtual_exit() {
 
 #[tokio::test]
 async fn test_execute_virtual_which() {
+    let _guard = lock_virtual_commands().await;
     enable_virtual_commands();
     let result = run("which echo").await.unwrap();
     assert!(result.is_success());
@@ -156,6 +172,7 @@ async fn test_execute_virtual_which() {
 
 #[tokio::test]
 async fn test_execute_virtual_sleep() {
+    let _guard = lock_virtual_commands().await;
     enable_virtual_commands();
     let start = std::time::Instant::now();
     let result = run("sleep 0.1").await.unwrap();
@@ -168,6 +185,7 @@ async fn test_execute_virtual_sleep() {
 
 #[tokio::test]
 async fn test_execute_echo_with_n_flag() {
+    let _guard = lock_virtual_commands().await;
     enable_virtual_commands();
     let result = run("echo -n Hello").await.unwrap();
     assert!(result.is_success());
@@ -182,6 +200,7 @@ async fn test_execute_echo_with_n_flag() {
 
 #[tokio::test]
 async fn test_process_runner_virtual_echo() {
+    let _guard = lock_virtual_commands().await;
     enable_virtual_commands();
     let mut runner = ProcessRunner::new("echo test virtual", RunOptions::default());
     let result = runner.run().await.unwrap();
@@ -191,6 +210,7 @@ async fn test_process_runner_virtual_echo() {
 
 #[tokio::test]
 async fn test_process_runner_virtual_pwd() {
+    let _guard = lock_virtual_commands().await;
     enable_virtual_commands();
     let mut runner = ProcessRunner::new("pwd", RunOptions::default());
     let result = runner.run().await.unwrap();

@@ -79,8 +79,13 @@ fn test_validate_args_insufficient() {
 
 #[test]
 fn test_resolve_path_absolute() {
-    let path = VirtualUtils::resolve_path("/absolute/path", None);
-    assert_eq!(path, PathBuf::from("/absolute/path"));
+    let absolute_path = if cfg!(windows) {
+        PathBuf::from(r"C:\absolute\path")
+    } else {
+        PathBuf::from("/absolute/path")
+    };
+    let path = VirtualUtils::resolve_path(absolute_path.to_str().unwrap(), None);
+    assert_eq!(path, absolute_path);
 }
 
 #[test]
