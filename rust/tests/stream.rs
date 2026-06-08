@@ -77,11 +77,18 @@ async fn test_streaming_exit_code() {
 
 #[tokio::test]
 async fn test_streaming_runner_cwd() {
-    let runner = StreamingRunner::new("pwd").cwd("/tmp");
+    let temp_dir = tempfile::tempdir().unwrap();
+    let command = if cfg!(windows) { "cd" } else { "pwd" };
+    let runner = StreamingRunner::new(command).cwd(temp_dir.path());
     let result = runner.collect().await.unwrap();
 
     assert!(result.is_success());
-    assert!(result.stdout.contains("/tmp"));
+    let stdout = result.stdout.trim().replace('\\', "/");
+    let expected = temp_dir.path().to_string_lossy().replace('\\', "/");
+    assert!(
+        stdout.contains(&expected),
+        "expected stdout {stdout:?} to contain cwd {expected:?}"
+    );
 }
 
 #[tokio::test]
