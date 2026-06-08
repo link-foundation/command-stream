@@ -1,0 +1,361 @@
+name: JavaScript checks and release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'js/**'
+      - '.github/workflows/js.yml'
+      - 'README.md'
+      - 'LICENSE'
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'js/**'
+      - '.github/workflows/js.yml'
+      - 'README.md'
+      - 'LICENSE'
+  workflow_dispatch:
+    inputs:
+      release_mode:
+        description: 'Manual release mode'
+        required: true
+        type: choice
+        default: 'instant'
+        options:
+          - instant
+          - changeset-pr
+      bump_type:
+        description: 'Manual release type'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      description:
+        description: 'Manual release description (optional)'
+        required: false
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  changeset-check:
+    name: Check for JavaScript changesets
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        working-directory: js
+        run: bun install
+
+      - name: Check for changesets
+        working-directory: js
+        env:
+          GITHUB_BASE_REF: ${{ github.base_ref }}
+          GITHUB_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [[ "${{ github.head_ref }}" == "changeset-release/"* ]]; then
+            echo "Skipping changeset check for automated release PR"
+            exit 0
+          fi
+
+          bun scripts/validate-changeset.mjs
+
+  lint:
+    name: Lint and format JavaScript
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [changeset-check]
+    if: always() && (github.event_name == 'push' || needs.changeset-check.result == 'success')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        working-directory: js
+        run: bun install
+
+      - name: Run ESLint
+        working-directory: js
+        run: bun run lint
+
+      - name: Check formatting
+        working-directory: js
+        run: bun run format:check
+
+      - name: Check code duplication
+        working-directory: js
+        run: bun run check:duplication
+
+  test:
+    name: Test JavaScript (${{ matrix.runtime }} on ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    needs: [changeset-check]
+    if: always() && (github.event_name == 'push' || needs.changeset-check.result == 'success')
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        runtime: [bun]
+        include:
+          - os: ubuntu-latest
+            runtime: node
+            node-version: 20
+          - os: ubuntu-latest
+            runtime: node
+            node-version: 22
+          - os: ubuntu-latest
+            runtime: node
+            node-version: 24
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        if: matrix.runtime == 'bun'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install system dependencies (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Install system dependencies (macOS)
+        if: matrix.os == 'macos-latest'
+        run: brew install jq
+
+      - name: Install system dependencies (Windows)
+        if: matrix.os == 'windows-latest'
+        run: choco install jq -y
+
+      - name: Install dependencies (Bun)
+        if: matrix.runtime == 'bun'
+        working-directory: js
+        run: bun install
+
+      - name: Run tests (Bun)
+        if: matrix.runtime == 'bun'
+        run: bun test js/tests/ --timeout 10000
+        env:
+          COMMAND_STREAM_TRACE: ${{ vars.COMMAND_STREAM_TRACE || 'false' }}
+
+      - name: Setup Node.js
+        if: matrix.runtime == 'node'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Test Node.js compatibility
+        if: matrix.runtime == 'node'
+        run: |
+          node -e "
+          import('./js/src/\$.mjs')
+            .then(() => console.log('Module loads successfully in Node.js ${{ matrix.node-version }}'))
+            .catch((error) => {
+              console.error('Module failed to load:', error.message);
+              process.exit(1);
+            });
+          "
+
+  release:
+    name: Release JavaScript package
+    needs: [lint, test]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.lint.result == 'success' && needs.test.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        working-directory: js
+        run: bun install
+
+      - name: Update npm for OIDC trusted publishing
+        working-directory: js
+        run: bun scripts/setup-npm.mjs
+
+      - name: Check for changesets
+        id: check_changesets
+        working-directory: js
+        run: |
+          CHANGESET_COUNT=$(find .changeset -name "*.md" ! -name "README.md" | wc -l)
+          echo "Found $CHANGESET_COUNT JavaScript changeset file(s)"
+          echo "has_changesets=$([[ $CHANGESET_COUNT -gt 0 ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+          echo "changeset_count=$CHANGESET_COUNT" >> $GITHUB_OUTPUT
+
+      - name: Merge multiple changesets
+        if: steps.check_changesets.outputs.has_changesets == 'true' && fromJSON(steps.check_changesets.outputs.changeset_count) > 1
+        working-directory: js
+        run: bun scripts/merge-changesets.mjs
+
+      - name: Version package and commit to main
+        if: steps.check_changesets.outputs.has_changesets == 'true'
+        id: version
+        working-directory: js
+        run: bun scripts/version-and-commit.mjs --mode changeset
+
+      - name: Publish to npm
+        if: steps.version.outputs.version_committed == 'true' || steps.version.outputs.already_released == 'true'
+        id: publish
+        working-directory: js
+        run: bun scripts/publish-to-npm.mjs --should-pull
+
+      - name: Create JavaScript GitHub Release
+        if: steps.publish.outputs.published == 'true'
+        working-directory: js
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bun scripts/create-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}" --tag-prefix js-v
+
+      - name: Format JavaScript GitHub release notes
+        if: steps.publish.outputs.published == 'true'
+        working-directory: js
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bun scripts/format-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}" --commit-sha "${{ github.sha }}" --tag-prefix js-v
+
+  instant-release:
+    name: Instant JavaScript release
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'instant'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        working-directory: js
+        run: bun install
+
+      - name: Update npm for OIDC trusted publishing
+        working-directory: js
+        run: bun scripts/setup-npm.mjs
+
+      - name: Version package and commit to main
+        id: version
+        working-directory: js
+        run: bun scripts/version-and-commit.mjs --mode instant --bump-type "${{ github.event.inputs.bump_type }}" --description "${{ github.event.inputs.description }}"
+
+      - name: Publish to npm
+        if: steps.version.outputs.version_committed == 'true' || steps.version.outputs.already_released == 'true'
+        id: publish
+        working-directory: js
+        run: bun scripts/publish-to-npm.mjs
+
+      - name: Create JavaScript GitHub Release
+        if: steps.publish.outputs.published == 'true'
+        working-directory: js
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bun scripts/create-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}" --tag-prefix js-v
+
+      - name: Format JavaScript GitHub release notes
+        if: steps.publish.outputs.published == 'true'
+        working-directory: js
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bun scripts/format-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}" --commit-sha "${{ github.sha }}" --tag-prefix js-v
+
+  changeset-pr:
+    name: Create JavaScript changeset PR
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'changeset-pr'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        working-directory: js
+        run: bun install
+
+      - name: Create changeset file
+        working-directory: js
+        run: bun scripts/create-manual-changeset.mjs --bump-type "${{ github.event.inputs.bump_type }}" --description "${{ github.event.inputs.description }}"
+
+      - name: Format changeset with Prettier
+        working-directory: js
+        run: bunx prettier --write ".changeset/*.md"
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore: add changeset for manual JavaScript ${{ github.event.inputs.bump_type }} release'
+          branch: changeset-js-manual-release-${{ github.run_id }}
+          delete-branch: true
+          title: 'chore: manual JavaScript ${{ github.event.inputs.bump_type }} release'
+          body: |
+            ## Manual JavaScript Release Request
+
+            This PR was created by a manual workflow trigger to prepare a **${{ github.event.inputs.bump_type }}** npm release.
+
+            ### Release Details
+            - Type: ${{ github.event.inputs.bump_type }}
+            - Description: ${{ github.event.inputs.description || 'Manual JavaScript release' }}
+            - Triggered by: @${{ github.actor }}

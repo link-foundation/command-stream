@@ -161,7 +161,7 @@ describe('Virtual Commands System', () => {
       expect(result1.code).toBe(0);
 
       // Test file
-      const result2 = await $`test -f package.json`;
+      const result2 = await $`test -f js/package.json`;
       expect(result2.code).toBe(0);
 
       // Test non-existent
