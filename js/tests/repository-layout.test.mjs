@@ -15,6 +15,25 @@ function readFromRepo(relativePath) {
   return readFileSync(resolve(repoRoot, relativePath), 'utf8');
 }
 
+function getWorkflowJobBlock(workflow, jobName) {
+  const lines = workflow.split(/\r?\n/);
+  const start = lines.findIndex((line) => line.trimEnd() === `  ${jobName}:`);
+
+  if (start === -1) {
+    throw new Error(`Workflow job not found: ${jobName}`);
+  }
+
+  const nextJob = lines.findIndex(
+    (line, index) => index > start && /^ {2}[A-Za-z0-9_-]+:/.test(line)
+  );
+
+  return lines.slice(start, nextJob === -1 ? lines.length : nextJob).join('\n');
+}
+
+function withCrlfLineEndings(text) {
+  return text.replace(/\r?\n/g, '\r\n');
+}
+
 describe('repository language layout', () => {
   test('keeps JavaScript package files inside js/', () => {
     expect(existsFromRepo('package.json')).toBe(false);
@@ -66,6 +85,37 @@ describe('repository language layout', () => {
     expect(jsWorkflow).toContain('--tag-prefix js-v');
     expect(rustWorkflow).toContain('working-directory: rust');
     expect(rustWorkflow).toContain('--tag-prefix rust-v');
+  });
+
+  test('release jobs evaluate after PR-only gate jobs are skipped on push', () => {
+    const jsWorkflow = readFromRepo('.github/workflows/js.yml');
+    const rustWorkflow = readFromRepo('.github/workflows/rust.yml');
+
+    for (const [jsWorkflowVariant, rustWorkflowVariant] of [
+      [jsWorkflow, rustWorkflow],
+      [withCrlfLineEndings(jsWorkflow), withCrlfLineEndings(rustWorkflow)],
+    ]) {
+      const jsReleaseJob = getWorkflowJobBlock(jsWorkflowVariant, 'release');
+      const rustReleaseJob = getWorkflowJobBlock(
+        rustWorkflowVariant,
+        'release'
+      );
+
+      expect(jsReleaseJob).toContain('needs: [lint, test]');
+      expect(jsReleaseJob).toContain('always() && !cancelled()');
+      expect(jsReleaseJob).toContain("github.ref == 'refs/heads/main'");
+      expect(jsReleaseJob).toContain("github.event_name == 'push'");
+      expect(jsReleaseJob).toContain("needs.lint.result == 'success'");
+      expect(jsReleaseJob).toContain("needs.test.result == 'success'");
+
+      expect(rustReleaseJob).toContain('needs: [lint, test, build]');
+      expect(rustReleaseJob).toContain('always() && !cancelled()');
+      expect(rustReleaseJob).toContain("github.ref == 'refs/heads/main'");
+      expect(rustReleaseJob).toContain("github.event_name == 'push'");
+      expect(rustReleaseJob).toContain("needs.lint.result == 'success'");
+      expect(rustReleaseJob).toContain("needs.test.result == 'success'");
+      expect(rustReleaseJob).toContain("needs.build.result == 'success'");
+    }
   });
 
   test('keeps root README focused on shared project information', () => {
