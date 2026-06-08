@@ -85,16 +85,19 @@ use tokio::process::{Child, Command};
 use tokio::sync::mpsc;
 
 pub use commands::{CommandContext, StreamChunk};
-pub use shell_parser::{parse_shell_command, needs_real_shell, ParsedCommand};
+pub use shell_parser::{needs_real_shell, parse_shell_command, ParsedCommand};
 pub use utils::{CommandResult, VirtualUtils};
 
 // Re-export modular utilities at crate root for convenient access
 pub use ansi::{AnsiConfig, AnsiUtils};
 pub use events::{EventData, EventType, StreamEmitter};
-pub use pipeline::{Pipeline, PipelineExt, PipelineBuilder};
+pub use pipeline::{Pipeline, PipelineBuilder, PipelineExt};
 pub use quote::quote;
-pub use state::{global_state, reset_global_state, get_shell_settings, set_shell_option, unset_shell_option, GlobalState, ShellSettings};
-pub use stream::{StreamingRunner, OutputStream, OutputChunk, AsyncIterator, IntoStream};
+pub use state::{
+    get_shell_settings, global_state, reset_global_state, set_shell_option, unset_shell_option,
+    GlobalState, ShellSettings,
+};
+pub use stream::{AsyncIterator, IntoStream, OutputChunk, OutputStream, StreamingRunner};
 pub use trace::trace;
 
 /// Error type for command-stream operations
@@ -235,10 +238,18 @@ impl ProcessRunner {
 
         // Configure stdin
         match &self.options.stdin {
-            StdinOption::Inherit => { cmd.stdin(Stdio::inherit()); }
-            StdinOption::Pipe => { cmd.stdin(Stdio::piped()); }
-            StdinOption::Content(_) => { cmd.stdin(Stdio::piped()); }
-            StdinOption::Null => { cmd.stdin(Stdio::null()); }
+            StdinOption::Inherit => {
+                cmd.stdin(Stdio::inherit());
+            }
+            StdinOption::Pipe => {
+                cmd.stdin(Stdio::piped());
+            }
+            StdinOption::Content(_) => {
+                cmd.stdin(Stdio::piped());
+            }
+            StdinOption::Null => {
+                cmd.stdin(Stdio::null());
+            }
         }
 
         // Configure stdout/stderr

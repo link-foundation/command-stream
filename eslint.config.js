@@ -222,6 +222,9 @@ export default [
       'dist/**',
       '*.min.js',
       '.eslintcache',
+      'docs/case-studies/**/data/**',
+      'docs/case-studies/**/log-excerpts/**',
+      'docs/case-studies/**/templates/**',
     ],
   },
 ];

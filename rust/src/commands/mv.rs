@@ -34,10 +34,7 @@ pub async fn mv(ctx: CommandContext) -> CommandResult {
     let multiple_sources = paths.len() > 1;
 
     if multiple_sources && !dest_is_dir {
-        return CommandResult::error(format!(
-            "mv: target '{}' is not a directory\n",
-            dest
-        ));
+        return CommandResult::error(format!("mv: target '{}' is not a directory\n", dest));
     }
 
     for source in paths {
@@ -90,10 +87,7 @@ pub async fn mv(ctx: CommandContext) -> CommandResult {
                         }
                     }
                 } else {
-                    return CommandResult::error(format!(
-                        "mv: cannot move '{}': {}\n",
-                        source, e
-                    ));
+                    return CommandResult::error(format!("mv: cannot move '{}': {}\n", source, e));
                 }
             }
         }

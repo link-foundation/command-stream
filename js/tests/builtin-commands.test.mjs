@@ -1,6 +1,12 @@
 import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
 import { isWindows } from './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
-import { $, register, unregister, enableVirtualCommands } from '../src/$.mjs';
+import {
+  $,
+  register,
+  unregister,
+  enableVirtualCommands,
+  shell,
+} from '../src/$.mjs';
 import { trace } from '../src/$.utils.mjs';
 import { rmSync, existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
 import { join } from 'path';
@@ -9,6 +15,12 @@ import { join } from 'path';
 const TEST_DIR = 'test-builtin-commands';
 
 beforeEach(() => {
+  shell.errexit(false);
+  shell.verbose(false);
+  shell.xtrace(false);
+  shell.pipefail(false);
+  shell.nounset(false);
+
   // Enable virtual commands for these tests
   enableVirtualCommands();
 

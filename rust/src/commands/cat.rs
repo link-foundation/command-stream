@@ -30,9 +30,7 @@ pub async fn cat(ctx: CommandContext) -> CommandResult {
             return CommandResult::error_with_code("", 130); // SIGINT exit code
         }
 
-        trace_lazy("VirtualCommand", || {
-            format!("cat: reading file {:?}", file)
-        });
+        trace_lazy("VirtualCommand", || format!("cat: reading file {:?}", file));
 
         let resolved_path = VirtualUtils::resolve_path(file, Some(&cwd));
 
@@ -44,7 +42,8 @@ pub async fn cat(ctx: CommandContext) -> CommandResult {
                 let error_msg = if e.kind() == std::io::ErrorKind::NotFound {
                     format!("cat: {}: No such file or directory\n", file)
                 } else if e.kind() == std::io::ErrorKind::IsADirectory
-                    || (e.kind() == std::io::ErrorKind::Other && e.to_string().contains("directory"))
+                    || (e.kind() == std::io::ErrorKind::Other
+                        && e.to_string().contains("directory"))
                 {
                     format!("cat: {}: Is a directory\n", file)
                 } else {
@@ -74,9 +73,7 @@ mod tests {
         let mut temp = NamedTempFile::new().unwrap();
         writeln!(temp, "Hello, World!").unwrap();
 
-        let ctx = CommandContext::new(vec![
-            temp.path().to_string_lossy().to_string()
-        ]);
+        let ctx = CommandContext::new(vec![temp.path().to_string_lossy().to_string()]);
         let result = cat(ctx).await;
 
         assert!(result.is_success());
@@ -95,9 +92,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_cat_nonexistent() {
-        let ctx = CommandContext::new(vec![
-            "/nonexistent/file/12345".to_string()
-        ]);
+        let ctx = CommandContext::new(vec!["/nonexistent/file/12345".to_string()]);
         let result = cat(ctx).await;
 
         assert!(!result.is_success());

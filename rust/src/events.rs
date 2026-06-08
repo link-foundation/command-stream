@@ -106,10 +106,7 @@ impl StreamEmitter {
         });
 
         let mut listeners = self.listeners.write().await;
-        listeners
-            .entry(event)
-            .or_default()
-            .push(Arc::new(listener));
+        listeners.entry(event).or_default().push(Arc::new(listener));
     }
 
     /// Register a one-time listener for an event

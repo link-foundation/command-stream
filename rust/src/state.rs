@@ -144,9 +144,7 @@ impl GlobalState {
             .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         self.active_runners.write().await.insert(id);
 
-        trace_lazy("GlobalState", || {
-            format!("Registered runner {}", id)
-        });
+        trace_lazy("GlobalState", || format!("Registered runner {}", id));
 
         id
     }
@@ -155,9 +153,7 @@ impl GlobalState {
     pub async fn unregister_runner(&self, id: u64) {
         self.active_runners.write().await.remove(&id);
 
-        trace_lazy("GlobalState", || {
-            format!("Unregistered runner {}", id)
-        });
+        trace_lazy("GlobalState", || format!("Unregistered runner {}", id));
     }
 
     /// Get the count of active runners
@@ -172,7 +168,8 @@ impl GlobalState {
 
     /// Mark signal handlers as installed
     pub fn set_signal_handlers_installed(&self, installed: bool) {
-        self.signal_handlers_installed.store(installed, Ordering::SeqCst);
+        self.signal_handlers_installed
+            .store(installed, Ordering::SeqCst);
     }
 
     /// Check if virtual commands are enabled

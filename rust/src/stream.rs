@@ -107,7 +107,9 @@ impl StreamingRunner {
         let stdin_content = self.stdin_content.take();
 
         tokio::spawn(async move {
-            if let Err(e) = run_streaming_process(command, cwd, env, stdin_content, tx.clone()).await {
+            if let Err(e) =
+                run_streaming_process(command, cwd, env, stdin_content, tx.clone()).await
+            {
                 trace_lazy("StreamingRunner", || format!("Error: {}", e));
             }
         });
@@ -242,7 +244,11 @@ async fn run_streaming_process(
                 match reader.read(&mut buf).await {
                     Ok(0) => break,
                     Ok(n) => {
-                        if tx_stdout.send(OutputChunk::Stdout(buf[..n].to_vec())).await.is_err() {
+                        if tx_stdout
+                            .send(OutputChunk::Stdout(buf[..n].to_vec()))
+                            .await
+                            .is_err()
+                        {
                             break;
                         }
                     }
@@ -266,7 +272,11 @@ async fn run_streaming_process(
                 match reader.read(&mut buf).await {
                     Ok(0) => break,
                     Ok(n) => {
-                        if tx_stderr.send(OutputChunk::Stderr(buf[..n].to_vec())).await.is_err() {
+                        if tx_stderr
+                            .send(OutputChunk::Stderr(buf[..n].to_vec()))
+                            .await
+                            .is_err()
+                        {
                             break;
                         }
                     }

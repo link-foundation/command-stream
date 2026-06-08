@@ -54,15 +54,21 @@ pub fn build_shell_command(parts: &[&str], values: &[&str]) -> String {
 
 /// Helper function to create a ProcessRunner from a command string
 pub fn create_runner(command: String) -> crate::ProcessRunner {
-    crate::ProcessRunner::new(command, crate::RunOptions {
-        mirror: true,
-        capture: true,
-        ..Default::default()
-    })
+    crate::ProcessRunner::new(
+        command,
+        crate::RunOptions {
+            mirror: true,
+            capture: true,
+            ..Default::default()
+        },
+    )
 }
 
 /// Helper function to create a ProcessRunner with custom options
-pub fn create_runner_with_options(command: String, options: crate::RunOptions) -> crate::ProcessRunner {
+pub fn create_runner_with_options(
+    command: String,
+    options: crate::RunOptions,
+) -> crate::ProcessRunner {
     crate::ProcessRunner::new(command, options)
 }
 

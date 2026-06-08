@@ -8,10 +8,7 @@ use crate::utils::CommandResult;
 /// Exits with the specified code (default 0).
 /// Note: This doesn't actually exit the process, it returns the exit code.
 pub async fn exit(ctx: CommandContext) -> CommandResult {
-    let code: i32 = ctx.args
-        .first()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(0);
+    let code: i32 = ctx.args.first().and_then(|s| s.parse().ok()).unwrap_or(0);
 
     CommandResult::error_with_code("", code)
 }

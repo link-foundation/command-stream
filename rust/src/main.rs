@@ -2,7 +2,7 @@
 //!
 //! A simple CLI wrapper for the command-stream library.
 
-use command_stream::{run, RunOptions, ProcessRunner};
+use command_stream::{run, ProcessRunner, RunOptions};
 use std::env;
 
 #[tokio::main]

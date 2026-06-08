@@ -18,7 +18,10 @@ pub async fn cd(ctx: CommandContext) -> CommandResult {
         ctx.args[0].clone()
     };
 
-    trace("VirtualCommand", &format!("cd: changing directory to {:?}", target));
+    trace(
+        "VirtualCommand",
+        &format!("cd: changing directory to {:?}", target),
+    );
 
     let path = PathBuf::from(&target);
 
@@ -27,7 +30,10 @@ pub async fn cd(ctx: CommandContext) -> CommandResult {
             let new_dir = env::current_dir()
                 .map(|p| p.display().to_string())
                 .unwrap_or_default();
-            trace("VirtualCommand", &format!("cd: success, new dir: {}", new_dir));
+            trace(
+                "VirtualCommand",
+                &format!("cd: success, new dir: {}", new_dir),
+            );
             // cd command should not output anything on success
             CommandResult::success_empty()
         }

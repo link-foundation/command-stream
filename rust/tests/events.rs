@@ -198,10 +198,16 @@ async fn test_event_data_variants() {
         .await;
 
     emitter
-        .emit(EventType::Stdout, EventData::String("test data".to_string()))
+        .emit(
+            EventType::Stdout,
+            EventData::String("test data".to_string()),
+        )
         .await;
     emitter.emit(EventType::Exit, EventData::ExitCode(42)).await;
 
-    assert_eq!(*string_received.lock().unwrap(), Some("test data".to_string()));
+    assert_eq!(
+        *string_received.lock().unwrap(),
+        Some("test data".to_string())
+    );
     assert_eq!(*code_received.lock().unwrap(), Some(42));
 }

@@ -88,7 +88,10 @@ pub async fn ls(ctx: CommandContext) -> CommandResult {
                     outputs.push(entry_strs.join("\n"));
                 }
                 Err(e) => {
-                    return CommandResult::error(format!("ls: cannot open '{}': {}\n", path_str, e));
+                    return CommandResult::error(format!(
+                        "ls: cannot open '{}': {}\n",
+                        path_str, e
+                    ));
                 }
             }
         }
@@ -103,7 +106,8 @@ pub async fn ls(ctx: CommandContext) -> CommandResult {
 }
 
 fn format_entry(path: &Path, long_format: bool) -> String {
-    let name = path.file_name()
+    let name = path
+        .file_name()
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_else(|| path.display().to_string());
 
@@ -147,9 +151,7 @@ mod tests {
         let temp = tempdir().unwrap();
         fs::write(temp.path().join("file.txt"), "test").unwrap();
 
-        let ctx = CommandContext::new(vec![
-            temp.path().to_string_lossy().to_string()
-        ]);
+        let ctx = CommandContext::new(vec![temp.path().to_string_lossy().to_string()]);
         let result = ls(ctx).await;
 
         assert!(result.is_success());
@@ -163,9 +165,7 @@ mod tests {
         fs::write(temp.path().join("visible"), "test").unwrap();
 
         // Without -a
-        let ctx = CommandContext::new(vec![
-            temp.path().to_string_lossy().to_string()
-        ]);
+        let ctx = CommandContext::new(vec![temp.path().to_string_lossy().to_string()]);
         let result = ls(ctx).await;
         assert!(!result.stdout.contains(".hidden"));
         assert!(result.stdout.contains("visible"));
