@@ -6,8 +6,10 @@ import {
   exec,
   run,
   quote,
+  quoteLiteral,
   create,
   raw,
+  literal,
   ProcessRunner,
   shell,
   disableVirtualCommands,
@@ -200,6 +202,59 @@ describe('Utility Functions', () => {
       expect(raw(123)).toEqual({ raw: '123' });
     });
   });
+
+  describe('quoteLiteral', () => {
+    test('should preserve apostrophes', () => {
+      expect(quoteLiteral("didn't")).toBe('"didn\'t"');
+      expect(quoteLiteral("it's user's")).toBe('"it\'s user\'s"');
+    });
+
+    test('should escape double quotes', () => {
+      expect(quoteLiteral('say "hello"')).toBe('"say \\"hello\\""');
+    });
+
+    test('should escape dollar signs', () => {
+      expect(quoteLiteral('price $100')).toBe('"price \\$100"');
+    });
+
+    test('should escape backticks', () => {
+      expect(quoteLiteral('use `npm`')).toBe('"use \\`npm\\`"');
+    });
+
+    test('should escape backslashes', () => {
+      expect(quoteLiteral('path\\to\\file')).toBe('"path\\\\to\\\\file"');
+    });
+
+    test('should handle empty string', () => {
+      expect(quoteLiteral('')).toBe('""');
+    });
+
+    test('should handle null/undefined', () => {
+      expect(quoteLiteral(null)).toBe('""');
+      expect(quoteLiteral(undefined)).toBe('""');
+    });
+
+    test('should not quote safe strings', () => {
+      expect(quoteLiteral('hello')).toBe('hello');
+      expect(quoteLiteral('file.txt')).toBe('file.txt');
+      expect(quoteLiteral('/path/to/file')).toBe('/path/to/file');
+    });
+
+    test('should handle arrays', () => {
+      expect(quoteLiteral(["it's", 'hello'])).toBe('"it\'s" hello');
+    });
+  });
+
+  describe('literal', () => {
+    test('should create literal object', () => {
+      const result = literal("didn't");
+      expect(result).toEqual({ literal: "didn't" });
+    });
+
+    test('should convert to string', () => {
+      expect(literal(123)).toEqual({ literal: '123' });
+    });
+  });
 });
 
 describe('ProcessRunner - Classic Await Pattern', () => {
@@ -232,6 +287,37 @@ describe('ProcessRunner - Classic Await Pattern', () => {
     const result = await $`${cmd}`;
 
     expect(result.stdout.trim()).toBe('raw test');
+  });
+
+  test('should handle literal interpolation - preserves apostrophes', async () => {
+    // This is the key test for issue #141
+    // literal() should preserve apostrophes without '\'' escaping
+    const text = "Dependencies didn't exist";
+    const result = await $`echo ${literal(text)}`;
+
+    expect(result.stdout.trim()).toBe(text);
+  });
+
+  test('should handle literal interpolation - multiple apostrophes', async () => {
+    const text = "it's the user's choice";
+    const result = await $`echo ${literal(text)}`;
+
+    expect(result.stdout.trim()).toBe(text);
+  });
+
+  test('should handle literal interpolation - mixed quotes', async () => {
+    const text = 'it\'s "great"';
+    const result = await $`echo ${literal(text)}`;
+
+    expect(result.stdout.trim()).toBe(text);
+  });
+
+  test('should handle literal interpolation - special characters', async () => {
+    // Dollar signs and backticks should be escaped to prevent shell expansion
+    const text = 'price is $100';
+    const result = await $`echo ${literal(text)}`;
+
+    expect(result.stdout.trim()).toBe(text);
   });
 
   test('should quote dangerous characters', async () => {

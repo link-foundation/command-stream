@@ -11,7 +11,7 @@ import {
   forceCleanupAll,
   resetGlobalState,
 } from './$.state.mjs';
-import { buildShellCommand, quote, raw } from './$.quote.mjs';
+import { buildShellCommand, quote, quoteLiteral, raw } from './$.quote.mjs';
 import {
   AnsiUtils,
   configureAnsi,
@@ -241,6 +241,34 @@ function create(defaultOptions = {}) {
   return tagged;
 }
 
+/**
+ * Mark a value as literal text that should use double-quote escaping.
+ *
+ * Use this when passing text to programs that store it literally (like API calls
+ * via CLI tools) rather than interpreting it as shell commands. This preserves
+ * apostrophes as-is instead of using the '\'' escape pattern.
+ *
+ * Unlike raw(), literal() still provides proper shell escaping for special
+ * characters like $, `, \, and ", but apostrophes pass through unchanged.
+ *
+ * @example
+ * // Problem: apostrophe gets escaped as '\''
+ * await $`gh release create --notes ${text}`;  // "didn't" → "didn'\''t" → appears as "didn'''t"
+ *
+ * // Solution: use literal() to preserve apostrophes
+ * await $`gh release create --notes ${literal(text)}`;  // "didn't" stays "didn't"
+ *
+ * @param {*} value - The value to mark as literal
+ * @returns {{ literal: string }} - Object with literal property for buildShellCommand
+ */
+function literal(value) {
+  trace(
+    'API',
+    () => `literal() called with value: ${String(value).slice(0, 50)}`
+  );
+  return { literal: String(value) };
+}
+
 function set(option) {
   trace('API', () => `set() called with option: ${option}`);
   const mapping = {
@@ -411,8 +439,10 @@ export {
   exec,
   run,
   quote,
+  quoteLiteral,
   create,
   raw,
+  literal,
   ProcessRunner,
   shell,
   set,
