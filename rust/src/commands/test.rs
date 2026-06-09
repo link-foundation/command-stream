@@ -42,7 +42,9 @@ fn evaluate_expression(args: &[String]) -> bool {
             }
             "-w" => {
                 // Check if writable (simplified)
-                fs::metadata(arg).map(|m| !m.permissions().readonly()).unwrap_or(false)
+                fs::metadata(arg)
+                    .map(|m| !m.permissions().readonly())
+                    .unwrap_or(false)
             }
             "-x" => {
                 // Check if executable (simplified - Unix only)
@@ -131,10 +133,7 @@ mod tests {
         let file = temp.path().join("test.txt");
         fs::write(&file, "test").unwrap();
 
-        let ctx = CommandContext::new(vec![
-            "-e".to_string(),
-            file.to_string_lossy().to_string(),
-        ]);
+        let ctx = CommandContext::new(vec!["-e".to_string(), file.to_string_lossy().to_string()]);
         let result = test(ctx).await;
         assert!(result.is_success());
     }
@@ -173,31 +172,21 @@ mod tests {
 
     #[tokio::test]
     async fn test_numeric_comparison() {
-        let ctx = CommandContext::new(vec![
-            "5".to_string(),
-            "-gt".to_string(),
-            "3".to_string(),
-        ]);
+        let ctx = CommandContext::new(vec!["5".to_string(), "-gt".to_string(), "3".to_string()]);
         let result = test(ctx).await;
         assert!(result.is_success());
     }
 
     #[tokio::test]
     async fn test_empty_string() {
-        let ctx = CommandContext::new(vec![
-            "-z".to_string(),
-            "".to_string(),
-        ]);
+        let ctx = CommandContext::new(vec!["-z".to_string(), "".to_string()]);
         let result = test(ctx).await;
         assert!(result.is_success());
     }
 
     #[tokio::test]
     async fn test_non_empty_string() {
-        let ctx = CommandContext::new(vec![
-            "-n".to_string(),
-            "hello".to_string(),
-        ]);
+        let ctx = CommandContext::new(vec!["-n".to_string(), "hello".to_string()]);
         let result = test(ctx).await;
         assert!(result.is_success());
     }

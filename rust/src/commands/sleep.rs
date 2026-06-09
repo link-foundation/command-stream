@@ -21,10 +21,7 @@ pub async fn sleep(ctx: CommandContext) -> CommandResult {
     };
 
     if seconds < 0.0 {
-        return CommandResult::error(format!(
-            "sleep: invalid time interval '{}'\n",
-            seconds_str
-        ));
+        return CommandResult::error(format!("sleep: invalid time interval '{}'\n", seconds_str));
     }
 
     trace_lazy("VirtualCommand", || {

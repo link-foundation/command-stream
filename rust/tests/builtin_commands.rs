@@ -341,7 +341,11 @@ async fn test_mv_to_directory() {
     fs::write(&source, "test content").unwrap();
     fs::create_dir(&dest_dir).unwrap();
 
-    let result = mv(ctx(vec![source.to_str().unwrap(), dest_dir.to_str().unwrap()])).await;
+    let result = mv(ctx(vec![
+        source.to_str().unwrap(),
+        dest_dir.to_str().unwrap(),
+    ]))
+    .await;
     assert!(result.is_success());
     assert!(!source.exists());
     assert!(dest_dir.join("source.txt").exists());

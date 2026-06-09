@@ -140,11 +140,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_seq_three_args() {
-        let ctx = CommandContext::new(vec![
-            "2".to_string(),
-            "2".to_string(),
-            "8".to_string(),
-        ]);
+        let ctx = CommandContext::new(vec!["2".to_string(), "2".to_string(), "8".to_string()]);
         let result = seq(ctx).await;
 
         assert!(result.is_success());
@@ -153,11 +149,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_seq_descending() {
-        let ctx = CommandContext::new(vec![
-            "5".to_string(),
-            "-1".to_string(),
-            "1".to_string(),
-        ]);
+        let ctx = CommandContext::new(vec!["5".to_string(), "-1".to_string(), "1".to_string()]);
         let result = seq(ctx).await;
 
         assert!(result.is_success());
@@ -166,11 +158,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_seq_zero_increment() {
-        let ctx = CommandContext::new(vec![
-            "1".to_string(),
-            "0".to_string(),
-            "5".to_string(),
-        ]);
+        let ctx = CommandContext::new(vec!["1".to_string(), "0".to_string(), "5".to_string()]);
         let result = seq(ctx).await;
 
         assert!(!result.is_success());

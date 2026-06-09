@@ -82,6 +82,9 @@ describe.skipIf(isWindows)('SIGINT Handler Cleanup Tests', () => {
       const ourListeners = process.listeners('SIGINT').filter((l) => {
         const str = l.toString();
         return (
+          str.includes('findActiveRunners') ||
+          str.includes('forwardSigintToRunners') ||
+          str.includes('handleSigintExit') ||
           str.includes('activeProcessRunners') ||
           str.includes('ProcessRunner') ||
           str.includes('activeChildren')

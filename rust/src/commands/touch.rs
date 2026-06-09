@@ -30,10 +30,15 @@ pub async fn touch(ctx: CommandContext) -> CommandResult {
         if resolved_path.exists() {
             // Update modification time
             let now = SystemTime::now();
-            if let Err(e) = filetime::set_file_mtime(&resolved_path, filetime::FileTime::from_system_time(now)) {
+            if let Err(e) =
+                filetime::set_file_mtime(&resolved_path, filetime::FileTime::from_system_time(now))
+            {
                 // Fallback: try to just open and close the file
                 if let Err(e2) = OpenOptions::new().write(true).open(&resolved_path) {
-                    return CommandResult::error(format!("touch: cannot touch '{}': {}\n", file, e2));
+                    return CommandResult::error(format!(
+                        "touch: cannot touch '{}': {}\n",
+                        file, e2
+                    ));
                 }
             }
         } else {
@@ -41,7 +46,10 @@ pub async fn touch(ctx: CommandContext) -> CommandResult {
             if let Some(parent) = resolved_path.parent() {
                 if !parent.exists() {
                     if let Err(e) = fs::create_dir_all(parent) {
-                        return CommandResult::error(format!("touch: cannot touch '{}': {}\n", file, e));
+                        return CommandResult::error(format!(
+                            "touch: cannot touch '{}': {}\n",
+                            file, e
+                        ));
                     }
                 }
             }
@@ -65,9 +73,7 @@ mod tests {
         let temp = tempdir().unwrap();
         let new_file = temp.path().join("new_file.txt");
 
-        let ctx = CommandContext::new(vec![
-            new_file.to_string_lossy().to_string()
-        ]);
+        let ctx = CommandContext::new(vec![new_file.to_string_lossy().to_string()]);
         let result = touch(ctx).await;
 
         assert!(result.is_success());
@@ -80,9 +86,7 @@ mod tests {
         let file = temp.path().join("existing.txt");
         fs::write(&file, "test").unwrap();
 
-        let ctx = CommandContext::new(vec![
-            file.to_string_lossy().to_string()
-        ]);
+        let ctx = CommandContext::new(vec![file.to_string_lossy().to_string()]);
         let result = touch(ctx).await;
 
         assert!(result.is_success());

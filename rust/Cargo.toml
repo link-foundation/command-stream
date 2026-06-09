@@ -1,6 +1,6 @@
 [package]
 name = "command-stream"
-version = "0.8.3"
+version = "0.9.6"
 edition = "2021"
 authors = ["link-foundation"]
 description = "Modern shell command execution library with streaming, async iteration, and event support"
@@ -8,7 +8,7 @@ license = "Unlicense"
 repository = "https://github.com/link-foundation/command-stream"
 keywords = ["shell", "command", "streaming", "async", "process"]
 categories = ["command-line-utilities", "asynchronous"]
-readme = "../README.md"
+readme = "README.md"
 
 [lib]
 name = "command_stream"

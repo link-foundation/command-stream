@@ -1,15 +1,22 @@
-import { test, expect, describe, beforeEach } from 'bun:test';
+import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
 import { isWindows } from './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
 import { $, shell, set, unset } from '../src/$.mjs';
 
+function resetShellSettings() {
+  shell.errexit(false);
+  shell.verbose(false);
+  shell.xtrace(false);
+  shell.pipefail(false);
+  shell.nounset(false);
+}
+
 describe('Shell Settings (set -e / set +e equivalent)', () => {
   beforeEach(() => {
-    // Reset all shell settings before each test
-    shell.errexit(false);
-    shell.verbose(false);
-    shell.xtrace(false);
-    shell.pipefail(false);
-    shell.nounset(false);
+    resetShellSettings();
+  });
+
+  afterEach(() => {
+    resetShellSettings();
   });
 
   describe('Error Handling (set -e / set +e)', () => {

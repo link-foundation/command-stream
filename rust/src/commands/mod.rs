@@ -4,49 +4,49 @@
 //! without spawning external processes. These provide faster execution and
 //! consistent behavior across platforms.
 
+mod basename;
 mod cat;
 mod cd;
-mod echo;
-mod pwd;
-mod sleep;
-mod r#true;
-mod r#false;
-mod mkdir;
-mod rm;
-mod touch;
-mod ls;
 mod cp;
-mod mv;
-mod basename;
 mod dirname;
+mod echo;
 mod env;
 mod exit;
+mod r#false;
+mod ls;
+mod mkdir;
+mod mv;
+mod pwd;
+mod rm;
+mod seq;
+mod sleep;
+mod test;
+mod touch;
+mod r#true;
 mod which;
 mod yes;
-mod seq;
-mod test;
 
+pub use basename::basename;
 pub use cat::cat;
 pub use cd::cd;
-pub use echo::echo;
-pub use pwd::pwd;
-pub use sleep::sleep;
-pub use r#true::r#true;
-pub use r#false::r#false;
-pub use mkdir::mkdir;
-pub use rm::rm;
-pub use touch::touch;
-pub use ls::ls;
 pub use cp::cp;
-pub use mv::mv;
-pub use basename::basename;
 pub use dirname::dirname;
+pub use echo::echo;
 pub use env::env;
 pub use exit::exit;
+pub use ls::ls;
+pub use mkdir::mkdir;
+pub use mv::mv;
+pub use pwd::pwd;
+pub use r#false::r#false;
+pub use r#true::r#true;
+pub use rm::rm;
+pub use seq::seq;
+pub use sleep::sleep;
+pub use test::test;
+pub use touch::touch;
 pub use which::which;
 pub use yes::yes;
-pub use seq::seq;
-pub use test::test;
 
 use crate::utils::CommandResult;
 use std::collections::HashMap;
@@ -104,10 +104,7 @@ impl CommandContext {
 
     /// Check if the command has been cancelled
     pub fn is_cancelled(&self) -> bool {
-        self.is_cancelled
-            .as_ref()
-            .map(|f| f())
-            .unwrap_or(false)
+        self.is_cancelled.as_ref().map(|f| f()).unwrap_or(false)
     }
 
     /// Get the current working directory
@@ -119,7 +116,10 @@ impl CommandContext {
 }
 
 /// Type for virtual command handler functions
-pub type VirtualCommandHandler = fn(CommandContext) -> std::pin::Pin<Box<dyn std::future::Future<Output = CommandResult> + Send>>;
+pub type VirtualCommandHandler =
+    fn(
+        CommandContext,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = CommandResult> + Send>>;
 
 /// Registry of virtual commands
 pub struct VirtualCommandRegistry {
