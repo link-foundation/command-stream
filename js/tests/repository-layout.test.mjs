@@ -108,12 +108,13 @@ describe('repository language layout', () => {
       expect(jsReleaseJob).toContain("needs.lint.result == 'success'");
       expect(jsReleaseJob).toContain("needs.test.result == 'success'");
 
-      expect(rustReleaseJob).toContain('needs: [lint, test, build]');
+      expect(rustReleaseJob).toContain('needs: [lint, test, scripts, build]');
       expect(rustReleaseJob).toContain('always() && !cancelled()');
       expect(rustReleaseJob).toContain("github.ref == 'refs/heads/main'");
       expect(rustReleaseJob).toContain("github.event_name == 'push'");
       expect(rustReleaseJob).toContain("needs.lint.result == 'success'");
       expect(rustReleaseJob).toContain("needs.test.result == 'success'");
+      expect(rustReleaseJob).toContain("needs.scripts.result == 'success'");
       expect(rustReleaseJob).toContain("needs.build.result == 'success'");
     }
   });

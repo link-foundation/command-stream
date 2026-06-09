@@ -433,6 +433,7 @@ mod tests {
     use super::update_cargo_lock;
     use std::fs;
     use std::path::PathBuf;
+    use std::process::Command;
     use std::time::{SystemTime, UNIX_EPOCH};
 
     fn temp_dir(name: &str) -> PathBuf {
@@ -513,6 +514,86 @@ version = "1.12.3"
         assert!(!update_cargo_lock(&cargo_lock, "example-sum-package-name", "0.14.0").unwrap());
         assert_eq!(fs::read_to_string(&cargo_lock).unwrap(), content);
     }
+
+    /// Regression test for issue #164: the Rust release job failed with
+    /// "cannot rebase: Your index contains uncommitted changes." because the
+    /// script staged the version bump (`git add`) and only afterwards ran
+    /// `git rebase origin/main`. `git rebase` refuses to run with a dirty
+    /// index, so the release must rebase onto the remote BEFORE staging.
+    ///
+    /// This test reproduces both orderings against a real temporary repository
+    /// and asserts the buggy order fails while the fixed order succeeds.
+    #[test]
+    fn rebase_must_run_before_staging_the_version_bump() {
+        let repo = temp_dir("rebase-order");
+        let git = |args: &[&str]| -> std::process::Output {
+            Command::new("git")
+                .args(args)
+                .current_dir(&repo)
+                .output()
+                .expect("failed to run git")
+        };
+
+        // Some CI images default to `master`; force the initial branch to main.
+        git(&["init", "-q", "."]);
+        git(&["checkout", "-q", "-b", "main"]);
+        git(&["config", "user.email", "ci@example.com"]);
+        git(&["config", "user.name", "ci"]);
+
+        // Commit A: the state the release job checks out.
+        fs::write(repo.join("Cargo.toml"), "version = \"0.1.0\"\n").unwrap();
+        git(&["add", "Cargo.toml"]);
+        git(&["commit", "-qm", "A: initial"]);
+
+        // Commit B on a parallel ref simulates origin/main advancing while the
+        // release job was running (e.g. a concurrent release pushed to main).
+        git(&["checkout", "-q", "-b", "upstream"]);
+        fs::write(repo.join("remote.txt"), "remote change\n").unwrap();
+        git(&["add", "remote.txt"]);
+        git(&["commit", "-qm", "B: remote advanced"]);
+        git(&["checkout", "-q", "main"]);
+
+        // BUGGY ORDER: stage the bump first, then rebase -> git rejects the
+        // dirty index. This is exactly what broke the release job.
+        fs::write(repo.join("Cargo.toml"), "version = \"0.1.1\"\n").unwrap();
+        git(&["add", "Cargo.toml"]);
+        let buggy = git(&["rebase", "upstream"]);
+        assert!(
+            !buggy.status.success(),
+            "rebase unexpectedly succeeded with a dirty index"
+        );
+        let buggy_err = String::from_utf8_lossy(&buggy.stderr);
+        assert!(
+            buggy_err.contains("cannot rebase") || buggy_err.contains("uncommitted changes"),
+            "unexpected rebase error: {buggy_err}"
+        );
+
+        // Reset back to a clean tree at commit A.
+        let _ = git(&["rebase", "--abort"]);
+        git(&["reset", "-q", "--hard", "HEAD"]);
+
+        // FIXED ORDER: rebase while the tree is clean, THEN stage and commit.
+        let fixed = git(&["rebase", "upstream"]);
+        assert!(
+            fixed.status.success(),
+            "rebase with a clean tree failed: {}",
+            String::from_utf8_lossy(&fixed.stderr)
+        );
+        fs::write(repo.join("Cargo.toml"), "version = \"0.1.1\"\n").unwrap();
+        git(&["add", "Cargo.toml"]);
+        let commit = git(&["commit", "-qm", "chore: release 0.1.1"]);
+        assert!(
+            commit.status.success(),
+            "commit after clean rebase failed: {}",
+            String::from_utf8_lossy(&commit.stderr)
+        );
+
+        // The bump rides on top of the upstream commit, proving no work was lost.
+        let log = git(&["log", "--oneline"]);
+        let log_out = String::from_utf8_lossy(&log.stdout);
+        assert!(log_out.contains("release 0.1.1"));
+        assert!(log_out.contains("B: remote advanced"));
+    }
 }
 
 #[cfg(not(test))]
@@ -564,6 +645,32 @@ fn main() {
             "github-actions[bot]@users.noreply.github.com",
         ],
     );
+
+    // Sync with the latest remote state BEFORE touching any files.
+    //
+    // This must happen while the working tree is clean: `git rebase` refuses to
+    // run with a dirty index ("cannot rebase: Your index contains uncommitted
+    // changes"). Rebasing after staging the version bump is what previously
+    // broke the release job. Rebasing first also means the version bump is
+    // computed from the most recent state of the branch (matches the JS
+    // version-and-commit.mjs ordering).
+    let current_branch =
+        exec("git", &["rev-parse", "--abbrev-ref", "HEAD"]).unwrap_or_else(|_| "main".to_string());
+    if let Err(e) = exec("git", &["fetch", "origin", &current_branch]) {
+        eprintln!("Warning: Could not fetch origin/{}: {}", current_branch, e);
+    } else {
+        let local = exec("git", &["rev-parse", "HEAD"]).unwrap_or_default();
+        let remote =
+            exec("git", &["rev-parse", &format!("origin/{}", current_branch)]).unwrap_or_default();
+        if !local.is_empty() && !remote.is_empty() && local != remote {
+            println!("Local branch is behind remote, rebasing...");
+            if let Err(e) = exec("git", &["rebase", &format!("origin/{}", current_branch)]) {
+                eprintln!("Error rebasing onto origin/{}: {}", current_branch, e);
+                let _ = exec("git", &["rebase", "--abort"]);
+                exit(1);
+            }
+        }
+    }
 
     // Get current version
     let content = match fs::read_to_string(&package_manifest) {
@@ -653,25 +760,6 @@ fn main() {
         set_output("version_committed", "false");
         set_output("new_version", &new_version);
         return;
-    }
-
-    // Fetch latest remote state before committing (supports concurrent release workflows)
-    let current_branch =
-        exec("git", &["rev-parse", "--abbrev-ref", "HEAD"]).unwrap_or_else(|_| "main".to_string());
-    if let Err(e) = exec("git", &["fetch", "origin", &current_branch]) {
-        eprintln!("Warning: Could not fetch origin/{}: {}", current_branch, e);
-    } else {
-        let local = exec("git", &["rev-parse", "HEAD"]).unwrap_or_default();
-        let remote =
-            exec("git", &["rev-parse", &format!("origin/{}", current_branch)]).unwrap_or_default();
-        if !local.is_empty() && !remote.is_empty() && local != remote {
-            println!("Local branch is behind remote, rebasing...");
-            if let Err(e) = exec("git", &["rebase", &format!("origin/{}", current_branch)]) {
-                eprintln!("Error rebasing onto origin/{}: {}", current_branch, e);
-                let _ = exec("git", &["rebase", "--abort"]);
-                exit(1);
-            }
-        }
     }
 
     // Commit changes
