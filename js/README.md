@@ -377,6 +377,32 @@ output still buffered is drained within a short grace period (the `exitPumpGrace
 option, default `100`ms) before the lingering reads are aborted, so the loop
 never hangs waiting on a pipe the command itself is no longer using.
 
+#### Stopping the process from inside the loop
+
+You can stop a long-running command while iterating over it — either by calling
+`kill()` on the command, or simply by `break`ing out of the loop (which kills the
+process automatically as the iterator is cleaned up):
+
+```javascript
+const cmd = $`some-endless-stream`;
+
+for await (const chunk of cmd.stream()) {
+  if (chunk.type === 'stdout') {
+    console.log(chunk.data.toString());
+    if (seenEnoughOutput(chunk)) {
+      cmd.kill(); // stops the process; the loop then ends with an exit chunk
+    }
+  } else if (chunk.type === 'exit') {
+    console.log('stopped with code', chunk.code); // 143 for the SIGTERM from kill()
+  }
+}
+
+// Or just break — the process is terminated as the loop unwinds:
+for await (const chunk of $`some-endless-stream`.stream()) {
+  if (chunk.type === 'stdout' && done(chunk)) break;
+}
+```
+
 ### EventEmitter Pattern (Event-driven)
 
 ```javascript

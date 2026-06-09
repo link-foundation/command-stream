@@ -30,3 +30,20 @@ for await (const chunk of $({
     console.log(chunk.type, '=>', chunk.data.toString().trim());
   }
 }
+
+// 3. Stop a long-running command from inside the loop by calling kill().
+console.log('--- stop from inside the loop ---');
+const endless = $({
+  mirror: false,
+})`sh -c 'i=0; while true; do i=$((i+1)); echo tick-$i; sleep 0.1; done'`;
+let ticks = 0;
+for await (const chunk of endless.stream()) {
+  if (chunk.type === 'stdout') {
+    console.log('stdout =>', chunk.data.toString().trim());
+    if (++ticks >= 3) {
+      endless.kill(); // ends the loop with an exit chunk
+    }
+  } else if (chunk.type === 'exit') {
+    console.log('stopped with code', chunk.code);
+  }
+}

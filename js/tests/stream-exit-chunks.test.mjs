@@ -81,3 +81,78 @@ test.skipIf(isWindows)(
   },
   20000
 );
+
+test.skipIf(isWindows)(
+  'stream() can be stopped from inside the loop with kill()',
+  async () => {
+    // Endless producer: without stopping it, the loop would never end.
+    const cmd = $({
+      mirror: false,
+    })`sh -c 'i=0; while true; do i=$((i+1)); echo line-$i; sleep 0.05; done'`;
+
+    const start = Date.now();
+    const stdoutCount = [];
+    let exitChunk;
+    for await (const chunk of cmd.stream()) {
+      if (chunk.type === 'stdout') {
+        stdoutCount.push(chunk.data.toString());
+        if (stdoutCount.length >= 3) {
+          cmd.kill(); // stop the process from inside the loop
+        }
+      } else if (chunk.type === 'exit') {
+        exitChunk = chunk;
+      }
+    }
+    const elapsed = Date.now() - start;
+
+    // The loop ends promptly after kill() rather than running forever.
+    expect(stdoutCount.length).toBeGreaterThanOrEqual(3);
+    expect(elapsed).toBeLessThan(10000);
+    // A kill() still yields a terminating exit chunk (SIGTERM => 143).
+    expect(exitChunk).toBeDefined();
+    expect(exitChunk.code).toBe(143);
+    expect(cmd.finished).toBe(true);
+  },
+  20000
+);
+
+test.skipIf(isWindows)(
+  'breaking out of the stream() loop stops the process',
+  async () => {
+    const cmd = $({
+      mirror: false,
+    })`sh -c 'i=0; while true; do i=$((i+1)); echo b-$i; sleep 0.05; done'`;
+
+    const start = Date.now();
+    let count = 0;
+    for await (const chunk of cmd.stream()) {
+      if (chunk.type === 'stdout') {
+        count += 1;
+        if (count >= 3) {
+          break; // abandoning the iterator must terminate the process
+        }
+      }
+    }
+    const elapsed = Date.now() - start;
+
+    expect(count).toBe(3);
+    expect(elapsed).toBeLessThan(10000);
+    // The finally block in stream() kills the still-running process on break.
+    expect(cmd.finished).toBe(true);
+  },
+  20000
+);
+
+test('exit chunk is yielded with zero added latency for normal commands', async () => {
+  // The exit-pump grace only applies when a grandchild holds the pipe open;
+  // an ordinary command must terminate the iterator immediately.
+  const start = Date.now();
+  const chunks = [];
+  for await (const chunk of $({ mirror: false })`echo quick`.stream()) {
+    chunks.push(chunk.type);
+  }
+  const elapsed = Date.now() - start;
+
+  expect(chunks).toContain('exit');
+  expect(elapsed).toBeLessThan(1000);
+});
