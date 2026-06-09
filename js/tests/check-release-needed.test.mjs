@@ -80,7 +80,7 @@ function runCheck({ version, hasChangesets }) {
   };
 }
 
-test('self-heals: no changesets + version not on npm → should_release=true, skip_bump=true', () => {
+test('self-heals: no changesets + version not on npm → should_release=true, skip_bump=true, current_unpublished=true', () => {
   if (!networkAvailable) {
     return;
   } // offline: skip
@@ -91,10 +91,11 @@ test('self-heals: no changesets + version not on npm → should_release=true, sk
 
   expect(output).toContain('should_release=true');
   expect(output).toContain('skip_bump=true');
+  expect(output).toContain('current_unpublished=true');
   expect(status).toBe(0);
 }, 130000);
 
-test('no release: no changesets + version already on npm → should_release=false', () => {
+test('no release: no changesets + version already on npm → should_release=false, current_unpublished=false', () => {
   if (!networkAvailable) {
     return;
   } // offline: skip
@@ -105,15 +106,16 @@ test('no release: no changesets + version already on npm → should_release=fals
 
   expect(output).toContain('should_release=false');
   expect(output).toContain('skip_bump=false');
+  expect(output).toContain('current_unpublished=false');
   expect(status).toBe(0);
 }, 130000);
 
-test('changesets present → should_release=true, skip_bump=false (no npm probe needed)', () => {
+test('changesets present + version already on npm → should_release=true, skip_bump=false, current_unpublished=false', () => {
   if (!networkAvailable) {
     return;
   } // offline: skip
-  // Even with a version that is already published, an explicit changeset means
-  // a new version will be produced, so a release is needed and the bump runs.
+  // An explicit changeset for an already-published version means a NEW version
+  // will be produced by the bump, so a release is needed and the bump runs.
   const { status, output } = runCheck({
     version: ALREADY_PUBLISHED_VERSION,
     hasChangesets: 'true',
@@ -121,5 +123,26 @@ test('changesets present → should_release=true, skip_bump=false (no npm probe 
 
   expect(output).toContain('should_release=true');
   expect(output).toContain('skip_bump=false');
+  expect(output).toContain('current_unpublished=false');
+  expect(status).toBe(0);
+}, 130000);
+
+test('#166 restart case: changesets present locally but current version not on npm → current_unpublished=true', () => {
+  if (!networkAvailable) {
+    return;
+  } // offline: skip
+  // This is the exact "failed to do any deploy" shape from run 27224046292: a
+  // changeset file is present in the checkout, but the bump was already
+  // consumed on origin/main, so the version step would commit nothing. We must
+  // still detect that the current version is unpublished so the workflow runs a
+  // catch-up publish. The template's design (which skips the npm probe whenever
+  // has_changesets is true) misses this; current_unpublished closes the gap.
+  const { status, output } = runCheck({
+    version: UNPUBLISHED_VERSION,
+    hasChangesets: 'true',
+  });
+
+  expect(output).toContain('current_unpublished=true');
+  expect(output).toContain('should_release=true');
   expect(status).toBe(0);
 }, 130000);
