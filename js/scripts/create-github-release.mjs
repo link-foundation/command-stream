@@ -87,9 +87,21 @@ try {
     body: releaseNotes,
   });
 
-  await $`gh api repos/${repository}/releases -X POST --input -`.run({
-    stdin: payload,
-  });
+  // command-stream's `$` does NOT throw on a non-zero exit (errexit is off by
+  // default — see issue #156), so we must inspect the result code explicitly.
+  // Otherwise a failed `gh api` call would be silently reported as a created
+  // release (the same false-positive class that produced #166).
+  const result =
+    await $`gh api repos/${repository}/releases -X POST --input -`.run({
+      stdin: payload,
+      capture: true,
+    });
+
+  if (result.code !== 0) {
+    throw new Error(
+      `gh api failed to create release ${tag} (exit code ${result.code}): ${result.stderr?.trim() || 'no stderr'}`
+    );
+  }
 
   console.log(`Created JavaScript GitHub release: ${tag}`);
 } catch (error) {
