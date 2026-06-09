@@ -269,7 +269,6 @@ function literal(value) {
   return { literal: String(value) };
 }
 
-
 function set(option) {
   trace('API', () => `set() called with option: ${option}`);
   const mapping = {
