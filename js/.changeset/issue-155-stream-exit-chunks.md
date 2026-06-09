@@ -18,3 +18,10 @@ Fix `stream()` async iterator to yield exit chunks and never hang on open pipes 
 - A long-running command can be stopped from inside the `stream()` loop, either by
   calling `kill()` (the loop then ends with a terminating `exit` chunk) or by
   `break`ing out of the loop (which kills the process as the iterator unwinds).
+- The stop signal is configurable via the new `killSignal` option (default
+  `SIGTERM`). An argument-less `kill()`, a `break`, and an external `AbortSignal`
+  all use it; an explicit `kill(signal)` argument still overrides it. Exit codes
+  follow the conventional `128 + signal` mapping (e.g. `SIGINT` => 130).
+- Awaiting a command while an external `AbortSignal` fires no longer hangs: the
+  abort listener is now registered on the await/then path too, so the command
+  resolves promptly with the configured signal's exit code.
