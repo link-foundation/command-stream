@@ -360,9 +360,22 @@ import { $ } from 'command-stream';
 for await (const chunk of $`long-running-command`.stream()) {
   if (chunk.type === 'stdout') {
     console.log('Real-time output:', chunk.data.toString());
+  } else if (chunk.type === 'exit') {
+    console.log('Process exited with code:', chunk.code);
   }
 }
 ```
+
+`stream()` yields `{ type: 'stdout' | 'stderr', data: Buffer }` chunks as output
+arrives, followed by a final `{ type: 'exit', code }` chunk when the process
+exits. Always guard on `chunk.type` before reading `chunk.data`, since the
+`exit` chunk carries `code` instead of `data`.
+
+The iterator terminates as soon as the process exits, even if a grandchild keeps
+the stdout/stderr pipe open (e.g. `sh -c 'background-task & echo done'`). Any
+output still buffered is drained within a short grace period (the `exitPumpGrace`
+option, default `100`ms) before the lingering reads are aborted, so the loop
+never hangs waiting on a pipe the command itself is no longer using.
 
 ### EventEmitter Pattern (Event-driven)
 
@@ -912,6 +925,7 @@ The enhanced `$` function returns a `ProcessRunner` instance that extends `Event
 - `interactive: boolean` - Enable TTY forwarding for interactive commands (requires `stdin: 'inherit'` and TTY environment)
 - `cwd: string` - Working directory for command
 - `env: object` - Environment variables
+- `exitPumpGrace: number` - Milliseconds to wait for buffered output to drain after the process exits before aborting stdio reads held open by a grandchild (default `100`; see [Async Iteration](#async-iteration-real-time-streaming))
 
 **Override defaults:**
 
