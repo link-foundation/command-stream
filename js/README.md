@@ -416,14 +416,18 @@ cmd.kill('SIGINT'); // exit code 130
 // Configured default — used by kill(), break, and AbortSignal cancellation:
 const cmd = $({ killSignal: 'SIGINT' })`some-endless-stream`;
 for await (const chunk of cmd.stream()) {
-  if (chunk.type === 'stdout' && done(chunk)) cmd.kill(); // sends SIGINT
+  if (chunk.type === 'stdout' && done(chunk))
+    cmd.kill(); // sends SIGINT
   else if (chunk.type === 'exit') console.log(chunk.code); // 130
 }
 
 // AbortSignal style also honors killSignal — awaiting resolves promptly when
 // the signal fires (it does not hang) with the configured signal's exit code:
 const ac = new AbortController();
-const running = $({ signal: ac.signal, killSignal: 'SIGINT' })`some-endless-stream`;
+const running = $({
+  signal: ac.signal,
+  killSignal: 'SIGINT',
+})`some-endless-stream`;
 setTimeout(() => ac.abort(), 1000); // stops with SIGINT
 const result = await running;
 console.log(result.code); // 130
