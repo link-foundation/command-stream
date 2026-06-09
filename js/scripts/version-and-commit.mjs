@@ -219,10 +219,20 @@ async function main() {
       const escapedMessage = commitMessage.replace(/"/g, '\\"');
       await $`git commit -m "${escapedMessage}"`;
 
-      // Push directly to main
-      await $`git push origin main`;
+      // Push directly to main.
+      // command-stream's `$` does NOT throw on a non-zero exit (errexit is off
+      // by default, see issue #156), so we check the result code explicitly.
+      // A silently-failed push would otherwise report version_committed=true and
+      // let the release job publish/release a version that is not on main (the
+      // same false-positive class that produced #166).
+      const pushResult = await $`git push origin main`.run({ capture: true });
+      if (pushResult.code !== 0) {
+        throw new Error(
+          `git push origin main failed (exit code ${pushResult.code}): ${pushResult.stderr?.trim() || 'no stderr'}`
+        );
+      }
 
-      console.log('\u2705 Version bump committed and pushed to main');
+      console.log('✅ Version bump committed and pushed to main');
       setOutput('version_committed', 'true');
     } else {
       console.log('No changes to commit');
