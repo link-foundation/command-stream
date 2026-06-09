@@ -143,6 +143,110 @@ test.skipIf(isWindows)(
   20000
 );
 
+test.skipIf(isWindows)(
+  'kill() honors the configured killSignal option (SIGINT => 130)',
+  async () => {
+    const cmd = $({
+      mirror: false,
+      killSignal: 'SIGINT',
+    })`sh -c 'i=0; while true; do i=$((i+1)); echo s-$i; sleep 0.05; done'`;
+
+    let count = 0;
+    let exitChunk;
+    for await (const chunk of cmd.stream()) {
+      if (chunk.type === 'stdout') {
+        if (++count >= 3) {
+          cmd.kill(); // no explicit signal -> uses the configured killSignal
+        }
+      } else if (chunk.type === 'exit') {
+        exitChunk = chunk;
+      }
+    }
+
+    expect(exitChunk).toBeDefined();
+    // 128 + SIGINT(2) = 130
+    expect(exitChunk.code).toBe(130);
+    expect(cmd.finished).toBe(true);
+  },
+  20000
+);
+
+test.skipIf(isWindows)(
+  'an explicit kill(signal) overrides the configured killSignal',
+  async () => {
+    const cmd = $({
+      mirror: false,
+      killSignal: 'SIGINT',
+    })`sh -c 'i=0; while true; do i=$((i+1)); echo k-$i; sleep 0.05; done'`;
+
+    let count = 0;
+    let exitChunk;
+    for await (const chunk of cmd.stream()) {
+      if (chunk.type === 'stdout') {
+        if (++count >= 3) {
+          cmd.kill('SIGKILL'); // explicit argument wins over the option
+        }
+      } else if (chunk.type === 'exit') {
+        exitChunk = chunk;
+      }
+    }
+
+    expect(exitChunk).toBeDefined();
+    // 128 + SIGKILL(9) = 137
+    expect(exitChunk.code).toBe(137);
+  },
+  20000
+);
+
+test.skipIf(isWindows)(
+  'breaking out of the loop uses the configured killSignal',
+  async () => {
+    const cmd = $({
+      mirror: false,
+      killSignal: 'SIGINT',
+    })`sh -c 'i=0; while true; do i=$((i+1)); echo br-$i; sleep 0.05; done'`;
+
+    let count = 0;
+    for await (const chunk of cmd.stream()) {
+      if (chunk.type === 'stdout' && ++count >= 3) {
+        break; // iterator cleanup kills with the configured signal
+      }
+    }
+
+    expect(cmd.finished).toBe(true);
+    // The result the iterator finalizes with reflects the configured signal.
+    const result = await cmd;
+    expect(result.code).toBe(130);
+  },
+  20000
+);
+
+test.skipIf(isWindows)(
+  'an external AbortSignal stops an awaited command and honors killSignal',
+  async () => {
+    // Regression: awaiting a long-running command while an external
+    // AbortSignal fires used to hang forever because the abort listener was
+    // only registered on the start({...}) path, not the await/then path.
+    const ac = new AbortController();
+    const running = $({
+      mirror: false,
+      signal: ac.signal,
+      killSignal: 'SIGINT',
+    })`sh -c 'i=0; while true; do echo a-$i; i=$((i+1)); sleep 0.05; done'`;
+
+    const start = Date.now();
+    setTimeout(() => ac.abort(), 200);
+    const result = await running;
+    const elapsed = Date.now() - start;
+
+    // Resolves promptly rather than hanging, with the configured signal's code.
+    expect(elapsed).toBeLessThan(10000);
+    // 128 + SIGINT(2) = 130
+    expect(result.code).toBe(130);
+  },
+  20000
+);
+
 test('exit chunk is yielded with zero added latency for normal commands', async () => {
   // The exit-pump grace only applies when a grandchild holds the pipe open;
   // an ordinary command must terminate the iterator immediately.

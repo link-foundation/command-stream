@@ -654,6 +654,14 @@ function setupExternalAbortSignal(runner) {
     return;
   }
 
+  // Guard against double registration: this is invoked both from start() (when
+  // options are merged) and from _doStartAsync() (so the await/then path also
+  // honors an AbortSignal). Without this guard the listener would fire twice.
+  if (runner._externalAbortSetup) {
+    return;
+  }
+  runner._externalAbortSetup = true;
+
   trace(
     'ProcessRunner',
     () =>
@@ -677,7 +685,9 @@ function setupExternalAbortSignal(runner) {
         })}`
     );
 
-    runner.kill('SIGTERM');
+    // Honor the configured killSignal (defaults to SIGTERM) so AbortSignal-based
+    // cancellation uses the same stop signal as an explicit kill().
+    runner.kill();
     trace(
       'ProcessRunner',
       () => 'Process kill initiated due to external abort signal'
@@ -698,7 +708,7 @@ function setupExternalAbortSignal(runner) {
       () =>
         `External signal already aborted, killing process and aborting internal controller`
     );
-    runner.kill('SIGTERM');
+    runner.kill();
     if (runner._abortController && !runner._abortController.signal.aborted) {
       runner._abortController.abort();
     }
@@ -1082,6 +1092,12 @@ export function attachExecutionMethods(ProcessRunner, deps) {
 
     this.started = true;
     this._mode = 'async';
+
+    // Ensure an external AbortSignal (options.signal) is honored regardless of
+    // how the runner was started. The await/then path reaches here without
+    // going through start()'s option-merge branch, so register the listener
+    // here too (idempotent via the _externalAbortSetup guard).
+    setupExternalAbortSignal(this);
 
     try {
       const { cwd, env, stdin } = this.options;

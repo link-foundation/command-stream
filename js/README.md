@@ -403,6 +403,36 @@ for await (const chunk of $`some-endless-stream`.stream()) {
 }
 ```
 
+##### Choosing the stop signal
+
+`kill()` defaults to `SIGTERM`, but you can stop with any signal. Pass it
+explicitly, or configure a default via the `killSignal` option so that an
+argument-less `kill()`, a `break`, or an `AbortSignal` all use it:
+
+```javascript
+// Explicit per-call signal:
+cmd.kill('SIGINT'); // exit code 130
+
+// Configured default — used by kill(), break, and AbortSignal cancellation:
+const cmd = $({ killSignal: 'SIGINT' })`some-endless-stream`;
+for await (const chunk of cmd.stream()) {
+  if (chunk.type === 'stdout' && done(chunk)) cmd.kill(); // sends SIGINT
+  else if (chunk.type === 'exit') console.log(chunk.code); // 130
+}
+
+// AbortSignal style also honors killSignal — awaiting resolves promptly when
+// the signal fires (it does not hang) with the configured signal's exit code:
+const ac = new AbortController();
+const running = $({ signal: ac.signal, killSignal: 'SIGINT' })`some-endless-stream`;
+setTimeout(() => ac.abort(), 1000); // stops with SIGINT
+const result = await running;
+console.log(result.code); // 130
+```
+
+command-stream still escalates to `SIGKILL` after delivering the chosen signal
+so a process that ignores it is guaranteed to terminate; the reported exit code
+reflects the signal you configured.
+
 ### EventEmitter Pattern (Event-driven)
 
 ```javascript
@@ -952,6 +982,7 @@ The enhanced `$` function returns a `ProcessRunner` instance that extends `Event
 - `cwd: string` - Working directory for command
 - `env: object` - Environment variables
 - `exitPumpGrace: number` - Milliseconds to wait for buffered output to drain after the process exits before aborting stdio reads held open by a grandchild (default `100`; see [Async Iteration](#async-iteration-real-time-streaming))
+- `killSignal: string` - Signal used to stop the process when it is killed without an explicit signal — i.e. `kill()` with no argument, `break`ing out of a `stream()` loop, or an external `AbortSignal` firing (default `'SIGTERM'`). An explicit `kill(signal)` argument always overrides this. The reported exit code follows the conventional `128 + signal` mapping (e.g. `SIGTERM` → 143, `SIGINT` → 130, `SIGKILL` → 137)
 
 **Override defaults:**
 
