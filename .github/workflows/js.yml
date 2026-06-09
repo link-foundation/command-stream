@@ -230,6 +230,13 @@ jobs:
           echo "has_changesets=$([[ $CHANGESET_COUNT -gt 0 ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
           echo "changeset_count=$CHANGESET_COUNT" >> $GITHUB_OUTPUT
 
+      - name: Check if release is needed
+        id: check_release
+        working-directory: js
+        env:
+          HAS_CHANGESETS: ${{ steps.check_changesets.outputs.has_changesets }}
+        run: bun scripts/check-release-needed.mjs
+
       - name: Merge multiple changesets
         if: steps.check_changesets.outputs.has_changesets == 'true' && fromJSON(steps.check_changesets.outputs.changeset_count) > 1
         working-directory: js
@@ -242,7 +249,15 @@ jobs:
         run: bun scripts/version-and-commit.mjs --mode changeset
 
       - name: Publish to npm
-        if: steps.version.outputs.version_committed == 'true' || steps.version.outputs.already_released == 'true'
+        # Run if a changeset bumped+committed the version, if a previous attempt
+        # already committed it (re-run safety), or if check-release-needed found
+        # the current version was never published to npm (self-healing — the repo
+        # version is ahead of npm with no changeset left to trigger a publish;
+        # this is the #166 "failed to do any deploy" case).
+        if: >-
+          steps.version.outputs.version_committed == 'true' ||
+          steps.version.outputs.already_released == 'true' ||
+          (steps.check_release.outputs.should_release == 'true' && steps.check_release.outputs.skip_bump == 'true')
         id: publish
         working-directory: js
         run: bun scripts/publish-to-npm.mjs --should-pull
