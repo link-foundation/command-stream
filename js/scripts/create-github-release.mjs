@@ -57,6 +57,67 @@ if (!version || !repository) {
 
 const tag = `${tagPrefix}${version}`;
 
+// Keep comfortably below GitHub's observed ~125000-character release-body limit.
+// A long CHANGELOG section would otherwise make the release API return 422 and
+// fail the (now correctly exit-code-checked) step even though npm already
+// published — turning a successful publish into a red job. Mirrors the js
+// pipeline template's limitReleaseNotesBytes().
+const GITHUB_RELEASE_BODY_MAX_BYTES = 120_000;
+const textEncoder = new globalThis.TextEncoder();
+
+/**
+ * UTF-8 byte length of a string.
+ * @param {string} value
+ * @returns {number}
+ */
+function getUtf8ByteLength(value) {
+  return textEncoder.encode(value).byteLength;
+}
+
+/**
+ * Truncate a string so its UTF-8 encoding does not exceed maxBytes, never
+ * splitting a multi-byte character.
+ * @param {string} value
+ * @param {number} maxBytes
+ * @returns {string}
+ */
+function truncateToUtf8Bytes(value, maxBytes) {
+  const chunks = [];
+  let usedBytes = 0;
+  for (const character of value) {
+    const characterBytes = getUtf8ByteLength(character);
+    if (usedBytes + characterBytes > maxBytes) {
+      break;
+    }
+    chunks.push(character);
+    usedBytes += characterBytes;
+  }
+  return chunks.join('');
+}
+
+/**
+ * Cap release notes to the GitHub body limit, appending a pointer to the full
+ * tagged CHANGELOG when truncation happens.
+ * @param {string} releaseNotes
+ * @returns {string}
+ */
+function limitReleaseNotesBytes(releaseNotes) {
+  if (getUtf8ByteLength(releaseNotes) <= GITHUB_RELEASE_BODY_MAX_BYTES) {
+    return releaseNotes;
+  }
+  const changelogUrl = `https://github.com/${repository}/blob/${tag}/CHANGELOG.md`;
+  const suffix = `\n\n...\n\nRelease notes were shortened to fit GitHub's release body limit. See the full tagged CHANGELOG.md: ${changelogUrl}`;
+  const availableBytes = Math.max(
+    0,
+    GITHUB_RELEASE_BODY_MAX_BYTES - getUtf8ByteLength(suffix)
+  );
+  const shortened = truncateToUtf8Bytes(releaseNotes, availableBytes).trimEnd();
+  const limited = `${shortened}${suffix}`;
+  return getUtf8ByteLength(limited) <= GITHUB_RELEASE_BODY_MAX_BYTES
+    ? limited
+    : truncateToUtf8Bytes(limited, GITHUB_RELEASE_BODY_MAX_BYTES);
+}
+
 console.log(`Creating JavaScript GitHub release for ${tag}...`);
 
 try {
@@ -84,7 +145,7 @@ try {
   const payload = JSON.stringify({
     tag_name: tag,
     name: `JavaScript ${version}`,
-    body: releaseNotes,
+    body: limitReleaseNotesBytes(releaseNotes),
   });
 
   // command-stream's `$` does NOT throw on a non-zero exit (errexit is off by
@@ -98,12 +159,24 @@ try {
     });
 
   if (result.code !== 0) {
-    throw new Error(
-      `gh api failed to create release ${tag} (exit code ${result.code}): ${result.stderr?.trim() || 'no stderr'}`
-    );
+    // Idempotency: a self-healing re-run (or a retried job) may try to create a
+    // release whose tag already exists. GitHub returns 422 already_exists; that
+    // is a success for our purposes, not a failure — so the publish does not
+    // get turned into a red job on re-run. Mirrors the template's behaviour.
+    const combinedOutput =
+      `${result.stderr || ''}\n${result.stdout || ''}`.trim();
+    if (/already_exists/i.test(combinedOutput)) {
+      console.log(
+        `JavaScript GitHub release already exists: ${tag}. Skipping creation.`
+      );
+    } else {
+      throw new Error(
+        `gh api failed to create release ${tag} (exit code ${result.code}): ${result.stderr?.trim() || 'no stderr'}`
+      );
+    }
+  } else {
+    console.log(`Created JavaScript GitHub release: ${tag}`);
   }
-
-  console.log(`Created JavaScript GitHub release: ${tag}`);
 } catch (error) {
   console.error('Error creating release:', error.message);
   process.exit(1);

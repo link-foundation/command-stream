@@ -1,15 +1,24 @@
 # Case study — Issue #166: "Latest `js-v0.10.1` release is a false positive, there is no actual release on npm"
 
 > Issue: <https://github.com/link-foundation/command-stream/issues/166>
-> Pull request: <https://github.com/link-foundation/command-stream/pull/167>
+> Pull request: <https://github.com/link-foundation/command-stream/pull/168>
 
 ## 1. Executive summary
 
 The `release` job of `.github/workflows/js.yml` created GitHub releases
 `js-v0.9.6`, `js-v0.10.0`, and `js-v0.10.1` even though **none of those versions
-were ever published to npm**. The latest npm version is `0.9.5`.
+were ever published to npm**. At the time of investigation the latest npm
+version was `0.9.5`.
 
-There are **two independent root causes**, and they compounded:
+> **Update (resolution):** npm now serves `command-stream@0.11.0` with a real
+> tarball — the version list jumps `0.9.5 → 0.11.0`, confirming `0.9.6 / 0.10.0
+> / 0.10.1 / 0.10.2` were never published (the false positives) while the
+> pipeline has since recovered and publishes real releases again. The fixes in
+> this PR (causes #2 and #3) ensure the pipeline can never again *fake* a
+> release and self-heals a committed-but-unpublished version; the `wait-for-npm`
+> guard would have failed CI loudly on the original `js-v0.10.1` run.
+
+There are **three independent root causes**, and they compounded:
 
 1. **The actual publish failed** with `npm error 404 … PUT
    https://registry.npmjs.org/command-stream - Not found`. This started the
@@ -29,9 +38,20 @@ There are **two independent root causes**, and they compounded:
    on `steps.publish.outputs.published == 'true'`) created a release for a
    version that does not exist on npm.
 
-This PR fixes cause **#2 fully** (so the pipeline can never again create a
-release without an actual npm publish) and **documents cause #1** with the exact
-fix the package owner must apply on npmjs.com (cause #1 lives in external npm
+3. **A restart "failed to do any deploy"** — the self-heal gap. After the
+   false positive was reported, a CI re-run
+   ([run 27224046292](https://github.com/link-foundation/command-stream/actions/runs/27224046292))
+   still produced **no deploy at all**. By then the version bump (`0.10.2`) had
+   already been committed to `main` and the changeset consumed, so `changeset
+   version` reported `No unreleased changesets found, exiting`, the version step
+   committed nothing, and the publish step — gated only on "did the version step
+   commit?" — was skipped. The committed `0.10.2` was stranded forever above
+   npm's `0.9.5`, with no path to ever publish it.
+
+This PR fixes causes **#2 and #3 fully** (so the pipeline can never again create
+a release without an actual npm publish, and a committed-but-unpublished version
+self-heals on the next push) and **documents cause #1** with the exact fix the
+package owner must apply on npmjs.com (cause #1 lives in external npm
 configuration and cannot be fixed from inside the repository).
 
 ## 2. Timeline / sequence of events
@@ -46,8 +66,9 @@ All times UTC, 2026-06-08/09.
 | 06-09 14:32 | `js-v0.10.0` GitHub release created | ❌ **not on npm** |
 | 06-09 14:38 | `js-v0.10.1` GitHub release created (run [27213712924](https://github.com/link-foundation/command-stream/actions/runs/27213712924), job `80349831936`) | ❌ **not on npm** |
 | 06-09 ~16:5x | Issue #166 filed | — |
+| 06-09 (restart) | CI re-run [27224046292](https://github.com/link-foundation/command-stream/actions/runs/27224046292) — `0.10.2` already committed, changeset consumed → **no deploy at all** (cause #3) | ❌ **still 0.9.5 on npm** |
 
-The decisive evidence is in [`logs/publish-step-excerpt.txt`](logs/publish-step-excerpt.txt):
+The decisive evidence is in [`ci-logs/run-27213712924-false-positive-smoking-gun.txt`](ci-logs/run-27213712924-false-positive-smoking-gun.txt):
 
 ```
 Publish attempt 1 of 3...
@@ -62,6 +83,19 @@ error: script "changeset:publish" exited with code 1
 `changeset publish` exited with code **1**, yet the very next line claims
 success. The GitHub release was then created from that false output.
 
+The restart (cause #3) is captured in
+[`ci-logs/run-27224046292-failed-deploy-excerpt.txt`](ci-logs/run-27224046292-failed-deploy-excerpt.txt):
+
+```
+Found 1 JavaScript changeset file(s)
+🦋  warn No unreleased changesets found, exiting.
+No changes to commit
+```
+
+The `Release JavaScript package` job's step list for that run contains **no
+`Publish to npm` step output** — the publish was gated off because the version
+step committed nothing, so `0.10.2` never even attempted to reach npm.
+
 ## 3. Requirements extracted from the issue
 
 | # | Requirement | Status |
@@ -69,7 +103,7 @@ success. The GitHub release was then created from that false output.
 | R1 | Fix the false-positive release (`js-v0.10.1` with no npm release) | ✅ Fixed (`publish-to-npm.mjs`) |
 | R2 | Check for **all** false positives / errors across CI jobs | ✅ Audited; `create-github-release.mjs` and `version-and-commit.mjs` hardened too |
 | R3 | Compare against the 4 pipeline templates; reuse best practices; report upstream if templates share the bug | ✅ §5 |
-| R4 | Download all related logs/data into `docs/case-studies/issue-166/` | ✅ [`logs/`](logs/) |
+| R4 | Download all related logs/data into `docs/case-studies/issue-166/` | ✅ [`ci-logs/`](ci-logs/) |
 | R5 | Deep case-study analysis: timeline, requirements, root causes, solutions, existing components | ✅ this document |
 | R6 | If not enough data for root cause, add debug/verbose output | ✅ Root cause found; the new script also logs full publish output + a diagnostic hint on failure |
 | R7 | Report issues to related repos with reproducible examples / fixes | ✅ §5 — template latent issue reported |
@@ -158,6 +192,72 @@ The two latent false positives (`create-github-release.mjs`,
 `version-and-commit.mjs`) are in the **same job chain** as the reported bug and
 are now hardened so the whole release path fails loudly instead of silently.
 
+### 4.5 Cause #3 — the restart that "failed to do any deploy" (self-heal gap)
+
+Once `0.10.2` had been bumped, committed to `main`, and its changeset consumed,
+the release job's publish step had no trigger to fire. The publish was gated
+only on the version step having committed a change:
+
+```yaml
+# before
+if: steps.version.outputs.version_committed == 'true' ||
+    steps.version.outputs.already_released == 'true'
+```
+
+On the restart, `changeset version` found nothing to do
+(`No unreleased changesets found, exiting`), so `version_committed` was `false`
+and publish was skipped. **npm is the source of truth, not git** — yet nothing
+in the job consulted npm to notice that the committed `0.10.2` had never been
+published. The version was stranded.
+
+The pipeline template **does** have a self-heal (`check-release-needed.mjs`),
+but its design only probes npm when `has_changesets` is **false**. The #166
+restart had a changeset file present in the checkout (`has_changesets=true`)
+even though the bump was already consumed on `origin/main`, so the template's
+self-heal path was never entered. This is a genuine gap in the template,
+reported upstream (§5).
+
+**Fix:** `check-release-needed.mjs` now **always** probes npm and emits a new
+`current_unpublished` output, and the publish step gates on it as well:
+
+```yaml
+# after
+if: steps.version.outputs.version_committed == 'true' ||
+    steps.version.outputs.already_released == 'true' ||
+    steps.check_release.outputs.current_unpublished == 'true'
+```
+
+So whenever the committed `package.json` version is missing from npm — no matter
+how it got into that state — the next push runs a catch-up publish. Regression
+test: [`js/tests/check-release-needed.test.mjs`](../../../js/tests/check-release-needed.test.mjs)
+includes the exact restart shape (changeset present locally + version not on
+npm → `current_unpublished=true`).
+
+### 4.6 Post-publish verification — `wait-for-npm.mjs`
+
+As a final belt-and-braces guard against *any* future "tagged but not on npm"
+divergence, a new `Verify npm availability` step runs after the GitHub release
+is created (in both the `release` and `instant-release` jobs). It polls
+`npm view <pkg>@<version>` and **fails the job** if the just-published version
+never becomes installable — turning the exact #166 symptom into a hard CI
+failure. Pure polling logic is unit-tested in
+[`js/tests/wait-for-npm.test.mjs`](../../../js/tests/wait-for-npm.test.mjs).
+
+### 4.7 OIDC precondition assertion — `setup-npm.mjs`
+
+`setup-npm.mjs` was brought in line with the template's robust multi-strategy
+npm upgrade (npm ≥ 11.5.1 is required for OIDC trusted publishing) and now
+**asserts** the resulting npm version, exiting non-zero if the runner still has
+an npm too old to mint OIDC tokens — so an environment that *cannot* publish via
+OIDC fails at setup instead of much later with a confusing `E404`.
+
+### 4.8 Release-notes body cap — `create-github-release.mjs`
+
+GitHub rejects release bodies over its size limit. `create-github-release.mjs`
+now caps the notes to a UTF-8 byte budget (appending a pointer to the tagged
+`CHANGELOG.md` when truncated) and treats an `already_exists` response from the
+releases API as idempotent success, so a re-run never errors on an existing tag.
+
 ## 5. Template comparison & upstream reports (R3, R7)
 
 Compared against all four pipeline templates
@@ -183,6 +283,14 @@ Compared against all four pipeline templates
   failed push would still set `version_committed=true`. This is reported
   upstream to the js template with a reproducible example and fix:
   see [`upstream-issue.md`](upstream-issue.md).
+- **Latent shared issue: the template's self-heal misses the "changeset present
+  locally but already consumed on remote" restart.** The template's
+  `check-release-needed.mjs` only probes npm when `has_changesets` is false, so a
+  committed-but-unpublished version with a stale local changeset (exactly the
+  #166 restart, cause #3) is never caught and the publish is silently skipped.
+  This PR's fix — always probe npm and emit `current_unpublished` — is reported
+  upstream with the reproducible restart shape: see
+  [`upstream-issue.md`](upstream-issue.md).
 
 ## 6. Solution plans per requirement & what was implemented
 
@@ -201,6 +309,15 @@ On failure it writes `published=false`, prints a diagnostic hint pointing at the
 trusted-publishing root cause, and exits non-zero — so the release job goes red
 instead of creating a bogus release. `create-github-release.mjs` and
 `version-and-commit.mjs` got matching `result.code` checks.
+
+### Cause #3 (restart that didn't deploy) — fully fixed in this PR
+
+`check-release-needed.mjs` now always probes npm and emits `current_unpublished`;
+the publish step in both release jobs gates on it, so a committed-but-unpublished
+version self-heals on the next push regardless of changeset state. A new
+`Verify npm availability` step (`wait-for-npm.mjs`) then asserts the version is
+actually installable, and `setup-npm.mjs` asserts npm ≥ 11.5.1 up front so an
+OIDC-incapable runner fails at setup. See §4.5–§4.8.
 
 ### Cause #1 (E404 / trusted publishing) — owner action required
 
@@ -247,10 +364,12 @@ version-bump commits) or simply let the next real release supersede them.
 ## 8. Files in this folder
 
 - `README.md` — this analysis.
-- `logs/release-js-job-80349831936.log` — full `Release JavaScript package` job log for run 27213712924.
-- `logs/publish-step-excerpt.txt` — de-colored excerpt of the publish + release steps (the smoking gun).
-- `logs/run-27213712924-summary.txt` — job summary for the run that created `js-v0.10.1`.
-- `logs/npm-vs-github-releases.txt` — snapshot proving npm stops at `0.9.5` while GitHub has `0.9.6/0.10.0/0.10.1`.
+- `ci-logs/run-27213712924-full.log.gz` — full workflow log for the run that created the false-positive `js-v0.10.1` (gzipped, 15k lines).
+- `ci-logs/run-27213712924-false-positive-smoking-gun.txt` — de-colored excerpt of the publish + release steps (the smoking gun: `changeset publish` E404 → exit 1 → "✅ Published" → GitHub release).
+- `ci-logs/run-27224046292-full.log.gz` — full workflow log for the restart that "failed to do any deploy" (gzipped, 15k lines).
+- `ci-logs/run-27224046292-failed-deploy-excerpt.txt` — excerpt showing `No unreleased changesets found, exiting` + `No changes to commit` (cause #3).
+- `ci-logs/run-27224046292-release-excerpt.txt` — the `Release JavaScript package` job step list for the restart, proving no `Publish to npm` step ran.
+- `ci-logs/npm-vs-github-releases.txt` — snapshot proving npm stops at `0.9.5` while GitHub has `0.9.6/0.10.0/0.10.1` and the repo is at `0.10.2`.
 - `templates/template-publish-to-npm.mjs` — the js template's already-correct publish script (best-practice reference).
 - `templates/template-create-github-release.mjs`, `templates/template-version-and-commit.mjs`, `templates/template-setup-npm.mjs` — template scripts compared against the repo's copies.
 - `upstream-issue.md` — the reproducible report filed against the js template for the latent `git push` false positive.
