@@ -259,6 +259,20 @@ export function attachStreamKillMethods(ProcessRunner) {
       }
     };
 
+    // Yield an explicit { type: 'exit', code } chunk when the process exits so
+    // consumers can observe the exit code from within the async iterator (see
+    // issue #155). 'exit' is emitted by finish() right after 'end', so the
+    // chunk is queued before the iterator drains and terminates.
+    const onExit = (code) => {
+      if (!killed) {
+        buffer.push({ type: 'exit', code });
+        if (resolve) {
+          resolve();
+          resolve = _reject = null;
+        }
+      }
+    };
+
     const onEnd = () => {
       ended = true;
       if (resolve) {
@@ -268,6 +282,7 @@ export function attachStreamKillMethods(ProcessRunner) {
     };
 
     this.on('data', onData);
+    this.on('exit', onExit);
     this.on('end', onEnd);
 
     try {
@@ -289,6 +304,7 @@ export function attachStreamKillMethods(ProcessRunner) {
       }
     } finally {
       this.off('data', onData);
+      this.off('exit', onExit);
       this.off('end', onEnd);
       if (!this.finished) {
         killed = true;
