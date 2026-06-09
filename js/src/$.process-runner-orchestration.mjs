@@ -247,4 +247,10 @@ export function attachOrchestrationMethods(ProcessRunner, deps) {
       'pipe() destination must be a ProcessRunner or $`command` result'
     );
   };
+
+  ProcessRunner.prototype.quiet = function () {
+    trace('ProcessRunner', () => `quiet() called - disabling console output`);
+    this.options.mirror = false;
+    return this;
+  };
 }
