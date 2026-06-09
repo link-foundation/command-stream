@@ -140,3 +140,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Patch Changes
 
 - Current stable release with streaming support, async iteration, and EventEmitter support
+
+## [0.9.6] - 2026-06-09
+
+### Changed
+
+- Separate Rust crate documentation, release scripts, changelog fragments, and
+  GitHub release tags from the JavaScript npm package release path.
+
+### Fixed
+
+- Ensure the Rust release job still evaluates on main pushes after the
+  pull-request-only changelog gate is skipped.
+
+### Fixed
+
+- Rebase onto the latest `origin/<branch>` **before** staging the version bump
+  in the Rust release script, so concurrent releases no longer abort with
+  "cannot rebase: Your index contains uncommitted changes". The release now
+  syncs on a clean working tree, matching the JavaScript release script.
