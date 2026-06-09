@@ -276,6 +276,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bun scripts/format-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}" --commit-sha "${{ github.sha }}" --tag-prefix js-v
 
+      - name: Verify npm availability
+        # Guards against the #166 false positive: a release/tag must correspond
+        # to a version that is actually installable from npm.
+        if: steps.publish.outputs.published == 'true'
+        working-directory: js
+        run: bun scripts/wait-for-npm.mjs --release-version "${{ steps.publish.outputs.published_version }}"
+
   instant-release:
     name: Instant JavaScript release
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'instant'
@@ -333,6 +340,13 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bun scripts/format-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}" --commit-sha "${{ github.sha }}" --tag-prefix js-v
+
+      - name: Verify npm availability
+        # Guards against the #166 false positive: a release/tag must correspond
+        # to a version that is actually installable from npm.
+        if: steps.publish.outputs.published == 'true'
+        working-directory: js
+        run: bun scripts/wait-for-npm.mjs --release-version "${{ steps.publish.outputs.published_version }}"
 
   changeset-pr:
     name: Create JavaScript changeset PR
