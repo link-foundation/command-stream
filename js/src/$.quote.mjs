@@ -112,6 +112,18 @@ export function buildShellCommand(strings, values) {
             `BRANCH: buildShellCommand => RAW_VALUE | ${JSON.stringify({ value: String(v.raw) }, null, 2)}`
         );
         out += String(v.raw);
+      } else if (
+        v &&
+        typeof v === 'object' &&
+        Object.prototype.hasOwnProperty.call(v, 'literal')
+      ) {
+        const literalQuoted = quoteLiteral(v.literal);
+        trace(
+          'Utils',
+          () =>
+            `BRANCH: buildShellCommand => LITERAL_VALUE | ${JSON.stringify({ original: v.literal, quoted: literalQuoted }, null, 2)}`
+        );
+        out += literalQuoted;
       } else {
         const quoted = quote(v);
         trace(
@@ -140,6 +152,51 @@ export function buildShellCommand(strings, values) {
 export function raw(value) {
   trace('API', () => `raw() called with value: ${String(value).slice(0, 50)}`);
   return { raw: String(value) };
+}
+
+/**
+ * Quote a value using double quotes - preserves apostrophes as-is.
+ *
+ * Use this when the text will be passed to programs that store it literally
+ * (like API calls via CLI tools) rather than interpreting it as shell commands.
+ *
+ * In double quotes, we only need to escape: $ ` \ " and newlines
+ * Apostrophes (') are preserved without escaping.
+ *
+ * @param {*} value - The value to quote
+ * @returns {string} - The double-quoted string with proper escaping
+ */
+export function quoteLiteral(value) {
+  if (value == null) {
+    return '""';
+  }
+  if (Array.isArray(value)) {
+    return value.map(quoteLiteral).join(' ');
+  }
+  if (typeof value !== 'string') {
+    value = String(value);
+  }
+  if (value === '') {
+    return '""';
+  }
+
+  // Check if the string needs quoting at all
+  // Safe characters: alphanumeric, dash, underscore, dot, slash, colon, equals, comma, plus
+  const safePattern = /^[a-zA-Z0-9_\-./=,+@:]+$/;
+
+  if (safePattern.test(value)) {
+    return value;
+  }
+
+  // Escape characters that are special inside double quotes: \ $ ` "
+  // Apostrophes (') do NOT need escaping in double quotes
+  const escaped = value
+    .replace(/\\/g, '\\\\') // Escape backslashes first
+    .replace(/\$/g, '\\$') // Escape dollar signs (prevent variable expansion)
+    .replace(/`/g, '\\`') // Escape backticks (prevent command substitution)
+    .replace(/"/g, '\\"'); // Escape double quotes
+
+  return `"${escaped}"`;
 }
 
 /**
