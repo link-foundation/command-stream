@@ -790,6 +790,9 @@ import { $, create, sh } from 'command-stream';
 // Disable terminal output but still capture
 const result = await sh('echo "silent"', { mirror: false });
 
+// Or use the chainable .quiet() method (like zx) to suppress output per command
+const quiet = await $`echo "silent"`.quiet();
+
 // Custom stdin input
 const custom = await sh('cat', { stdin: 'custom input' });
 

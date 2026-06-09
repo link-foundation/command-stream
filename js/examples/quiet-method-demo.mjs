@@ -28,7 +28,7 @@ console.log('=== Example 3: Similar to the issue example ===');
 const jsonData = JSON.stringify({
   owner: 'test-user',
   files: { 'file.txt': { content: 'Hello World' } },
-  history: []
+  history: [],
 });
 
 const result3 = await $`echo ${jsonData}`.quiet();
