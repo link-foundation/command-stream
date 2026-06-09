@@ -7,7 +7,16 @@
 
 The `release` job of `.github/workflows/js.yml` created GitHub releases
 `js-v0.9.6`, `js-v0.10.0`, and `js-v0.10.1` even though **none of those versions
-were ever published to npm**. The latest npm version is `0.9.5`.
+were ever published to npm**. At the time of investigation the latest npm
+version was `0.9.5`.
+
+> **Update (resolution):** npm now serves `command-stream@0.11.0` with a real
+> tarball — the version list jumps `0.9.5 → 0.11.0`, confirming `0.9.6 / 0.10.0
+> / 0.10.1 / 0.10.2` were never published (the false positives) while the
+> pipeline has since recovered and publishes real releases again. The fixes in
+> this PR (causes #2 and #3) ensure the pipeline can never again *fake* a
+> release and self-heals a committed-but-unpublished version; the `wait-for-npm`
+> guard would have failed CI loudly on the original `js-v0.10.1` run.
 
 There are **three independent root causes**, and they compounded:
 
