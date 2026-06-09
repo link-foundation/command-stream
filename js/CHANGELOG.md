@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.10.1
+
+### Patch Changes
+
+- b5f7309: Update the JavaScript release workflow to the action versions used by the
+  pipeline templates (`actions/checkout@v6`, `actions/setup-node@v6`,
+  `peter-evans/create-pull-request@v8`), clearing the Node.js 20 deprecation
+  warnings emitted by GitHub Actions.
+
 ## 0.10.0
 
 ### Minor Changes
