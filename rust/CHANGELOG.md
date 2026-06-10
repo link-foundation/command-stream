@@ -141,6 +141,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Current stable release with streaming support, async iteration, and EventEmitter support
 
+
+## [0.10.0] - 2026-06-10
+
+### Added
+- `StreamingRunner::kill_signal` to configure the signal used to stop a process
+  (default `SIGTERM`), mirroring the JavaScript `killSignal` option.
+- `StreamingRunner::exit_pump_grace_ms` to configure the post-exit pipe drain
+  grace period (default 100ms).
+- `OutputStream::kill` / `OutputStream::kill_with` to stop a streaming process
+  from inside the consumption loop; abandoning the stream (drop/`break`) now
+  stops the process too.
+
+### Fixed
+- `OutputStream` no longer hangs when the process has exited but a grandchild
+  keeps the stdio pipes open: readers are drained with a grace period and then
+  aborted, and the exit chunk is always delivered (parity with the JavaScript
+  fix for issue #155).
+
 ## [0.9.6] - 2026-06-09
 
 ### Changed
