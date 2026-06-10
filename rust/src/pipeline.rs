@@ -175,8 +175,9 @@ impl Pipeline {
             cmd.stdout(Stdio::piped());
             cmd.stderr(Stdio::piped());
 
-            // Set working directory
-            if let Some(ref cwd) = self.cwd {
+            // Set working directory. Fall back to a valid directory when the
+            // inherited working directory has been deleted (issue #44).
+            if let Some(cwd) = crate::resolve_spawn_cwd(self.cwd.as_ref()) {
                 cmd.current_dir(cwd);
             }
 

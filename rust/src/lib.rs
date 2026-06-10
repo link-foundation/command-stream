@@ -100,6 +100,49 @@ pub use state::{
 pub use stream::{AsyncIterator, IntoStream, OutputChunk, OutputStream, StreamingRunner};
 pub use trace::trace;
 
+/// Resolve a working directory that is safe to spawn a child process in.
+///
+/// When no explicit cwd is requested the child normally inherits the parent's
+/// working directory. But if that directory has been deleted or become
+/// inaccessible (the "getcwd() failed" scenario from issue #44), inheriting it
+/// makes the OS-level spawn fail. In that case fall back to a directory that is
+/// known to exist so the command still runs.
+///
+/// Normal behavior is preserved: when an explicit cwd is given, or when the
+/// inherited working directory is valid, this returns the requested value
+/// (`None` meaning "inherit").
+fn resolve_spawn_cwd(cwd: Option<&PathBuf>) -> Option<PathBuf> {
+    // An explicit directory is always honored as-is.
+    if let Some(c) = cwd {
+        return Some(c.clone());
+    }
+
+    // No explicit cwd: we would inherit the parent's working directory. Make
+    // sure that directory is actually usable before relying on inheritance.
+    match std::env::current_dir() {
+        Ok(_) => None,
+        Err(e) => {
+            let fallback = std::env::var_os("HOME")
+                .or_else(|| std::env::var_os("USERPROFILE"))
+                .map(PathBuf::from)
+                .unwrap_or_else(std::env::temp_dir);
+            trace(
+                "ProcessRunner",
+                &format!(
+                    "current_dir() failed ({}); spawning in fallback directory {}",
+                    e,
+                    fallback.display()
+                ),
+            );
+            if fallback.exists() {
+                Some(fallback)
+            } else {
+                Some(std::env::temp_dir())
+            }
+        }
+    }
+}
+
 /// Error type for command-stream operations
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -261,8 +304,9 @@ impl ProcessRunner {
             cmd.stderr(Stdio::inherit());
         }
 
-        // Set working directory
-        if let Some(ref cwd) = self.options.cwd {
+        // Set working directory. Fall back to a valid directory when the
+        // inherited working directory has been deleted (issue #44).
+        if let Some(cwd) = resolve_spawn_cwd(self.options.cwd.as_ref()) {
             cmd.current_dir(cwd);
         }
 
