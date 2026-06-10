@@ -27,7 +27,17 @@ async fn command_runs_even_when_working_directory_was_deleted() {
     let tmp = env::temp_dir().join(format!("getcwd-test-{}", std::process::id()));
     fs::create_dir_all(&tmp).expect("create temp dir");
     env::set_current_dir(&tmp).expect("chdir into temp dir");
-    fs::remove_dir_all(&tmp).expect("delete temp dir");
+
+    // Some platforms (notably Windows) lock the current working directory and
+    // refuse to delete it. In that case the "deleted working directory"
+    // scenario cannot be reproduced, so restore state and skip the test rather
+    // than report a spurious failure.
+    if fs::remove_dir_all(&tmp).is_err() {
+        let _ = env::set_current_dir(&start_dir);
+        enable_virtual_commands();
+        eprintln!("skipping: platform does not allow deleting the current working directory");
+        return;
+    }
 
     // Running a command must still succeed even though the inherited working
     // directory is gone.
