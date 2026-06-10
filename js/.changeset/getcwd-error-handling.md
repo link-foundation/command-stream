@@ -9,3 +9,4 @@ Handle `getcwd() failed` errors gracefully during subshell execution (issue #44)
 - capturing the working directory before a subshell no longer throws when `getcwd()` fails
 - directory restoration falls back to a safe location (`HOME`, then `/`) when the original directory is gone
 - simple commands fall back to the inherited `cwd` when `getcwd()` is unavailable
+- spawning a child process no longer fails with `posix_spawn ENOENT` when the inherited working directory has been deleted; the process is launched from a valid fallback directory (`HOME`, `USERPROFILE`, the temp dir, then `/`) instead

@@ -3,7 +3,7 @@
 
 import cp from 'child_process';
 import { trace } from './$.trace.mjs';
-import { findAvailableShell } from './$.shell.mjs';
+import { findAvailableShell, resolveSpawnCwd } from './$.shell.mjs';
 import { StreamUtils, safeWrite, asBuffer } from './$.stream-utils.mjs';
 import { pumpReadable } from './$.quote.mjs';
 import { createResult } from './$.result.mjs';
@@ -186,6 +186,9 @@ function spawnWithNode(argv, config) {
  */
 function spawnChild(argv, config) {
   const { stdin } = config;
+  // Make sure we never try to spawn from a deleted/inaccessible working
+  // directory, which would make the OS-level spawn fail (issue #44).
+  config = { ...config, cwd: resolveSpawnCwd(config.cwd) };
   const needsExplicitPipe = stdin !== 'inherit' && stdin !== 'ignore';
   const preferNodeForInput = isBun && needsExplicitPipe;
 
@@ -600,6 +603,8 @@ function executeSyncNode(argv, options) {
  * @returns {object} Result object
  */
 function executeSyncProcess(argv, options) {
+  // Guard against a deleted/inaccessible working directory (issue #44).
+  options = { ...options, cwd: resolveSpawnCwd(options.cwd) };
   return isBun ? executeSyncBun(argv, options) : executeSyncNode(argv, options);
 }
 

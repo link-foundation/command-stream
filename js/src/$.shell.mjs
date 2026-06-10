@@ -3,10 +3,51 @@
 
 import cp from 'child_process';
 import fs from 'fs';
+import os from 'os';
 import { trace } from './$.trace.mjs';
 
 // Shell detection cache
 let cachedShell = null;
+
+/**
+ * Resolve a working directory that is safe to spawn a child process in.
+ *
+ * When no explicit cwd is requested the child normally inherits the parent's
+ * working directory. But if that directory has been deleted or become
+ * inaccessible (the "getcwd() failed" scenario from issue #44), inheriting it
+ * makes the OS-level spawn fail with `ENOENT: ... posix_spawn` on Linux and a
+ * similar error on Windows. In that case fall back to a directory that is known
+ * to exist so the command still runs.
+ *
+ * Normal behavior is preserved: when an explicit cwd is given, or when the
+ * inherited working directory is valid, this returns the original value
+ * (including `undefined`, meaning "inherit").
+ *
+ * @param {string|undefined|null} cwd - Requested working directory
+ * @returns {string|undefined} A spawn-safe working directory
+ */
+export function resolveSpawnCwd(cwd) {
+  // An explicit, existing directory is always honored as-is.
+  if (cwd) {
+    return cwd;
+  }
+
+  // No explicit cwd: we would inherit the parent's working directory. Make sure
+  // that directory is actually usable before relying on inheritance.
+  try {
+    process.cwd();
+    return cwd;
+  } catch (e) {
+    const fallback =
+      process.env.HOME || process.env.USERPROFILE || os.tmpdir() || '/';
+    trace(
+      'ProcessRunner',
+      () =>
+        `process.cwd() failed (${e.message}); spawning in fallback directory ${fallback}`
+    );
+    return fs.existsSync(fallback) ? fallback : os.tmpdir();
+  }
+}
 
 /**
  * Find an available shell by checking multiple options in order
