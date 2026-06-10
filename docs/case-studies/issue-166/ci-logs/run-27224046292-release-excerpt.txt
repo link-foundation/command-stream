@@ -1,0 +1,60 @@
+Lint and format JavaScript	Set up job	﻿2026-06-09T17:31:10.4476982Z Current runner version: '2.334.0'
+Lint and format JavaScript	Set up job	2026-06-09T17:31:10.4506929Z Version: 20260520.533
+Lint and format JavaScript	Set up job	2026-06-09T17:31:10.4517376Z Version: 20260525.161.1
+Lint and format JavaScript	Set up job	2026-06-09T17:31:10.4520654Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260525.161
+Lint and format JavaScript	Run actions/checkout@v6	2026-06-09T17:31:11.5345027Z ##[group]Getting Git version info
+Lint and format JavaScript	Run actions/checkout@v6	2026-06-09T17:31:11.5347113Z [command]/usr/bin/git version
+Lint and format JavaScript	Run actions/checkout@v6	2026-06-09T17:31:11.5402481Z git version 2.54.0
+Lint and format JavaScript	Run actions/checkout@v6	2026-06-09T17:31:11.6707726Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +6e9f63e72ff0b23a44c5c6d28f5c248f8670e966:refs/remotes/origin/main
+Lint and format JavaScript	Setup Bun	2026-06-09T17:31:12.2262137Z   bun-version: latest
+Lint and format JavaScript	Setup Bun	2026-06-09T17:31:12.6866324Z Downloading a new version of Bun: https://github.com/oven-sh/bun/releases/download/bun-v1.3.14/bun-linux-x64.zip
+Lint and format JavaScript	Install dependencies	2026-06-09T17:31:14.1963070Z + @changesets/cli@2.29.8
+Lint and format JavaScript	Post Run actions/checkout@v6	2026-06-09T17:31:24.5990293Z [command]/usr/bin/git version
+Lint and format JavaScript	Post Run actions/checkout@v6	2026-06-09T17:31:24.6027011Z git version 2.54.0
+Test JavaScript (bun on windows-latest)	Set up job	﻿2026-06-09T17:31:13.9846449Z Current runner version: '2.334.0'
+Test JavaScript (bun on windows-latest)	Set up job	2026-06-09T17:31:14.0191389Z Version: 20260520.533
+Test JavaScript (bun on windows-latest)	Set up job	2026-06-09T17:31:14.0199490Z Version: 20260525.121.1
+Test JavaScript (bun on windows-latest)	Set up job	2026-06-09T17:31:14.0202535Z Image Release: https://github.com/actions/runner-images/releases/tag/win25-vs2026%2F20260525.121
+Test JavaScript (bun on windows-latest)	Run actions/checkout@v6	2026-06-09T17:31:16.3402543Z ##[group]Getting Git version info
+Test JavaScript (bun on windows-latest)	Run actions/checkout@v6	2026-06-09T17:31:16.4338236Z [command]"C:\Program Files\Git\bin\git.exe" version
+Test JavaScript (bun on windows-latest)	Run actions/checkout@v6	2026-06-09T17:31:16.8014636Z git version 2.54.0.windows.1
+Test JavaScript (bun on windows-latest)	Run actions/checkout@v6	2026-06-09T17:31:19.7669553Z [command]"C:\Program Files\Git\bin\git.exe" -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +6e9f63e72ff0b23a44c5c6d28f5c248f8670e966:refs/remotes/origin/main
+Test JavaScript (bun on windows-latest)	Setup Bun	2026-06-09T17:31:21.9650212Z   bun-version: latest
+Test JavaScript (bun on windows-latest)	Setup Bun	2026-06-09T17:31:22.6604224Z Downloading a new version of Bun: https://github.com/oven-sh/bun/releases/download/bun-v1.3.14/bun-windows-x64.zip
+Test JavaScript (bun on windows-latest)	Install system dependencies (Windows)	2026-06-09T17:31:34.0620533Z  Use --force to reinstall, specify a version to install, or try upgrade.
+Test JavaScript (bun on windows-latest)	Install system dependencies (Windows)	2026-06-09T17:31:34.0726084Z  Use --force to reinstall, specify a version to install, or try upgrade.
+Test JavaScript (bun on windows-latest)	Install dependencies (Bun)	2026-06-09T17:32:02.2214513Z + @changesets/cli@2.29.8
+Test JavaScript (bun on windows-latest)	Run tests (Bun)	2026-06-09T17:32:11.7769434Z ##[group]js\tests\publish-to-npm.test.mjs:
+Test JavaScript (bun on windows-latest)	Run tests (Bun)	2026-06-09T17:32:11.7785510Z (pass) does NOT report published when changeset:publish fails (exit 1) [0.04ms]
+Test JavaScript (bun on windows-latest)	Run tests (Bun)	2026-06-09T17:32:11.7786970Z (pass) does NOT report published when changeset:publish exits 0 but nothing reaches npm [0.04ms]
+Test JavaScript (bun on windows-latest)	Run tests (Bun)	2026-06-09T17:32:11.7788119Z (pass) reports published for a version already on npm (legit success path) [0.07ms]
+Test JavaScript (bun on windows-latest)	Run tests (Bun)	2026-06-09T17:32:14.5903545Z (pass) repository language layout > does not keep language release scripts at the repository root [0.23ms]
+Test JavaScript (bun on windows-latest)	Run tests (Bun)	2026-06-09T17:32:14.5905446Z (pass) repository language layout > keeps Rust package release files inside rust/ [0.16ms]
+Test JavaScript (bun on windows-latest)	Run tests (Bun)	2026-06-09T17:32:14.5909335Z (pass) repository language layout > uses separate JavaScript and Rust workflows and release tags [0.37ms]
+Test JavaScript (bun on windows-latest)	Run tests (Bun)	2026-06-09T17:32:14.5924657Z (pass) repository language layout > release jobs evaluate after PR-only gate jobs are skipped on push [1.49ms]
+Test JavaScript (bun on windows-latest)	Run tests (Bun)	2026-06-09T17:32:17.7252838Z (pass) Synchronous Execution (.sync()) > Comparison with Async > should produce same result as async version [125.95ms]
+Test JavaScript (bun on windows-latest)	Run tests (Bun)	2026-06-09T17:32:18.2509031Z publish-to-npm.test.mjs
+Test JavaScript (bun on windows-latest)	Run tests (Bun)	2026-06-09T17:32:19.5047793Z GITHUB_WORKFLOW=JavaScript checks and release
+Test JavaScript (bun on windows-latest)	Run tests (Bun)	2026-06-09T17:32:19.5051939Z ImageVersion=20260525.121.1
+Test JavaScript (bun on windows-latest)	Post Run actions/checkout@v6	2026-06-09T17:32:21.6755737Z [command]"C:\Program Files\Git\bin\git.exe" version
+Test JavaScript (bun on windows-latest)	Post Run actions/checkout@v6	2026-06-09T17:32:21.7019544Z git version 2.54.0.windows.1
+Test JavaScript (bun on ubuntu-latest)	Set up job	﻿2026-06-09T17:31:10.3857050Z Current runner version: '2.334.0'
+Test JavaScript (bun on ubuntu-latest)	Set up job	2026-06-09T17:31:10.3884857Z Version: 20260527.539
+Test JavaScript (bun on ubuntu-latest)	Set up job	2026-06-09T17:31:10.3894506Z Version: 20260607.184.1
+Test JavaScript (bun on ubuntu-latest)	Set up job	2026-06-09T17:31:10.3897440Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260607.184
+Test JavaScript (bun on ubuntu-latest)	Run actions/checkout@v6	2026-06-09T17:31:11.9442613Z ##[group]Getting Git version info
+Test JavaScript (bun on ubuntu-latest)	Run actions/checkout@v6	2026-06-09T17:31:11.9444840Z [command]/usr/bin/git version
+Test JavaScript (bun on ubuntu-latest)	Run actions/checkout@v6	2026-06-09T17:31:11.9501039Z git version 2.54.0
+Test JavaScript (bun on ubuntu-latest)	Run actions/checkout@v6	2026-06-09T17:31:12.0930562Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +6e9f63e72ff0b23a44c5c6d28f5c248f8670e966:refs/remotes/origin/main
+Test JavaScript (bun on ubuntu-latest)	Setup Bun	2026-06-09T17:31:12.7147725Z   bun-version: latest
+Test JavaScript (bun on ubuntu-latest)	Setup Bun	2026-06-09T17:31:13.2347760Z Downloading a new version of Bun: https://github.com/oven-sh/bun/releases/download/bun-v1.3.14/bun-linux-x64.zip
+Test JavaScript (bun on ubuntu-latest)	Install system dependencies (Ubuntu)	2026-06-09T17:31:14.5535455Z Hit:2 http://azure.archive.ubuntu.com/ubuntu noble InRelease
+Test JavaScript (bun on ubuntu-latest)	Install system dependencies (Ubuntu)	2026-06-09T17:31:14.5537076Z Hit:6 https://packages.microsoft.com/repos/azure-cli noble InRelease
+Test JavaScript (bun on ubuntu-latest)	Install system dependencies (Ubuntu)	2026-06-09T17:31:14.5538317Z Get:7 https://packages.microsoft.com/ubuntu/24.04/prod noble InRelease [3600 B]
+Test JavaScript (bun on ubuntu-latest)	Install system dependencies (Ubuntu)	2026-06-09T17:31:14.5598316Z Get:3 http://azure.archive.ubuntu.com/ubuntu noble-updates InRelease [126 kB]
+Test JavaScript (bun on ubuntu-latest)	Install system dependencies (Ubuntu)	2026-06-09T17:31:14.5669004Z Get:4 http://azure.archive.ubuntu.com/ubuntu noble-backports InRelease [126 kB]
+Test JavaScript (bun on ubuntu-latest)	Install system dependencies (Ubuntu)	2026-06-09T17:31:14.5732997Z Get:5 http://azure.archive.ubuntu.com/ubuntu noble-security InRelease [126 kB]
+Test JavaScript (bun on ubuntu-latest)	Install system dependencies (Ubuntu)	2026-06-09T17:31:14.6490200Z Get:8 https://dl.google.com/linux/chrome-stable/deb stable InRelease [1825 B]
+Test JavaScript (bun on ubuntu-latest)	Install system dependencies (Ubuntu)	2026-06-09T17:31:26.2645039Z jq is already the newest version (1.7.1-3ubuntu0.24.04.2).
+Test JavaScript (bun on ubuntu-latest)	Install dependencies (Bun)	2026-06-09T17:31:29.3708934Z + @changesets/cli@2.29.8
+Test JavaScript (bun on ubuntu-latest)	Run tests (Bun)	2026-06-09T17:31:31.1138955Z (pass) Synchronous Execution (.sync()) > Comparison with Async > should produce same result as async version [12.26ms]
