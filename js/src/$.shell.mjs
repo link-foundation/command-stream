@@ -10,6 +10,29 @@ import { trace } from './$.trace.mjs';
 let cachedShell = null;
 
 /**
+ * Pick a directory that is known to exist for spawning a child process.
+ * @returns {string} An existing fallback directory
+ */
+function spawnFallbackDir() {
+  const candidates = [
+    process.env.HOME,
+    process.env.USERPROFILE,
+    os.tmpdir(),
+    '/',
+  ];
+  for (const candidate of candidates) {
+    try {
+      if (candidate && fs.existsSync(candidate)) {
+        return candidate;
+      }
+    } catch {
+      // Ignore and try the next candidate.
+    }
+  }
+  return os.tmpdir();
+}
+
+/**
  * Resolve a working directory that is safe to spawn a child process in.
  *
  * When no explicit cwd is requested the child normally inherits the parent's
@@ -19,34 +42,69 @@ let cachedShell = null;
  * similar error on Windows. In that case fall back to a directory that is known
  * to exist so the command still runs.
  *
- * Normal behavior is preserved: when an explicit cwd is given, or when the
- * inherited working directory is valid, this returns the original value
- * (including `undefined`, meaning "inherit").
+ * Note: `process.cwd()` does not reliably throw when the working directory has
+ * been deleted — under Bun (and on some platforms) it returns a stale path that
+ * no longer exists on disk. So validity is checked with `fs.existsSync()`
+ * rather than by relying on `process.cwd()` to throw.
+ *
+ * Normal behavior is preserved: when an explicit, existing cwd is given, or
+ * when the inherited working directory is valid, this returns the original
+ * value (including `undefined`, meaning "inherit").
  *
  * @param {string|undefined|null} cwd - Requested working directory
  * @returns {string|undefined} A spawn-safe working directory
  */
 export function resolveSpawnCwd(cwd) {
-  // An explicit, existing directory is always honored as-is.
+  // An explicit directory is honored only when it actually exists on disk;
+  // otherwise the spawn would fail, so fall back to a known-good directory.
   if (cwd) {
-    return cwd;
+    try {
+      if (fs.existsSync(cwd)) {
+        return cwd;
+      }
+    } catch {
+      // Fall through to the fallback below.
+    }
+    const fallback = spawnFallbackDir();
+    trace(
+      'ProcessRunner',
+      () =>
+        `Requested cwd "${cwd}" is not accessible; spawning in fallback directory ${fallback}`
+    );
+    return fallback;
   }
 
-  // No explicit cwd: we would inherit the parent's working directory. Make sure
-  // that directory is actually usable before relying on inheritance.
+  // No explicit cwd: the child would inherit the parent's working directory.
+  // Make sure that directory actually exists before relying on inheritance.
+  let current;
   try {
-    process.cwd();
-    return cwd;
+    current = process.cwd();
   } catch (e) {
-    const fallback =
-      process.env.HOME || process.env.USERPROFILE || os.tmpdir() || '/';
+    const fallback = spawnFallbackDir();
     trace(
       'ProcessRunner',
       () =>
         `process.cwd() failed (${e.message}); spawning in fallback directory ${fallback}`
     );
-    return fs.existsSync(fallback) ? fallback : os.tmpdir();
+    return fallback;
   }
+
+  try {
+    if (current && fs.existsSync(current)) {
+      // Inherited directory is valid: preserve "inherit" semantics.
+      return cwd;
+    }
+  } catch {
+    // Fall through to the fallback below.
+  }
+
+  const fallback = spawnFallbackDir();
+  trace(
+    'ProcessRunner',
+    () =>
+      `Inherited working directory "${current}" no longer exists; spawning in fallback directory ${fallback}`
+  );
+  return fallback;
 }
 
 /**
