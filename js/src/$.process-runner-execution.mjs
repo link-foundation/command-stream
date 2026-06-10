@@ -8,6 +8,10 @@ import { StreamUtils, safeWrite, asBuffer } from './$.stream-utils.mjs';
 import { pumpReadable } from './$.quote.mjs';
 import { createResult } from './$.result.mjs';
 import { parseShellCommand, needsRealShell } from './shell-parser.mjs';
+import {
+  createExitPromise,
+  drainPumpsAfterExit,
+} from './$.process-runner-exit.mjs';
 
 const isBun = typeof globalThis.Bun !== 'undefined';
 
@@ -245,33 +249,37 @@ function setupChildEventListeners(runner) {
  * @param {number} childPid - Child process PID
  * @returns {Promise}
  */
-function createStdoutPump(runner, childPid) {
+function createStdoutPump(runner, childPid, signal) {
   if (!runner.child.stdout) {
     return Promise.resolve();
   }
 
-  return pumpReadable(runner.child.stdout, (buf) => {
-    trace(
-      'ProcessRunner',
-      () =>
-        `stdout data received | ${JSON.stringify({
-          pid: childPid,
-          bufferLength: buf.length,
-          capture: runner.options.capture,
-          mirror: runner.options.mirror,
-          preview: buf.toString().slice(0, 100),
-        })}`
-    );
+  return pumpReadable(
+    runner.child.stdout,
+    (buf) => {
+      trace(
+        'ProcessRunner',
+        () =>
+          `stdout data received | ${JSON.stringify({
+            pid: childPid,
+            bufferLength: buf.length,
+            capture: runner.options.capture,
+            mirror: runner.options.mirror,
+            preview: buf.toString().slice(0, 100),
+          })}`
+      );
 
-    if (runner.options.capture) {
-      runner.outChunks.push(buf);
-    }
-    if (runner.options.mirror) {
-      safeWrite(process.stdout, buf);
-    }
+      if (runner.options.capture) {
+        runner.outChunks.push(buf);
+      }
+      if (runner.options.mirror) {
+        safeWrite(process.stdout, buf);
+      }
 
-    runner._emitProcessedData('stdout', buf);
-  });
+      runner._emitProcessedData('stdout', buf);
+    },
+    signal
+  );
 }
 
 /**
@@ -280,33 +288,37 @@ function createStdoutPump(runner, childPid) {
  * @param {number} childPid - Child process PID
  * @returns {Promise}
  */
-function createStderrPump(runner, childPid) {
+function createStderrPump(runner, childPid, signal) {
   if (!runner.child.stderr) {
     return Promise.resolve();
   }
 
-  return pumpReadable(runner.child.stderr, (buf) => {
-    trace(
-      'ProcessRunner',
-      () =>
-        `stderr data received | ${JSON.stringify({
-          pid: childPid,
-          bufferLength: buf.length,
-          capture: runner.options.capture,
-          mirror: runner.options.mirror,
-          preview: buf.toString().slice(0, 100),
-        })}`
-    );
+  return pumpReadable(
+    runner.child.stderr,
+    (buf) => {
+      trace(
+        'ProcessRunner',
+        () =>
+          `stderr data received | ${JSON.stringify({
+            pid: childPid,
+            bufferLength: buf.length,
+            capture: runner.options.capture,
+            mirror: runner.options.mirror,
+            preview: buf.toString().slice(0, 100),
+          })}`
+      );
 
-    if (runner.options.capture) {
-      runner.errChunks.push(buf);
-    }
-    if (runner.options.mirror) {
-      safeWrite(process.stderr, buf);
-    }
+      if (runner.options.capture) {
+        runner.errChunks.push(buf);
+      }
+      if (runner.options.mirror) {
+        safeWrite(process.stderr, buf);
+      }
 
-    runner._emitProcessedData('stderr', buf);
-  });
+      runner._emitProcessedData('stderr', buf);
+    },
+    signal
+  );
 }
 
 /**
@@ -413,55 +425,6 @@ function handleStdin(runner, stdin, isInteractive) {
   }
 
   return Promise.resolve();
-}
-
-/**
- * Create promise for child exit
- * @param {object} child - Child process
- * @returns {Promise}
- */
-function createExitPromise(child) {
-  if (isBun) {
-    return child.exited;
-  }
-
-  return new Promise((resolve) => {
-    trace(
-      'ProcessRunner',
-      () => `Setting up child process event listeners for PID ${child.pid}`
-    );
-
-    child.on('close', (code, signal) => {
-      trace(
-        'ProcessRunner',
-        () =>
-          `Child process close event | ${JSON.stringify({
-            pid: child.pid,
-            code,
-            signal,
-            killed: child.killed,
-            exitCode: child.exitCode,
-            signalCode: child.signalCode,
-          })}`
-      );
-      resolve(code);
-    });
-
-    child.on('exit', (code, signal) => {
-      trace(
-        'ProcessRunner',
-        () =>
-          `Child process exit event | ${JSON.stringify({
-            pid: child.pid,
-            code,
-            signal,
-            killed: child.killed,
-            exitCode: child.exitCode,
-            signalCode: child.signalCode,
-          })}`
-      );
-    });
-  });
 }
 
 /**
@@ -691,6 +654,14 @@ function setupExternalAbortSignal(runner) {
     return;
   }
 
+  // Guard against double registration: this is invoked both from start() (when
+  // options are merged) and from _doStartAsync() (so the await/then path also
+  // honors an AbortSignal). Without this guard the listener would fire twice.
+  if (runner._externalAbortSetup) {
+    return;
+  }
+  runner._externalAbortSetup = true;
+
   trace(
     'ProcessRunner',
     () =>
@@ -714,7 +685,9 @@ function setupExternalAbortSignal(runner) {
         })}`
     );
 
-    runner.kill('SIGTERM');
+    // Honor the configured killSignal (defaults to SIGTERM) so AbortSignal-based
+    // cancellation uses the same stop signal as an explicit kill().
+    runner.kill();
     trace(
       'ProcessRunner',
       () => 'Process kill initiated due to external abort signal'
@@ -735,7 +708,7 @@ function setupExternalAbortSignal(runner) {
       () =>
         `External signal already aborted, killing process and aborting internal controller`
     );
-    runner.kill('SIGTERM');
+    runner.kill();
     if (runner._abortController && !runner._abortController.signal.aborted) {
       runner._abortController.abort();
     }
@@ -976,13 +949,18 @@ async function executeChildProcess(runner, argv, config) {
   }
 
   const childPid = runner.child?.pid;
-  const outPump = createStdoutPump(runner, childPid);
-  const errPump = createStderrPump(runner, childPid);
+  const pumpAbort = new AbortController();
+  const outPump = createStdoutPump(runner, childPid, pumpAbort.signal);
+  const errPump = createStderrPump(runner, childPid, pumpAbort.signal);
   const stdinPumpPromise = handleStdin(runner, stdin, isInteractive);
-  const exited = createExitPromise(runner.child);
+  const exited = createExitPromise(runner.child, runner);
 
   const code = await exited;
-  await Promise.all([outPump, errPump, stdinPumpPromise]);
+  await drainPumpsAfterExit(
+    runner,
+    [outPump, errPump, stdinPumpPromise],
+    pumpAbort
+  );
 
   const finalExitCode = determineFinalExitCode(code, runner._cancelled);
   const resultData = buildResultData(runner, finalExitCode);
@@ -1114,6 +1092,12 @@ export function attachExecutionMethods(ProcessRunner, deps) {
 
     this.started = true;
     this._mode = 'async';
+
+    // Ensure an external AbortSignal (options.signal) is honored regardless of
+    // how the runner was started. The await/then path reaches here without
+    // going through start()'s option-merge branch, so register the listener
+    // here too (idempotent via the _externalAbortSetup guard).
+    setupExternalAbortSignal(this);
 
     try {
       const { cwd, env, stdin } = this.options;

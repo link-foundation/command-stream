@@ -1,6 +1,7 @@
 // ProcessRunner stream and kill methods - streaming and process termination
 // Part of the modular ProcessRunner architecture
 
+import os from 'os';
 import { trace } from './$.trace.mjs';
 import { createResult } from './$.result.mjs';
 
@@ -48,8 +49,9 @@ function sendSignalToProcess(pid, sig, runtime) {
 /**
  * Kill a child process with escalating signals
  * @param {object} child - Child process object
+ * @param {string} [signal] - Signal to send first (default 'SIGTERM')
  */
-function killChildProcess(child) {
+function killChildProcess(child, signal = 'SIGTERM') {
   if (!child || !child.pid) {
     return;
   }
@@ -58,12 +60,18 @@ function killChildProcess(child) {
   trace(
     'ProcessRunner',
     () =>
-      `Killing ${runtime} process | ${JSON.stringify({ pid: child.pid }, null, 2)}`
+      `Killing ${runtime} process | ${JSON.stringify({ pid: child.pid, signal }, null, 2)}`
   );
 
+  // Send the configured signal first, then escalate to SIGKILL to guarantee
+  // termination even if the process ignores or handles the first signal.
+  // When the configured signal already is SIGKILL we skip the redundant second
+  // delivery.
   const killOperations = [];
-  killOperations.push(...sendSignalToProcess(child.pid, 'SIGTERM', runtime));
-  killOperations.push(...sendSignalToProcess(child.pid, 'SIGKILL', runtime));
+  killOperations.push(...sendSignalToProcess(child.pid, signal, runtime));
+  if (signal !== 'SIGKILL') {
+    killOperations.push(...sendSignalToProcess(child.pid, 'SIGKILL', runtime));
+  }
 
   trace(
     'ProcessRunner',
@@ -176,10 +184,19 @@ function cleanupVirtualGenerator(generator, signal) {
 
 /**
  * Get exit code for signal
+ *
+ * Uses the conventional 128 + signal-number mapping (so SIGTERM → 143,
+ * SIGKILL → 137, SIGINT → 130, SIGHUP → 129, …) resolved from the runtime's
+ * signal table so any configured signal reports a faithful exit code.
  * @param {string} signal - Signal name
  * @returns {number} Exit code
  */
 function getSignalExitCode(signal) {
+  const signals = os.constants?.signals || {};
+  if (typeof signals[signal] === 'number') {
+    return 128 + signals[signal];
+  }
+  // Fallbacks for runtimes that do not expose the signal table.
   if (signal === 'SIGKILL') {
     return 137;
   }
@@ -210,7 +227,7 @@ function killRunner(runner, signal) {
   if (runner.child && !runner.finished) {
     trace('ProcessRunner', () => `Killing child process ${runner.child.pid}`);
     try {
-      killChildProcess(runner.child);
+      killChildProcess(runner.child, signal);
       runner.child = null;
     } catch (err) {
       trace('ProcessRunner', () => `Error killing process: ${err.message}`);
@@ -259,6 +276,20 @@ export function attachStreamKillMethods(ProcessRunner) {
       }
     };
 
+    // Yield an explicit { type: 'exit', code } chunk when the process exits so
+    // consumers can observe the exit code from within the async iterator (see
+    // issue #155). 'exit' is emitted by finish() right after 'end', so the
+    // chunk is queued before the iterator drains and terminates.
+    const onExit = (code) => {
+      if (!killed) {
+        buffer.push({ type: 'exit', code });
+        if (resolve) {
+          resolve();
+          resolve = _reject = null;
+        }
+      }
+    };
+
     const onEnd = () => {
       ended = true;
       if (resolve) {
@@ -268,6 +299,7 @@ export function attachStreamKillMethods(ProcessRunner) {
     };
 
     this.on('data', onData);
+    this.on('exit', onExit);
     this.on('end', onEnd);
 
     try {
@@ -289,6 +321,7 @@ export function attachStreamKillMethods(ProcessRunner) {
       }
     } finally {
       this.off('data', onData);
+      this.off('exit', onExit);
       this.off('end', onEnd);
       if (!this.finished) {
         killed = true;
@@ -299,14 +332,17 @@ export function attachStreamKillMethods(ProcessRunner) {
     }
   };
 
-  ProcessRunner.prototype.kill = function (signal = 'SIGTERM') {
+  ProcessRunner.prototype.kill = function (signal) {
+    // When no explicit signal is passed (e.g. the iterator auto-killing on
+    // break), fall back to the configured `killSignal` option, then SIGTERM.
+    const effectiveSignal = signal || this.options?.killSignal || 'SIGTERM';
     trace(
       'ProcessRunner',
-      () => `kill | signal=${signal} finished=${this.finished}`
+      () => `kill | signal=${effectiveSignal} finished=${this.finished}`
     );
     if (this.finished) {
       return;
     }
-    killRunner(this, signal);
+    killRunner(this, effectiveSignal);
   };
 }

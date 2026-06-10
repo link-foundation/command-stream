@@ -100,39 +100,7 @@ export function buildShellCommand(strings, values) {
   for (let i = 0; i < strings.length; i++) {
     out += strings[i];
     if (i < values.length) {
-      const v = values[i];
-      if (
-        v &&
-        typeof v === 'object' &&
-        Object.prototype.hasOwnProperty.call(v, 'raw')
-      ) {
-        trace(
-          'Utils',
-          () =>
-            `BRANCH: buildShellCommand => RAW_VALUE | ${JSON.stringify({ value: String(v.raw) }, null, 2)}`
-        );
-        out += String(v.raw);
-      } else if (
-        v &&
-        typeof v === 'object' &&
-        Object.prototype.hasOwnProperty.call(v, 'literal')
-      ) {
-        const literalQuoted = quoteLiteral(v.literal);
-        trace(
-          'Utils',
-          () =>
-            `BRANCH: buildShellCommand => LITERAL_VALUE | ${JSON.stringify({ original: v.literal, quoted: literalQuoted }, null, 2)}`
-        );
-        out += literalQuoted;
-      } else {
-        const quoted = quote(v);
-        trace(
-          'Utils',
-          () =>
-            `BRANCH: buildShellCommand => QUOTED_VALUE | ${JSON.stringify({ original: v, quoted }, null, 2)}`
-        );
-        out += quoted;
-      }
+      out += formatInterpolatedValue(values[i]);
     }
   }
 
@@ -142,6 +110,45 @@ export function buildShellCommand(strings, values) {
       `buildShellCommand EXIT | ${JSON.stringify({ command: out }, null, 2)}`
   );
   return out;
+}
+
+/**
+ * Format a single interpolated value for a shell command: raw values are
+ * inserted verbatim, { literal } values are double-quoted, everything else is
+ * shell-quoted.
+ * @param {*} v - Interpolated value
+ * @returns {string} Formatted fragment
+ */
+function formatInterpolatedValue(v) {
+  const isWrapper = (key) =>
+    v && typeof v === 'object' && Object.prototype.hasOwnProperty.call(v, key);
+
+  if (isWrapper('raw')) {
+    trace(
+      'Utils',
+      () =>
+        `BRANCH: buildShellCommand => RAW_VALUE | ${JSON.stringify({ value: String(v.raw) }, null, 2)}`
+    );
+    return String(v.raw);
+  }
+
+  if (isWrapper('literal')) {
+    const literalQuoted = quoteLiteral(v.literal);
+    trace(
+      'Utils',
+      () =>
+        `BRANCH: buildShellCommand => LITERAL_VALUE | ${JSON.stringify({ original: v.literal, quoted: literalQuoted }, null, 2)}`
+    );
+    return literalQuoted;
+  }
+
+  const quoted = quote(v);
+  trace(
+    'Utils',
+    () =>
+      `BRANCH: buildShellCommand => QUOTED_VALUE | ${JSON.stringify({ original: v, quoted }, null, 2)}`
+  );
+  return quoted;
 }
 
 /**
@@ -167,7 +174,7 @@ export function raw(value) {
  * @returns {string} - The double-quoted string with proper escaping
  */
 export function quoteLiteral(value) {
-  if (value == null) {
+  if (value === null || value === undefined) {
     return '""';
   }
   if (Array.isArray(value)) {
@@ -200,19 +207,80 @@ export function quoteLiteral(value) {
 }
 
 /**
- * Pump a readable stream, calling onChunk for each chunk
- * @param {Readable} readable - Readable stream
+ * Pump a readable stream, calling onChunk for each chunk.
+ *
+ * An optional AbortSignal can be supplied to stop pumping even while a read is
+ * pending. This is required to recover from the case where a process has
+ * exited but a grandchild keeps the stdio pipe open, which would otherwise
+ * leave the pump (and the awaiting caller) hanging forever (issue #155).
+ *
+ * @param {Readable|ReadableStream} readable - Readable stream
  * @param {function} onChunk - Callback for each chunk
+ * @param {AbortSignal} [signal] - Optional signal to abort pumping
  */
-export async function pumpReadable(readable, onChunk) {
+export async function pumpReadable(readable, onChunk, signal) {
   if (!readable) {
     trace('Utils', () => 'pumpReadable: No readable stream provided');
     return;
   }
   trace('Utils', () => 'pumpReadable: Starting to pump readable stream');
-  for await (const chunk of readable) {
-    const { asBuffer } = await import('./$.stream-utils.mjs');
-    await onChunk(asBuffer(chunk));
+  const { asBuffer } = await import('./$.stream-utils.mjs');
+
+  // Web/Bun ReadableStream: use an explicit reader so a pending read() can be
+  // cancelled when the signal aborts.
+  if (typeof readable.getReader === 'function') {
+    const reader = readable.getReader();
+    const onAbort = () => {
+      Promise.resolve(reader.cancel()).catch(() => {});
+    };
+    if (signal) {
+      if (signal.aborted) {
+        onAbort();
+      } else {
+        signal.addEventListener('abort', onAbort, { once: true });
+      }
+    }
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) {
+          break;
+        }
+        await onChunk(asBuffer(value));
+      }
+    } finally {
+      if (signal) {
+        signal.removeEventListener('abort', onAbort);
+      }
+      reader.releaseLock?.();
+    }
+    trace('Utils', () => 'pumpReadable: Finished pumping readable stream');
+    return;
+  }
+
+  // Node Readable: destroy() ends the async iteration when aborted.
+  const onAbort = () => {
+    try {
+      readable.destroy();
+    } catch {
+      /* ignore */
+    }
+  };
+  if (signal) {
+    if (signal.aborted) {
+      onAbort();
+    } else {
+      signal.addEventListener('abort', onAbort, { once: true });
+    }
+  }
+  try {
+    for await (const chunk of readable) {
+      await onChunk(asBuffer(chunk));
+    }
+  } finally {
+    if (signal) {
+      signal.removeEventListener('abort', onAbort);
+    }
   }
   trace('Utils', () => 'pumpReadable: Finished pumping readable stream');
 }

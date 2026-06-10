@@ -210,12 +210,20 @@ describe('Virtual Commands System', () => {
       });
 
       const chunks = [];
+      let exitCode;
       const cmd = $`count 3`;
       for await (const chunk of cmd.stream()) {
+        // stream() now also yields a { type: 'exit', code } chunk (issue #155),
+        // so consumers must guard on chunk.type before touching chunk.data.
+        if (chunk.type === 'exit') {
+          exitCode = chunk.code;
+          continue;
+        }
         chunks.push(chunk.data.toString());
       }
 
       expect(chunks.length).toBeGreaterThan(0);
+      expect(exitCode).toBe(0);
       const output = chunks.join('');
 
       // Check if we got the numbers in order, regardless of newlines

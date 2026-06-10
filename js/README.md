@@ -360,9 +360,82 @@ import { $ } from 'command-stream';
 for await (const chunk of $`long-running-command`.stream()) {
   if (chunk.type === 'stdout') {
     console.log('Real-time output:', chunk.data.toString());
+  } else if (chunk.type === 'exit') {
+    console.log('Process exited with code:', chunk.code);
   }
 }
 ```
+
+`stream()` yields `{ type: 'stdout' | 'stderr', data: Buffer }` chunks as output
+arrives, followed by a final `{ type: 'exit', code }` chunk when the process
+exits. Always guard on `chunk.type` before reading `chunk.data`, since the
+`exit` chunk carries `code` instead of `data`.
+
+The iterator terminates as soon as the process exits, even if a grandchild keeps
+the stdout/stderr pipe open (e.g. `sh -c 'background-task & echo done'`). Any
+output still buffered is drained within a short grace period (the `exitPumpGrace`
+option, default `100`ms) before the lingering reads are aborted, so the loop
+never hangs waiting on a pipe the command itself is no longer using.
+
+#### Stopping the process from inside the loop
+
+You can stop a long-running command while iterating over it — either by calling
+`kill()` on the command, or simply by `break`ing out of the loop (which kills the
+process automatically as the iterator is cleaned up):
+
+```javascript
+const cmd = $`some-endless-stream`;
+
+for await (const chunk of cmd.stream()) {
+  if (chunk.type === 'stdout') {
+    console.log(chunk.data.toString());
+    if (seenEnoughOutput(chunk)) {
+      cmd.kill(); // stops the process; the loop then ends with an exit chunk
+    }
+  } else if (chunk.type === 'exit') {
+    console.log('stopped with code', chunk.code); // 143 for the SIGTERM from kill()
+  }
+}
+
+// Or just break — the process is terminated as the loop unwinds:
+for await (const chunk of $`some-endless-stream`.stream()) {
+  if (chunk.type === 'stdout' && done(chunk)) break;
+}
+```
+
+##### Choosing the stop signal
+
+`kill()` defaults to `SIGTERM`, but you can stop with any signal. Pass it
+explicitly, or configure a default via the `killSignal` option so that an
+argument-less `kill()`, a `break`, or an `AbortSignal` all use it:
+
+```javascript
+// Explicit per-call signal:
+cmd.kill('SIGINT'); // exit code 130
+
+// Configured default — used by kill(), break, and AbortSignal cancellation:
+const cmd = $({ killSignal: 'SIGINT' })`some-endless-stream`;
+for await (const chunk of cmd.stream()) {
+  if (chunk.type === 'stdout' && done(chunk))
+    cmd.kill(); // sends SIGINT
+  else if (chunk.type === 'exit') console.log(chunk.code); // 130
+}
+
+// AbortSignal style also honors killSignal — awaiting resolves promptly when
+// the signal fires (it does not hang) with the configured signal's exit code:
+const ac = new AbortController();
+const running = $({
+  signal: ac.signal,
+  killSignal: 'SIGINT',
+})`some-endless-stream`;
+setTimeout(() => ac.abort(), 1000); // stops with SIGINT
+const result = await running;
+console.log(result.code); // 130
+```
+
+command-stream still escalates to `SIGKILL` after delivering the chosen signal
+so a process that ignores it is guaranteed to terminate; the reported exit code
+reflects the signal you configured.
 
 ### EventEmitter Pattern (Event-driven)
 
@@ -912,6 +985,8 @@ The enhanced `$` function returns a `ProcessRunner` instance that extends `Event
 - `interactive: boolean` - Enable TTY forwarding for interactive commands (requires `stdin: 'inherit'` and TTY environment)
 - `cwd: string` - Working directory for command
 - `env: object` - Environment variables
+- `exitPumpGrace: number` - Milliseconds to wait for buffered output to drain after the process exits before aborting stdio reads held open by a grandchild (default `100`; see [Async Iteration](#async-iteration-real-time-streaming))
+- `killSignal: string` - Signal used to stop the process when it is killed without an explicit signal — i.e. `kill()` with no argument, `break`ing out of a `stream()` loop, or an external `AbortSignal` firing (default `'SIGTERM'`). An explicit `kill(signal)` argument always overrides this. The reported exit code follows the conventional `128 + signal` mapping (e.g. `SIGTERM` → 143, `SIGINT` → 130, `SIGKILL` → 137)
 
 **Override defaults:**
 
