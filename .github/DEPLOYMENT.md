@@ -1,102 +1,81 @@
 # Deployment Setup
 
-This document explains how to set up automated deployment to NPM using GitHub Actions.
+This repository has separate release workflows for each language package:
 
-## Required Secrets
+- JavaScript npm package: `.github/workflows/js.yml`
+- Rust crates.io package: `.github/workflows/rust.yml`
 
-To enable automatic NPM publishing, you need to configure the following secrets in your GitHub repository:
+The workflows run independently on pull requests and pushes that touch their
+language folders, workflow files, or shared repository files.
 
-### 1. NPM_TOKEN
+## JavaScript Publishing
 
-1. Go to [npmjs.com](https://www.npmjs.com) and log in to your account
-2. Navigate to "Access Tokens" in your account settings
-3. Click "Generate New Token" → "Classic Token"
-4. Select "Automation" (for publishing from CI/CD)
-5. Copy the generated token
-6. In your GitHub repository, go to Settings → Secrets and variables → Actions
-7. Click "New repository secret"
-8. Name: `NPM_TOKEN`
-9. Value: paste your NPM token
+The JavaScript package lives in `js/` and is published to npm as
+`command-stream`.
 
-### 2. GITHUB_TOKEN
+npm publishing uses trusted publishing through GitHub Actions OIDC. Configure
+the trusted publisher in npm for:
 
-This is automatically provided by GitHub Actions, no setup required.
+- Repository: `link-foundation/command-stream`
+- Workflow file: `.github/workflows/js.yml`
+- Environment: none, unless the npm package is configured to require one
 
-## How the Deployment Works
+The JavaScript workflow uses `id-token: write`, runs npm release scripts from
+`js/`, and creates GitHub releases tagged as `js-v<version>`.
 
-### CI Workflow (`.github/workflows/ci.yml`)
-- Runs on every pull request and push to main
-- Tests the code with Bun
-- Checks Node.js compatibility (versions 20, 22, 24)
-- Validates package.json and required files
-- Runs coverage tests
+JavaScript PRs that change package code must add exactly one changeset in
+`js/.changeset/`.
 
-### Deploy Workflow (`.github/workflows/deploy.yml`)
-- Runs only on pushes to the `main` branch
-- Only deploys if relevant files have changed:
-  - `$.mjs` (main library file)
-  - `$.test.mjs` (test file)
-  - `package.json` (package configuration)
-  - `README.md` (documentation)
-  - `.github/workflows/deploy.yml` (deployment config)
+## Rust Publishing
 
-### Deployment Process
-1. **Change Detection**: Checks if relevant files changed
-2. **Testing**: Runs full test suite with coverage
-3. **Version Check**: Verifies if the current version already exists on NPM
-4. **Publishing**: If version doesn't exist, publishes to NPM
-5. **Release Creation**: Creates a GitHub release with changelog
+The Rust crate lives in `rust/` and is published to crates.io as
+`command-stream`.
 
-## Version Management
+Configure one of these GitHub Actions secrets at the repository or organization
+level:
 
-To release a new version:
+- `CARGO_REGISTRY_TOKEN` - Cargo's native environment variable name, preferred
+- `CARGO_TOKEN` - backwards-compatible fallback used by older organization
+  workflows
 
-1. Update the version in `package.json`:
-   ```bash
-   # For patch releases (bug fixes)
-   npm version patch
-   
-   # For minor releases (new features)
-   npm version minor
-   
-   # For major releases (breaking changes)
-   npm version major
-   ```
+The Rust workflow maps both names and runs Rust release scripts from
+`rust/scripts/`. Rust GitHub releases are tagged as `rust-v<version>`.
 
-2. Push to main branch:
-   ```bash
-   git push origin main --tags
-   ```
+Rust PRs that change crate code must add a changelog fragment in
+`rust/changelog.d/`.
 
-3. The GitHub Action will automatically:
-   - Run tests
-   - Check if the version exists on NPM
-   - Publish if it's a new version
-   - Create a GitHub release
+## Local Release Checks
 
-## Manual Publishing
-
-If you need to publish manually:
+JavaScript:
 
 ```bash
-# Make sure you're logged in to NPM
-npm login
+cd js
+bun install
+bun run lint
+bun run format:check
+bun run check:duplication
+bun run test
+```
 
-# Publish the package
-npm publish --access public
+Rust:
+
+```bash
+cd rust
+cargo fmt --all -- --check
+cargo clippy --all-targets --all-features
+cargo test --all-features --verbose
+cargo test --doc --all-features --verbose
+cargo package --allow-dirty
 ```
 
 ## Troubleshooting
 
-### Common Issues
-
-1. **NPM_TOKEN expired**: Generate a new token and update the secret
-2. **Permission denied**: Ensure your NPM account has publish permissions for the package
-3. **Version already exists**: Update the version in package.json
-4. **Tests failing**: Fix the tests before the deployment will proceed
-
-### Checking Deployment Status
-
-- View workflow runs in the "Actions" tab of your GitHub repository
-- Check NPM package status at: https://www.npmjs.com/package/command-stream
-- Monitor GitHub releases in the "Releases" section of your repository
+- Missing JavaScript changeset: add one `js/.changeset/*.md` file.
+- Missing Rust changelog: add one `rust/changelog.d/*.md` file.
+- npm trusted publishing failure: verify npm trusted publisher settings match
+  `.github/workflows/js.yml`.
+- crates.io authentication failure: verify `CARGO_REGISTRY_TOKEN` or
+  `CARGO_TOKEN` is available to Actions.
+- crate version already exists: rerun the Rust workflow if a previous release
+  partially completed; the Rust scripts check crates.io and GitHub release
+  artifacts before deciding whether to bump.

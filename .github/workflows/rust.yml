@@ -1,0 +1,355 @@
+name: Rust checks and release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'rust/**'
+      - '.github/workflows/rust.yml'
+      - 'README.md'
+      - 'LICENSE'
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'rust/**'
+      - '.github/workflows/rust.yml'
+      - 'README.md'
+      - 'LICENSE'
+  workflow_dispatch:
+    inputs:
+      release_mode:
+        description: 'Manual release mode'
+        required: true
+        type: choice
+        default: 'instant'
+        options:
+          - instant
+          - changelog-pr
+      bump_type:
+        description: 'Version bump type'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      description:
+        description: 'Release description (optional)'
+        required: false
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN || secrets.CARGO_TOKEN }}
+  CARGO_TOKEN: ${{ secrets.CARGO_TOKEN }}
+
+jobs:
+  changelog:
+    name: Rust changelog fragment check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install rust-script
+        run: cargo install rust-script
+
+      - name: Check for changelog fragments
+        env:
+          GITHUB_BASE_REF: ${{ github.base_ref }}
+        run: rust-script rust/scripts/check-changelog-fragment.rs
+
+  lint:
+    name: Lint and format Rust
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [changelog]
+    if: always() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changelog.result == 'success')
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo registry
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Check formatting
+        working-directory: rust
+        run: cargo fmt --all -- --check
+
+      - name: Run Clippy
+        working-directory: rust
+        run: cargo clippy --all-targets --all-features
+
+  test:
+    name: Test Rust (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    needs: [changelog]
+    if: always() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changelog.result == 'success')
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Run tests
+        working-directory: rust
+        run: cargo test --all-features --verbose
+
+      - name: Run doc tests
+        working-directory: rust
+        run: cargo test --doc --all-features --verbose
+
+  scripts:
+    name: Test Rust release scripts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [changelog]
+    if: always() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changelog.result == 'success')
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/target
+          key: ${{ runner.os }}-cargo-scripts-${{ hashFiles('rust/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-scripts-
+
+      - name: Install rust-script
+        run: cargo install rust-script
+
+      - name: Run release script unit tests
+        # Run the inline `#[cfg(test)]` suites for every rust-script under
+        # rust/scripts/. `cargo test` only covers the library crate, so without
+        # this step the release-script regression tests (e.g. the rebase
+        # ordering guard) never execute in CI.
+        run: |
+          set -euo pipefail
+          status=0
+          for f in rust/scripts/*.rs; do
+            if grep -q 'cfg(test)' "$f"; then
+              echo "::group::rust-script --test $f"
+              rust-script --test "$f" || status=1
+              echo "::endgroup::"
+            fi
+          done
+          exit $status
+
+  build:
+    name: Build Rust package
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [lint, test]
+    if: always() && !cancelled() && needs.lint.result == 'success' && needs.test.result == 'success'
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/target
+          key: ${{ runner.os }}-cargo-build-${{ hashFiles('rust/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-build-
+
+      - name: Build release
+        working-directory: rust
+        run: cargo build --release --verbose
+
+      - name: Check package
+        working-directory: rust
+        run: cargo package --allow-dirty
+
+  release:
+    name: Release Rust crate
+    needs: [lint, test, scripts, build]
+    # Required because lint/test depend on the pull-request-only changelog job,
+    # which is skipped on push events.
+    if: |
+      always() && !cancelled() &&
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'push' &&
+      needs.lint.result == 'success' &&
+      needs.test.result == 'success' &&
+      needs.scripts.result == 'success' &&
+      needs.build.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install rust-script
+        run: cargo install rust-script
+
+      - name: Determine bump type
+        id: bump
+        run: rust-script rust/scripts/get-bump-type.rs
+
+      - name: Check whether Rust release is needed
+        id: release_needed
+        env:
+          HAS_FRAGMENTS: ${{ steps.bump.outputs.has_fragments }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: rust-script rust/scripts/check-release-needed.rs --tag-prefix rust-v
+
+      - name: Version Rust crate and commit to main
+        if: steps.release_needed.outputs.should_release == 'true'
+        id: version
+        run: rust-script rust/scripts/version-and-commit.rs --bump-type "${{ steps.bump.outputs.bump_type }}" --tag-prefix rust-v --release-label Rust
+
+      - name: Read Rust release version
+        if: steps.release_needed.outputs.should_release == 'true'
+        id: current_version
+        run: rust-script rust/scripts/get-version.rs
+
+      - name: Publish to crates.io
+        if: steps.version.outputs.version_committed == 'true' || steps.release_needed.outputs.skip_bump == 'true'
+        id: publish_crate
+        run: rust-script rust/scripts/publish-crate.rs
+
+      - name: Create Rust GitHub Release
+        if: steps.publish_crate.outputs.publish_result == 'success' || steps.publish_crate.outputs.publish_result == 'already_exists'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: rust-script rust/scripts/create-github-release.rs --release-version "${{ steps.version.outputs.new_version || steps.current_version.outputs.version }}" --repository "${{ github.repository }}" --tag-prefix rust-v --language Rust --release-label Rust
+
+      - name: Wait for crate availability
+        if: steps.publish_crate.outputs.publish_result == 'success'
+        run: rust-script rust/scripts/wait-for-crate.rs --version "${{ steps.version.outputs.new_version || steps.current_version.outputs.version }}"
+
+  instant-release:
+    name: Instant Rust release
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'instant'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install rust-script
+        run: cargo install rust-script
+
+      - name: Version Rust crate and commit to main
+        id: version
+        run: rust-script rust/scripts/version-and-commit.rs --bump-type "${{ github.event.inputs.bump_type }}" --description "${{ github.event.inputs.description }}" --tag-prefix rust-v --release-label Rust
+
+      - name: Publish to crates.io
+        if: steps.version.outputs.version_committed == 'true'
+        id: publish_crate
+        run: rust-script rust/scripts/publish-crate.rs
+
+      - name: Create Rust GitHub Release
+        if: steps.publish_crate.outputs.publish_result == 'success' || steps.publish_crate.outputs.publish_result == 'already_exists'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: rust-script rust/scripts/create-github-release.rs --release-version "${{ steps.version.outputs.new_version }}" --repository "${{ github.repository }}" --tag-prefix rust-v --language Rust --release-label Rust
+
+      - name: Wait for crate availability
+        if: steps.publish_crate.outputs.publish_result == 'success'
+        run: rust-script rust/scripts/wait-for-crate.rs --version "${{ steps.version.outputs.new_version }}"
+
+  changelog-pr:
+    name: Create Rust changelog PR
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'changelog-pr'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install rust-script
+        run: cargo install rust-script
+
+      - name: Create changelog fragment
+        run: rust-script rust/scripts/create-changelog-fragment.rs --bump-type "${{ github.event.inputs.bump_type }}" --description "${{ github.event.inputs.description }}"
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v8
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore: add changelog fragment for manual Rust ${{ github.event.inputs.bump_type }} release'
+          branch: changelog-rust-manual-release-${{ github.run_id }}
+          delete-branch: true
+          title: 'chore: manual Rust ${{ github.event.inputs.bump_type }} release'
+          body: |
+            ## Manual Rust Release Request
+
+            This PR was created by a manual workflow trigger to prepare a **${{ github.event.inputs.bump_type }}** crates.io release.
+
+            ### Release Details
+            - Type: ${{ github.event.inputs.bump_type }}
+            - Description: ${{ github.event.inputs.description || 'Manual Rust release' }}
+            - Triggered by: @${{ github.actor }}
