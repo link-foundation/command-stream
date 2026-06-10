@@ -143,6 +143,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [0.11.1] - 2026-06-10
+
+### Fixed
+- Handle `getcwd()`/`current_dir()` failures during command execution (issue #44). When the inherited working directory has been deleted or becomes inaccessible, the child process is now spawned from a valid fallback directory (`HOME`, `USERPROFILE`, the temp dir, then `/`) instead of failing at the OS level. Applies to both `ProcessRunner` and `Pipeline`.
+
 ## [0.11.0] - 2026-06-10
 
 ### Changed
