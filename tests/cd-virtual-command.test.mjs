@@ -117,11 +117,17 @@ describe('cd Virtual Command - Core Behavior', () => {
       await $`cd ${dir2}`;
       const pwd2 = await $`pwd`;
       expect(pwd2.stdout.trim()).toBe(dir2);
-      
-      // Note: cd - might not be implemented in virtual command yet
-      // This test documents expected behavior
-      const result = await $`cd - 2>&1 || echo "not implemented"`;
-      
+
+      // `cd -` switches back to the previous directory and prints it,
+      // exactly like POSIX sh/bash.
+      const result = await $`cd -`;
+      expect(result.code).toBe(0);
+      expect(result.stdout.trim()).toBe(dir1);
+      expect(process.cwd()).toBe(dir1);
+
+      const pwd3 = await $`pwd`;
+      expect(pwd3.stdout.trim()).toBe(dir1);
+
       await $`cd ${originalCwd}`;
     } finally {
       rmSync(dir1, { recursive: true, force: true });

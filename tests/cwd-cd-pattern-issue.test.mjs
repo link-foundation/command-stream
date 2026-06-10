@@ -155,3 +155,90 @@ describe('Issue #50: CWD with CD pattern failure', () => {
     expect(process.cwd()).toBe(originalCwd);
   });
 });
+
+describe('Issue #50: cd sh-compatibility (drop-in translation from sh)', () => {
+  let testDir;
+
+  beforeEach(async () => {
+    await beforeTestCleanup();
+    testDir = mkdtempSync(join(tmpdir(), 'issue-50-shcompat-'));
+  });
+
+  afterEach(async () => {
+    process.chdir(originalCwd);
+    if (testDir) {
+      rmSync(testDir, { recursive: true, force: true });
+    }
+    await afterTestCleanup();
+  });
+
+  test('cd with no argument goes to $HOME (like sh)', async () => {
+    process.chdir(testDir);
+    const result = await $`cd`;
+    expect(result.code).toBe(0);
+    expect(process.cwd()).toBe(process.env.HOME);
+  });
+
+  test('cd ~ expands tilde to $HOME (like sh)', async () => {
+    process.chdir(testDir);
+    const result = await $`cd ~`;
+    expect(result.code).toBe(0);
+    expect(process.cwd()).toBe(process.env.HOME);
+  });
+
+  test('cd ~/subpath expands tilde prefix (like sh)', async () => {
+    process.chdir(testDir);
+    const result = await $`cd ~/`;
+    expect(result.code).toBe(0);
+    expect(process.cwd()).toBe(process.env.HOME);
+  });
+
+  test('cd - switches to previous directory and prints it (like sh)', async () => {
+    const dirA = mkdtempSync(join(tmpdir(), 'issue-50-a-'));
+    const dirB = mkdtempSync(join(tmpdir(), 'issue-50-b-'));
+    try {
+      await $`cd ${dirA}`;
+      await $`cd ${dirB}`;
+      const result = await $`cd -`;
+      expect(result.code).toBe(0);
+      // sh prints the new (previous) directory on `cd -`
+      expect(result.stdout.trim()).toBe(dirA);
+      expect(process.cwd()).toBe(dirA);
+    } finally {
+      process.chdir(originalCwd);
+      rmSync(dirA, { recursive: true, force: true });
+      rmSync(dirB, { recursive: true, force: true });
+    }
+  });
+
+  test('cd updates PWD and OLDPWD environment variables (like sh)', async () => {
+    const start = mkdtempSync(join(tmpdir(), 'issue-50-pwd-'));
+    try {
+      await $`cd ${start}`;
+      expect(process.env.PWD).toBe(start);
+      await $`cd ${testDir}`;
+      expect(process.env.PWD).toBe(testDir);
+      expect(process.env.OLDPWD).toBe(start);
+    } finally {
+      process.chdir(originalCwd);
+      rmSync(start, { recursive: true, force: true });
+    }
+  });
+
+  test('cd to a non-existent directory reports a sh-style error and keeps cwd', async () => {
+    process.chdir(testDir);
+    const result = await $`cd ${join(testDir, 'nope')}`;
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('cd:');
+    expect(process.cwd()).toBe(testDir);
+  });
+
+  test('relative cd resolves against the cwd option', async () => {
+    const subDir = join(testDir, 'sub');
+    await $({ cwd: testDir })`mkdir sub`;
+    process.chdir(originalCwd);
+    const result = await $({ cwd: testDir })`cd sub`;
+    expect(result.code).toBe(0);
+    expect(process.cwd()).toBe(subDir);
+  });
+});
