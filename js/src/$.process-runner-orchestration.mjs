@@ -4,6 +4,25 @@
 import { trace } from './$.trace.mjs';
 
 /**
+ * Safely get the current working directory.
+ *
+ * `process.cwd()` throws "getcwd() failed" when the current directory has been
+ * deleted or becomes inaccessible (common in CI/CD with temporary directories).
+ * This helper returns null instead of throwing so callers can fall back to a
+ * safe location.
+ *
+ * @returns {string|null} The current working directory, or null if unavailable
+ */
+function safeCwd() {
+  try {
+    return process.cwd();
+  } catch (e) {
+    trace('ProcessRunner', () => `process.cwd() failed: ${e.message}`);
+    return null;
+  }
+}
+
+/**
  * Execute a command based on its type
  * @param {object} runner - The ProcessRunner instance
  * @param {object} command - Command to execute
@@ -29,23 +48,35 @@ function executeCommand(runner, command) {
 async function restoreCwd(savedCwd) {
   trace(
     'ProcessRunner',
-    () => `Restoring cwd from ${process.cwd()} to ${savedCwd}`
+    () => `Restoring cwd from ${safeCwd() ?? '<unavailable>'} to ${savedCwd}`
   );
   const fs = await import('fs');
-  if (fs.existsSync(savedCwd)) {
-    process.chdir(savedCwd);
+  const fallbackDir = process.env.HOME || process.env.USERPROFILE || '/';
+
+  // If we never captured the original directory (getcwd() failed), or the
+  // saved directory no longer exists, restore to a safe fallback location.
+  if (savedCwd && fs.existsSync(savedCwd)) {
+    try {
+      process.chdir(savedCwd);
+      return;
+    } catch (e) {
+      trace(
+        'ProcessRunner',
+        () => `Failed to restore to saved directory: ${e.message}`
+      );
+    }
   } else {
-    const fallbackDir = process.env.HOME || process.env.USERPROFILE || '/';
     trace(
       'ProcessRunner',
       () =>
-        `Saved directory ${savedCwd} no longer exists, falling back to ${fallbackDir}`
+        `Saved directory ${savedCwd ?? '<unavailable>'} cannot be restored, falling back to ${fallbackDir}`
     );
-    try {
-      process.chdir(fallbackDir);
-    } catch (e) {
-      trace('ProcessRunner', () => `Failed to restore directory: ${e.message}`);
-    }
+  }
+
+  try {
+    process.chdir(fallbackDir);
+  } catch (e) {
+    trace('ProcessRunner', () => `Failed to restore directory: ${e.message}`);
   }
 }
 
@@ -162,7 +193,11 @@ export function attachOrchestrationMethods(ProcessRunner, deps) {
       () =>
         `_runSubshell ENTER | ${JSON.stringify({ commandType: subshell.command.type }, null, 2)}`
     );
-    const savedCwd = process.cwd();
+    // Capture the current directory so it can be restored after the subshell.
+    // Use safeCwd() because process.cwd() throws "getcwd() failed" when the
+    // current directory has been deleted; in that case restoreCwd() falls back
+    // to a safe location.
+    const savedCwd = safeCwd();
     try {
       return await executeCommand(this, subshell.command);
     } finally {
@@ -191,9 +226,12 @@ export function attachOrchestrationMethods(ProcessRunner, deps) {
     trace('ProcessRunner', () => `Executing real command: ${commandStr}`);
 
     const ProcessRunnerRef = this.constructor;
+    // Fall back to the inherited cwd (or undefined) when getcwd() fails so the
+    // command still runs instead of crashing with "getcwd() failed".
+    const currentCwd = safeCwd() ?? this.options.cwd;
     const runner = new ProcessRunnerRef(
       { mode: 'shell', command: commandStr },
-      { ...this.options, cwd: process.cwd(), _bypassVirtual: true }
+      { ...this.options, cwd: currentCwd, _bypassVirtual: true }
     );
 
     return await runner;
