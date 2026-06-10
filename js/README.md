@@ -627,6 +627,81 @@ const numbers = await $`cat numbers.txt`;
 await $`rm -r project numbers.txt`;
 ```
 
+### Working Directory (`cd` and the `cwd` option)
+
+The built-in `cd` command behaves like `cd` in a POSIX `sh`/bash script, so shell
+scripts translate directly. Crucially, **a directory change persists across
+subsequent commands** — just like running successive lines in a shell script:
+
+```javascript
+import { $ } from 'command-stream';
+
+// In sh:                         // In command-stream (.mjs):
+// cd /some/directory             await $`cd /some/directory`;
+// pwd   # -> /some/directory     await $`pwd`; // -> /some/directory
+```
+
+This is the behavior described in [issue #50](https://github.com/link-foundation/command-stream/issues/50):
+each `cd` updates the process working directory, so the next command starts from
+the new location. All of the following sh idioms work identically:
+
+```javascript
+await $`cd /tmp && pwd`; // chain with && -> /tmp
+await $`cd /tmp`;
+await $`pwd`; // separate commands -> /tmp (change persists)
+await $`cd`; // no argument -> $HOME
+await $`cd ~`; // ~ expands to $HOME
+await $`cd ~/projects`; // ~/ prefix expands to $HOME/projects
+await $`cd ..`; // parent directory
+await $`cd -`; // previous directory (prints it, like sh)
+await $`cd /tmp && mkdir t && cd t && pwd`; // -> /tmp/t
+```
+
+A successful `cd` updates the `PWD` and `OLDPWD` environment variables (used by
+`cd -`), exactly like a real shell. A failed `cd` prints a `sh`-style error to
+stderr, returns a non-zero exit code, and leaves the working directory unchanged:
+
+```javascript
+const r = await $`cd /does/not/exist`;
+console.log(r.code); // 1
+console.log(r.stderr); // cd: ENOENT: no such file or directory, ...
+```
+
+#### Subshell isolation with `( … )`
+
+As in sh, a `cd` inside a subshell `( … )` does **not** leak to the parent:
+
+```javascript
+process.chdir('/tmp');
+await $`(cd /usr && pwd) ; pwd`;
+// -> /usr        (inside the subshell)
+// -> /tmp        (parent directory is unchanged)
+```
+
+#### `cd` vs. the `cwd` option
+
+There are two ways to control the working directory; pick whichever maps best to
+the script you are translating:
+
+```javascript
+// 1) cd command — mutates the process working directory and persists,
+//    just like a line in a shell script.
+await $`cd /tmp`;
+await $`pwd`; // -> /tmp
+
+// 2) cwd option — sets a fixed working directory for a single invocation
+//    (or a reusable $({ cwd }) binding) without changing process.cwd().
+await $({ cwd: '/tmp' })`pwd`; // -> /tmp, process.cwd() is untouched
+```
+
+Relative `cd` targets are resolved against the `cwd` option when one is provided,
+so `` $({ cwd: '/tmp' })`cd sub` `` changes into `/tmp/sub`.
+
+> **Note:** Virtual commands such as `echo` do not perform shell variable
+> expansion, so `echo $PWD` prints the literal string `$PWD`. Use `process.cwd()`
+> in JavaScript, the `pwd` command, or a real binary (e.g. `/bin/echo $PWD`) when
+> you need the expanded value.
+
 ### Virtual Commands (Extensible Shell)
 
 Create custom commands that work seamlessly alongside built-ins:

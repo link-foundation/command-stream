@@ -145,9 +145,15 @@ describe.skipIf(isWindows)('cd Virtual Command - Core Behavior', () => {
       const pwd2 = await $`pwd`;
       expect(normalizePath(pwd2.stdout.trim())).toBe(normalizePath(dir2));
 
-      // Note: cd - might not be implemented in virtual command yet
-      // This test documents expected behavior
-      const result = await $`cd - 2>&1 || echo "not implemented"`;
+      // `cd -` switches back to the previous directory and prints it,
+      // exactly like POSIX sh/bash.
+      const result = await $`cd -`;
+      expect(result.code).toBe(0);
+      expect(normalizePath(result.stdout.trim())).toBe(normalizePath(dir1));
+      expect(normalizePath(process.cwd())).toBe(normalizePath(dir1));
+
+      const pwd3 = await $`pwd`;
+      expect(normalizePath(pwd3.stdout.trim())).toBe(normalizePath(dir1));
 
       await $`cd ${originalCwd}`;
     } finally {
