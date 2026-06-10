@@ -142,6 +142,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Current stable release with streaming support, async iteration, and EventEmitter support
 
 
+
+## [0.11.0] - 2026-06-10
+
+### Changed
+- Make the built-in `cd` command fully `sh`/bash compatible so shell scripts translate directly to Rust (issue #50):
+  - `cd -` switches to the previous directory and prints it, like `sh`
+  - `~` and `~/path` tilde expansion
+  - a successful `cd` updates the `PWD` and `OLDPWD` environment variables
+  - relative targets resolve against the `cwd` option for consistency
+
 ## [0.10.0] - 2026-06-10
 
 ### Added
