@@ -1,4 +1,4 @@
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 const tmp = '/tmp/cs-cd-test';
 await $`rm -rf ${tmp}`;

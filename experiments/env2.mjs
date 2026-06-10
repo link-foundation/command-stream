@@ -1,4 +1,4 @@
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 process.chdir('/tmp');
 let r = await $`echo $HOME`;
 console.log('virtual echo $HOME ->', JSON.stringify(r.stdout.toString().trim()));
