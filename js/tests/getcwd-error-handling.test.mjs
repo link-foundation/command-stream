@@ -85,24 +85,33 @@ describe('getcwd() error handling', () => {
     expect(r3.stdout.toString().trim()).toBe('third');
   });
 
-  test('subshell runs even when the real working directory was deleted', async () => {
-    // Create a temporary directory, switch into it, then delete it so the
-    // process is left with a working directory that no longer exists.
-    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'getcwd-test-'));
-    process.chdir(tmp);
-    fs.rmSync(tmp, { recursive: true, force: true });
+  // Windows locks the current working directory, so it cannot be deleted while
+  // the process is inside it (`fs.rmSync` throws EBUSY). The "deleted working
+  // directory" scenario this test reproduces simply cannot occur on Windows, so
+  // skip it there (the Rust suite skips the equivalent test for the same
+  // reason).
+  const deletedDirTest = process.platform === 'win32' ? test.skip : test;
+  deletedDirTest(
+    'subshell runs even when the real working directory was deleted',
+    async () => {
+      // Create a temporary directory, switch into it, then delete it so the
+      // process is left with a working directory that no longer exists.
+      const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'getcwd-test-'));
+      process.chdir(tmp);
+      fs.rmSync(tmp, { recursive: true, force: true });
 
-    try {
-      const result = await $`(echo "deleted dir")`;
-      expect(result.stdout.toString().trim()).toBe('deleted dir');
-      expect(result.code).toBe(0);
-    } finally {
-      // Restore a valid directory for subsequent tests.
       try {
-        process.chdir(startDir);
-      } catch {
-        // ignore
+        const result = await $`(echo "deleted dir")`;
+        expect(result.stdout.toString().trim()).toBe('deleted dir');
+        expect(result.code).toBe(0);
+      } finally {
+        // Restore a valid directory for subsequent tests.
+        try {
+          process.chdir(startDir);
+        } catch {
+          // ignore
+        }
       }
     }
-  });
+  );
 });
