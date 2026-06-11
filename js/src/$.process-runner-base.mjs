@@ -417,6 +417,13 @@ class ProcessRunner extends StreamEmitter {
 
   // Centralized method to properly finish a process with correct event emission order
   finish(result) {
+    // Ensure `exitCode` is always available as an alias for `code` (issue #36).
+    // This is the single choke point every result passes through before it is
+    // stored and returned to the user, so normalizing here covers all paths.
+    if (result && result.exitCode === undefined && result.code !== undefined) {
+      result.exitCode = result.code;
+    }
+
     trace(
       'ProcessRunner',
       () =>

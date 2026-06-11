@@ -29,6 +29,10 @@ async fn main() {
         .expect("echo should run");
 
     assert_eq!(result.stdout.trim(), "hello from rust");
+
+    // `exit_code()` is an alias for the `code` field, mirroring the
+    // JavaScript `exitCode` alias.
+    assert_eq!(result.exit_code(), result.code);
 }
 ```
 

@@ -70,6 +70,14 @@ impl CommandResult {
     pub fn is_success(&self) -> bool {
         self.code == 0
     }
+
+    /// Exit code of the command.
+    ///
+    /// This is an alias for the [`code`](Self::code) field, mirroring the
+    /// `exitCode` alias exposed by the JavaScript implementation (issue #36).
+    pub fn exit_code(&self) -> i32 {
+        self.code
+    }
 }
 
 /// Utility functions for virtual commands

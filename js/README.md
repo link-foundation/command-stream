@@ -265,6 +265,7 @@ import { $ } from 'command-stream';
 const result = await $`ls -la`;
 console.log(result.stdout);
 console.log(result.code); // exit code
+console.log(result.exitCode); // alias for result.code
 ```
 
 ### Custom Options with $({ options }) Syntax (NEW!)

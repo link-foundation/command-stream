@@ -43,6 +43,18 @@ fn test_command_result_error_with_code() {
     assert_eq!(result.code, 127);
 }
 
+#[test]
+fn test_command_result_exit_code_alias() {
+    // `exit_code()` is an alias for the `code` field (issue #36)
+    let success = CommandResult::success("hello");
+    assert_eq!(success.exit_code(), 0);
+    assert_eq!(success.exit_code(), success.code);
+
+    let failure = CommandResult::error_with_code("not found", 127);
+    assert_eq!(failure.exit_code(), 127);
+    assert_eq!(failure.exit_code(), failure.code);
+}
+
 // ============================================================================
 // VirtualUtils Tests
 // ============================================================================

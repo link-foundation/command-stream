@@ -13,6 +13,8 @@
 export function createResult({ code, stdout = '', stderr = '', stdin = '' }) {
   return {
     code,
+    // `exitCode` is an alias for `code` for better compatibility (issue #36)
+    exitCode: code,
     stdout,
     stderr,
     stdin,
