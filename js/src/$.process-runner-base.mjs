@@ -487,6 +487,27 @@ class ProcessRunner extends StreamEmitter {
       return;
     }
 
+    // Never tear down a command that user code is actively awaiting (issue #170).
+    // Graceful shutdown on parent-stream closure exists for fire-and-forget /
+    // streamed commands whose output consumer went away; when the result is being
+    // awaited, the await is the authoritative consumer. A spurious parent
+    // stdout/stderr 'close' — observed on Windows/Bun, which also logged
+    // "11 close listeners added to [WriteStream]" in run 27310950658 — must not
+    // preempt the awaited result and replace the real exit code with a synthetic
+    // SIGTERM (143).
+    if (this._awaited) {
+      trace(
+        'ProcessRunner',
+        () =>
+          `Parent stream closure ignored for awaited command | ${JSON.stringify(
+            {
+              command: this.spec?.command?.slice(0, 50) || this.spec?.file,
+            }
+          )}`
+      );
+      return;
+    }
+
     trace(
       'ProcessRunner',
       () =>

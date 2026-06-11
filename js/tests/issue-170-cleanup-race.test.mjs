@@ -14,11 +14,15 @@
 //  2. cleanupActiveRunners() (run by resetGlobalState() between tests)
 //     force-killed a command that was still running and being awaited,
 //     replacing its real exit code with a synthetic SIGTERM (143) result.
+//  3. _handleParentStreamClosure() (fired by a parent stdout/stderr 'close'
+//     event — which can be spurious on Windows/Bun, the same place the
+//     MaxListeners warning came from) terminated a command that was still
+//     being awaited, again replacing the real exit code with 143.
 //
-// These tests reproduce both problems and verify the fixes.
+// These tests reproduce all three problems and verify the fixes.
 import { test, expect, describe } from 'bun:test';
 import './test-helper.mjs'; // installs beforeEach/afterEach resetGlobalState
-import { $, resetGlobalState } from '../src/$.mjs';
+import { $, shell, resetGlobalState } from '../src/$.mjs';
 
 describe('issue #170 - CI false positives', () => {
   test('resetGlobalState() during an awaited command preserves the real exit code', async () => {
@@ -62,6 +66,36 @@ describe('issue #170 - CI false positives', () => {
 
     // The result must reflect the real exit code (7), never a synthetic 143.
     expect(error?.code).toBe(7);
+  });
+
+  test('a spurious parent stdout close does not preempt an awaited command', async () => {
+    // This is the actual CI trigger (run 27310950658, Windows/Bun): the parent
+    // WriteStream emitted a 'close' event while an errexit command was in flight
+    // and being awaited. monitorParentStreams' listener -> _handleParentStreamClosure()
+    // then killed the live command, replacing the real exit code (5) with a
+    // synthetic SIGTERM (143). The _awaited guard must keep the real code.
+    shell.errexit(true);
+    try {
+      const timer = setTimeout(() => {
+        // Emit a spurious 'close' on the parent stdout, exactly as the flaky
+        // Windows/Bun WriteStream did.
+        process.stdout.emit('close');
+      }, 60);
+
+      let observedCode;
+      try {
+        await $`sh -c "echo stdout-marker; echo stderr-marker >&2; sleep 0.25; exit 5"`;
+        observedCode = 0;
+      } catch (error) {
+        observedCode = error.code;
+      } finally {
+        clearTimeout(timer);
+      }
+
+      expect(observedCode).toBe(5);
+    } finally {
+      shell.errexit(false);
+    }
   });
 
   test('parent stream monitoring does not leak listeners across resets', async () => {
