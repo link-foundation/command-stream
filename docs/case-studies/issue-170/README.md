@@ -32,6 +32,8 @@ docs/case-studies/issue-170/
 | 22:41:18.859 | `##[error]Process completed with exit code 1`. |
 | — | All other matrix legs (bun on ubuntu/macOS, node 20/22/24 on ubuntu) **passed**. Only `bun on windows-latest` failed. |
 | 2026-06-10 22:49:36 | Issue #170 filed. |
+| 2026-06-11 (this PR) | First fix (commit `9fd7ad2`: reaper guard + listener-leak removal) pushed. The `MaxListenersExceeded` warning disappeared, **but `bun on windows-latest` still failed identically** (run 27315260602) with the synthetic `143`. This proved the reaper was *not* the (only) trigger — see §3.4. |
+| 2026-06-11 (this PR) | Second fix (commit `1c53eef`: `_handleParentStreamClosure` guard) pushed, closing the parent-stream-closure teardown path. |
 
 The failure is a **flaky, timing-dependent false positive**: the same test
 passes on every other matrix leg and on local re-runs. It surfaced on a push to
@@ -105,32 +107,50 @@ const killResult = {
 this.finish(killResult);
 ```
 
-So **something called `runner.kill()` on a live, still-awaited command**, and
-because `finish()` is idempotent (first-wins), the synthetic kill result became
-`this.result`. When `_doStartAsync` then reached `throwErrexitIfNeeded`, it threw
-the synthetic 143 instead of the real exit code 5.
+So **something tore down a live, still-awaited command**, and because `finish()`
+is idempotent (first-wins), a synthetic/teardown result became `this.result`.
+When `_doStartAsync` then reached `throwErrexitIfNeeded`, it threw `143` instead
+of the real exit code 5.
 
-### 3.2 Who called `kill()`? — the test-isolation reaper race
-
-`kill()` here was **not** triggered by the test. It came from the global
-test-isolation reset that `test-helper.mjs` runs in `beforeEach`/`afterEach`:
+The unifying root cause is therefore: **a global teardown path force-terminates
+a command that user code is actively awaiting.** There are *two* such paths, and
+both reach `activeProcessRunners` runners during a `resetGlobalState()`:
 
 ```
-resetGlobalState()  →  cleanupActiveRunners()  →  runner.kill()  →  killRunner()
+resetGlobalState() ─┬─ cleanupActiveRunners() ─→ runner.kill() ─→ killRunner()   (Path A — reaper)
+                    └─ (a parent stdout/stderr 'close' fires the monitor listener)
+                         └─→ runner._handleParentStreamClosure() ─→ abort + child.kill('SIGTERM')   (Path B — parent closure)
 ```
 
-`cleanupActiveRunners()` iterates `activeProcessRunners` and kills anything still
+### 3.2 Path A — the test-isolation reaper race
+
+`cleanupActiveRunners()` (run by `resetGlobalState()` in `test-helper.mjs`'s
+`beforeEach`/`afterEach`) iterates `activeProcessRunners` and kills anything still
 registered, to prevent leaked fire-and-forget processes from bleeding across
 tests. On the slow Windows/Bun runner, the previous test's `afterEach` (or the
-next test's `beforeEach`) **ran while this command was still in flight and still
-being awaited**. The reaper killed it, the synthetic SIGTERM result won, and the
-real exit code 5 was lost.
+next test's `beforeEach`) could **run while this command was still in flight and
+still being awaited**. The reaper killed it, the synthetic SIGTERM result won, and
+the real exit code 5 was lost. **Root cause #1: the reaper does not distinguish a
+leaked runner from a healthy, actively-awaited one.**
 
-This is a genuine race, which is why it only reproduced on the slowest leg
-(Windows + Bun) and never locally. **Root cause #1: the reaper does not
-distinguish a leaked runner from a healthy, actively-awaited one.**
+### 3.3 Path B — the parent-stream-closure handler (the path that actually broke CI)
 
-### 3.3 The MaxListeners warning — a second, independent defect
+`monitorParentStreams()` attaches a `'close'` listener to `process.stdout` /
+`process.stderr` so active runners can shut down gracefully when the parent stream
+closes. When that listener fires, it calls `_handleParentStreamClosure()` on
+**every** active runner, which aborts the runner's controller and kills its child
+(`child.kill('SIGTERM')`). For a command being awaited, that replaces the real
+exit code with `143` — exactly the failure signature.
+
+Crucially, on Windows/Bun the parent `WriteStream` emits a **spurious** `'close'`
+event — the very same stream whose listeners overflowed into the
+`MaxListenersExceeded` warning logged 14 seconds before the failure (§3.4). That
+spurious close fires Path B against the in-flight, awaited command. **This is why
+the reaper-only fix (commit `9fd7ad2`) did not stop the CI failure**: it closed
+Path A but left Path B wide open. **Root cause #2: `_handleParentStreamClosure()`
+also fails to distinguish a leaked runner from an actively-awaited one.**
+
+### 3.4 The MaxListeners warning — a third, independent defect (and the smoking gun)
 
 The log also shows, before the failure:
 
@@ -143,19 +163,28 @@ MaxListenersExceededWarning: … 11 close listeners added to [WriteStream].
 when the parent stream closes. It guards with a `parentStreamsMonitored` flag —
 but `resetGlobalState()` reset the flag to `false` **without removing the
 listeners**. Every test therefore re-attached a new pair of listeners, and they
-accumulated until Node/Bun warned at 11. **Root cause #2: listeners are added on
-every reset cycle but never removed**, an unbounded leak. While the warning
-itself did not fail the test, it is noise that masks real leaks and is itself a
-CI-quality defect the issue asks us to eliminate.
+accumulated until Node/Bun warned at 11. **Root cause #3: listeners are added on
+every reset cycle but never removed**, an unbounded leak.
 
-### 3.4 Confirmation (reproduced on Linux)
+This warning is more than noise — it is the **smoking gun for Path B**. It proves
+the parent `WriteStream` was being churned (closed/re-listened) on the
+Windows/Bun runner, i.e. exactly the spurious `'close'` activity that fires
+`_handleParentStreamClosure()` against the in-flight, awaited command. The warning
+and the failure are two symptoms of the same unstable parent-stream lifecycle.
 
-`experiments/repro-issue-170-awaited.mjs` fires `resetGlobalState()` 100 ms into
-an awaited `$\`… exit 5\`` command. On the unpatched code it reproduces the exact
-CI failure (`code=143`, `stderr="Process killed with SIGTERM"`); with the fix it
-returns `code=5`. The committed regression test
-`js/tests/issue-170-cleanup-race.test.mjs` encodes both defects and goes from
-**3 fail (clean) → 3 pass (fixed)**.
+### 3.5 Confirmation (reproduced on Linux, both paths)
+
+- **Path A** — `experiments/repro-issue-170-awaited.mjs` fires
+  `resetGlobalState()` 100 ms into an awaited `$\`… exit 5\`` command. Unpatched it
+  reproduces `code=143`; fixed it returns `code=5`.
+- **Path B** — `experiments/repro-issue-170-parentclose.mjs` emits a spurious
+  `process.stdout.emit('close')` 60 ms into an awaited errexit `$\`… exit 5\``
+  command. Unpatched it returns `code=143` (the bug); with the
+  `_handleParentStreamClosure` guard it returns `code=5`, on **both node and bun**.
+
+The committed regression test `js/tests/issue-170-cleanup-race.test.mjs` encodes
+all three defects (reaper race, parent-closure preemption, listener leak). The
+parent-closure case was verified to go **143 without the guard → 5 with it**.
 
 ---
 
@@ -188,20 +217,48 @@ Because `await x` calls `x.then(...)` **synchronously** before yielding, the fla
 is set before any `beforeEach`/`afterEach` reset can interleave — closing the
 race. Leaked fire-and-forget runners (never awaited) are still reaped as before.
 
-### Fix 2 — remove parent-stream listeners on reset
+### Fix 2 — never tear down an awaited runner on parent-stream closure (the CI fix)
+
+The same `_awaited` flag guards `_handleParentStreamClosure()`
+(`$.process-runner-base.mjs`). When a runner is being awaited, the graceful
+parent-stream shutdown is suppressed — the await is the authoritative consumer, so
+a spurious parent `'close'` must not preempt the real result:
+
+```js
+// Graceful shutdown on parent-stream closure exists for fire-and-forget /
+// streamed commands whose output consumer went away; when the result is being
+// awaited, the await is the authoritative consumer. A spurious parent
+// stdout/stderr 'close' — observed on Windows/Bun … — must not preempt the
+// awaited result and replace the real exit code with a synthetic SIGTERM (143).
+if (this._awaited) {
+  return;
+}
+```
+
+Fire-and-forget / streamed runners (e.g. `runner.start()` without awaiting the
+runner itself) are **not** flagged `_awaited`, so the legitimate
+parent-stream-closure shutdown path is preserved — verified by
+`ctrl-c-signal.test.mjs`'s "should handle parent stream closure triggering process
+cleanup" still passing.
+
+### Fix 3 — remove parent-stream listeners on reset
 
 `monitorParentStreams()` now records each `{ stream, listener }` it installs in a
 module-level `parentStreamListeners` array. A new `removeParentStreamListeners()`
 detaches them, and it is called from both `resetParentStreamMonitoring()` and
 `resetGlobalState()` (right before clearing `parentStreamsMonitored`). The listener
-count is now bounded across any number of resets.
+count is now bounded across any number of resets, eliminating the warning.
 
 ### Why not other approaches (rejected alternatives)
 
-- **Guarding the `'close'` handler on `stream.destroyed`** — rejected. Empirically
-  `process.stdout.destroyed` stays `false` in Node even after `process.stdout.destroy()`,
-  so the guard either does nothing or, when interpreted strictly, hangs the legitimate
-  parent-stream-closure shutdown path (verified: subprocess timed out at rc=124/143).
+- **Guarding the `'close'` handler on `stream.destroyed`** (instead of `_awaited`) —
+  rejected. Empirically `process.stdout.destroyed` stays `false` in Node even after
+  `process.stdout.destroy()`, so the guard either does nothing or, when interpreted
+  strictly, hangs the legitimate parent-stream-closure shutdown path (verified:
+  subprocess timed out at rc=124/143). Keying on `_awaited` (intent of the consumer)
+  rather than on stream internals is both correct and portable across Node/Bun.
+- **Fixing only the reaper (Path A)** — rejected: insufficient. Commit `9fd7ad2` did
+  exactly this and CI still failed (run 27315260602) because Path B remained open.
 - **Raising `setMaxListeners`** — rejected. It hides the leak instead of fixing it.
 - **Skipping the test on Windows** — rejected. It hides a real correctness bug
   (a kill racing an await could mask any command's exit code, not just in tests).
@@ -268,10 +325,12 @@ regression test is the durable guard against recurrence.
 
 ## 7. Verification
 
-- `experiments/repro-issue-170-awaited.mjs`: clean → `code=143` (reproduces); fixed → `code=5`.
-- `js/tests/issue-170-cleanup-race.test.mjs`: clean → **3 fail**; fixed → **3 pass** (bun).
-- `bun test js/tests/shell-settings.test.mjs js/tests/issue-170-cleanup-race.test.mjs js/tests/ctrl-c-signal.test.mjs`: **31 pass / 0 fail**, no `MaxListenersExceeded` warning.
+- `experiments/repro-issue-170-awaited.mjs` (Path A): clean → `code=143`; fixed → `code=5`.
+- `experiments/repro-issue-170-parentclose.mjs` (Path B): clean → `code=143`; fixed → `code=5` on both node and bun.
+- `js/tests/issue-170-cleanup-race.test.mjs`: **4 pass / 0 fail** (bun); the parent-closure case verified to fail with `143` when the guard is removed.
+- `bun test js/tests/shell-settings.test.mjs js/tests/issue-170-cleanup-race.test.mjs js/tests/ctrl-c-signal.test.mjs`: all pass, no `MaxListenersExceeded` warning; the legitimate parent-stream-closure cleanup test still passes.
 - Lint + Prettier: clean on all changed files.
+- CI re-run on `bun on windows-latest` after commit `1c53eef`: see PR #171 checks.
 
 ---
 
@@ -279,10 +338,10 @@ regression test is the durable guard against recurrence.
 
 | Req | Status |
 | --- | --- |
-| R1 fix CI false positives/errors | ✅ both defects fixed at the source |
+| R1 fix CI false positives/errors | ✅ all three defects fixed at the source (reaper race, parent-closure preemption, listener leak) |
 | R2 compare workflows vs templates | ✅ compared; no matching defect in templates; deltas documented |
 | R3 logs + deep case study | ✅ this folder |
 | R4 debug/verbose for next iteration | ✅ existing `COMMAND_STREAM_TRACE` tracing sufficient; root cause determined |
 | R5 report to other repos | ✅ N/A — root cause is this repo's own source, no external/template target |
-| R6 fix across entire codebase | ✅ all consumption entry points + both reset paths covered |
+| R6 fix across entire codebase | ✅ all consumption entry points flag `_awaited`; both teardown paths (reaper + parent-closure) and the listener leak covered |
 | R7 single PR #171 | ✅ all work on `issue-170-9e2e62bb506a` / PR #171 |
