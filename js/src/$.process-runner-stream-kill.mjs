@@ -257,6 +257,7 @@ export function attachStreamKillMethods(ProcessRunner) {
   ProcessRunner.prototype.stream = async function* () {
     trace('ProcessRunner', () => `stream ENTER | started=${this.started}`);
     this._isStreaming = true;
+    this._awaited = true;
     if (!this.started) {
       this._startAsync();
     }

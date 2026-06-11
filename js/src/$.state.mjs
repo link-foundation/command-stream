@@ -13,6 +13,13 @@ const initialWorkingDirectory = process.cwd();
 
 // Track parent stream state for graceful shutdown
 let parentStreamsMonitored = false;
+// References to the 'close' listeners installed on the parent streams so they
+// can be removed on reset. Without this, resetGlobalState() would clear the
+// `parentStreamsMonitored` flag while leaving the old listeners attached, so
+// every subsequent ProcessRunner re-registered a new 'close' listener and they
+// accumulated until Node/Bun emitted a MaxListenersExceeded warning (issue
+// #170). Each entry is { stream, listener }.
+let parentStreamListeners = [];
 
 // Set of active ProcessRunner instances
 export const activeProcessRunners = new Set();
@@ -289,7 +296,7 @@ export function monitorParentStreams() {
 
   const checkParentStream = (stream, name) => {
     if (stream && typeof stream.on === 'function') {
-      stream.on('close', () => {
+      const listener = () => {
         trace(
           'ProcessRunner',
           () =>
@@ -300,7 +307,12 @@ export function monitorParentStreams() {
             runner._handleParentStreamClosure();
           }
         }
-      });
+      };
+      stream.on('close', listener);
+      // Keep a reference so the listener can be removed on reset; without this
+      // the listeners accumulate across resetGlobalState() calls and trigger a
+      // MaxListenersExceeded warning (issue #170).
+      parentStreamListeners.push({ stream, listener });
     }
   };
 
@@ -309,9 +321,26 @@ export function monitorParentStreams() {
 }
 
 /**
+ * Remove any parent-stream 'close' listeners installed by monitorParentStreams.
+ */
+function removeParentStreamListeners() {
+  for (const { stream, listener } of parentStreamListeners) {
+    try {
+      if (stream && typeof stream.removeListener === 'function') {
+        stream.removeListener('close', listener);
+      }
+    } catch (_e) {
+      // Ignore - stream may already be torn down
+    }
+  }
+  parentStreamListeners = [];
+}
+
+/**
  * Reset parent stream monitoring flag (for testing)
  */
 export function resetParentStreamMonitoring() {
+  removeParentStreamListeners();
   parentStreamsMonitored = false;
 }
 
@@ -369,6 +398,15 @@ function cleanupActiveRunners() {
       continue;
     }
     try {
+      // Never force-terminate a command that user code is still awaiting. The
+      // reaper exists to clean up *leaked* fire-and-forget runners between
+      // tests; killing a live, awaited command would replace its real exit
+      // code with a synthetic SIGTERM (143) result and mask the true outcome
+      // (issue #170). Awaited runners settle on their own and remove
+      // themselves from activeProcessRunners when they finish.
+      if (runner._awaited && !runner.finished) {
+        continue;
+      }
       if (!runner.started && runner._cleanup) {
         runner._cleanup();
       } else if (runner.kill) {
@@ -388,6 +426,9 @@ export function resetGlobalState() {
   cleanupActiveRunners();
   forceCleanupAll();
   clearShellCache();
+  // Remove the parent-stream 'close' listeners as well as clearing the flag, so
+  // they do not accumulate across resets (issue #170 listener leak).
+  removeParentStreamListeners();
   parentStreamsMonitored = false;
   resetShellSettings();
   virtualCommandsEnabled = true;

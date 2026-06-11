@@ -1450,6 +1450,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
 
   // Promise interface
   ProcessRunner.prototype.then = function (onFulfilled, onRejected) {
+    this._awaited = true;
     if (!this.promise) {
       this.promise = this._startAsync();
     }
@@ -1457,6 +1458,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
   };
 
   ProcessRunner.prototype.catch = function (onRejected) {
+    this._awaited = true;
     if (!this.promise) {
       this.promise = this._startAsync();
     }
@@ -1464,6 +1466,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
   };
 
   ProcessRunner.prototype.finally = function (onFinally) {
+    this._awaited = true;
     if (!this.promise) {
       this.promise = this._startAsync();
     }
