@@ -288,6 +288,19 @@ conditional "if the same issue is found in a template" does not apply, and R5's
 "other reportable repos" likewise has no applicable target — the root cause is
 our own code, not a Bun/Node/template defect).
 
+### Does the same defect exist in the Rust implementation? — No (parity check)
+
+command-stream ships parallel JavaScript and Rust libraries and enforces a
+`JS/Rust source parity` CI gate (`parity.yml`) that fails when `js/src/**`
+changes without a matching `rust/src/**` change. This fix touches only
+`js/src/**`, so the gate fired — correctly. Investigating the Rust side
+(`rust/src/state.rs`) shows its `reset()` simply **clears** the active-runner set
+(`active_runners.write().await.clear()`); it never force-kills runners, has no
+parent-stream-closure monitoring, and never synthesizes a SIGTERM result. None of
+the three JS defects has a Rust counterpart, so there is no equivalent change to
+mirror. The PR therefore carries the documented `parity-exempt` label (the gate's
+own escape hatch for legitimately single-language changes).
+
 ### Best-practice deltas observed (for future hardening)
 
 `js.yml` already matches the template on the highest-value practices:
