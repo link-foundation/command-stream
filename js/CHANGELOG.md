@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.14.0
+
+### Minor Changes
+
+- Add `exitCode` as an alias for the `code` property on all command result objects (issue #36). Code written against the `exitCode` convention (e.g. `child_process` / `execa`) now works without changes, while the existing `code` property remains fully supported.
+
 ## 0.13.0
 
 ### Minor Changes
