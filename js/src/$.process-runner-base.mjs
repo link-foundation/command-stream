@@ -243,6 +243,13 @@ class ProcessRunner extends StreamEmitter {
     this._virtualGenerator = null;
     this._abortController = new AbortController();
 
+    // Set to true once user code starts consuming this runner (await / then /
+    // catch / finally / async iteration). Used by the global test-isolation
+    // reaper (cleanupActiveRunners) to avoid force-terminating a command that
+    // is still being awaited, which would mask its real exit code with a
+    // synthetic SIGTERM result (see issue #170).
+    this._awaited = false;
+
     activeProcessRunners.add(this);
     monitorParentStreams();
 
