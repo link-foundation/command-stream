@@ -144,6 +144,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [0.12.0] - 2026-06-11
+
+### Added
+- `CommandResult::exit_code()` accessor as an alias for the `code` field, mirroring the `exitCode` alias exposed by the JavaScript implementation (issue #36).
+
 ## [0.11.1] - 2026-06-10
 
 ### Fixed
