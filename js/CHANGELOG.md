@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.13.0
+
+### Minor Changes
+
+- Handle `getcwd() failed` errors gracefully during subshell execution (issue #44).
+
+  `process.cwd()` throws `getcwd() failed: No such file or directory` when the current working directory has been deleted or becomes inaccessible (common in CI/CD with temporary directories). Subshell execution and directory restoration now degrade gracefully instead of crashing:
+  - capturing the working directory before a subshell no longer throws when `getcwd()` fails
+  - directory restoration falls back to a safe location (`HOME`, then `/`) when the original directory is gone
+  - simple commands fall back to the inherited `cwd` when `getcwd()` is unavailable
+  - spawning a child process no longer fails with `posix_spawn ENOENT` when the inherited working directory has been deleted; the process is launched from a valid fallback directory (`HOME`, `USERPROFILE`, the temp dir, then `/`) instead
+
+  Make the built-in `cd` command fully `sh`/bash compatible so shell scripts translate directly to `.mjs` (issue #50):
+  - `cd -` switches to the previous directory and prints it, like `sh`
+  - `~` and `~/path` tilde expansion
+  - successful `cd` updates the `PWD` and `OLDPWD` environment variables
+  - relative targets resolve against the `cwd` option for consistency
+
+  Also documents the working-directory behavior (persistence across commands, subshell isolation, and `cd` vs. the `cwd` option) in the README.
+
+  Fix CI false positives where a global teardown preempted an in-flight, awaited command (issue #170).
+
+  Three related defects made tests intermittently report a `SIGTERM` result (exit code 143) and emit a `MaxListenersExceeded` warning, most visibly on Windows/Bun. All are now keyed on a new `_awaited` flag, set synchronously when user code starts consuming a runner (`await`/`then`/`catch`/`finally`/`stream`):
+  - `_handleParentStreamClosure()` killed any active runner when a parent `stdout`/`stderr` `close` event fired. On Windows/Bun the parent `WriteStream` can emit a spurious `close` (the same instability behind the `MaxListenersExceeded` warning), which preempted the awaited command and replaced its real exit code with `143`. It now skips runners that are being awaited, since the `await` is the authoritative consumer. This was the actual CI trigger.
+  - `cleanupActiveRunners()` (invoked by `resetGlobalState()` between tests) could force-kill a command that user code was still awaiting, replacing its real exit code with a synthetic SIGTERM result. The reaper now skips awaited, unfinished runners.
+  - `monitorParentStreams()` attached a `close` listener to `process.stdout`/`process.stderr` on every `ProcessRunner` construction but never removed them on reset, so they accumulated until Node/Bun emitted a `MaxListenersExceeded` warning. The listeners are now tracked and removed in `resetGlobalState()`/`resetParentStreamMonitoring()`.
+
 ## 0.12.0
 
 ### Minor Changes
