@@ -184,6 +184,53 @@ const doubleQuoted = '"/path with spaces/file"';
 await $`cat ${doubleQuoted}`; // → cat '"/path with spaces/file"' (preserves intent)
 ```
 
+### Go templates & `{{ }}` arguments
+
+`command-stream` gives you a real shell's word-splitting, including for tokens
+you type **literally** in the template. That means a Go/Docker template flag
+like `--format {{json .Config.Env}}` behaves exactly as it would in `bash`: the
+**unquoted space** inside `{{ }}` splits the token into separate words, so the
+child process receives a broken `--format` value (e.g. Docker reports
+`template parsing error: ... unclosed action`).
+
+The rule is simple — **quote template tokens that contain spaces**, just like
+you would in a shell script:
+
+```javascript
+import { $ } from 'command-stream';
+
+// ❌ BREAKS — the unquoted space splits the token into 3 argv words:
+//   `--format`, `{{json`, `.Config.Env}}`
+await $`docker image inspect alpine --format {{json .Config.Env}}`;
+
+// ✅ WORKS — a token with no space stays a single word
+await $`docker image inspect alpine --format {{.Id}}`;
+
+// ✅ WORKS — single-quote the template (recommended, mirrors shell scripts)
+await $`docker image inspect alpine --format '{{json .Config.Env}}'`;
+
+// ✅ WORKS — double quotes work too
+await $`docker image inspect alpine --format "{{json .Config.Env}}"`;
+
+// ✅ WORKS — interpolate the whole template as one ${value}; it is
+//   auto-quoted and always reaches the child as a single argument
+const format = '{{json .Config.Env}}';
+await $`docker image inspect alpine --format ${format}`;
+
+// ✅ WORKAROUND — drop --format and parse the full JSON in JS
+const all = await $`docker image inspect alpine`;
+const env = JSON.parse(all.stdout)[0].Config.Env;
+```
+
+To help diagnose the broken case, `command-stream` prints a one-line warning to
+stderr when a built command contains an **unquoted** `{{ … }}` token with an
+internal space (the warning fires once per unique token). Silence it by setting
+the `COMMAND_STREAM_NO_TEMPLATE_WARNING=1` environment variable.
+
+> Note: a token whose space is already **quoted** (`'{{json .Config.Env}}'`) or
+> supplied via interpolation (`${format}`) is passed through untouched — no
+> splitting, no warning.
+
 ### Shell Injection Protection
 
 All interpolated values are automatically secured:
