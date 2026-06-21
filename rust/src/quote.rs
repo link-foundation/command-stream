@@ -3,6 +3,9 @@
 //! This module provides functions for safely quoting values for shell usage,
 //! preventing command injection and ensuring proper argument handling.
 
+use std::collections::HashSet;
+use std::sync::{Mutex, OnceLock};
+
 /// Quote a value for safe shell usage
 ///
 /// This function quotes strings appropriately for use in shell commands,
@@ -101,6 +104,145 @@ pub fn needs_quoting(value: &str) -> bool {
     !safe_pattern.is_match(value)
 }
 
+/// Scan a built command string for an unquoted Go/Handlebars-style template
+/// token (`{{ ... }}`) that contains an unquoted space.
+///
+/// Such a token is split by the shell (and by command-stream, which mirrors
+/// shell word-splitting) into multiple argv words, so `--format {{json .X}}`
+/// reaches the child as `--format`, `{{json`, `.X}}` — exactly what a POSIX
+/// shell would do, but surprising for Go templates. Returns the offending
+/// snippet so callers can point the user at the gotcha.
+///
+/// # Examples
+///
+/// ```
+/// use command_stream::quote::find_split_template_token;
+///
+/// assert_eq!(
+///     find_split_template_token("docker inspect --format {{json .Config.Env}}"),
+///     Some("{{json .Config.Env}}".to_string())
+/// );
+/// // Space-free or quoted tokens are not flagged.
+/// assert_eq!(find_split_template_token("docker inspect --format {{.Id}}"), None);
+/// assert_eq!(
+///     find_split_template_token("docker inspect --format '{{json .Config.Env}}'"),
+///     None
+/// );
+/// ```
+pub fn find_split_template_token(command: &str) -> Option<String> {
+    if !command.contains("{{") {
+        return None;
+    }
+
+    let chars: Vec<char> = command.chars().collect();
+    let n = chars.len();
+    let mut in_single = false;
+    let mut in_double = false;
+    let mut i = 0;
+    while i < n {
+        let c = chars[i];
+        if in_single {
+            in_single = c != '\'';
+            i += 1;
+            continue;
+        }
+        if in_double {
+            in_double = c != '"';
+            i += 1;
+            continue;
+        }
+        if c == '\'' {
+            in_single = true;
+            i += 1;
+            continue;
+        }
+        if c == '"' {
+            in_double = true;
+            i += 1;
+            continue;
+        }
+
+        // An unquoted `{{` — scan forward for its matching `}}`, reporting it
+        // when an unquoted space appears in between (which triggers splitting).
+        if c == '{' && i + 1 < n && chars[i + 1] == '{' {
+            let (splits, end) = scan_template_close(&chars, i + 2);
+            if splits {
+                return Some(chars[i..=end + 1].iter().collect());
+            }
+            i = end + 1;
+            continue;
+        }
+        i += 1;
+    }
+
+    None
+}
+
+/// Starting just after an unquoted `{{`, scan to the matching unquoted `}}`,
+/// tracking whether an unquoted space appears in between.
+///
+/// Returns `(splits, end_index)` where `splits` is true when a closing `}}`
+/// was found with an intervening unquoted space, and `end_index` points at the
+/// first `}` of that closing pair (or the end of input when no `}}` is found).
+fn scan_template_close(chars: &[char], start: usize) -> (bool, usize) {
+    let n = chars.len();
+    let mut j = start;
+    let mut has_unquoted_space = false;
+    let mut in_single = false;
+    let mut in_double = false;
+    while j < n {
+        let c = chars[j];
+        if in_single {
+            in_single = c != '\'';
+        } else if in_double {
+            in_double = c != '"';
+        } else if c == '\'' {
+            in_single = true;
+        } else if c == '"' {
+            in_double = true;
+        } else if c == '}' && j + 1 < n && chars[j + 1] == '}' {
+            return (has_unquoted_space, j);
+        } else if c.is_whitespace() {
+            has_unquoted_space = true;
+        }
+        j += 1;
+    }
+    (false, j)
+}
+
+fn warned_template_snippets() -> &'static Mutex<HashSet<String>> {
+    static WARNED: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
+    WARNED.get_or_init(|| Mutex::new(HashSet::new()))
+}
+
+/// Emit a one-line diagnostic when a built command contains an unquoted Go
+/// template token with an internal space. This points users at the
+/// shell-splitting gotcha behind the cryptic downstream errors (e.g. Go's
+/// "unclosed action"). Silenced via `COMMAND_STREAM_NO_TEMPLATE_WARNING`, and
+/// each unique snippet is only reported once per process.
+pub fn warn_on_split_template(command: &str) {
+    if std::env::var_os("COMMAND_STREAM_NO_TEMPLATE_WARNING").is_some() {
+        return;
+    }
+    let snippet = match find_split_template_token(command) {
+        Some(s) => s,
+        None => return,
+    };
+    {
+        let mut warned = warned_template_snippets().lock().unwrap();
+        if !warned.insert(snippet.clone()) {
+            return;
+        }
+    }
+    eprintln!(
+        "[command-stream] Warning: template token `{snippet}` contains an \
+unquoted space, so the shell splits it into multiple arguments (just like \
+bash would). Quote it ('{snippet}') or interpolate it as a single ${{value}} \
+to pass it as one argument. See README \"Go templates & {{{{ }}}} arguments\". \
+Set COMMAND_STREAM_NO_TEMPLATE_WARNING=1 to silence."
+    );
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -157,5 +299,42 @@ mod tests {
     #[test]
     fn test_quote_with_tabs() {
         assert_eq!(quote("col1\tcol2"), "'col1\tcol2'");
+    }
+
+    #[test]
+    fn test_find_split_template_unquoted_with_space() {
+        assert_eq!(
+            find_split_template_token("docker inspect --format {{json .Config.Env}}"),
+            Some("{{json .Config.Env}}".to_string())
+        );
+    }
+
+    #[test]
+    fn test_find_split_template_space_free() {
+        assert_eq!(
+            find_split_template_token("docker inspect --format {{.Id}}"),
+            None
+        );
+    }
+
+    #[test]
+    fn test_find_split_template_single_quoted() {
+        assert_eq!(
+            find_split_template_token("docker inspect --format '{{json .Config.Env}}'"),
+            None
+        );
+    }
+
+    #[test]
+    fn test_find_split_template_double_quoted() {
+        assert_eq!(
+            find_split_template_token("docker inspect --format \"{{json .Config.Env}}\""),
+            None
+        );
+    }
+
+    #[test]
+    fn test_find_split_template_none_without_braces() {
+        assert_eq!(find_split_template_token("echo hello world"), None);
     }
 }
