@@ -49,6 +49,7 @@ pub fn build_shell_command(parts: &[&str], values: &[&str]) -> String {
         }
     }
 
+    crate::quote::warn_on_split_template(&result);
     result
 }
 
@@ -130,6 +131,7 @@ macro_rules! cmd {
                 result.push_str(&$crate::quote::quote(values_ref[i]));
             }
         }
+        $crate::quote::warn_on_split_template(&result);
 
         async move {
             $crate::run(result).await

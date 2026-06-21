@@ -54,6 +54,126 @@ export function quote(value) {
   return `'${value.replace(/'/g, "'\\''")}'`;
 }
 
+// Remember which split-template snippets we've already warned about so a hot
+// loop doesn't spam stderr with the same diagnostic over and over.
+const warnedTemplateSnippets = new Set();
+
+/**
+ * Scan a fully-built command string for an unquoted Go/Handlebars-style
+ * template token (`{{ ... }}`) that contains an unquoted space.
+ *
+ * Such a token is split by the shell (and by command-stream, which mirrors
+ * shell word-splitting) into multiple argv words, so `--format {{json .X}}`
+ * reaches the child as `--format`, `{{json`, `.X}}` — exactly what a POSIX
+ * shell would do, but surprising for Go templates. We return the offending
+ * snippet so the caller can point the user at the gotcha.
+ *
+ * @param {string} command - The assembled command string
+ * @returns {string|null} The split template snippet, or null if none
+ */
+export function findSplitTemplateToken(command) {
+  if (typeof command !== 'string' || !command.includes('{{')) {
+    return null;
+  }
+
+  let inSingle = false;
+  let inDouble = false;
+  for (let i = 0; i < command.length; i++) {
+    const char = command[i];
+    if (inSingle) {
+      inSingle = char !== "'";
+      continue;
+    }
+    if (inDouble) {
+      inDouble = char !== '"';
+      continue;
+    }
+    if (char === "'") {
+      inSingle = true;
+      continue;
+    }
+    if (char === '"') {
+      inDouble = true;
+      continue;
+    }
+
+    // An unquoted `{{` — scan forward for its matching `}}`, reporting it when
+    // an unquoted space appears in between (which is what triggers splitting).
+    if (char === '{' && command[i + 1] === '{') {
+      const close = scanTemplateClose(command, i + 2);
+      if (close.splits) {
+        return command.slice(i, close.endIndex + 2);
+      }
+      i = close.endIndex;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Starting just after an unquoted `{{`, scan to the matching unquoted `}}`,
+ * tracking whether an unquoted space appears in between.
+ *
+ * @param {string} command - The command string
+ * @param {number} startIndex - Index just past the opening `{{`
+ * @returns {{ splits: boolean, endIndex: number }} `splits` is true when a
+ *   closing `}}` was found with an intervening unquoted space; `endIndex`
+ *   points at the closing `}}` (or the end of input).
+ */
+function scanTemplateClose(command, startIndex) {
+  let j = startIndex;
+  let hasUnquotedSpace = false;
+  let inSingle = false;
+  let inDouble = false;
+  while (j < command.length) {
+    const cj = command[j];
+    if (inSingle) {
+      inSingle = cj !== "'";
+    } else if (inDouble) {
+      inDouble = cj !== '"';
+    } else if (cj === "'") {
+      inSingle = true;
+    } else if (cj === '"') {
+      inDouble = true;
+    } else if (cj === '}' && command[j + 1] === '}') {
+      return { splits: hasUnquotedSpace, endIndex: j };
+    } else if (/\s/.test(cj)) {
+      hasUnquotedSpace = true;
+    }
+    j++;
+  }
+  return { splits: false, endIndex: j };
+}
+
+/**
+ * Emit a one-line diagnostic when a built command contains an unquoted Go
+ * template token with an internal space. This points users at the
+ * shell-splitting gotcha behind the cryptic downstream errors (e.g. Go's
+ * "unclosed action"). Silenced via COMMAND_STREAM_NO_TEMPLATE_WARNING=1, and
+ * each unique snippet is only reported once per process.
+ *
+ * @param {string} command - The assembled command string
+ */
+function warnOnSplitTemplate(command) {
+  if (process.env.COMMAND_STREAM_NO_TEMPLATE_WARNING) {
+    return;
+  }
+  const snippet = findSplitTemplateToken(command);
+  if (!snippet || warnedTemplateSnippets.has(snippet)) {
+    return;
+  }
+  warnedTemplateSnippets.add(snippet);
+  console.error(
+    `[command-stream] Warning: template token \`${snippet}\` contains an ` +
+      `unquoted space, so the shell splits it into multiple arguments (just ` +
+      `like bash would). Quote it ('${snippet}') or interpolate it as a ` +
+      `single \${value} to pass it as one argument. See README ` +
+      `"Go templates & {{ }} arguments". Set ` +
+      `COMMAND_STREAM_NO_TEMPLATE_WARNING=1 to silence.`
+  );
+}
+
 /**
  * Build a shell command from template strings and values
  * @param {string[]} strings - Template literal strings
@@ -92,6 +212,7 @@ export function buildShellCommand(strings, values) {
         () =>
           `BRANCH: buildShellCommand => COMPLETE_COMMAND | ${JSON.stringify({ command: commandStr }, null, 2)}`
       );
+      warnOnSplitTemplate(commandStr);
       return commandStr;
     }
   }
@@ -109,6 +230,7 @@ export function buildShellCommand(strings, values) {
     () =>
       `buildShellCommand EXIT | ${JSON.stringify({ command: out }, null, 2)}`
   );
+  warnOnSplitTemplate(out);
   return out;
 }
 
