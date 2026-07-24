@@ -113,6 +113,18 @@ describe('PTY terminal capture', () => {
     }
   });
 
+  test('retains a state before a later output chunk starts with a repaint', async () => {
+    const capture = await captureTerminal({
+      file: process.execPath,
+      args: [join(directory, 'fixtures/tui-leading-repaint-fixture.mjs')],
+      cols: 20,
+      rows: 3,
+      settleMilliseconds: 100,
+    });
+
+    expect(capture.transcript).toBe('first-state\nsecond-state');
+  });
+
   test('retains repeated content when another state appeared between it', () => {
     const frame = (lines) => ({ lines });
     expect(
