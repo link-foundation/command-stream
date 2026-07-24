@@ -147,6 +147,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [0.13.1] - 2026-07-24
+
+### Fixed
+
+- Preserve the current terminal frame before a later full-screen repaint,
+  including when its control sequence is split across PTY output chunks.
+
 ## [0.13.0] - 2026-07-24
 
 ### Added
