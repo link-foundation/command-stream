@@ -32,6 +32,62 @@ const splitRenderSegments = (data) => {
   return segments;
 };
 
+const splitPendingRenderSequence = (data, flush) => {
+  if (!data || flush) {
+    return [data, ''];
+  }
+  const maximum = Math.min(data.length, CLEAR_SCREEN.length - 1);
+  for (let length = maximum; length > 0; length -= 1) {
+    if (CLEAR_SCREEN.startsWith(data.slice(-length))) {
+      return [data.slice(0, -length), data.slice(-length)];
+    }
+  }
+  return [data, ''];
+};
+
+const createTerminalOutputWriter = (terminal, appendFrame) => {
+  let promise = Promise.resolve();
+  let pending = '';
+  let terminalHasOutput = false;
+  const after = (operation) => {
+    promise = promise.then(operation);
+    return promise;
+  };
+  const write = (data, flush = false) => {
+    const [complete, nextPending] = splitPendingRenderSequence(
+      pending + data,
+      flush
+    );
+    pending = nextPending;
+    if (!complete) {
+      return;
+    }
+
+    const segments = splitRenderSegments(complete);
+    if (terminalHasOutput && complete.startsWith(CLEAR_SCREEN)) {
+      after(appendFrame);
+    }
+    for (const [index, segment] of segments.entries()) {
+      after(
+        () =>
+          new Promise((written) => {
+            terminal.write(segment, written);
+          })
+      );
+      terminalHasOutput ||= segment.length > 0;
+      if (index < segments.length - 1) {
+        after(appendFrame);
+      }
+    }
+  };
+  return {
+    after,
+    flush: () => write('', true),
+    settled: () => promise,
+    write,
+  };
+};
+
 const normalizeLines = (lines) => {
   let last = lines.length;
   while (last > 0 && lines[last - 1] === '') {
@@ -236,8 +292,6 @@ export const captureTerminal = async ({
   let interactionIndex = 0;
   let settleTimer, stopTimer;
   let stopMarkerSeen = false;
-  let writeQueue = Promise.resolve();
-  let terminalHasOutput = false;
   let interactionScheduled = false;
   let captureError;
   const appendFrame = () => {
@@ -250,24 +304,7 @@ export const captureTerminal = async ({
     clearTimeout(settleTimer);
     settleTimer = setTimeout(appendFrame, settleMilliseconds);
   };
-  const queueOutput = (data) => {
-    const segments = splitRenderSegments(data);
-    if (terminalHasOutput && data.startsWith(CLEAR_SCREEN)) {
-      writeQueue = writeQueue.then(appendFrame);
-    }
-    for (const [index, segment] of segments.entries()) {
-      writeQueue = writeQueue.then(
-        () =>
-          new Promise((written) => {
-            terminal.write(segment, written);
-          })
-      );
-      terminalHasOutput ||= segment.length > 0;
-      if (index < segments.length - 1) {
-        writeQueue = writeQueue.then(appendFrame);
-      }
-    }
-  };
+  const outputWriter = createTerminalOutputWriter(terminal, appendFrame);
   const advanceInteractions = () => {
     if (
       interactionScheduled ||
@@ -279,7 +316,7 @@ export const captureTerminal = async ({
 
     interactionScheduled = true;
     traceCapture('interaction-scheduled', { interactionIndex });
-    writeQueue.then(() => {
+    outputWriter.after(() => {
       appendFrame();
       traceCapture('interaction-applied', { interactionIndex });
       applyInteraction({
@@ -307,13 +344,13 @@ export const captureTerminal = async ({
       traceCapture('output', { data });
       output += data;
       record('o', data);
-      queueOutput(data);
-      writeQueue.then(settle);
+      outputWriter.write(data);
+      outputWriter.after(settle);
       advanceInteractions();
 
       if (stopMarker && output.includes(stopMarker) && !stopMarkerSeen) {
         stopMarkerSeen = true;
-        writeQueue.then(appendFrame);
+        outputWriter.after(appendFrame);
         stopTimer = setTimeout(
           () => child.kill('SIGTERM'),
           stopMarkerGraceMilliseconds
@@ -332,7 +369,8 @@ export const captureTerminal = async ({
   let status;
   try {
     status = await completion;
-    await writeQueue;
+    outputWriter.flush();
+    await outputWriter.settled();
     clearTimeout(settleTimer);
     appendFrame();
   } finally {

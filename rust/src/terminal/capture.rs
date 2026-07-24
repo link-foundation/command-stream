@@ -80,6 +80,15 @@ fn render_segments(data: &[u8]) -> Vec<&[u8]> {
     segments
 }
 
+fn drain_complete_render_data(pending: &mut Vec<u8>) -> Vec<u8> {
+    let maximum = pending.len().min(CLEAR_SCREEN.len() - 1);
+    let pending_length = (1..=maximum)
+        .rev()
+        .find(|length| CLEAR_SCREEN.starts_with(&pending[pending.len() - length..]))
+        .unwrap_or(0);
+    pending.drain(..pending.len() - pending_length).collect()
+}
+
 fn record(asciicast: &mut Asciicast, started: Instant, code: &str, data: impl Into<String>) {
     asciicast.events.push(AsciicastEvent {
         time: elapsed(started),
@@ -253,6 +262,7 @@ pub fn capture_terminal(
     let mut recording = asciicast(&options);
     let mut output = String::new();
     let mut frames = Vec::new();
+    let mut pending_render = Vec::new();
     let mut terminal_has_output = false;
     let mut interaction_index = 0;
     let mut last_output = None;
@@ -268,9 +278,11 @@ pub fn capture_terminal(
                 let text = String::from_utf8_lossy(&data);
                 output.push_str(&text);
                 record(&mut recording, started, "o", text.into_owned());
-                let segments = render_segments(&data);
+                pending_render.extend_from_slice(&data);
+                let render_data = drain_complete_render_data(&mut pending_render);
+                let segments = render_segments(&render_data);
                 let segment_count = segments.len();
-                if terminal_has_output && data.starts_with(CLEAR_SCREEN) {
+                if terminal_has_output && render_data.starts_with(CLEAR_SCREEN) {
                     append_frame(&mut frames, &parser, started);
                 }
                 for (index, segment) in segments.into_iter().enumerate() {
@@ -343,6 +355,7 @@ pub fn capture_terminal(
         }
     }
 
+    parser.process(&pending_render);
     append_frame(&mut frames, &parser, started);
     let capture = capture_result(
         status.expect("child status is available after capture loop"),
