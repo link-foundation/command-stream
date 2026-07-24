@@ -17,19 +17,75 @@ const KEY_SEQUENCES = {
   TAB: '\t',
   UP: '\u001b[A',
 };
-const CLEAR_SCREEN = '\u001b[2J\u001b[H';
+const ERASE_SCREEN = '\u001b[2J';
 
 const splitRenderSegments = (data) => {
-  const pieces = data.split(CLEAR_SCREEN);
+  const pieces = data.split(ERASE_SCREEN);
   if (pieces.length === 1) {
     return [data];
   }
 
-  const segments = pieces.slice(1).map((piece) => `${CLEAR_SCREEN}${piece}`);
+  const segments = pieces.slice(1).map((piece) => `${ERASE_SCREEN}${piece}`);
   if (pieces[0]) {
     segments.unshift(pieces[0]);
   }
   return segments;
+};
+
+const splitPendingRenderSequence = (data, flush) => {
+  if (!data || flush) {
+    return [data, ''];
+  }
+  const maximum = Math.min(data.length, ERASE_SCREEN.length - 1);
+  for (let length = maximum; length > 0; length -= 1) {
+    if (ERASE_SCREEN.startsWith(data.slice(-length))) {
+      return [data.slice(0, -length), data.slice(-length)];
+    }
+  }
+  return [data, ''];
+};
+
+const createTerminalOutputWriter = (terminal, appendFrame) => {
+  let promise = Promise.resolve();
+  let pending = '';
+  let terminalHasOutput = false;
+  const after = (operation) => {
+    promise = promise.then(operation);
+    return promise;
+  };
+  const write = (data, flush = false) => {
+    const [complete, nextPending] = splitPendingRenderSequence(
+      pending + data,
+      flush
+    );
+    pending = nextPending;
+    if (!complete) {
+      return;
+    }
+
+    const segments = splitRenderSegments(complete);
+    if (terminalHasOutput && complete.startsWith(ERASE_SCREEN)) {
+      after(appendFrame);
+    }
+    for (const [index, segment] of segments.entries()) {
+      after(
+        () =>
+          new Promise((written) => {
+            terminal.write(segment, written);
+          })
+      );
+      terminalHasOutput ||= segment.length > 0;
+      if (index < segments.length - 1) {
+        after(appendFrame);
+      }
+    }
+  };
+  return {
+    after,
+    flush: () => write('', true),
+    settled: () => promise,
+    write,
+  };
 };
 
 const normalizeLines = (lines) => {
@@ -234,13 +290,10 @@ export const captureTerminal = async ({
   const frames = [];
   let output = '';
   let interactionIndex = 0;
-  let settleTimer;
-  let stopTimer;
+  let settleTimer, stopTimer;
   let stopMarkerSeen = false;
-  let writeQueue = Promise.resolve();
   let interactionScheduled = false;
   let captureError;
-
   const appendFrame = () => {
     const frame = terminalFrame(terminal, elapsed);
     if (!frames.at(-1) || !sameFrame(frames.at(-1), frame)) {
@@ -251,20 +304,7 @@ export const captureTerminal = async ({
     clearTimeout(settleTimer);
     settleTimer = setTimeout(appendFrame, settleMilliseconds);
   };
-  const queueOutput = (data) => {
-    const segments = splitRenderSegments(data);
-    for (const [index, segment] of segments.entries()) {
-      writeQueue = writeQueue.then(
-        () =>
-          new Promise((written) => {
-            terminal.write(segment, written);
-          })
-      );
-      if (index < segments.length - 1) {
-        writeQueue = writeQueue.then(appendFrame);
-      }
-    }
-  };
+  const outputWriter = createTerminalOutputWriter(terminal, appendFrame);
   const advanceInteractions = () => {
     if (
       interactionScheduled ||
@@ -276,7 +316,7 @@ export const captureTerminal = async ({
 
     interactionScheduled = true;
     traceCapture('interaction-scheduled', { interactionIndex });
-    writeQueue.then(() => {
+    outputWriter.after(() => {
       appendFrame();
       traceCapture('interaction-applied', { interactionIndex });
       applyInteraction({
@@ -304,13 +344,13 @@ export const captureTerminal = async ({
       traceCapture('output', { data });
       output += data;
       record('o', data);
-      queueOutput(data);
-      writeQueue.then(settle);
+      outputWriter.write(data);
+      outputWriter.after(settle);
       advanceInteractions();
 
       if (stopMarker && output.includes(stopMarker) && !stopMarkerSeen) {
         stopMarkerSeen = true;
-        writeQueue.then(appendFrame);
+        outputWriter.after(appendFrame);
         stopTimer = setTimeout(
           () => child.kill('SIGTERM'),
           stopMarkerGraceMilliseconds
@@ -329,7 +369,8 @@ export const captureTerminal = async ({
   let status;
   try {
     status = await completion;
-    await writeQueue;
+    outputWriter.flush();
+    await outputWriter.settled();
     clearTimeout(settleTimer);
     appendFrame();
   } finally {

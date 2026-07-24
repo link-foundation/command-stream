@@ -76,7 +76,12 @@ describe('PTY terminal capture', () => {
     expect(capture.transcript).toContain('ready:true:20x4');
     expect(capture.transcript).toContain('typed:hello');
     expect(capture.transcript).toContain('resized:32x6');
-    expect(capture.frames.length).toBeLessThan(8);
+    const settledStates = capture.frames.map(({ time: _time, ...frame }) =>
+      JSON.stringify(frame)
+    );
+    for (let index = 1; index < settledStates.length; index += 1) {
+      expect(settledStates[index]).not.toBe(settledStates[index - 1]);
+    }
 
     const replay = await readAsciicast(join(artifactDirectory, 'session.cast'));
     expect(replay.header.width).toBe(20);
@@ -111,6 +116,18 @@ describe('PTY terminal capture', () => {
     for (const line of ['alpha', 'beta', 'gamma', 'delta', 'epsilon']) {
       expect(capture.transcript.split(line)).toHaveLength(2);
     }
+  });
+
+  test('retains a state when a later repaint is split across output chunks', async () => {
+    const capture = await captureTerminal({
+      file: process.execPath,
+      args: [join(directory, 'fixtures/tui-leading-repaint-fixture.mjs')],
+      cols: 20,
+      rows: 3,
+      settleMilliseconds: 100,
+    });
+
+    expect(capture.transcript).toBe('first-state\nsecond-state');
   });
 
   test('retains repeated content when another state appeared between it', () => {

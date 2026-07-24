@@ -88,6 +88,19 @@ printf '\033[2J\033[Halpha\n'
 }
 
 #[test]
+fn retains_a_state_when_a_later_repaint_is_split_across_output_chunks() {
+    let mut options = shell_options(
+        "printf '\\033[2J\\033[Hfirst-state'; sleep 0.02; printf '\\033[2'; \
+         sleep 0.02; printf 'J\\033[Hsecond-state'",
+    );
+    options.settle_duration = Duration::from_millis(100);
+
+    let capture = capture_terminal(options).expect("capture should complete");
+
+    assert_eq!(capture.transcript, "first-state\nsecond-state");
+}
+
+#[test]
 fn retains_lines_after_they_scroll_off_the_visible_terminal() {
     let mut options = shell_options(
         "printf 'one\\r\\n'; sleep 0.04; printf 'two\\r\\n'; sleep 0.04; \
