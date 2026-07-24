@@ -21,12 +21,15 @@ process.stdin.on('data', (chunk) => {
   }
 });
 
-process.on('SIGWINCH', () => {
-  setTimeout(() => {
-    render(`resized:${process.stdout.columns}x${process.stdout.rows}`);
+const initialDimensions = `${process.stdout.columns}x${process.stdout.rows}`;
+const resizeWatcher = setInterval(() => {
+  const dimensions = `${process.stdout.columns}x${process.stdout.rows}`;
+  if (dimensions !== initialDimensions) {
+    clearInterval(resizeWatcher);
+    render(`resized:${dimensions}`);
     setTimeout(() => process.exit(0), 20);
-  }, 5);
-});
+  }
+}, 5);
 
 render(
   `ready:${process.stdout.isTTY}:${process.stdout.columns}x${process.stdout.rows}`
