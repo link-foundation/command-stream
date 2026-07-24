@@ -4,22 +4,28 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { captureTerminal, readAsciicast } from '../src/$.mjs';
+import {
+  captureTerminal,
+  readAsciicast,
+  unrollTerminalFrames,
+} from '../src/$.mjs';
 
 const directory = dirname(fileURLToPath(import.meta.url));
 const temporaryDirectories = [];
 
 afterEach(async () => {
   await Promise.all(
-    temporaryDirectories.splice(0).map((path) =>
-      rm(path, { force: true, recursive: true })
-    )
+    temporaryDirectories
+      .splice(0)
+      .map((path) => rm(path, { force: true, recursive: true }))
   );
 });
 
 describe('PTY terminal capture', () => {
   test('drives input and resize while retaining settled, deduplicated frames', async () => {
-    const artifactDirectory = await mkdtemp(join(tmpdir(), 'command-stream-tui-'));
+    const artifactDirectory = await mkdtemp(
+      join(tmpdir(), 'command-stream-tui-')
+    );
     temporaryDirectories.push(artifactDirectory);
 
     const capture = await captureTerminal({
@@ -54,11 +60,13 @@ describe('PTY terminal capture', () => {
       'snapshot.svg',
       'recording.svg',
     ]) {
-      expect((await readFile(join(artifactDirectory, artifact))).length).toBeGreaterThan(0);
+      expect(
+        (await readFile(join(artifactDirectory, artifact))).length
+      ).toBeGreaterThan(0);
     }
-    expect(await readFile(join(artifactDirectory, 'recording.svg'), 'utf8')).toContain(
-      '<animate'
-    );
+    expect(
+      await readFile(join(artifactDirectory, 'recording.svg'), 'utf8')
+    ).toContain('<animate');
   });
 
   test('unrolls scrolled-off lines in order and exactly once', async () => {
@@ -74,5 +82,41 @@ describe('PTY terminal capture', () => {
     for (const line of ['alpha', 'beta', 'gamma', 'delta', 'epsilon']) {
       expect(capture.transcript.split(line)).toHaveLength(2);
     }
+  });
+
+  test('retains repeated content when another state appeared between it', () => {
+    const frame = (lines) => ({ lines });
+    expect(
+      unrollTerminalFrames([
+        frame(['same']),
+        frame(['different']),
+        frame(['same']),
+      ])
+    ).toBe('same\ndifferent\nsame');
+  });
+
+  test('writes partial artifacts when a terminal command times out', async () => {
+    const artifactDirectory = await mkdtemp(
+      join(tmpdir(), 'command-stream-tui-timeout-')
+    );
+    temporaryDirectories.push(artifactDirectory);
+
+    let failure;
+    try {
+      await captureTerminal({
+        file: process.execPath,
+        args: [join(directory, 'fixtures/tui-hang-fixture.mjs')],
+        timeoutMilliseconds: 250,
+        artifactDirectory,
+      });
+    } catch (error) {
+      failure = error;
+    }
+
+    expect(failure?.message).toContain('timed out');
+    expect(failure?.capture.transcript).toContain('waiting for input');
+    expect(
+      (await readFile(join(artifactDirectory, 'recording.svg'))).length
+    ).toBeGreaterThan(0);
   });
 });
