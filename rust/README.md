@@ -88,6 +88,39 @@ The crate also builds a `command-stream` binary:
 cargo run -- echo hello
 ```
 
+## TUI Capture
+
+`capture_terminal` runs an interactive program in a real pseudoterminal and
+uses `vt100` to retain settled terminal states:
+
+```rust
+use command_stream::terminal::{
+    capture_terminal, TerminalCaptureOptions, TerminalInteraction, TerminalKey,
+};
+
+let capture = capture_terminal(TerminalCaptureOptions {
+    file: "codex".into(),
+    args: vec!["--no-alt-screen".into()],
+    interactions: vec![TerminalInteraction {
+        text: Some("Inspect the failing test".into()),
+        key: Some(TerminalKey::Enter),
+        ..TerminalInteraction::default()
+    }],
+    artifact_directory: Some("artifacts/codex".into()),
+    ..TerminalCaptureOptions::default()
+})?;
+
+println!("{}", capture.transcript);
+# Ok::<(), command_stream::terminal::TerminalCaptureError>(())
+```
+
+The capture contains the raw PTY output, consecutive-deduplicated frames, an
+ordered unrolled transcript, and asciicast v2 input/output/resize events. The
+artifact directory receives `transcript.txt`, `frames.json`, `session.cast`,
+`snapshot.svg`, and an animated `recording.svg`; timeout errors retain the
+partial capture and those diagnostic files. Use `capture_terminal_async` from
+an async application.
+
 ## Features
 
 - Shell parser for pipelines, command lists, logical operators, and redirection.

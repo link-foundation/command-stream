@@ -1,7 +1,8 @@
 #![cfg(unix)]
 
 use command_stream::terminal::{
-    capture_terminal, TerminalCaptureOptions, TerminalInteraction, TerminalKey, TerminalResize,
+    capture_terminal, read_asciicast, TerminalCaptureOptions, TerminalInteraction, TerminalKey,
+    TerminalResize,
 };
 use std::fs;
 use std::time::Duration;
@@ -87,6 +88,24 @@ printf '\033[2J\033[Halpha\n'
 }
 
 #[test]
+fn retains_lines_after_they_scroll_off_the_visible_terminal() {
+    let mut options = shell_options(
+        "printf 'one\\r\\n'; sleep 0.04; printf 'two\\r\\n'; sleep 0.04; \
+         printf 'three\\r\\n'; sleep 0.04; printf 'four\\r\\n'",
+    );
+    options.rows = 2;
+
+    let capture = capture_terminal(options).expect("capture should complete");
+
+    for line in ["one", "two", "three", "four"] {
+        assert!(
+            capture.transcript.lines().any(|seen| seen == line),
+            "{line}"
+        );
+    }
+}
+
+#[test]
 fn writes_replay_artifacts_and_preserves_partial_capture_on_timeout() {
     let artifacts = tempdir().expect("artifact directory");
     let mut options = shell_options("printf 'waiting for input'; sleep 5");
@@ -106,7 +125,9 @@ fn writes_replay_artifacts_and_preserves_partial_capture_on_timeout() {
     ] {
         assert!(artifacts.path().join(name).is_file(), "{name}");
     }
-    let animation =
-        fs::read_to_string(artifacts.path().join("recording.svg")).expect("animation");
+    let animation = fs::read_to_string(artifacts.path().join("recording.svg")).expect("animation");
     assert!(animation.contains("<animate"));
+    let cast = read_asciicast(artifacts.path().join("session.cast")).expect("asciicast");
+    assert_eq!(cast.header.version, 2);
+    assert!(cast.events.iter().any(|event| event.code == "o"));
 }
