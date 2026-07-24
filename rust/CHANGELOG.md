@@ -146,6 +146,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [0.13.0] - 2026-07-24
+
+### Added
+
+- Added PTY-backed terminal capture with input and resize controls, settled
+  frames, unrolled transcripts, asciicast v2 recordings, SVG artifacts, and
+  partial timeout diagnostics.
+
 ## [0.12.1] - 2026-06-21
 
 ### Added
