@@ -10,6 +10,7 @@ import {
   unrollTerminalFrames,
 } from '../src/$.mjs';
 import { stopTerminal } from '../src/terminal-pty-host-platform.mjs';
+import { spawnTerminalPty } from '../src/terminal-pty.mjs';
 
 const directory = dirname(fileURLToPath(import.meta.url));
 const temporaryDirectories = [];
@@ -23,6 +24,20 @@ afterEach(async () => {
 });
 
 describe('PTY terminal capture', () => {
+  test('reports a PTY host that exits before its ready handshake', async () => {
+    await expect(
+      spawnTerminalPty(
+        process.execPath,
+        [join(directory, 'fixtures/pty-host-exit.mjs')],
+        {},
+        {
+          hostPath: join(directory, 'fixtures/pty-host-exit.mjs'),
+          nodeBinary: process.execPath,
+        }
+      )
+    ).rejects.toThrow('fixture exited before ready');
+  });
+
   test('stops Windows terminals without passing an unsupported signal', () => {
     const calls = [];
     const terminal = {
