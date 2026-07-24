@@ -1,6 +1,8 @@
 import ptyModule from 'node-pty';
 import { createInterface } from 'node:readline';
 
+import { stopTerminal } from './terminal-pty-host-platform.mjs';
+
 const send = (message, callback) => {
   process.stdout.write(`${JSON.stringify(message)}\n`, callback);
 };
@@ -22,10 +24,10 @@ messages.on('line', (line) => {
   } else if (message.type === 'resize') {
     terminal.resize(message.cols, message.rows);
   } else if (message.type === 'kill') {
-    terminal.kill(message.signal);
+    stopTerminal(terminal, message.signal);
   }
 });
 
 messages.on('close', () => {
-  terminal?.kill('SIGTERM');
+  stopTerminal(terminal);
 });
