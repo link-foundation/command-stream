@@ -76,7 +76,12 @@ describe('PTY terminal capture', () => {
     expect(capture.transcript).toContain('ready:true:20x4');
     expect(capture.transcript).toContain('typed:hello');
     expect(capture.transcript).toContain('resized:32x6');
-    expect(capture.frames.length).toBeLessThanOrEqual(8);
+    const settledStates = capture.frames.map(({ time: _time, ...frame }) =>
+      JSON.stringify(frame)
+    );
+    for (let index = 1; index < settledStates.length; index += 1) {
+      expect(settledStates[index]).not.toBe(settledStates[index - 1]);
+    }
 
     const replay = await readAsciicast(join(artifactDirectory, 'session.cast'));
     expect(replay.header.width).toBe(20);
