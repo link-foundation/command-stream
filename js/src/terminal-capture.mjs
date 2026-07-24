@@ -234,13 +234,12 @@ export const captureTerminal = async ({
   const frames = [];
   let output = '';
   let interactionIndex = 0;
-  let settleTimer;
-  let stopTimer;
+  let settleTimer, stopTimer;
   let stopMarkerSeen = false;
   let writeQueue = Promise.resolve();
+  let terminalHasOutput = false;
   let interactionScheduled = false;
   let captureError;
-
   const appendFrame = () => {
     const frame = terminalFrame(terminal, elapsed);
     if (!frames.at(-1) || !sameFrame(frames.at(-1), frame)) {
@@ -253,6 +252,9 @@ export const captureTerminal = async ({
   };
   const queueOutput = (data) => {
     const segments = splitRenderSegments(data);
+    if (terminalHasOutput && data.startsWith(CLEAR_SCREEN)) {
+      writeQueue = writeQueue.then(appendFrame);
+    }
     for (const [index, segment] of segments.entries()) {
       writeQueue = writeQueue.then(
         () =>
@@ -260,6 +262,7 @@ export const captureTerminal = async ({
             terminal.write(segment, written);
           })
       );
+      terminalHasOutput ||= segment.length > 0;
       if (index < segments.length - 1) {
         writeQueue = writeQueue.then(appendFrame);
       }
