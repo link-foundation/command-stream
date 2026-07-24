@@ -88,10 +88,10 @@ printf '\033[2J\033[Halpha\n'
 }
 
 #[test]
-fn retains_a_state_before_a_later_output_chunk_starts_with_a_repaint() {
+fn retains_a_state_when_a_later_repaint_is_split_across_output_chunks() {
     let mut options = shell_options(
-        "printf '\\033[2J\\033[Hfirst-state'; sleep 0.02; \
-         printf '\\033[2J\\033[Hsecond-state'",
+        "printf '\\033[2J\\033[Hfirst-state'; sleep 0.02; printf '\\033[2'; \
+         sleep 0.02; printf 'J\\033[Hsecond-state'",
     );
     options.settle_duration = Duration::from_millis(100);
 

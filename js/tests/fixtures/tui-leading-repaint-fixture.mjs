@@ -4,5 +4,7 @@ const pause = (milliseconds) =>
 
 process.stdout.write(`${clear}first-state`);
 await pause(20);
-process.stdout.write(`${clear}second-state`);
+process.stdout.write('\u001b[2');
+await pause(20);
+process.stdout.write('J\u001b[Hsecond-state');
 await pause(20);

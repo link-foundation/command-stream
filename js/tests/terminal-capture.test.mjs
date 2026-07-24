@@ -113,7 +113,7 @@ describe('PTY terminal capture', () => {
     }
   });
 
-  test('retains a state before a later output chunk starts with a repaint', async () => {
+  test('retains a state when a later repaint is split across output chunks', async () => {
     const capture = await captureTerminal({
       file: process.execPath,
       args: [join(directory, 'fixtures/tui-leading-repaint-fixture.mjs')],
