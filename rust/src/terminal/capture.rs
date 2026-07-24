@@ -253,6 +253,7 @@ pub fn capture_terminal(
     let mut recording = asciicast(&options);
     let mut output = String::new();
     let mut frames = Vec::new();
+    let mut terminal_has_output = false;
     let mut interaction_index = 0;
     let mut last_output = None;
     let mut dirty = false;
@@ -269,8 +270,12 @@ pub fn capture_terminal(
                 record(&mut recording, started, "o", text.into_owned());
                 let segments = render_segments(&data);
                 let segment_count = segments.len();
+                if terminal_has_output && data.starts_with(CLEAR_SCREEN) {
+                    append_frame(&mut frames, &parser, started);
+                }
                 for (index, segment) in segments.into_iter().enumerate() {
                     parser.process(segment);
+                    terminal_has_output |= !segment.is_empty();
                     if index + 1 < segment_count {
                         append_frame(&mut frames, &parser, started);
                     }
