@@ -9,12 +9,6 @@ const render = (body) => {
   process.stdout.write(`${clear}${body}`);
 };
 
-render(`ready:${process.stdout.isTTY}:${process.stdout.columns}x${process.stdout.rows}`);
-for (let index = 0; index < 8; index += 1) {
-  await pause(5);
-  render(`ready:${process.stdout.isTTY}:${process.stdout.columns}x${process.stdout.rows}`);
-}
-
 let input = '';
 process.stdin.on('data', (chunk) => {
   for (const character of chunk.toString()) {
@@ -26,6 +20,12 @@ process.stdin.on('data', (chunk) => {
     }
   }
 });
+
+render(`ready:${process.stdout.isTTY}:${process.stdout.columns}x${process.stdout.rows}`);
+for (let index = 0; index < 8; index += 1) {
+  await pause(5);
+  render(`ready:${process.stdout.isTTY}:${process.stdout.columns}x${process.stdout.rows}`);
+}
 
 process.on('SIGWINCH', () => {
   render(`resized:${process.stdout.columns}x${process.stdout.rows}`);
