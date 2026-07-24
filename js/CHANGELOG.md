@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.15.0
+
+### Minor Changes
+
+- 4b8a864: Add PTY-backed terminal capture with resize and input control, settled frame
+  deduplication, unrolled text transcripts, asciicast v2 interchange, and animated
+  SVG recording artifacts.
+
+### Patch Changes
+
+- d917186: Preserve the current terminal frame before a later full-screen repaint,
+  including when its control sequence is split across PTY output chunks.
+
 ## 0.14.1
 
 ### Patch Changes
