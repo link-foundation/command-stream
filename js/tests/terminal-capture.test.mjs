@@ -9,6 +9,7 @@ import {
   readAsciicast,
   unrollTerminalFrames,
 } from '../src/$.mjs';
+import { stopTerminal } from '../src/terminal-pty-host-platform.mjs';
 
 const directory = dirname(fileURLToPath(import.meta.url));
 const temporaryDirectories = [];
@@ -22,6 +23,19 @@ afterEach(async () => {
 });
 
 describe('PTY terminal capture', () => {
+  test('stops Windows terminals without passing an unsupported signal', () => {
+    const calls = [];
+    const terminal = {
+      kill(...args) {
+        calls.push(args);
+      },
+    };
+
+    stopTerminal(terminal, 'SIGTERM', 'win32');
+
+    expect(calls).toEqual([[]]);
+  });
+
   test('drives input and resize while retaining settled, deduplicated frames', async () => {
     const artifactDirectory = await mkdtemp(
       join(tmpdir(), 'command-stream-tui-')
