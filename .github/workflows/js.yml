@@ -137,6 +137,12 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Setup Node.js PTY host
+        if: matrix.runtime == 'bun'
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24.x'
+
       - name: Install system dependencies (Ubuntu)
         if: matrix.os == 'ubuntu-latest'
         run: |

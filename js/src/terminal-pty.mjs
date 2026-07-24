@@ -13,16 +13,22 @@ const parseMessages = (stream, receive) => {
   });
 };
 
-export const spawnTerminalPty = async (file, args, options) => {
+export const spawnTerminalPty = async (
+  file,
+  args,
+  options,
+  { hostPath: hostPathOverride, nodeBinary: nodeBinaryOverride } = {}
+) => {
   const [{ spawn }, { dirname }, { fileURLToPath }] = await Promise.all([
     import('node:child_process'),
     import('node:path'),
     import('node:url'),
   ]);
-  const hostPath = fileURLToPath(
-    new URL('./terminal-pty-host.mjs', import.meta.url)
-  );
-  const nodeBinary = process.env.COMMAND_STREAM_NODE_BINARY ?? 'node';
+  const hostPath =
+    hostPathOverride ??
+    fileURLToPath(new URL('./terminal-pty-host.mjs', import.meta.url));
+  const nodeBinary =
+    nodeBinaryOverride ?? process.env.COMMAND_STREAM_NODE_BINARY ?? 'node';
   const host = spawn(nodeBinary, [hostPath], {
     cwd: dirname(hostPath),
     env: process.env,
@@ -34,6 +40,7 @@ export const spawnTerminalPty = async (file, args, options) => {
   let pendingExit;
   let hostErrors = '';
   let exited = false;
+  let terminalExitReceived = false;
   let resolveReady;
   let rejectReady;
   const ready = new Promise((resolve, reject) => {
@@ -54,6 +61,7 @@ export const spawnTerminalPty = async (file, args, options) => {
         }
       }
     } else if (message.type === 'exit') {
+      terminalExitReceived = true;
       if (exitListeners.size === 0) {
         pendingExit = message;
       } else {
@@ -73,20 +81,30 @@ export const spawnTerminalPty = async (file, args, options) => {
     if (!exited) {
       exited = true;
       rejectReady(error);
-      for (const listener of exitListeners) {
-        listener({ exitCode: 1, signal: 0, error });
+      const message = { exitCode: 1, signal: 0, error };
+      if (exitListeners.size === 0) {
+        pendingExit = message;
+      } else {
+        for (const listener of exitListeners) {
+          listener(message);
+        }
       }
     }
   });
   host.on('exit', (exitCode) => {
-    if (exitCode && exitListeners.size > 0 && !exited) {
+    if (!terminalExitReceived && !exited) {
       exited = true;
       const error = new Error(
         `PTY host exited with code ${exitCode}: ${hostErrors.trim()}`
       );
       rejectReady(error);
-      for (const listener of exitListeners) {
-        listener({ exitCode, signal: 0, error });
+      const message = { exitCode: exitCode ?? 1, signal: 0, error };
+      if (exitListeners.size === 0) {
+        pendingExit = message;
+      } else {
+        for (const listener of exitListeners) {
+          listener(message);
+        }
       }
     }
   });
