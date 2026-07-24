@@ -400,6 +400,43 @@ console.log(result.stdout); // "hello\n"
 $`echo "world"`.on('end', (result) => console.log('Done:', result)).sync();
 ```
 
+### TUI Capture
+
+`captureTerminal()` runs a command in a real pseudoterminal and uses xterm's
+terminal model to capture settled screen states. It can send text and control
+keys, resize the terminal, and stop after an output marker:
+
+```javascript
+import { captureTerminal } from 'command-stream';
+
+const capture = await captureTerminal({
+  file: 'my-tui',
+  args: ['--interactive'],
+  cols: 80,
+  rows: 24,
+  interactions: [
+    { after: 'Choose an option', key: 'DOWN' },
+    { after: 'Second option', key: 'ENTER' },
+    { after: 'Your name', text: 'Ada', key: 'ENTER' },
+    { after: 'Dashboard', resize: { cols: 120, rows: 40 } },
+  ],
+  stopMarker: 'Done',
+  artifactDirectory: 'artifacts/my-tui',
+});
+
+console.log(capture.transcript);
+console.log(`${capture.frames.length} distinct settled states`);
+```
+
+The artifact directory contains an unrolled `transcript.txt`, machine-readable
+`frames.json`, an asciicast v2 `session.cast`, a final `snapshot.svg`, and a
+self-contained animated `recording.svg`. Exact consecutive repaints are
+deduplicated, while repeated content after an intervening state remains in the
+transcript. Scrolled-off terminal history is retained.
+
+Set `settleMilliseconds` to tune repaint coalescing. For opt-in diagnostics,
+pass `onTrace(event)`; capture is silent by default.
+
 ### Async Iteration (Real-time Streaming)
 
 ```javascript

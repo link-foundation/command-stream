@@ -70,6 +70,7 @@ pub mod pipeline;
 pub mod quote;
 pub mod state;
 pub mod stream;
+pub mod terminal;
 pub mod trace;
 
 // Core modules
