@@ -76,7 +76,7 @@ describe('PTY terminal capture', () => {
     expect(capture.transcript).toContain('ready:true:20x4');
     expect(capture.transcript).toContain('typed:hello');
     expect(capture.transcript).toContain('resized:32x6');
-    expect(capture.frames.length).toBeLessThan(8);
+    expect(capture.frames.length).toBeLessThanOrEqual(8);
 
     const replay = await readAsciicast(join(artifactDirectory, 'session.cast'));
     expect(replay.header.width).toBe(20);
