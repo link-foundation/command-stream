@@ -22,8 +22,10 @@ process.stdin.on('data', (chunk) => {
 });
 
 process.on('SIGWINCH', () => {
-  render(`resized:${process.stdout.columns}x${process.stdout.rows}`);
-  setTimeout(() => process.exit(0), 20);
+  setTimeout(() => {
+    render(`resized:${process.stdout.columns}x${process.stdout.rows}`);
+    setTimeout(() => process.exit(0), 20);
+  }, 5);
 });
 
 render(
