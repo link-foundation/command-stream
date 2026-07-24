@@ -21,13 +21,17 @@ process.stdin.on('data', (chunk) => {
   }
 });
 
-render(`ready:${process.stdout.isTTY}:${process.stdout.columns}x${process.stdout.rows}`);
-for (let index = 0; index < 8; index += 1) {
-  await pause(5);
-  render(`ready:${process.stdout.isTTY}:${process.stdout.columns}x${process.stdout.rows}`);
-}
-
 process.on('SIGWINCH', () => {
   render(`resized:${process.stdout.columns}x${process.stdout.rows}`);
   setTimeout(() => process.exit(0), 20);
 });
+
+render(
+  `ready:${process.stdout.isTTY}:${process.stdout.columns}x${process.stdout.rows}`
+);
+for (let index = 0; index < 8; index += 1) {
+  await pause(5);
+  render(
+    `ready:${process.stdout.isTTY}:${process.stdout.columns}x${process.stdout.rows}`
+  );
+}
