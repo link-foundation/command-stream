@@ -9,7 +9,7 @@ use std::io::{Read, Write};
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
-const CLEAR_SCREEN: &[u8] = b"\x1b[2J\x1b[H";
+const ERASE_SCREEN: &[u8] = b"\x1b[2J";
 
 fn elapsed(started: Instant) -> f64 {
     (started.elapsed().as_secs_f64() * 1_000_000.0).round() / 1_000_000.0
@@ -61,9 +61,9 @@ fn append_frame(frames: &mut Vec<TerminalFrame>, parser: &vt100::Parser, started
 
 fn render_segments(data: &[u8]) -> Vec<&[u8]> {
     let positions = data
-        .windows(CLEAR_SCREEN.len())
+        .windows(ERASE_SCREEN.len())
         .enumerate()
-        .filter_map(|(index, window)| (window == CLEAR_SCREEN).then_some(index))
+        .filter_map(|(index, window)| (window == ERASE_SCREEN).then_some(index))
         .collect::<Vec<_>>();
     if positions.is_empty() {
         return vec![data];
@@ -81,10 +81,10 @@ fn render_segments(data: &[u8]) -> Vec<&[u8]> {
 }
 
 fn drain_complete_render_data(pending: &mut Vec<u8>) -> Vec<u8> {
-    let maximum = pending.len().min(CLEAR_SCREEN.len() - 1);
+    let maximum = pending.len().min(ERASE_SCREEN.len() - 1);
     let pending_length = (1..=maximum)
         .rev()
-        .find(|length| CLEAR_SCREEN.starts_with(&pending[pending.len() - length..]))
+        .find(|length| ERASE_SCREEN.starts_with(&pending[pending.len() - length..]))
         .unwrap_or(0);
     pending.drain(..pending.len() - pending_length).collect()
 }
@@ -282,7 +282,7 @@ pub fn capture_terminal(
                 let render_data = drain_complete_render_data(&mut pending_render);
                 let segments = render_segments(&render_data);
                 let segment_count = segments.len();
-                if terminal_has_output && render_data.starts_with(CLEAR_SCREEN) {
+                if terminal_has_output && render_data.starts_with(ERASE_SCREEN) {
                     append_frame(&mut frames, &parser, started);
                 }
                 for (index, segment) in segments.into_iter().enumerate() {

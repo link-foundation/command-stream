@@ -17,15 +17,15 @@ const KEY_SEQUENCES = {
   TAB: '\t',
   UP: '\u001b[A',
 };
-const CLEAR_SCREEN = '\u001b[2J\u001b[H';
+const ERASE_SCREEN = '\u001b[2J';
 
 const splitRenderSegments = (data) => {
-  const pieces = data.split(CLEAR_SCREEN);
+  const pieces = data.split(ERASE_SCREEN);
   if (pieces.length === 1) {
     return [data];
   }
 
-  const segments = pieces.slice(1).map((piece) => `${CLEAR_SCREEN}${piece}`);
+  const segments = pieces.slice(1).map((piece) => `${ERASE_SCREEN}${piece}`);
   if (pieces[0]) {
     segments.unshift(pieces[0]);
   }
@@ -36,9 +36,9 @@ const splitPendingRenderSequence = (data, flush) => {
   if (!data || flush) {
     return [data, ''];
   }
-  const maximum = Math.min(data.length, CLEAR_SCREEN.length - 1);
+  const maximum = Math.min(data.length, ERASE_SCREEN.length - 1);
   for (let length = maximum; length > 0; length -= 1) {
-    if (CLEAR_SCREEN.startsWith(data.slice(-length))) {
+    if (ERASE_SCREEN.startsWith(data.slice(-length))) {
       return [data.slice(0, -length), data.slice(-length)];
     }
   }
@@ -64,7 +64,7 @@ const createTerminalOutputWriter = (terminal, appendFrame) => {
     }
 
     const segments = splitRenderSegments(complete);
-    if (terminalHasOutput && complete.startsWith(CLEAR_SCREEN)) {
+    if (terminalHasOutput && complete.startsWith(ERASE_SCREEN)) {
       after(appendFrame);
     }
     for (const [index, segment] of segments.entries()) {
