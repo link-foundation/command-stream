@@ -18,6 +18,11 @@ import {
   getAnsiConfig,
   processOutput,
 } from './$.ansi.mjs';
+import {
+  captureTerminal,
+  readAsciicast,
+  unrollTerminalFrames,
+} from './terminal-capture.mjs';
 
 // Import ProcessRunner base and method modules
 import { ProcessRunner } from './$.process-runner-base.mjs';
@@ -458,5 +463,8 @@ export {
   getAnsiConfig,
   processOutput,
   forceCleanupAll,
+  captureTerminal,
+  readAsciicast,
+  unrollTerminalFrames,
 };
 export default $tagged;
