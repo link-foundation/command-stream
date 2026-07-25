@@ -251,8 +251,16 @@ const createCaptureRecorder = (asciicast, onTrace) => {
   };
 };
 
-const interactionAfter = (interaction, output) =>
-  interaction.after === undefined || output.includes(interaction.after);
+const interactionAfter = (interaction, output) => {
+  if (interaction.after === undefined) {
+    return true;
+  }
+  if (interaction.after instanceof RegExp) {
+    interaction.after.lastIndex = 0;
+    return interaction.after.test(output);
+  }
+  return output.includes(interaction.after);
+};
 
 const applyInteraction = ({ interaction, process, terminal, record }) => {
   if (interaction.text !== undefined) {
@@ -271,6 +279,70 @@ const applyInteraction = ({ interaction, process, terminal, record }) => {
     terminal.resize(cols, rows);
     record('r', `${cols}x${rows}`);
   }
+};
+
+const createInteractionCoordinator = ({
+  interactions,
+  output,
+  outputWriter,
+  appendFrame,
+  trace,
+  process,
+  terminal,
+  record,
+}) => {
+  let index = 0;
+  let timer;
+  let scheduled = false;
+  const applyNext = () => {
+    scheduled = true;
+    trace('interaction-scheduled', { interactionIndex: index });
+    outputWriter.after(() => {
+      appendFrame();
+      trace('interaction-applied', { interactionIndex: index });
+      applyInteraction({
+        interaction: interactions[index],
+        process,
+        terminal,
+        record,
+      });
+      index += 1;
+      scheduled = false;
+      advance();
+    });
+  };
+  const advance = () => {
+    if (
+      scheduled ||
+      index >= interactions.length ||
+      !interactionAfter(interactions[index], output())
+    ) {
+      return;
+    }
+    const idleMilliseconds = interactions[index].idleMilliseconds ?? 0;
+    if (idleMilliseconds > 0) {
+      scheduled = true;
+      timer = setTimeout(() => {
+        timer = undefined;
+        scheduled = false;
+        applyNext();
+      }, idleMilliseconds);
+      return;
+    }
+    applyNext();
+  };
+  return {
+    advance,
+    close: () => clearTimeout(timer),
+    count: () => index,
+    outputArrived: () => {
+      if (timer !== undefined) {
+        clearTimeout(timer);
+        timer = undefined;
+        scheduled = false;
+      }
+    },
+  };
 };
 
 const startTerminal = async ({ file, args, cwd, env, cols, rows }) => {
@@ -384,10 +456,8 @@ export const captureTerminal = async ({
   } = createCaptureRecorder(asciicast, onTrace);
   const frames = [];
   let output = '';
-  let interactionIndex = 0;
   let settleTimer, stopTimer;
   let stopMarkerSeen = false;
-  let interactionScheduled = false;
   let captureError;
   const appendFrame = () => {
     const frame = terminalFrame(terminal, elapsed);
@@ -400,31 +470,16 @@ export const captureTerminal = async ({
     settleTimer = setTimeout(appendFrame, settleMilliseconds);
   };
   const outputWriter = createTerminalOutputWriter(terminal, appendFrame);
-  const advanceInteractions = () => {
-    if (
-      interactionScheduled ||
-      interactionIndex >= interactions.length ||
-      !interactionAfter(interactions[interactionIndex], output)
-    ) {
-      return;
-    }
-
-    interactionScheduled = true;
-    traceCapture('interaction-scheduled', { interactionIndex });
-    outputWriter.after(() => {
-      appendFrame();
-      traceCapture('interaction-applied', { interactionIndex });
-      applyInteraction({
-        interaction: interactions[interactionIndex],
-        process: child,
-        terminal,
-        record,
-      });
-      interactionIndex += 1;
-      interactionScheduled = false;
-      advanceInteractions();
-    });
-  };
+  const interactionCoordinator = createInteractionCoordinator({
+    interactions,
+    output: () => output,
+    outputWriter,
+    appendFrame,
+    trace: traceCapture,
+    process: child,
+    terminal,
+    record,
+  });
 
   const completion = new Promise((resolve) => {
     const timeout = setTimeout(() => {
@@ -436,12 +491,13 @@ export const captureTerminal = async ({
     }, timeoutMilliseconds);
 
     child.onData((data) => {
+      interactionCoordinator.outputArrived();
       traceCapture('output', { data });
       output += data;
       record('o', data);
       outputWriter.write(data);
       outputWriter.after(settle);
-      advanceInteractions();
+      interactionCoordinator.advance();
 
       if (stopMarker && output.includes(stopMarker) && !stopMarkerSeen) {
         stopMarkerSeen = true;
@@ -456,6 +512,7 @@ export const captureTerminal = async ({
       traceCapture('exit', { exitCode, signal });
       clearTimeout(timeout);
       clearTimeout(stopTimer);
+      interactionCoordinator.close();
       captureError ??= error;
       resolve({ exitCode, signal });
     });
@@ -486,7 +543,7 @@ export const captureTerminal = async ({
     output,
     transcript,
     frames,
-    interactionCount: interactionIndex,
+    interactionCount: interactionCoordinator.count(),
     asciicast,
   });
   if (captureError) {

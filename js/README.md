@@ -415,8 +415,10 @@ const capture = await captureTerminal({
   cols: 80,
   // rows defaults to 30: an 80-column 4:3 terminal with the default cell ratio
   interactions: [
-    { after: 'Choose an option', key: 'DOWN' },
-    { after: 'Second option', key: 'ENTER' },
+    // Readiness accepts a string or RegExp. idleMilliseconds restarts whenever
+    // output arrives, so the key is sent only after the repaint goes quiet.
+    { after: /Choose an option/, idleMilliseconds: 50, key: 'DOWN' },
+    { after: 'Second option', idleMilliseconds: 50, key: 'ENTER' },
     { after: 'Your name', text: 'Ada', key: 'ENTER' },
     { after: 'Dashboard', resize: { cols: 120, rows: 40 } },
   ],
@@ -435,6 +437,26 @@ const capture = await captureTerminal({
 console.log(capture.transcript);
 console.log(`${capture.frames.length} distinct settled states`);
 ```
+
+Unlike `interactive: true`, `captureTerminal()` allocates a PTY without
+forwarding the session exclusively to the parent terminal. The child sees a
+TTY and raw-mode input while the returned `output`, `frames`, `transcript`, and
+`asciicast` remain available for assertions. To inspect output as it arrives,
+pass `onTrace(event)` and handle events whose `type` is `"output"`.
+
+Named keys include `UP`, `DOWN`, `LEFT`, `RIGHT`, `ENTER`, `TAB`, `ESCAPE`,
+`BACKSPACE`, `CTRL_C`, and `CTRL_D`. The `key` value may also be any raw
+sequence, such as `'\x1b[6~'` for Page Down; `text` is likewise written
+verbatim to the PTY master. Initial `cols`, `rows`, and `TERM` come from the
+capture options and `env`, and interaction `resize` values update the PTY and
+deliver the platform's resize notification to the child.
+
+Each interaction can use `after: 'literal text'` or `after: /pattern/` as its
+readiness condition. Add `idleMilliseconds` to require that no PTY output
+arrive for that duration before applying the interaction; new output restarts
+the idle wait. The complete, runnable
+[`tui-e2e.mjs`](examples/tui-e2e.mjs) example navigates a raw-mode menu and
+asserts on its captured output.
 
 The artifact directory contains an unrolled `transcript.txt`, machine-readable
 `frames.json`, an asciicast v2 `session.cast`, a final `snapshot.svg`, a

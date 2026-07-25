@@ -46,6 +46,8 @@ impl TerminalKey {
 #[derive(Debug, Clone, Default)]
 pub struct TerminalInteraction {
     pub after: Option<String>,
+    pub after_regex: Option<String>,
+    pub idle_duration: Duration,
     pub text: Option<String>,
     pub key: Option<TerminalKey>,
     pub resize: Option<TerminalResize>,

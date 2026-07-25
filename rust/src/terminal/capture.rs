@@ -4,6 +4,7 @@ use super::types::{
     TerminalCaptureOptions, TerminalCursor, TerminalFrame, TerminalInteraction, TerminalResize,
 };
 use portable_pty::{native_pty_system, CommandBuilder, MasterPty, PtySize};
+use regex::Regex;
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::sync::mpsc;
@@ -220,6 +221,24 @@ pub fn capture_terminal(
             None,
         ));
     }
+    let interaction_regexes = options
+        .interactions
+        .iter()
+        .map(|interaction| {
+            interaction
+                .after_regex
+                .as_ref()
+                .map(|pattern| {
+                    Regex::new(pattern).map_err(|error| {
+                        TerminalCaptureError::new(
+                            format!("invalid terminal interaction regex: {error}"),
+                            None,
+                        )
+                    })
+                })
+                .transpose()
+        })
+        .collect::<Result<Vec<_>, _>>()?;
     let pty = native_pty_system()
         .openpty(PtySize {
             rows: options.rows,
@@ -313,6 +332,17 @@ pub fn capture_terminal(
                 .after
                 .as_ref()
                 .is_some_and(|marker| !output.contains(marker))
+            {
+                break;
+            }
+            if interaction_regexes[interaction_index]
+                .as_ref()
+                .is_some_and(|pattern| !pattern.is_match(&output))
+            {
+                break;
+            }
+            if interaction.idle_duration > Duration::ZERO
+                && last_output.is_none_or(|instant| instant.elapsed() < interaction.idle_duration)
             {
                 break;
             }
