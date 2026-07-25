@@ -9,8 +9,6 @@
 
 import { readFileSync, writeFileSync } from 'node:fs';
 
-import { translateShellToMjs } from '../fy/index.mjs';
-
 const USAGE = `$fy - Convert shell scripts to command-stream JavaScript modules
 
 Usage:
@@ -48,9 +46,10 @@ function formatDiagnostics(diagnostics) {
  * The `$fy` virtual command.
  *
  * @param {{args?: string[], stdin?: string|Buffer}} invocation Command input.
- * @returns {{stdout?: string, stderr?: string, code: number}} Command result.
+ * @returns {Promise<{stdout?: string, stderr?: string, code: number}>} Command
+ *   result.
  */
-export function $fy({ args = [], stdin } = {}) {
+export async function $fy({ args = [], stdin } = {}) {
   const options = { shebang: !args.includes('--no-shebang') };
   const positional = args.filter((argument) => !argument.startsWith('-'));
   // A file argument always wins: `$fy in.sh` must read `in.sh` even when the
@@ -81,6 +80,9 @@ export function $fy({ args = [], stdin } = {}) {
 
   let translated;
   try {
+    // Loaded on demand: the translator pulls in `meta-language`, which must not
+    // become an import-time dependency of the library itself.
+    const { translateShellToMjs } = await import('../fy/index.mjs');
     translated = translateShellToMjs(source, options);
   } catch (error) {
     return { stderr: `$fy: translation failed: ${error.message}\n`, code: 1 };
