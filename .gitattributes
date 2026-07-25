@@ -1,0 +1,3 @@
+# The `$fy` fixtures are compared byte for byte by both test suites, so they
+# must check out with LF endings on every platform, Windows included.
+fixtures/fy/* text eol=lf

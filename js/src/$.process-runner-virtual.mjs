@@ -9,7 +9,13 @@ import { safeWrite } from './$.stream-utils.mjs';
  * @param {object} options - Runner options
  * @returns {string} Stdin data
  */
+/** Stdio *modes*, which are configuration rather than data to feed a command. */
+const STDIN_MODES = new Set(['inherit', 'pipe', 'ignore']);
+
 function getStdinData(options) {
+  if (typeof options.stdin === 'string' && STDIN_MODES.has(options.stdin)) {
+    return '';
+  }
   if (options.stdin && typeof options.stdin === 'string') {
     return options.stdin;
   }
