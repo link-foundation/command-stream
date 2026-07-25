@@ -325,7 +325,15 @@ const dimensions = (frames, options) => {
   };
 };
 
-const svgShell = ({ width, height, body, options, font, style = '' }) =>
+const svgShell = ({
+  width,
+  height,
+  body,
+  options,
+  font,
+  style = '',
+  background = true,
+}) =>
   [
     '<?xml version="1.0" encoding="UTF-8"?>',
     `<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
@@ -333,7 +341,8 @@ const svgShell = ({ width, height, body, options, font, style = '' }) =>
     `@font-face{font-family:"Terminal Artifact";src:url(data:font/woff2;base64,${font}) format("woff2");}`,
     style,
     '</style>',
-    `<rect width="100%" height="100%" rx="${options.borderRadius}" fill="${options.background}"/>`,
+    background &&
+      `<rect width="100%" height="100%" rx="${options.borderRadius}" fill="${options.background}"/>`,
     `<g font-family='"Terminal Artifact", "DejaVu Sans Mono", monospace' font-size="${options.fontSize}" shape-rendering="crispEdges">`,
     body,
     '</g></svg>',
@@ -403,10 +412,30 @@ const renderGif = async ({ frames, options, font }) => {
   );
   const { width, height } = dimensions(frames, options);
   const { times } = frameTimes(frames, options.idleTimeLimit);
+  const sheet = svgShell({
+    width,
+    height: height * frames.length,
+    body: frames
+      .map(
+        (frame, index) =>
+          `<g transform="translate(0 ${index * height})"><rect width="${width}" height="${height}" rx="${options.borderRadius}" fill="${options.background}"/>${renderFrame(frame, options)}</g>`
+      )
+      .join(''),
+    options,
+    font,
+    background: false,
+  });
+  const sheetPixels = new Resvg(sheet).render().pixels;
   const gif = GIFEncoder();
-  for (const [index, frame] of frames.entries()) {
-    const svg = renderSnapshotSvg({ frame, options, font });
-    const pixels = new Resvg(svg).render().pixels;
+  for (const index of frames.keys()) {
+    const pixels = new Uint8Array(width * height * 4);
+    for (let row = 0; row < height; row += 1) {
+      const sourceStart = (index * height + row) * width * 4;
+      pixels.set(
+        sheetPixels.subarray(sourceStart, sourceStart + width * 4),
+        row * width * 4
+      );
+    }
     const palette = quantize(pixels, 256);
     gif.writeFrame(applyPalette(pixels, palette), width, height, {
       palette,

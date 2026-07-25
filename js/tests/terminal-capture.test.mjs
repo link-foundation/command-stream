@@ -134,9 +134,9 @@ describe('PTY terminal capture', () => {
       },
     });
 
-    const styled = capture.frames[0].cells[0].find(
-      (cell) => cell.chars === 's'
-    );
+    const styled = capture.frames
+      .flatMap((frame) => frame.cells[0])
+      .find((cell) => cell.chars === 's');
     expect(styled).toMatchObject({
       fg: '#0c2238',
       bg: '#ff0000',
