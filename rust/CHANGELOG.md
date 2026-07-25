@@ -148,6 +148,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [0.14.0] - 2026-07-25
+
+### Added
+
+- Add regex readiness markers and per-interaction output-idle waits to PTY
+  terminal capture.
+
 ## [0.13.1] - 2026-07-24
 
 ### Fixed
