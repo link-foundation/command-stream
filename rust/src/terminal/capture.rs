@@ -342,7 +342,8 @@ pub fn capture_terminal(
                 break;
             }
             if interaction.idle_duration > Duration::ZERO
-                && last_output.is_none_or(|instant| instant.elapsed() < interaction.idle_duration)
+                && last_output.map_or_else(|| started.elapsed(), |instant| instant.elapsed())
+                    < interaction.idle_duration
             {
                 break;
             }
