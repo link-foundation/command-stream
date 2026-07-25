@@ -306,28 +306,14 @@ const renderFrame = (frame, options) => {
   return `${backgrounds.join('')}${foregrounds.join('')}`;
 };
 
-const collectCharacters = (frames) =>
-  frames
-    .flatMap((frame) => frame.cells ?? [])
-    .flatMap((row) => row)
-    .filter((cell) => !isVectorCharacter(cell.chars))
-    .map((cell) => cell.chars)
-    .join('');
-
-const embeddedFont = async (frames) => {
-  const [{ readFile }, { createRequire }, { default: subsetFont }] =
-    await Promise.all([
-      import('node:fs/promises'),
-      import('node:module'),
-      import('subset-font'),
-    ]);
-  const require = createRequire(import.meta.url);
-  const fontPath = require.resolve('dejavu-fonts-ttf/ttf/DejaVuSansMono.ttf');
-  const characters = ` ${collectCharacters(frames)}`;
-  const subset = await subsetFont(await readFile(fontPath), characters, {
-    targetFormat: 'woff2',
-  });
-  return subset.toString('base64');
+let embeddedFontPromise;
+const embeddedFont = () => {
+  embeddedFontPromise ??= import('node:fs/promises').then(({ readFile }) =>
+    readFile(
+      new URL('./assets/dejavu-sans-mono-terminal.woff2', import.meta.url)
+    ).then((font) => font.toString('base64'))
+  );
+  return embeddedFontPromise;
 };
 
 const dimensions = (frames, options) => {
@@ -475,7 +461,7 @@ export const writeTerminalArtifacts = async ({
     cells: [],
   };
   const renderFrames = frames.length ? frames : [finalFrame];
-  const font = await embeddedFont(renderFrames);
+  const font = await embeddedFont();
 
   await mkdir(directory, { recursive: true });
   const snapshot = renderSnapshotSvg({ frame: finalFrame, options, font });

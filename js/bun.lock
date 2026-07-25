@@ -7,13 +7,12 @@
       "dependencies": {
         "@resvg/resvg-js": "^2.6.2",
         "@xterm/headless": "^6.0.0",
-        "dejavu-fonts-ttf": "^2.37.3",
         "gifenc": "^1.0.3",
         "node-pty": "^1.2.0-beta.14",
-        "subset-font": "^2.5.0",
       },
       "devDependencies": {
         "@changesets/cli": "^2.29.7",
+        "dejavu-fonts-ttf": "^2.37.3",
         "eslint": "^9.38.0",
         "eslint-config-prettier": "^10.1.8",
         "eslint-plugin-prettier": "^5.5.4",
@@ -21,6 +20,7 @@
         "jscpd": "^4.0.5",
         "lint-staged": "^16.2.6",
         "prettier": "^3.6.2",
+        "subset-font": "^2.5.0",
       },
     },
   },

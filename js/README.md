@@ -440,8 +440,9 @@ The artifact directory contains an unrolled `transcript.txt`, machine-readable
 `frames.json`, an asciicast v2 `session.cast`, a final `snapshot.svg`, a
 self-contained animated `recording.svg`, and `recording.gif`. Frames retain
 truecolor and 256-color foreground/background values plus bold, dim, italic,
-underline, reverse, and strikethrough attributes. The SVG embeds a subsetted
-DejaVu Sans Mono font, preserves an integer cell grid, and draws box/block
+underline, reverse, and strikethrough attributes. The SVG embeds a pre-subsetted
+DejaVu Sans Mono font with Latin, arrow, and Braille coverage, preserves an
+integer cell grid, and draws box/block
 characters as seamless vector geometry. Animation uses the capture's real
 timestamps; pauses longer than `idleTimeLimit` are trimmed.
 
