@@ -449,6 +449,10 @@ GIF is provided for consumers that cannot play CSS-animated SVG. The format is
 limited to 256 colors per frame, so truecolor recordings can show color
 banding. Prefer `recording.svg` when full color fidelity is important.
 
+The [committed recording sample](docs/screenshots/terminal-artifacts/recording.svg)
+uses the same public API and CSS animation path used by generated artifacts.
+Run `bun examples/terminal-artifacts-demo.mjs` to regenerate it.
+
 Set `aspectRatio` to derive the row count when `rows` is omitted (the default is
 `4 / 3`). Explicit `rows` always wins. Exact consecutive repaints are
 deduplicated, including style-only repaints, while repeated content after an
