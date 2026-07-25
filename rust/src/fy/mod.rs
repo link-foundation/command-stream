@@ -117,6 +117,11 @@ fn collapse_blank_lines(text: &str) -> String {
 
 /// Translates a shell script into a command-stream ES module.
 pub fn translate_shell_to_mjs(source: &str, options: &TranslateOptions) -> Translation {
+    // A shell script checked out with CRLF endings is still a shell script:
+    // `\r` is not a token, so it is dropped before anything else looks at the
+    // text.
+    let normalized = source.replace("\r\n", "\n").replace('\r', "\n");
+    let source = normalized.as_str();
     // A `#!/bin/sh` line selects the interpreter for the *shell* script; the
     // translated module gets its own shebang from `build_preamble`.
     let script = match source.strip_prefix("#!") {
@@ -212,6 +217,13 @@ mod tests {
     fn keeps_comments_and_drops_the_source_shebang() {
         let translation = translate("#!/bin/sh\n# note\nls\n");
         assert_eq!(translation.body, "// note\nawait $`ls`;\n");
+    }
+
+    #[test]
+    fn translates_a_script_with_crlf_line_endings() {
+        let translation = translate("ls\r\necho hi\r\n");
+        assert_eq!(translation.body, "await $`ls`;\nawait $`echo hi`;\n");
+        assert!(translation.diagnostics.is_empty());
     }
 
     #[test]

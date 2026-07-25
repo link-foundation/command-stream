@@ -70,9 +70,12 @@ function buildPreamble(terms, names, options) {
  *   (and tests) can inspect the translated statements on their own.
  */
 export function translateShellToMjs(source, options = {}) {
+  // A shell script checked out with CRLF endings is still a shell script: `\r`
+  // is not a token, so it is dropped before anything else looks at the text.
+  const normalized = source.replace(/\r\n?/g, '\n');
   // A `#!/bin/sh` line selects the interpreter for the *shell* script; the
   // translated module gets its own shebang from `buildPreamble`.
-  const script = source.replace(/^#![^\n]*\n?/, '');
+  const script = normalized.replace(/^#![^\n]*\n?/, '');
   const { network, root, terms, names } = formalizeShell(script);
   const ruleSet = buildRuleSet({ trackExitCode: terms.has('exit-status') });
   const engine = new RuleEngine(network, ruleSet, {

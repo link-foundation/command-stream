@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import { LinkType } from 'meta-language';
 
@@ -287,7 +288,9 @@ describe('translated scripts run', () => {
       writeFileSync(shellFile, `${script}\n`);
 
       const { code, diagnostics } = translateShellToMjs(script, {
-        moduleName: new URL('../src/$.mjs', import.meta.url).pathname,
+        // A file URL, not a path: `URL.pathname` yields `/D:/...` on Windows,
+        // which is not importable.
+        moduleName: new URL('../src/$.mjs', import.meta.url).href,
       });
       expect(diagnostics).toEqual([]);
       writeFileSync(moduleFile, code);
@@ -305,6 +308,14 @@ describe('translated scripts run', () => {
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }
+  });
+
+  test('translates a script with CRLF line endings', () => {
+    const translated = translateShellToMjs('ls\r\necho hi\r\n', {
+      shebang: false,
+    });
+    expect(translated.diagnostics).toEqual([]);
+    expect(translated.body).toBe('await $`ls`;\nawait $`echo hi`;\n');
   });
 
   test('reproduces the golden fixture shared with the Rust suite', () => {
