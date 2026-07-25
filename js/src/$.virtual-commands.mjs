@@ -26,6 +26,7 @@ import dirnameCommand from './commands/$.dirname.mjs';
 import yesCommand from './commands/$.yes.mjs';
 import seqCommand from './commands/$.seq.mjs';
 import testCommand from './commands/$.test.mjs';
+import fyCommand from './commands/$.$fy.mjs';
 
 /**
  * Register a virtual command
@@ -110,4 +111,5 @@ export function registerBuiltins() {
   register('yes', yesCommand);
   register('seq', seqCommand);
   register('test', testCommand);
+  register('$fy', fyCommand);
 }

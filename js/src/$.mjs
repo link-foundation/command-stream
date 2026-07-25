@@ -399,6 +399,7 @@ import dirnameCommand from './commands/$.dirname.mjs';
 import yesCommand from './commands/$.yes.mjs';
 import seqCommand from './commands/$.seq.mjs';
 import testCommand from './commands/$.test.mjs';
+import fyCommand from './commands/$.$fy.mjs';
 
 // Built-in commands that match Bun.$ functionality
 function registerBuiltins() {
@@ -428,6 +429,7 @@ function registerBuiltins() {
   register('yes', yesCommand);
   register('seq', seqCommand);
   register('test', testCommand);
+  register('$fy', fyCommand);
 }
 
 // Initialize built-in commands
