@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.17.0
+
+### Minor Changes
+
+- 2549f26: Add regex readiness markers and per-interaction output-idle waits to PTY terminal
+  capture, enabling deterministic end-to-end TUI navigation with raw key
+  sequences.
+
 ## 0.16.0
 
 ### Minor Changes
