@@ -93,14 +93,83 @@ describe('PTY terminal capture', () => {
       'session.cast',
       'snapshot.svg',
       'recording.svg',
+      'recording.gif',
     ]) {
       expect(
         (await readFile(join(artifactDirectory, artifact))).length
       ).toBeGreaterThan(0);
     }
+    const recording = await readFile(
+      join(artifactDirectory, 'recording.svg'),
+      'utf8'
+    );
+    expect(recording).toContain('@keyframes');
+    expect(recording).toContain('steps(1, end)');
+    expect(recording).not.toContain('<animate');
     expect(
-      await readFile(join(artifactDirectory, 'recording.svg'), 'utf8')
-    ).toContain('<animate');
+      (await readFile(join(artifactDirectory, 'recording.gif')))
+        .slice(0, 6)
+        .toString()
+    ).toBe('GIF89a');
+  });
+
+  test('preserves styled cells, exact grid geometry, and real timing', async () => {
+    const artifactDirectory = await mkdtemp(
+      join(tmpdir(), 'command-stream-tui-styled-')
+    );
+    temporaryDirectories.push(artifactDirectory);
+
+    const capture = await captureTerminal({
+      file: process.execPath,
+      args: [join(directory, 'fixtures/tui-styled-fixture.mjs')],
+      cols: 12,
+      rows: 5,
+      settleMilliseconds: 20,
+      artifactDirectory,
+      artifactOptions: {
+        borderRadius: 0,
+        cellWidth: 10,
+        cellHeight: 20,
+        padding: 0,
+      },
+    });
+
+    const styled = capture.frames[0].cells[0].find(
+      (cell) => cell.chars === 's'
+    );
+    expect(styled).toMatchObject({
+      fg: '#0c2238',
+      bg: '#ff0000',
+      bold: true,
+      dim: true,
+      italic: true,
+      underline: true,
+      strikethrough: true,
+    });
+
+    const snapshot = await readFile(
+      join(artifactDirectory, 'snapshot.svg'),
+      'utf8'
+    );
+    expect(snapshot).toContain('xml:space="preserve"');
+    expect(snapshot).toContain('textLength="20"');
+    expect(snapshot).toContain('lengthAdjust="spacingAndGlyphs"');
+    expect(snapshot).toContain('shape-rendering="crispEdges"');
+    expect(snapshot).toContain('<path');
+    expect(snapshot).toContain('@font-face');
+    expect(snapshot).toContain('data:font/woff2;base64,');
+    expect(snapshot).toContain('rx="0"');
+
+    const recording = await readFile(
+      join(artifactDirectory, 'recording.svg'),
+      'utf8'
+    );
+    expect(recording).toContain('animation-timing-function:steps(1, end)');
+    const duration = Number(
+      recording.match(/animation-duration:([0-9.]+)s/)?.[1]
+    );
+    expect(duration).toBeGreaterThanOrEqual(0.1);
+    expect(duration).toBeLessThan(0.5);
   });
 
   test('unrolls scrolled-off lines in order and exactly once', async () => {
