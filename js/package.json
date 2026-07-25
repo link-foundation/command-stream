@@ -83,7 +83,11 @@
     ]
   },
   "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "@xterm/headless": "^6.0.0",
-    "node-pty": "^1.2.0-beta.14"
+    "dejavu-fonts-ttf": "^2.37.3",
+    "gifenc": "^1.0.3",
+    "node-pty": "^1.2.0-beta.14",
+    "subset-font": "^2.5.0"
   }
 }

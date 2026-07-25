@@ -96,6 +96,77 @@ const normalizeLines = (lines) => {
   return lines.slice(0, last);
 };
 
+const ANSI_COLORS = [
+  '#000000',
+  '#cd0000',
+  '#00cd00',
+  '#cdcd00',
+  '#0000ee',
+  '#cd00cd',
+  '#00cdcd',
+  '#e5e5e5',
+  '#7f7f7f',
+  '#ff0000',
+  '#00ff00',
+  '#ffff00',
+  '#5c5cff',
+  '#ff00ff',
+  '#00ffff',
+  '#ffffff',
+];
+
+const paletteColor = (index) => {
+  if (index < ANSI_COLORS.length) {
+    return ANSI_COLORS[index];
+  }
+  if (index < 232) {
+    const offset = index - 16;
+    const component = (value) => (value === 0 ? 0 : value * 40 + 55);
+    return `#${[
+      component(Math.floor(offset / 36)),
+      component(Math.floor((offset % 36) / 6)),
+      component(offset % 6),
+    ]
+      .map((value) => value.toString(16).padStart(2, '0'))
+      .join('')}`;
+  }
+  const gray = (index - 232) * 10 + 8;
+  return `#${gray.toString(16).padStart(2, '0').repeat(3)}`;
+};
+
+const terminalColor = (cell, foreground) => {
+  const isDefault = foreground ? cell.isFgDefault() : cell.isBgDefault();
+  if (isDefault) {
+    return null;
+  }
+  const value = foreground ? cell.getFgColor() : cell.getBgColor();
+  const isRgb = foreground ? cell.isFgRGB() : cell.isBgRGB();
+  return isRgb
+    ? `#${value.toString(16).padStart(6, '0')}`
+    : paletteColor(value);
+};
+
+const terminalCells = (line, columns) =>
+  Array.from({ length: columns }, (_, column) => {
+    const cell = line?.getCell(column);
+    if (!cell) {
+      return { chars: ' ', width: 1 };
+    }
+    return {
+      chars: cell.getChars() || ' ',
+      width: cell.getWidth(),
+      fg: terminalColor(cell, true),
+      bg: terminalColor(cell, false),
+      bold: Boolean(cell.isBold()),
+      dim: Boolean(cell.isDim()),
+      italic: Boolean(cell.isItalic()),
+      underline: Boolean(cell.isUnderline()),
+      reverse: Boolean(cell.isInverse()),
+      strikethrough: Boolean(cell.isStrikethrough()),
+      invisible: Boolean(cell.isInvisible()),
+    };
+  });
+
 const terminalFrame = (terminal, elapsed) => {
   const buffer = terminal.buffer.active;
   const allLines = Array.from(
@@ -110,6 +181,9 @@ const terminalFrame = (terminal, elapsed) => {
         ?.translateToString(true)
         .trimEnd() ?? ''
   );
+  const cells = Array.from({ length: terminal.rows }, (_, index) =>
+    terminalCells(buffer.getLine(buffer.viewportY + index), terminal.cols)
+  );
   return {
     time: elapsed(),
     cols: terminal.cols,
@@ -121,6 +195,7 @@ const terminalFrame = (terminal, elapsed) => {
     alternate: buffer === terminal.buffer.alternate,
     lines: normalizeLines(allLines),
     screen: normalizeLines(screen),
+    cells,
   };
 };
 
@@ -131,7 +206,8 @@ const sameFrame = (left, right) =>
   left.cursor.y === right.cursor.y &&
   left.alternate === right.alternate &&
   left.lines.length === right.lines.length &&
-  left.lines.every((line, index) => line === right.lines[index]);
+  left.lines.every((line, index) => line === right.lines[index]) &&
+  JSON.stringify(left.cells) === JSON.stringify(right.cells);
 
 const runtimeDependencies = async () => {
   const xtermModule = await import('@xterm/headless');
@@ -240,6 +316,7 @@ const persistArtifacts = async ({
   frames,
   transcript,
   asciicast,
+  artifactOptions,
 }) => {
   if (artifactDirectory) {
     await writeTerminalArtifacts({
@@ -247,8 +324,18 @@ const persistArtifacts = async ({
       frames,
       transcript,
       asciicast,
+      options: artifactOptions,
     });
   }
+};
+
+const resolveTerminalRows = ({ cols, rows, aspectRatio }) => {
+  if (!(aspectRatio > 0)) {
+    throw new TypeError(
+      'captureTerminal aspectRatio must be greater than zero'
+    );
+  }
+  return rows ?? Math.max(1, Math.round(cols / (2 * aspectRatio)));
 };
 
 /**
@@ -260,18 +347,21 @@ export const captureTerminal = async ({
   cwd = process.cwd(),
   env = process.env,
   cols = 80,
-  rows = 24,
+  rows,
+  aspectRatio = 4 / 3,
   settleMilliseconds = 35,
   interactions = [],
   stopMarker,
   stopMarkerGraceMilliseconds = 250,
   timeoutMilliseconds = 30_000,
   artifactDirectory,
+  artifactOptions,
   onTrace,
 } = {}) => {
   if (!file) {
     throw new TypeError('captureTerminal requires a file');
   }
+  const terminalRows = resolveTerminalRows({ cols, rows, aspectRatio });
 
   const { child, environment, terminal } = await startTerminal({
     file,
@@ -279,9 +369,14 @@ export const captureTerminal = async ({
     cwd,
     env,
     cols,
-    rows,
+    rows: terminalRows,
   });
-  const asciicast = createAsciicast({ cols, rows, file, environment });
+  const asciicast = createAsciicast({
+    cols,
+    rows: terminalRows,
+    file,
+    environment,
+  });
   const {
     elapsed,
     record,
@@ -378,7 +473,13 @@ export const captureTerminal = async ({
   }
 
   const transcript = unrollTerminalFrames(frames);
-  await persistArtifacts({ artifactDirectory, frames, transcript, asciicast });
+  await persistArtifacts({
+    artifactDirectory,
+    frames,
+    transcript,
+    asciicast,
+    artifactOptions,
+  });
 
   const capture = captureResult({
     status,

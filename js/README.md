@@ -413,7 +413,7 @@ const capture = await captureTerminal({
   file: 'my-tui',
   args: ['--interactive'],
   cols: 80,
-  rows: 24,
+  // rows defaults to 30: an 80-column 4:3 terminal with the default cell ratio
   interactions: [
     { after: 'Choose an option', key: 'DOWN' },
     { after: 'Second option', key: 'ENTER' },
@@ -422,6 +422,14 @@ const capture = await captureTerminal({
   ],
   stopMarker: 'Done',
   artifactDirectory: 'artifacts/my-tui',
+  artifactOptions: {
+    cellWidth: 9,
+    cellHeight: 18,
+    fontSize: 14,
+    padding: 12,
+    borderRadius: 0,
+    idleTimeLimit: 2,
+  },
 });
 
 console.log(capture.transcript);
@@ -429,10 +437,23 @@ console.log(`${capture.frames.length} distinct settled states`);
 ```
 
 The artifact directory contains an unrolled `transcript.txt`, machine-readable
-`frames.json`, an asciicast v2 `session.cast`, a final `snapshot.svg`, and a
-self-contained animated `recording.svg`. Exact consecutive repaints are
-deduplicated, while repeated content after an intervening state remains in the
-transcript. Scrolled-off terminal history is retained.
+`frames.json`, an asciicast v2 `session.cast`, a final `snapshot.svg`, a
+self-contained animated `recording.svg`, and `recording.gif`. Frames retain
+truecolor and 256-color foreground/background values plus bold, dim, italic,
+underline, reverse, and strikethrough attributes. The SVG embeds a subsetted
+DejaVu Sans Mono font, preserves an integer cell grid, and draws box/block
+characters as seamless vector geometry. Animation uses the capture's real
+timestamps; pauses longer than `idleTimeLimit` are trimmed.
+
+GIF is provided for consumers that cannot play CSS-animated SVG. The format is
+limited to 256 colors per frame, so truecolor recordings can show color
+banding. Prefer `recording.svg` when full color fidelity is important.
+
+Set `aspectRatio` to derive the row count when `rows` is omitted (the default is
+`4 / 3`). Explicit `rows` always wins. Exact consecutive repaints are
+deduplicated, including style-only repaints, while repeated content after an
+intervening state remains in the transcript. Scrolled-off terminal history is
+retained.
 
 Set `settleMilliseconds` to tune repaint coalescing. For opt-in diagnostics,
 pass `onTrace(event)`; capture is silent by default.

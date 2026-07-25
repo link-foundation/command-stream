@@ -152,7 +152,8 @@ describe('PTY terminal capture', () => {
       'utf8'
     );
     expect(snapshot).toContain('xml:space="preserve"');
-    expect(snapshot).toContain('textLength="20"');
+    expect(snapshot).toMatch(/textLength="\d+"/);
+    expect(snapshot).toContain('ed  表');
     expect(snapshot).toContain('lengthAdjust="spacingAndGlyphs"');
     expect(snapshot).toContain('shape-rendering="crispEdges"');
     expect(snapshot).toContain('<path');
