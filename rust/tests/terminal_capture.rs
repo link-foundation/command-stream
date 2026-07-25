@@ -34,13 +34,17 @@ stty size
     let mut options = shell_options(script);
     options.interactions = vec![
         TerminalInteraction {
-            after: Some("ready:".into()),
+            after: None,
+            after_regex: Some(r"ready:\d+ \d+".into()),
+            idle_duration: Duration::from_millis(30),
             text: Some("hello".into()),
             key: Some(TerminalKey::Enter),
             resize: None,
         },
         TerminalInteraction {
             after: Some("waiting-resize".into()),
+            after_regex: None,
+            idle_duration: Duration::ZERO,
             text: None,
             key: None,
             resize: Some(TerminalResize { cols: 40, rows: 10 }),
@@ -64,6 +68,16 @@ stty size
         .events
         .iter()
         .any(|event| event.code == "r" && event.data == "40x10"));
+    assert!(
+        capture
+            .asciicast
+            .events
+            .iter()
+            .find(|event| event.code == "i")
+            .expect("input event")
+            .time
+            >= 0.02
+    );
 }
 
 #[test]

@@ -188,6 +188,44 @@ describe('PTY terminal capture', () => {
     }
   });
 
+  test('waits for regex readiness and output quiescence before sending a raw key sequence', async () => {
+    const trace = [];
+    const capture = await captureTerminal({
+      file: process.execPath,
+      args: [
+        '-e',
+        [
+          "process.stdin.setRawMode(true); process.stdout.write('boot:1');",
+          "setTimeout(() => process.stdout.write('\\rboot:ready-42'), 30);",
+          "process.stdin.once('data', data => {",
+          "  process.stdout.write(`\\rkey:${data.toString('hex')}`);",
+          '  process.exit(0);',
+          '});',
+        ].join(''),
+      ],
+      interactions: [
+        {
+          after: /boot:ready-\d+/,
+          idleMilliseconds: 50,
+          key: '\x1b[B',
+        },
+      ],
+      timeoutMilliseconds: 2_000,
+      onTrace: (event) => trace.push(event),
+    });
+
+    expect(capture.output).toContain('key:1b5b42');
+    expect(capture.interactionCount).toBe(1);
+
+    const finalOutput = trace.findLast(
+      ({ type, data }) => type === 'output' && data.includes('boot:ready-42')
+    );
+    const interaction = trace.findLast(
+      ({ type }) => type === 'interaction-applied'
+    );
+    expect(interaction.time - finalOutput.time).toBeGreaterThanOrEqual(0.04);
+  });
+
   test('retains a state when a later repaint is split across output chunks', async () => {
     const capture = await captureTerminal({
       file: process.execPath,

@@ -102,6 +102,8 @@ let capture = capture_terminal(TerminalCaptureOptions {
     file: "codex".into(),
     args: vec!["--no-alt-screen".into()],
     interactions: vec![TerminalInteraction {
+        after_regex: Some("Ready: .+".into()),
+        idle_duration: std::time::Duration::from_millis(50),
         text: Some("Inspect the failing test".into()),
         key: Some(TerminalKey::Enter),
         ..TerminalInteraction::default()
@@ -120,6 +122,11 @@ artifact directory receives `transcript.txt`, `frames.json`, `session.cast`,
 `snapshot.svg`, and an animated `recording.svg`; timeout errors retain the
 partial capture and those diagnostic files. Use `capture_terminal_async` from
 an async application.
+
+Interactions can wait for literal output with `after`, regex output with
+`after_regex`, and output quiescence with `idle_duration`. Named
+`TerminalKey` variants cover arrows, Enter, Tab, Escape, Backspace, Ctrl-C, and
+Ctrl-D; use `TerminalKey::Raw` for any other escape sequence.
 
 ## Features
 
