@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.16.0
+
+### Minor Changes
+
+- 00cf1ad: Render faithful terminal SVG and GIF artifacts with styled cells, exact grid geometry, embedded subset fonts, real CSS animation timing, and configurable capture geometry.
+
 ## 0.15.0
 
 ### Minor Changes
