@@ -295,6 +295,7 @@ impl Pipeline {
             "yes" => Some(crate::commands::yes(ctx).await),
             "seq" => Some(crate::commands::seq(ctx).await),
             "test" => Some(crate::commands::test(ctx).await),
+            "$fy" => Some(crate::commands::fy(ctx).await),
             _ => None,
         }
     }

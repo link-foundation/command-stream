@@ -5,6 +5,9 @@
 //   literal(")  variable(DIR)  literal(/)  substitution(...)  literal(.log")
 
 const NAME = /^[A-Za-z_][A-Za-z0-9_]*/;
+// The parameter a `${...}` body can start with: a name, a positional number,
+// or one of the special parameters.
+const PARAMETER = /^(?:[A-Za-z_][A-Za-z0-9_]*|\d+|[@*#?$])/;
 
 const node = (term, children = [], text = undefined) => ({
   term,
@@ -168,11 +171,13 @@ export function expandWord(text, declared, parseSubstitution) {
  * information is silently dropped.
  */
 function braceExpansion(body, declared) {
-  const plain = NAME.exec(body);
+  const plain = PARAMETER.exec(body);
   if (plain && plain[0] === body) {
     return expansionNode(body, declared);
   }
-  const withDefault = /^([A-Za-z_][A-Za-z0-9_]*):?[-=](.*)$/s.exec(body);
+  const withDefault = /^(\d+|[@*#?$]|[A-Za-z_][A-Za-z0-9_]*):?[-=](.*)$/s.exec(
+    body
+  );
   if (withDefault) {
     return node(
       'default-expansion',

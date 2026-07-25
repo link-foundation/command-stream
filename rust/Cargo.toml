@@ -34,6 +34,7 @@ chrono = "0.4"
 filetime = "0.2"
 portable-pty = "0.9"
 vt100 = "0.15"
+meta-language = { version = "0.54", default-features = false }
 
 [dev-dependencies]
 tokio-test = "0.4"

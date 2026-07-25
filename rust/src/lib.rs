@@ -64,6 +64,7 @@
 // Modular utility modules (following JavaScript modular pattern)
 pub mod ansi;
 pub mod events;
+pub mod fy;
 #[doc(hidden)]
 pub mod macros;
 pub mod pipeline;
@@ -436,6 +437,7 @@ impl ProcessRunner {
             "yes" => Some(commands::yes(ctx).await),
             "seq" => Some(commands::seq(ctx).await),
             "test" => Some(commands::test(ctx).await),
+            "$fy" => Some(commands::fy(ctx).await),
             _ => None,
         }
     }

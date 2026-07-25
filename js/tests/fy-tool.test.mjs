@@ -306,4 +306,18 @@ describe('translated scripts run', () => {
       rmSync(directory, { recursive: true, force: true });
     }
   });
+
+  test('reproduces the golden fixture shared with the Rust suite', () => {
+    // `rust/tests/fy.rs` asserts the same two files, which is what keeps both
+    // translators byte-for-byte equivalent. See `fixtures/fy/README.md`.
+    const fixture = (name) =>
+      readFileSync(
+        new URL(`../../fixtures/fy/${name}`, import.meta.url),
+        'utf8'
+      );
+
+    const translated = translateShellToMjs(fixture('sample.sh'));
+    expect(translated.diagnostics).toEqual([]);
+    expect(translated.code).toBe(fixture('sample.mjs'));
+  });
 });
