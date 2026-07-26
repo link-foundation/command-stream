@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.17.1
+
+### Patch Changes
+
+- 2e89d4e: Fix GIF terminal artifact rendering on Node.js by supporting the CommonJS
+  default export exposed by `gifenc`.
+
 ## 0.17.0
 
 ### Minor Changes
