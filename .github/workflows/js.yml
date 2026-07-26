@@ -185,6 +185,7 @@ jobs:
               process.exit(1);
             });
           "
+          node --test js/tests/node-terminal-artifacts.mjs
 
   release:
     name: Release JavaScript package

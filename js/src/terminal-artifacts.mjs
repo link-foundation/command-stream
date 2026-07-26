@@ -407,9 +407,12 @@ const renderRecordingSvg = ({ frames, options, font }) => {
 };
 
 const renderGif = async ({ frames, options, font }) => {
-  const [{ Resvg }, { GIFEncoder, applyPalette, quantize }] = await Promise.all(
-    [import('@resvg/resvg-js'), import('gifenc')]
-  );
+  const [{ Resvg }, gifencModule] = await Promise.all([
+    import('@resvg/resvg-js'),
+    import('gifenc'),
+  ]);
+  const gifenc = gifencModule.GIFEncoder ? gifencModule : gifencModule.default;
+  const { GIFEncoder, applyPalette, quantize } = gifenc;
   const { width, height } = dimensions(frames, options);
   const { times } = frameTimes(frames, options.idleTimeLimit);
   const sheet = svgShell({
