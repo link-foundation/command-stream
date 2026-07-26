@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.17.2
+
+### Patch Changes
+
+- 6e89fc4: Render terminal SVG text at its visible cell-grid position and width without
+  stretching glyphs across leading or trailing row padding.
+
 ## 0.17.1
 
 ### Patch Changes
