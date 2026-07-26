@@ -173,6 +173,36 @@ describe('PTY terminal capture', () => {
     expect(duration).toBeLessThan(0.5);
   });
 
+  test('measures visible glyphs without stretching terminal row padding', async () => {
+    const artifactDirectory = await mkdtemp(
+      join(tmpdir(), 'command-stream-tui-padding-')
+    );
+    temporaryDirectories.push(artifactDirectory);
+
+    await captureTerminal({
+      file: process.execPath,
+      args: ['-e', "process.stdout.write('\\u001b[3Gok 表')"],
+      cols: 12,
+      rows: 2,
+      artifactDirectory,
+      artifactOptions: {
+        cellWidth: 10,
+        cellHeight: 20,
+        padding: 0,
+      },
+    });
+
+    const snapshot = await readFile(
+      join(artifactDirectory, 'snapshot.svg'),
+      'utf8'
+    );
+    expect(snapshot).toMatch(
+      /<text x="20" [^>]*textLength="50"[^>]*>ok 表<\/text>/
+    );
+    expect(snapshot).not.toMatch(/<text [^>]*>[ \t]/);
+    expect(snapshot).not.toMatch(/[ \t]<\/text>/);
+  });
+
   test('unrolls scrolled-off lines in order and exactly once', async () => {
     const capture = await captureTerminal({
       file: process.execPath,
