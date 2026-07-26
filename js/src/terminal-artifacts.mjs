@@ -153,6 +153,8 @@ const cellStyle = (cell, options) => {
 const sameStyle = (left, right) =>
   Object.keys(left).every((key) => left[key] === right[key]);
 
+const isBlankCell = (cell) => (cell.chars || ' ').trim() === '';
+
 const coalesceRow = (cells, options) => {
   const runs = [];
   for (let column = 0; column < cells.length; ) {
@@ -161,13 +163,19 @@ const coalesceRow = (cells, options) => {
       column += 1;
       continue;
     }
+    if (isBlankCell(cell)) {
+      column += Math.max(cell.width, 1);
+      continue;
+    }
     const style = cellStyle(cell, options);
     const run = {
       column,
       width: Math.max(cell.width, 1),
-      text: cell.chars || ' ',
+      text: cell.chars,
       style,
     };
+    let visibleTextLength = run.text.length;
+    let visibleWidth = run.width;
     column += Math.max(cell.width, 1);
     while (column < cells.length) {
       const next = cells[column];
@@ -182,7 +190,13 @@ const coalesceRow = (cells, options) => {
       run.text += next.chars || ' ';
       run.width += Math.max(next.width, 1);
       column += Math.max(next.width, 1);
+      if (!isBlankCell(next)) {
+        visibleTextLength = run.text.length;
+        visibleWidth = run.width;
+      }
     }
+    run.text = run.text.slice(0, visibleTextLength);
+    run.width = visibleWidth;
     runs.push(run);
   }
   return runs;
