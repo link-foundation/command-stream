@@ -148,6 +148,10 @@ export function attachOrchestrationMethods(ProcessRunner, deps) {
     let combinedStderr = '';
 
     for (let i = 0; i < sequence.commands.length; i++) {
+      if (this._cancelled) {
+        break;
+      }
+
       const command = sequence.commands[i];
       const operator = i > 0 ? sequence.operators[i - 1] : null;
 
@@ -217,7 +221,7 @@ export function attachOrchestrationMethods(ProcessRunner, deps) {
     if (isVirtualCommandsEnabled() && virtualCommands.has(cmd)) {
       trace('ProcessRunner', () => `Using virtual command: ${cmd}`);
       const argValues = args.map((a) => a.value || a);
-      const result = await this._runVirtual(cmd, argValues);
+      const result = await this._runVirtual(cmd, argValues, null, false);
       await handleRedirects(result, redirects);
       return result;
     }
@@ -234,7 +238,23 @@ export function attachOrchestrationMethods(ProcessRunner, deps) {
       { ...this.options, cwd: currentCwd, _bypassVirtual: true }
     );
 
-    return await runner;
+    const forwardData = (chunk) => {
+      if (!this._cancelled && !this.finished) {
+        this._emitProcessedData(chunk.type, chunk.data);
+      }
+    };
+
+    runner.on('data', forwardData);
+    this._activeNestedRunner = runner;
+
+    try {
+      return await runner;
+    } finally {
+      runner.off('data', forwardData);
+      if (this._activeNestedRunner === runner) {
+        this._activeNestedRunner = null;
+      }
+    }
   };
 
   ProcessRunner.prototype.pipe = function (destination) {

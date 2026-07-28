@@ -504,6 +504,27 @@ arrives, followed by a final `{ type: 'exit', code }` chunk when the process
 exits. Always guard on `chunk.type` before reading `chunk.data`, since the
 `exit` chunk carries `code` instead of `data`.
 
+Compound commands stream progressively too. Supported sequences keep built-in
+and registered virtual commands in command-stream while forwarding nested
+system-process output in real time:
+
+```javascript
+const build = $({
+  mirror: false,
+})`echo "build started"; npm run build; echo "build finished"`;
+
+for await (const chunk of build.stream()) {
+  if (chunk.type === 'stdout') {
+    consumeBuildOutput(chunk.data);
+  }
+}
+```
+
+Breaking the loop or calling `build.kill()` also stops the active nested
+command. For guidance on system-shell fallback, programmatic pipelines,
+producer-side buffering, and patterns to avoid, see
+[Real-time Streaming in Best Practices](BEST-PRACTICES.md#real-time-streaming).
+
 The iterator terminates as soon as the process exits, even if a grandchild keeps
 the stdout/stderr pipe open (e.g. `sh -c 'background-task & echo done'`). Any
 output still buffered is drained within a short grace period (the `exitPumpGrace`

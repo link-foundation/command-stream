@@ -241,6 +241,7 @@ class ProcessRunner extends StreamEmitter {
     this._cancelled = false;
     this._cancellationSignal = null;
     this._virtualGenerator = null;
+    this._activeNestedRunner = null;
     this._abortController = new AbortController();
 
     // Set to true once user code starts consuming this runner (await / then /
