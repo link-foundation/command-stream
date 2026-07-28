@@ -152,6 +152,18 @@ function tokenize(command) {
       break;
     }
 
+    // A lone ampersand is a background-process operator, which this parser
+    // intentionally leaves to the real shell. Guard here as well as in
+    // needsRealShell() so malformed input can never leave the tokenizer at the
+    // same index forever.
+    if (
+      command[i] === '&' &&
+      command[i - 1] !== '&' &&
+      command[i + 1] !== '&'
+    ) {
+      throw new Error('Background commands require a real shell');
+    }
+
     // Check for operators
     const operator = matchOperator(command, i);
     if (operator) {
@@ -413,28 +425,83 @@ export function parseShellCommand(command) {
   }
 }
 
+function scanQuotedFeature(command, index, quote) {
+  const char = command[index];
+
+  if (quote === "'") {
+    return {
+      quote: char === quote ? null : quote,
+      skip: 0,
+      unsupported: false,
+    };
+  }
+  if (char === '\\') {
+    return { quote, skip: 1, unsupported: false };
+  }
+  if (char === quote) {
+    return { quote: null, skip: 0, unsupported: false };
+  }
+
+  // Parameter and command substitution still occur in double quotes.
+  return {
+    quote,
+    skip: 0,
+    unsupported: char === '`' || char === '$',
+  };
+}
+
+function isSingleAmpersand(command, index) {
+  return (
+    command[index] === '&' &&
+    command[index - 1] !== '&' &&
+    command[index + 1] !== '&'
+  );
+}
+
+function isUnsupportedUnquotedFeature(command, index) {
+  const char = command[index];
+  if ('`$~*?['.includes(char) || isSingleAmpersand(command, index)) {
+    return true;
+  }
+
+  const remainder = command.slice(index);
+  return (
+    remainder.startsWith('2>') ||
+    remainder.startsWith('&>') ||
+    remainder.startsWith('>&') ||
+    remainder.startsWith('<<')
+  );
+}
+
 /**
  * Check if a command needs shell features we don't handle
  */
 export function needsRealShell(command) {
-  // Check for features we don't handle yet
-  const unsupported = [
-    '`', // Command substitution
-    '$(', // Command substitution
-    '${', // Variable expansion
-    '~', // Home expansion (at start of word)
-    '*', // Glob patterns
-    '?', // Glob patterns
-    '[', // Glob patterns
-    '2>', // stderr redirection
-    '&>', // Combined redirection
-    '>&', // File descriptor duplication
-    '<<', // Here documents
-    '<<<', // Here strings
-  ];
+  let quote = null;
+  for (let i = 0; i < command.length; i++) {
+    const char = command[i];
 
-  for (const feature of unsupported) {
-    if (command.includes(feature)) {
+    if (quote) {
+      const scan = scanQuotedFeature(command, i, quote);
+      if (scan.unsupported) {
+        return true;
+      }
+      quote = scan.quote;
+      i += scan.skip;
+      continue;
+    }
+
+    if (char === '\\') {
+      i++;
+      continue;
+    }
+
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+
+    if (isUnsupportedUnquotedFeature(command, i)) {
       return true;
     }
   }

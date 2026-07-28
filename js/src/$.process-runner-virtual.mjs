@@ -77,7 +77,7 @@ function emitOutput(runner, type, data) {
  * @param {object} shellSettings - Global shell settings
  * @returns {object} Result object
  */
-function handleVirtualError(runner, error, shellSettings) {
+function handleVirtualError(runner, error, shellSettings, shouldFinish) {
   let exitCode = error.code ?? 1;
   if (runner._cancelled && runner._cancellationSignal) {
     exitCode = getCancellationExitCode(runner._cancellationSignal);
@@ -91,7 +91,9 @@ function handleVirtualError(runner, error, shellSettings) {
   };
 
   emitOutput(runner, 'stderr', result.stderr);
-  runner.finish(result);
+  if (shouldFinish) {
+    runner.finish(result);
+  }
 
   if (shellSettings.errexit) {
     error.result = result;
@@ -236,7 +238,8 @@ export function attachVirtualCommandMethods(ProcessRunner, deps) {
   ProcessRunner.prototype._runVirtual = async function (
     cmd,
     args,
-    originalCommand = null
+    originalCommand = null,
+    shouldFinish = true
   ) {
     trace('ProcessRunner', () => `_runVirtual | cmd=${cmd}`);
 
@@ -278,7 +281,9 @@ export function attachVirtualCommandMethods(ProcessRunner, deps) {
         ? await runGeneratorHandler(this, handler, argValues, stdinData)
         : await runRegularHandler(this, handler, argValues, stdinData);
 
-      this.finish(result);
+      if (shouldFinish) {
+        this.finish(result);
+      }
 
       if (globalShellSettings.errexit && result.code !== 0) {
         const error = new Error(`Command failed with exit code ${result.code}`);
@@ -291,7 +296,7 @@ export function attachVirtualCommandMethods(ProcessRunner, deps) {
 
       return result;
     } catch (error) {
-      return handleVirtualError(this, error, globalShellSettings);
+      return handleVirtualError(this, error, globalShellSettings, shouldFinish);
     }
   };
 }

@@ -216,6 +216,15 @@ function killRunner(runner, signal) {
   runner._cancellationSignal = signal;
   killPipelineComponents(runner.spec, signal);
 
+  if (
+    runner._activeNestedRunner &&
+    !runner._activeNestedRunner.finished &&
+    typeof runner._activeNestedRunner.kill === 'function'
+  ) {
+    trace('ProcessRunner', () => 'Killing active nested command');
+    runner._activeNestedRunner.kill(signal);
+  }
+
   if (runner._cancelResolve) {
     trace('ProcessRunner', () => 'Resolving cancel promise');
     runner._cancelResolve();

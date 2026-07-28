@@ -26,20 +26,8 @@ function hasShellOperators(command) {
     command.includes('||') ||
     command.includes('(') ||
     command.includes(';') ||
+    command.includes('&') ||
     (command.includes('cd ') && command.includes('&&'))
-  );
-}
-
-/**
- * Check if command is a streaming pattern
- * @param {string} command - Command to check
- * @returns {boolean}
- */
-function isStreamingPattern(command) {
-  return (
-    command.includes('sleep') &&
-    command.includes(';') &&
-    (command.includes('echo') || command.includes('printf'))
   );
 }
 
@@ -50,14 +38,7 @@ function isStreamingPattern(command) {
  * @returns {boolean}
  */
 function shouldUseShellOperators(runner, command) {
-  const hasOps = hasShellOperators(command);
-  const isStreaming = isStreamingPattern(command);
-  return (
-    runner.options.shellOperators &&
-    hasOps &&
-    !isStreaming &&
-    !runner._isStreaming
-  );
+  return runner.options.shellOperators && hasShellOperators(command);
 }
 
 /**
@@ -863,6 +844,7 @@ async function handleShellMode(runner, deps) {
   );
 
   const useShellOps = shouldUseShellOperators(runner, command);
+  const requiresRealShell = useShellOps && needsRealShell(command);
 
   trace(
     'ProcessRunner',
@@ -870,18 +852,18 @@ async function handleShellMode(runner, deps) {
       `Shell operator detection | ${JSON.stringify({
         hasShellOperators: hasShellOperators(command),
         shellOperatorsEnabled: runner.options.shellOperators,
-        isStreamingPattern: isStreamingPattern(command),
         isStreaming: runner._isStreaming,
         shouldUseShellOperators: useShellOps,
+        requiresRealShell,
         command: command.slice(0, 100),
       })}`
   );
 
-  if (
-    !runner.options._bypassVirtual &&
-    useShellOps &&
-    !needsRealShell(command)
-  ) {
+  if (requiresRealShell) {
+    return null;
+  }
+
+  if (!runner.options._bypassVirtual && useShellOps) {
     const result = await tryEnhancedShellParser(runner, command);
     if (result) {
       return result;
@@ -1127,7 +1109,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
       if (this.spec.mode === 'shell') {
         const shellResult = await handleShellMode(this, deps);
         if (shellResult) {
-          return shellResult;
+          return this.finish(shellResult);
         }
       }
 
