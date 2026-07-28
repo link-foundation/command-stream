@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import { rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import './test-helper.mjs';
 import { $, enableVirtualCommands, register, unregister } from '../src/$.mjs';
 
@@ -187,3 +188,30 @@ test.skipIf(process.platform === 'win32')(
     expect(stdout.join('')).toBe('background\n');
   }
 );
+
+test('a streamed sequence with virtual sleep releases its timers', async () => {
+  const examplePath = fileURLToPath(
+    new URL('../examples/streaming-compound-commands.mjs', import.meta.url)
+  );
+  const child = Bun.spawn([process.execPath, examplePath], {
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
+
+  let timer;
+  try {
+    const exitCode = await Promise.race([
+      child.exited,
+      new Promise((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error('streaming example did not exit')),
+          1000
+        );
+      }),
+    ]);
+    expect(exitCode).toBe(0);
+  } finally {
+    clearTimeout(timer);
+    child.kill();
+  }
+}, 3000);

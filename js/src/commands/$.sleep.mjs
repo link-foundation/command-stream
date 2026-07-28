@@ -24,7 +24,45 @@ export default async function sleep({ args, abortSignal, isCancelled }) {
   // Use abort signal if available, otherwise use setTimeout
   try {
     await new Promise((resolve, reject) => {
-      const timeoutId = setTimeout(resolve, seconds * 1000);
+      let settled = false;
+      let checkInterval;
+
+      const cleanup = () => {
+        clearTimeout(timeoutId);
+        if (checkInterval) {
+          clearInterval(checkInterval);
+        }
+        abortSignal?.removeEventListener('abort', handleAbort);
+      };
+
+      const settle = (callback, value) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        cleanup();
+        callback(value);
+      };
+
+      const complete = () => settle(resolve);
+      const cancel = () => settle(reject, new Error('Sleep cancelled'));
+      const handleAbort = () => {
+        trace(
+          'VirtualCommand',
+          () =>
+            `sleep: abort signal received | ${JSON.stringify(
+              {
+                seconds,
+                signalAborted: abortSignal.aborted,
+              },
+              null,
+              2
+            )}`
+        );
+        cancel();
+      };
+
+      const timeoutId = setTimeout(complete, seconds * 1000);
 
       // Handle cancellation via abort signal
       if (abortSignal) {
@@ -40,22 +78,7 @@ export default async function sleep({ args, abortSignal, isCancelled }) {
             )}`
         );
 
-        abortSignal.addEventListener('abort', () => {
-          trace(
-            'VirtualCommand',
-            () =>
-              `sleep: abort signal received | ${JSON.stringify(
-                {
-                  seconds,
-                  signalAborted: abortSignal.aborted,
-                },
-                null,
-                2
-              )}`
-          );
-          clearTimeout(timeoutId);
-          reject(new Error('Sleep cancelled'));
-        });
+        abortSignal.addEventListener('abort', handleAbort, { once: true });
 
         // Check if already aborted
         if (abortSignal.aborted) {
@@ -64,8 +87,7 @@ export default async function sleep({ args, abortSignal, isCancelled }) {
             () =>
               `sleep: signal already aborted | ${JSON.stringify({ seconds }, null, 2)}`
           );
-          clearTimeout(timeoutId);
-          reject(new Error('Sleep cancelled'));
+          cancel();
           return;
         }
       } else {
@@ -83,18 +105,17 @@ export default async function sleep({ args, abortSignal, isCancelled }) {
           () =>
             `sleep: setting up isCancelled polling | ${JSON.stringify({ seconds }, null, 2)}`
         );
-        const checkInterval = setInterval(() => {
+        checkInterval = setInterval(() => {
           if (isCancelled()) {
             trace(
               'VirtualCommand',
               () =>
                 `sleep: isCancelled returned true | ${JSON.stringify({ seconds }, null, 2)}`
             );
-            clearTimeout(timeoutId);
-            clearInterval(checkInterval);
-            reject(new Error('Sleep cancelled'));
+            cancel();
           }
         }, 100);
+        checkInterval.unref?.();
       }
     });
 
