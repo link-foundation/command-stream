@@ -8,6 +8,7 @@ This document covers best practices, common patterns, and pitfalls to avoid when
 - [String Interpolation](#string-interpolation)
 - [Security Best Practices](#security-best-practices)
 - [Error Handling](#error-handling)
+- [Real-time Streaming](#real-time-streaming)
 - [Performance Tips](#performance-tips)
 - [Common Pitfalls](#common-pitfalls)
   - [7. try/catch for Exit Code Detection (Silent Bug)](#7-trycatch-for-exit-code-detection-silent-bug)
@@ -204,6 +205,129 @@ switch (result.code) {
     console.error(`Unknown error (code ${result.code})`);
 }
 ```
+
+---
+
+## Real-time Streaming
+
+### Stream Compound Commands Progressively
+
+Use `stream()` when code must react to output before the full command finishes.
+Sequences containing `;`, `&&`, `||`, subshells, or pipelines preserve
+command-stream built-ins and registered virtual commands. Output from nested
+system processes is forwarded as soon as it arrives:
+
+```javascript
+import { $ } from 'command-stream';
+
+const build = $({
+  mirror: false,
+})`echo "build started"; npm run build; echo "build finished"`;
+
+for await (const chunk of build.stream()) {
+  if (chunk.type === 'stdout') {
+    consumeBuildOutput(chunk.data);
+  } else if (chunk.type === 'stderr') {
+    consumeBuildError(chunk.data);
+  } else if (chunk.type === 'exit') {
+    console.log('build exited with', chunk.code);
+  }
+}
+```
+
+Always check `chunk.type`: the final `{ type: 'exit', code }` chunk has no
+`data` property.
+
+Breaking out of the loop stops the currently active command, including a real
+process nested inside a compound command. Keep a runner reference when you also
+need explicit cancellation:
+
+```javascript
+const watcher = $`echo "watching"; npm run watch`;
+
+for await (const chunk of watcher.stream()) {
+  if (chunk.type === 'stdout' && isReady(chunk.data)) {
+    watcher.kill('SIGINT');
+  }
+}
+```
+
+### Choose the Right Execution Model
+
+JavaScript process libraries generally use one of three models:
+
+1. **Parse and interpret shell syntax in the library.** [Bun Shell](https://bun.sh/docs/runtime/shell)
+   uses a lexer, parser, and interpreter with cross-platform built-ins. This is
+   the model command-stream uses for supported operators so built-in and custom
+   virtual commands remain available.
+2. **Run an explicit system shell.** [zx](https://google.github.io/zx/shell)
+   is shell-oriented, while [Node's `child_process`](https://nodejs.org/api/child_process.html)
+   exposes a `shell` option. This is appropriate for trusted scripts that need
+   platform shell features such as command substitution, glob expansion, file
+   descriptor redirection, or background jobs. command-stream automatically
+   falls back to the system shell when a compound command uses unsupported
+   syntax.
+3. **Spawn executables directly and compose streams programmatically.**
+   [Execa](https://github.com/sindresorhus/execa) emphasizes direct process
+   execution, iterable output, and programmatic pipelines; Node also exposes
+   piped child streams directly. In command-stream, prefer `.pipe()` when the
+   pipeline structure is built dynamically or should not depend on shell
+   syntax.
+
+Use the internal command-stream path for portable built-ins, registered virtual
+commands, and ordinary sequences. Use a real shell only when its extra syntax
+is required, because behavior then depends on the installed shell and custom
+virtual commands do not exist inside that external process. Use `.pipe()` for
+explicit application-controlled composition.
+
+### Streaming Pitfalls
+
+```javascript
+// WRONG: waits for completion before application code can consume stdout.
+const result = await $({ mirror: false })`long-running-build`;
+consumeBuildOutput(result.stdout);
+
+// CORRECT: consumes each chunk while the build is still running.
+for await (const chunk of $({ mirror: false })`long-running-build`.stream()) {
+  if (chunk.type === 'stdout') consumeBuildOutput(chunk.data);
+}
+```
+
+Do not wrap a sequence in `sh -c` merely to make it stream. That creates a
+separate shell where registered virtual commands are unavailable:
+
+```javascript
+import { $, register } from 'command-stream';
+
+register('project-status', statusHandler);
+
+// WRONG: the external shell cannot resolve the JavaScript virtual command.
+await $`sh -c 'echo checking; project-status'`;
+
+// CORRECT: command-stream keeps both commands in its own orchestration.
+await $`echo checking; project-status`;
+```
+
+Never insert untrusted text as raw shell syntax:
+
+```javascript
+import { $, raw } from 'command-stream';
+
+// WRONG: raw user input can introduce operators or command substitution.
+await $`${raw(request.body.command)}`;
+
+// CORRECT: interpolation treats external data as an argument.
+await $`project-status ${request.body.project}`;
+```
+
+Finally, command-stream can forward only what a producer writes. Some programs
+buffer output when stdout is a pipe; use that program's line-buffered,
+unbuffered, or watch option when available. Increasing a test timeout does not
+fix producer-side buffering.
+
+See
+[`examples/streaming-compound-commands.mjs`](./examples/streaming-compound-commands.mjs)
+for a runnable compound-stream example.
 
 ---
 
