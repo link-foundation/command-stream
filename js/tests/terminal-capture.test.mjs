@@ -380,7 +380,8 @@ describe('PTY terminal sessions', () => {
     });
 
     // Windows reports the teardown through the PTY host rather than a child
-    // exit status, so only the rejection itself is portable.
+    // exit status, and ConPTY drops the output of a process this short-lived,
+    // so only the rejection itself is portable.
     await expect(session.waitFor('never-printed')).rejects.toThrow(
       isWindows ? /exited/ : 'Terminal exited with code 3'
     );
@@ -391,8 +392,8 @@ describe('PTY terminal sessions', () => {
     const capture = await session.close();
     if (!isWindows) {
       expect(capture.exitCode).toBe(3);
+      expect(capture.transcript).toContain('bye');
     }
-    expect(capture.transcript).toContain('bye');
   });
 
   test('dispose stops a child that never exits on its own', async () => {
