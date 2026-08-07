@@ -113,7 +113,9 @@ describe('PTY terminal capture', () => {
         .slice(0, 6)
         .toString()
     ).toBe('GIF89a');
-  });
+    // Rendering every artifact (including the GIF) runs close to the default
+    // 10 s budget on slow Windows runners.
+  }, 60_000);
 
   test('preserves styled cells, exact grid geometry, and real timing', async () => {
     const artifactDirectory = await mkdtemp(
