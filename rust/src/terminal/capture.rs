@@ -3,7 +3,7 @@ use super::types::{
     Asciicast, AsciicastEvent, AsciicastHeader, TerminalCapture, TerminalCaptureError,
     TerminalCaptureOptions, TerminalCursor, TerminalFrame, TerminalInteraction, TerminalResize,
 };
-use portable_pty::{native_pty_system, CommandBuilder, MasterPty, PtySize};
+use portable_pty::{native_pty_system, Child, CommandBuilder, ExitStatus, MasterPty, PtySize};
 use regex::Regex;
 use std::collections::HashMap;
 use std::io::{Read, Write};
@@ -212,6 +212,436 @@ fn capture_result(
     }
 }
 
+/// Readiness condition for [`TerminalSession::wait_for`], mirroring the
+/// `after` / `after_regex` vocabulary of [`TerminalInteraction`].
+#[derive(Debug, Clone)]
+pub enum TerminalPattern {
+    Text(String),
+    Regex(Regex),
+}
+
+impl TerminalPattern {
+    pub fn text(value: impl Into<String>) -> Self {
+        Self::Text(value.into())
+    }
+
+    pub fn regex(pattern: &str) -> Result<Self, TerminalCaptureError> {
+        Regex::new(pattern).map(Self::Regex).map_err(|error| {
+            TerminalCaptureError::new(format!("invalid terminal pattern regex: {error}"), None)
+        })
+    }
+
+    fn matches(&self, output: &str) -> bool {
+        match self {
+            Self::Text(value) => output.contains(value),
+            Self::Regex(pattern) => pattern.is_match(output),
+        }
+    }
+}
+
+/// A pseudoterminal that stays open until the caller closes it, so input may be
+/// sent long after the process started.
+pub struct TerminalSession {
+    options: TerminalCaptureOptions,
+    interaction_regexes: Vec<Option<Regex>>,
+    master: Box<dyn MasterPty + Send>,
+    writer: Box<dyn Write + Send>,
+    child: Box<dyn Child + Send + Sync>,
+    receiver: mpsc::Receiver<Vec<u8>>,
+    started: Instant,
+    parser: vt100::Parser,
+    recording: Asciicast,
+    output: String,
+    frames: Vec<TerminalFrame>,
+    pending_render: Vec<u8>,
+    terminal_has_output: bool,
+    interaction_index: usize,
+    last_output: Option<Instant>,
+    dirty: bool,
+    reader_closed: bool,
+    status: Option<ExitStatus>,
+    timed_out: bool,
+    stop_deadline: Option<Instant>,
+}
+
+impl TerminalSession {
+    fn open(options: TerminalCaptureOptions) -> Result<Self, TerminalCaptureError> {
+        if options.file.is_empty() {
+            return Err(TerminalCaptureError::new(
+                "open_terminal requires a file",
+                None,
+            ));
+        }
+        let interaction_regexes = options
+            .interactions
+            .iter()
+            .map(|interaction| {
+                interaction
+                    .after_regex
+                    .as_ref()
+                    .map(|pattern| {
+                        Regex::new(pattern).map_err(|error| {
+                            TerminalCaptureError::new(
+                                format!("invalid terminal interaction regex: {error}"),
+                                None,
+                            )
+                        })
+                    })
+                    .transpose()
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        let pty = native_pty_system()
+            .openpty(PtySize {
+                rows: options.rows,
+                cols: options.cols,
+                pixel_width: 0,
+                pixel_height: 0,
+            })
+            .map_err(|error| TerminalCaptureError::new(error.to_string(), None))?;
+        let mut command = CommandBuilder::new(&options.file);
+        command.args(&options.args);
+        if let Some(cwd) = &options.cwd {
+            command.cwd(cwd);
+        }
+        command.env(
+            "TERM",
+            options
+                .env
+                .get("TERM")
+                .map_or("xterm-256color", String::as_str),
+        );
+        for (name, value) in &options.env {
+            command.env(name, value);
+        }
+        let child = pty
+            .slave
+            .spawn_command(command)
+            .map_err(|error| TerminalCaptureError::new(error.to_string(), None))?;
+        drop(pty.slave);
+        let reader = pty
+            .master
+            .try_clone_reader()
+            .map_err(|error| TerminalCaptureError::new(error.to_string(), None))?;
+        let writer = pty
+            .master
+            .take_writer()
+            .map_err(|error| TerminalCaptureError::new(error.to_string(), None))?;
+        let receiver = spawn_reader(reader);
+        let recording = asciicast(&options);
+        let parser = vt100::Parser::new(options.rows, options.cols, 100_000);
+        Ok(Self {
+            interaction_regexes,
+            master: pty.master,
+            writer,
+            child,
+            receiver,
+            started: Instant::now(),
+            parser,
+            recording,
+            output: String::new(),
+            frames: Vec::new(),
+            pending_render: Vec::new(),
+            terminal_has_output: false,
+            interaction_index: 0,
+            last_output: None,
+            dirty: false,
+            reader_closed: false,
+            status: None,
+            timed_out: false,
+            stop_deadline: None,
+            options,
+        })
+    }
+
+    /// Raw PTY output seen so far.
+    pub fn output(&self) -> &str {
+        &self.output
+    }
+
+    /// Settled states retained so far.
+    pub fn frames(&self) -> &[TerminalFrame] {
+        &self.frames
+    }
+
+    /// Unrolled transcript of the states retained so far.
+    pub fn transcript(&self) -> String {
+        unroll_terminal_frames(&self.frames)
+    }
+
+    /// Whether the child is still alive.
+    pub fn running(&self) -> bool {
+        self.status.is_none()
+    }
+
+    fn read_available(&mut self) {
+        match self.receiver.recv_timeout(Duration::from_millis(5)) {
+            Ok(data) => {
+                let text = String::from_utf8_lossy(&data);
+                self.output.push_str(&text);
+                record(&mut self.recording, self.started, "o", text.into_owned());
+                self.pending_render.extend_from_slice(&data);
+                let render_data = drain_complete_render_data(&mut self.pending_render);
+                let segments = render_segments(&render_data);
+                let segment_count = segments.len();
+                if self.terminal_has_output && render_data.starts_with(ERASE_SCREEN) {
+                    append_frame(&mut self.frames, &self.parser, self.started);
+                }
+                for (index, segment) in segments.into_iter().enumerate() {
+                    self.parser.process(segment);
+                    self.terminal_has_output |= !segment.is_empty();
+                    if index + 1 < segment_count {
+                        append_frame(&mut self.frames, &self.parser, self.started);
+                    }
+                }
+                self.last_output = Some(Instant::now());
+                self.dirty = true;
+                if self
+                    .options
+                    .stop_marker
+                    .as_ref()
+                    .is_some_and(|marker| self.output.contains(marker))
+                    && self.stop_deadline.is_none()
+                {
+                    append_frame(&mut self.frames, &self.parser, self.started);
+                    self.stop_deadline = Some(Instant::now() + self.options.stop_marker_grace);
+                }
+            }
+            Err(mpsc::RecvTimeoutError::Disconnected) => self.reader_closed = true,
+            Err(mpsc::RecvTimeoutError::Timeout) => {}
+        }
+    }
+
+    fn idle_for(&self) -> Duration {
+        self.last_output
+            .map_or_else(|| self.started.elapsed(), |instant| instant.elapsed())
+    }
+
+    fn apply_scripted_interactions(&mut self) -> Result<(), TerminalCaptureError> {
+        while let Some(interaction) = self.options.interactions.get(self.interaction_index) {
+            if interaction
+                .after
+                .as_ref()
+                .is_some_and(|marker| !self.output.contains(marker))
+            {
+                break;
+            }
+            if self.interaction_regexes[self.interaction_index]
+                .as_ref()
+                .is_some_and(|pattern| !pattern.is_match(&self.output))
+            {
+                break;
+            }
+            if interaction.idle_duration > Duration::ZERO
+                && self.idle_for() < interaction.idle_duration
+            {
+                break;
+            }
+            let interaction = interaction.clone();
+            append_frame(&mut self.frames, &self.parser, self.started);
+            apply_interaction(
+                &interaction,
+                self.writer.as_mut(),
+                self.master.as_ref(),
+                &mut self.parser,
+                &mut self.recording,
+                self.started,
+            )?;
+            self.interaction_index += 1;
+        }
+        Ok(())
+    }
+
+    /// Advance the capture by one step: read pending output, apply any scripted
+    /// interaction whose readiness condition became true, retain settled states,
+    /// and enforce the optional deadline.
+    fn poll(&mut self) -> Result<(), TerminalCaptureError> {
+        self.read_available();
+        self.apply_scripted_interactions()?;
+
+        if self.dirty
+            && self
+                .last_output
+                .is_some_and(|instant| instant.elapsed() >= self.options.settle_duration)
+        {
+            append_frame(&mut self.frames, &self.parser, self.started);
+            self.dirty = false;
+        }
+        if self.status.is_none() {
+            self.status = self
+                .child
+                .try_wait()
+                .map_err(|error| TerminalCaptureError::new(error.to_string(), None))?;
+        }
+        if self.status.is_none() {
+            let expired = self
+                .options
+                .timeout
+                .is_some_and(|timeout| self.started.elapsed() >= timeout);
+            let stopped = self
+                .stop_deadline
+                .is_some_and(|deadline| Instant::now() >= deadline);
+            if expired || stopped {
+                self.timed_out = expired;
+                self.stop()?;
+            }
+        }
+        Ok(())
+    }
+
+    fn finished(&self) -> bool {
+        self.status.is_some() && self.reader_closed
+    }
+
+    fn stop(&mut self) -> Result<(), TerminalCaptureError> {
+        let _ = self.child.kill();
+        self.status = Some(
+            self.child
+                .wait()
+                .map_err(|error| TerminalCaptureError::new(error.to_string(), None))?,
+        );
+        Ok(())
+    }
+
+    /// Block until `pattern` has been seen and, when `idle` is non-zero, no
+    /// further output arrived for that long. New output restarts the idle wait.
+    pub fn wait_for(
+        &mut self,
+        pattern: &TerminalPattern,
+        idle: Duration,
+        timeout: Option<Duration>,
+    ) -> Result<(), TerminalCaptureError> {
+        let deadline = timeout.map(|limit| Instant::now() + limit);
+        loop {
+            if pattern.matches(&self.output) && self.idle_for() >= idle {
+                return Ok(());
+            }
+            if self.status.is_some() {
+                self.poll()?;
+                if pattern.matches(&self.output) {
+                    return Ok(());
+                }
+                if self.finished() {
+                    return Err(TerminalCaptureError::new(
+                        "terminal exited before the expected output arrived",
+                        None,
+                    ));
+                }
+                continue;
+            }
+            if deadline.is_some_and(|limit| Instant::now() >= limit) {
+                return Err(TerminalCaptureError::new(
+                    format!(
+                        "terminal wait_for timed out after {} ms",
+                        timeout.unwrap_or_default().as_millis()
+                    ),
+                    None,
+                ));
+            }
+            self.poll()?;
+        }
+    }
+
+    /// Send text, a named key, or a resize to the live terminal, using the same
+    /// vocabulary as [`TerminalInteraction`].
+    pub fn send(&mut self, interaction: &TerminalInteraction) -> Result<(), TerminalCaptureError> {
+        if let Some(marker) = &interaction.after {
+            let pattern = TerminalPattern::text(marker.clone());
+            self.wait_for(&pattern, interaction.idle_duration, None)?;
+        } else if let Some(expression) = &interaction.after_regex {
+            let pattern = TerminalPattern::regex(expression)?;
+            self.wait_for(&pattern, interaction.idle_duration, None)?;
+        } else if interaction.idle_duration > Duration::ZERO {
+            while self.idle_for() < interaction.idle_duration && self.status.is_none() {
+                self.poll()?;
+            }
+        }
+        if self.status.is_some() {
+            return Err(TerminalCaptureError::new(
+                "terminal session has already exited",
+                None,
+            ));
+        }
+        append_frame(&mut self.frames, &self.parser, self.started);
+        apply_interaction(
+            interaction,
+            self.writer.as_mut(),
+            self.master.as_ref(),
+            &mut self.parser,
+            &mut self.recording,
+            self.started,
+        )
+    }
+
+    /// Wait for a child that exits on its own, then produce the capture.
+    pub fn finish(mut self) -> Result<TerminalCapture, TerminalCaptureError> {
+        while !self.finished() {
+            self.poll()?;
+        }
+        self.into_capture()
+    }
+
+    /// Stop the child if it is still running, then produce the capture and write
+    /// any configured artifacts.
+    pub fn close(mut self) -> Result<TerminalCapture, TerminalCaptureError> {
+        if self.status.is_none() {
+            self.stop()?;
+        }
+        while !self.finished() {
+            self.read_available();
+        }
+        self.into_capture()
+    }
+
+    fn into_capture(mut self) -> Result<TerminalCapture, TerminalCaptureError> {
+        let pending = std::mem::take(&mut self.pending_render);
+        self.parser.process(&pending);
+        append_frame(&mut self.frames, &self.parser, self.started);
+        let capture = capture_result(
+            self.status
+                .clone()
+                .expect("child status is available after the capture loop"),
+            std::mem::take(&mut self.output),
+            std::mem::take(&mut self.frames),
+            self.interaction_index,
+            std::mem::replace(&mut self.recording, asciicast(&self.options)),
+        );
+        if let Some(directory) = &self.options.artifact_directory {
+            write_terminal_artifacts(
+                directory,
+                &capture.frames,
+                &capture.transcript,
+                &capture.asciicast,
+            )?;
+        }
+        if self.timed_out {
+            return Err(TerminalCaptureError::new(
+                format!(
+                    "terminal command timed out after {} ms",
+                    self.options.timeout.unwrap_or_default().as_millis()
+                ),
+                Some(capture),
+            ));
+        }
+        Ok(capture)
+    }
+}
+
+/// Open a terminal session that stays alive until the caller closes it.
+///
+/// Unlike [`capture_terminal`], input may be sent at any later point through
+/// [`TerminalSession::send`], and readiness can be awaited with
+/// [`TerminalSession::wait_for`]. `options.timeout` defaults to `None` here, so
+/// nothing terminates the child until [`TerminalSession::close`] is called.
+pub fn open_terminal(
+    options: TerminalCaptureOptions,
+) -> Result<TerminalSession, TerminalCaptureError> {
+    TerminalSession::open(TerminalCaptureOptions {
+        timeout: None,
+        ..options
+    })
+}
+
+/// Run a command inside a real pseudoterminal and retain its settled TUI states.
 pub fn capture_terminal(
     options: TerminalCaptureOptions,
 ) -> Result<TerminalCapture, TerminalCaptureError> {
@@ -221,198 +651,7 @@ pub fn capture_terminal(
             None,
         ));
     }
-    let interaction_regexes = options
-        .interactions
-        .iter()
-        .map(|interaction| {
-            interaction
-                .after_regex
-                .as_ref()
-                .map(|pattern| {
-                    Regex::new(pattern).map_err(|error| {
-                        TerminalCaptureError::new(
-                            format!("invalid terminal interaction regex: {error}"),
-                            None,
-                        )
-                    })
-                })
-                .transpose()
-        })
-        .collect::<Result<Vec<_>, _>>()?;
-    let pty = native_pty_system()
-        .openpty(PtySize {
-            rows: options.rows,
-            cols: options.cols,
-            pixel_width: 0,
-            pixel_height: 0,
-        })
-        .map_err(|error| TerminalCaptureError::new(error.to_string(), None))?;
-    let mut command = CommandBuilder::new(&options.file);
-    command.args(&options.args);
-    if let Some(cwd) = &options.cwd {
-        command.cwd(cwd);
-    }
-    command.env(
-        "TERM",
-        options
-            .env
-            .get("TERM")
-            .map_or("xterm-256color", String::as_str),
-    );
-    for (name, value) in &options.env {
-        command.env(name, value);
-    }
-    let mut child = pty
-        .slave
-        .spawn_command(command)
-        .map_err(|error| TerminalCaptureError::new(error.to_string(), None))?;
-    drop(pty.slave);
-    let reader = pty
-        .master
-        .try_clone_reader()
-        .map_err(|error| TerminalCaptureError::new(error.to_string(), None))?;
-    let mut writer = pty
-        .master
-        .take_writer()
-        .map_err(|error| TerminalCaptureError::new(error.to_string(), None))?;
-    let receiver = spawn_reader(reader);
-    let started = Instant::now();
-    let mut parser = vt100::Parser::new(options.rows, options.cols, 100_000);
-    let mut recording = asciicast(&options);
-    let mut output = String::new();
-    let mut frames = Vec::new();
-    let mut pending_render = Vec::new();
-    let mut terminal_has_output = false;
-    let mut interaction_index = 0;
-    let mut last_output = None;
-    let mut dirty = false;
-    let mut reader_closed = false;
-    let mut status = None;
-    let mut timed_out = false;
-    let mut stop_deadline = None;
-
-    loop {
-        match receiver.recv_timeout(Duration::from_millis(5)) {
-            Ok(data) => {
-                let text = String::from_utf8_lossy(&data);
-                output.push_str(&text);
-                record(&mut recording, started, "o", text.into_owned());
-                pending_render.extend_from_slice(&data);
-                let render_data = drain_complete_render_data(&mut pending_render);
-                let segments = render_segments(&render_data);
-                let segment_count = segments.len();
-                if terminal_has_output && render_data.starts_with(ERASE_SCREEN) {
-                    append_frame(&mut frames, &parser, started);
-                }
-                for (index, segment) in segments.into_iter().enumerate() {
-                    parser.process(segment);
-                    terminal_has_output |= !segment.is_empty();
-                    if index + 1 < segment_count {
-                        append_frame(&mut frames, &parser, started);
-                    }
-                }
-                last_output = Some(Instant::now());
-                dirty = true;
-                if options
-                    .stop_marker
-                    .as_ref()
-                    .is_some_and(|marker| output.contains(marker))
-                    && stop_deadline.is_none()
-                {
-                    append_frame(&mut frames, &parser, started);
-                    stop_deadline = Some(Instant::now() + options.stop_marker_grace);
-                }
-            }
-            Err(mpsc::RecvTimeoutError::Disconnected) => reader_closed = true,
-            Err(mpsc::RecvTimeoutError::Timeout) => {}
-        }
-
-        while let Some(interaction) = options.interactions.get(interaction_index) {
-            if interaction
-                .after
-                .as_ref()
-                .is_some_and(|marker| !output.contains(marker))
-            {
-                break;
-            }
-            if interaction_regexes[interaction_index]
-                .as_ref()
-                .is_some_and(|pattern| !pattern.is_match(&output))
-            {
-                break;
-            }
-            if interaction.idle_duration > Duration::ZERO
-                && last_output.map_or_else(|| started.elapsed(), |instant| instant.elapsed())
-                    < interaction.idle_duration
-            {
-                break;
-            }
-            append_frame(&mut frames, &parser, started);
-            apply_interaction(
-                interaction,
-                writer.as_mut(),
-                pty.master.as_ref(),
-                &mut parser,
-                &mut recording,
-                started,
-            )?;
-            interaction_index += 1;
-        }
-
-        if dirty && last_output.is_some_and(|instant| instant.elapsed() >= options.settle_duration)
-        {
-            append_frame(&mut frames, &parser, started);
-            dirty = false;
-        }
-        if status.is_none() {
-            status = child
-                .try_wait()
-                .map_err(|error| TerminalCaptureError::new(error.to_string(), None))?;
-        }
-        if status.is_some() && reader_closed {
-            break;
-        }
-        if status.is_none()
-            && (started.elapsed() >= options.timeout
-                || stop_deadline.is_some_and(|deadline| Instant::now() >= deadline))
-        {
-            timed_out = started.elapsed() >= options.timeout;
-            let _ = child.kill();
-            status = Some(
-                child
-                    .wait()
-                    .map_err(|error| TerminalCaptureError::new(error.to_string(), None))?,
-            );
-        }
-    }
-
-    parser.process(&pending_render);
-    append_frame(&mut frames, &parser, started);
-    let capture = capture_result(
-        status.expect("child status is available after capture loop"),
-        output,
-        frames,
-        interaction_index,
-        recording,
-    );
-    if let Some(directory) = &options.artifact_directory {
-        write_terminal_artifacts(
-            directory,
-            &capture.frames,
-            &capture.transcript,
-            &capture.asciicast,
-        )?;
-    }
-    if timed_out {
-        return Err(TerminalCaptureError::new(
-            format!(
-                "terminal command timed out after {} ms",
-                options.timeout.as_millis()
-            ),
-            Some(capture),
-        ));
-    }
-    Ok(capture)
+    TerminalSession::open(options)?.finish()
 }
 
 pub async fn capture_terminal_async(

@@ -1,8 +1,8 @@
 #![cfg(unix)]
 
 use command_stream::terminal::{
-    capture_terminal, read_asciicast, TerminalCaptureOptions, TerminalInteraction, TerminalKey,
-    TerminalResize,
+    capture_terminal, open_terminal, read_asciicast, TerminalCaptureOptions, TerminalInteraction,
+    TerminalKey, TerminalPattern, TerminalResize,
 };
 use std::fs;
 use std::time::Duration;
@@ -15,7 +15,7 @@ fn shell_options(script: &str) -> TerminalCaptureOptions {
         cols: 24,
         rows: 6,
         settle_duration: Duration::from_millis(10),
-        timeout: Duration::from_secs(3),
+        timeout: Some(Duration::from_secs(3)),
         ..TerminalCaptureOptions::default()
     }
 }
@@ -136,7 +136,7 @@ fn retains_lines_after_they_scroll_off_the_visible_terminal() {
 fn writes_replay_artifacts_and_preserves_partial_capture_on_timeout() {
     let artifacts = tempdir().expect("artifact directory");
     let mut options = shell_options("printf 'waiting for input'; sleep 5");
-    options.timeout = Duration::from_millis(100);
+    options.timeout = Some(Duration::from_millis(100));
     options.artifact_directory = Some(artifacts.path().into());
 
     let error = capture_terminal(options).expect_err("capture should time out");
@@ -157,4 +157,103 @@ fn writes_replay_artifacts_and_preserves_partial_capture_on_timeout() {
     let cast = read_asciicast(artifacts.path().join("session.cast")).expect("asciicast");
     assert_eq!(cast.header.version, 2);
     assert!(cast.events.iter().any(|event| event.code == "o"));
+}
+
+#[test]
+fn keeps_a_session_open_for_input_that_arrives_later() {
+    let script = r#"
+printf 'auth-url: https://example.test/device?code=42\n'
+IFS= read -r code
+printf 'logged-in:%s\n' "$code"
+"#;
+    let mut session = open_terminal(shell_options(script)).expect("session opens");
+    session
+        .wait_for(
+            &TerminalPattern::regex(r"auth-url: (\S+)").expect("valid regex"),
+            Duration::from_millis(30),
+            None,
+        )
+        .expect("auth url arrives");
+    assert!(session
+        .output()
+        .contains("https://example.test/device?code=42"));
+
+    // The code only becomes available much later; nothing may kill the child.
+    std::thread::sleep(Duration::from_millis(400));
+    assert!(session.running());
+
+    session
+        .send(&TerminalInteraction {
+            text: Some("42".into()),
+            key: Some(TerminalKey::Enter),
+            ..TerminalInteraction::default()
+        })
+        .expect("code is typed");
+    session
+        .wait_for(
+            &TerminalPattern::text("logged-in:42"),
+            Duration::ZERO,
+            Some(Duration::from_secs(5)),
+        )
+        .expect("login completes");
+
+    let capture = session.close().expect("session closes");
+    assert_eq!(capture.exit_code, 0);
+    assert!(capture.transcript.contains("logged-in:42"));
+    assert!(capture
+        .asciicast
+        .events
+        .iter()
+        .any(|event| event.code == "i"));
+}
+
+#[test]
+fn reports_wait_for_timeouts_and_sends_after_exit() {
+    let mut session = open_terminal(shell_options("printf 'bye\\n'")).expect("session opens");
+    let failure = session
+        .wait_for(
+            &TerminalPattern::text("never-printed"),
+            Duration::ZERO,
+            Some(Duration::from_millis(100)),
+        )
+        .expect_err("wait_for gives up");
+    assert!(
+        failure.to_string().contains("timed out")
+            || failure.to_string().contains("terminal exited"),
+        "unexpected error: {failure}"
+    );
+
+    let capture = session.close().expect("session closes");
+    assert!(capture.transcript.contains("bye"));
+}
+
+#[test]
+fn closes_a_child_that_never_exits_on_its_own() {
+    let mut session = open_terminal(shell_options(
+        "printf 'waiting for input\\n'; while true; do sleep 0.05; done",
+    ))
+    .expect("session opens");
+    session
+        .wait_for(
+            &TerminalPattern::text("waiting for input"),
+            Duration::ZERO,
+            Some(Duration::from_secs(5)),
+        )
+        .expect("prompt arrives");
+    let capture = session.close().expect("session closes");
+    assert!(capture.transcript.contains("waiting for input"));
+}
+
+#[test]
+fn requires_a_file_for_both_entry_points() {
+    let options = TerminalCaptureOptions::default();
+    assert!(capture_terminal(options.clone())
+        .expect_err("capture rejects an empty file")
+        .to_string()
+        .contains("capture_terminal requires a file"));
+    assert!(open_terminal(options)
+        .err()
+        .expect("session rejects an empty file")
+        .to_string()
+        .contains("open_terminal requires a file"));
 }
