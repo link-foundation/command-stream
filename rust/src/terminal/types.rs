@@ -65,7 +65,9 @@ pub struct TerminalCaptureOptions {
     pub interactions: Vec<TerminalInteraction>,
     pub stop_marker: Option<String>,
     pub stop_marker_grace: Duration,
-    pub timeout: Duration,
+    /// Deadline for the whole run. `None` keeps the child alive indefinitely,
+    /// which is the default for [`crate::terminal::open_terminal`] sessions.
+    pub timeout: Option<Duration>,
     pub artifact_directory: Option<PathBuf>,
 }
 
@@ -82,7 +84,7 @@ impl Default for TerminalCaptureOptions {
             interactions: Vec::new(),
             stop_marker: None,
             stop_marker_grace: Duration::from_millis(250),
-            timeout: Duration::from_secs(30),
+            timeout: Some(Duration::from_secs(30)),
             artifact_directory: None,
         }
     }

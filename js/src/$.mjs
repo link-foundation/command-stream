@@ -20,6 +20,7 @@ import {
 } from './$.ansi.mjs';
 import {
   captureTerminal,
+  openTerminal,
   readAsciicast,
   unrollTerminalFrames,
 } from './terminal-capture.mjs';
@@ -464,6 +465,7 @@ export {
   processOutput,
   forceCleanupAll,
   captureTerminal,
+  openTerminal,
   readAsciicast,
   unrollTerminalFrames,
 };

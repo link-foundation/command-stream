@@ -123,6 +123,56 @@ artifact directory receives `transcript.txt`, `frames.json`, `session.cast`,
 partial capture and those diagnostic files. Use `capture_terminal_async` from
 an async application.
 
+### Interactive sessions
+
+`capture_terminal` is batch-only: every interaction is known up front and
+`timeout` (30 s by default) kills the child. When the input arrives later and
+from elsewhere — an authorization code a human pastes back minutes later, a
+chat-ops bridge, a test that interleaves assertions with input — use
+`open_terminal`, which keeps the same PTY open until you close it:
+
+```rust,no_run
+use command_stream::terminal::{
+    open_terminal, TerminalCaptureOptions, TerminalInteraction, TerminalKey, TerminalPattern,
+};
+use std::time::Duration;
+
+let mut session = open_terminal(TerminalCaptureOptions {
+    file: "my-cli".into(),
+    args: vec!["login".into()],
+    ..TerminalCaptureOptions::default()
+})?;
+
+session.wait_for(
+    &TerminalPattern::regex(r"https://\S+")?,
+    Duration::from_millis(50),
+    None,
+)?;
+let url = session.transcript();
+
+// ... arbitrary time passes; nothing terminates the child ...
+
+session.send(&TerminalInteraction {
+    text: Some("ABCD-1234".into()),
+    key: Some(TerminalKey::Enter),
+    ..TerminalInteraction::default()
+})?;
+session.wait_for(&TerminalPattern::text("Logged in"), Duration::ZERO, None)?;
+
+let capture = session.close()?;
+# let _ = (url, capture);
+# Ok::<(), command_stream::terminal::TerminalCaptureError>(())
+```
+
+`open_terminal` accepts every `capture_terminal` option and forces
+`timeout: None`, so a session runs until the child exits or `close()` is called.
+`wait_for` reuses the same readiness semantics as `interactions`, including the
+idle wait, and fails when the child exits first or its own timeout elapses.
+`send` uses the `TerminalInteraction` vocabulary, `close` stops the child and
+returns the usual capture (writing `artifact_directory` artifacts), and `finish`
+waits for a child that exits on its own. `capture_terminal` is implemented on
+top of the same session, so the two paths cannot drift.
+
 Interactions can wait for literal output with `after`, regex output with
 `after_regex`, and output quiescence with `idle_duration`. Named
 `TerminalKey` variants cover arrows, Enter, Tab, Escape, Backspace, Ctrl-C, and

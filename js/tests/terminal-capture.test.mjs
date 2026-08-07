@@ -6,10 +6,12 @@ import { fileURLToPath } from 'node:url';
 
 import {
   captureTerminal,
+  openTerminal,
   readAsciicast,
   unrollTerminalFrames,
 } from '../src/$.mjs';
 import { stopTerminal } from '../src/terminal-pty-host-platform.mjs';
+import { isWindows } from './test-helper.mjs';
 import { spawnTerminalPty } from '../src/terminal-pty.mjs';
 
 const directory = dirname(fileURLToPath(import.meta.url));
@@ -111,7 +113,9 @@ describe('PTY terminal capture', () => {
         .slice(0, 6)
         .toString()
     ).toBe('GIF89a');
-  });
+    // Rendering every artifact (including the GIF) runs close to the default
+    // 10 s budget on slow Windows runners.
+  }, 60_000);
 
   test('preserves styled cells, exact grid geometry, and real timing', async () => {
     const artifactDirectory = await mkdtemp(
@@ -302,5 +306,118 @@ describe('PTY terminal capture', () => {
     expect(
       (await readFile(join(artifactDirectory, 'recording.svg'))).length
     ).toBeGreaterThan(0);
+  });
+});
+
+describe('PTY terminal sessions', () => {
+  test('keeps the child alive for input that arrives much later', async () => {
+    const artifactDirectory = await mkdtemp(
+      join(tmpdir(), 'command-stream-tui-session-')
+    );
+    temporaryDirectories.push(artifactDirectory);
+
+    const session = await openTerminal({
+      file: process.execPath,
+      args: [join(directory, 'fixtures/tui-session-fixture.mjs')],
+      cols: 60,
+      rows: 6,
+      settleMilliseconds: 10,
+      artifactDirectory,
+    });
+
+    await session.waitFor(/auth-url: (\S+)/, { idleMilliseconds: 30 });
+    const url = session.transcript.match(/auth-url: (\S+)/)?.[1];
+    expect(url).toBe('https://example.test/device?code=42');
+
+    // The caller leaves and comes back: nothing may terminate the child.
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect(session.running).toBe(true);
+
+    await session.send({ text: '42', key: 'ENTER' });
+    await session.waitFor('logged-in:42');
+
+    // The fixture exits on its own; wait for that instead of racing close()
+    // against it, because a kill during exit reports a signal exit code.
+    await session.exited;
+    const capture = await session.close();
+    expect(capture.exitCode).toBe(0);
+    expect(capture.transcript).toContain('logged-in:42');
+    expect(capture.frames.length).toBeGreaterThan(0);
+    expect(capture.asciicast.events.some(({ code }) => code === 'i')).toBe(
+      true
+    );
+    expect(
+      await readFile(join(artifactDirectory, 'transcript.txt'), 'utf8')
+    ).toContain('logged-in:42');
+    expect(session.running).toBe(false);
+  });
+
+  test('waitFor requires output quiescence and honours its own timeout', async () => {
+    const session = await openTerminal({
+      file: process.execPath,
+      args: [join(directory, 'fixtures/tui-session-fixture.mjs')],
+      cols: 60,
+      rows: 6,
+      settleMilliseconds: 10,
+    });
+
+    const startedAt = Date.now();
+    await session.waitFor('auth-url', { idleMilliseconds: 120 });
+    expect(Date.now() - startedAt).toBeGreaterThanOrEqual(120);
+    expect(session.output).toContain('waiting for code');
+
+    await expect(
+      session.waitFor('never-printed', { timeoutMilliseconds: 100 })
+    ).rejects.toThrow('Terminal waitFor timed out after 100 ms');
+
+    await session.close();
+  });
+
+  test('rejects pending waits and later sends once the child exits', async () => {
+    const session = await openTerminal({
+      file: process.execPath,
+      args: ['-e', "process.stdout.write('bye'); process.exit(3)"],
+      cols: 40,
+      rows: 4,
+    });
+
+    // Windows reports the teardown through the PTY host rather than a child
+    // exit status, and ConPTY drops the output of a process this short-lived,
+    // so only the rejection itself is portable.
+    await expect(session.waitFor('never-printed')).rejects.toThrow(
+      isWindows ? /exited/ : 'Terminal exited with code 3'
+    );
+    await expect(session.send({ text: 'late' })).rejects.toThrow(
+      'already exited'
+    );
+
+    const capture = await session.close();
+    if (!isWindows) {
+      expect(capture.exitCode).toBe(3);
+      expect(capture.transcript).toContain('bye');
+    }
+  });
+
+  test('dispose stops a child that never exits on its own', async () => {
+    const session = await openTerminal({
+      file: process.execPath,
+      args: [join(directory, 'fixtures/tui-hang-fixture.mjs')],
+      cols: 40,
+      rows: 4,
+    });
+
+    await session.waitFor('waiting for input');
+    const capture = await session.dispose();
+    expect(session.running).toBe(false);
+    expect(capture.transcript).toContain('waiting for input');
+  });
+
+  test('requires a file just like the batch capture', async () => {
+    await expect(openTerminal({})).rejects.toThrow(
+      'openTerminal requires a file'
+    );
+    await expect(captureTerminal({})).rejects.toThrow(
+      'captureTerminal requires a file'
+    );
   });
 });
