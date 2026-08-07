@@ -11,6 +11,7 @@ import {
   unrollTerminalFrames,
 } from '../src/$.mjs';
 import { stopTerminal } from '../src/terminal-pty-host-platform.mjs';
+import { isWindows } from './test-helper.mjs';
 import { spawnTerminalPty } from '../src/terminal-pty.mjs';
 
 const directory = dirname(fileURLToPath(import.meta.url));
@@ -333,6 +334,9 @@ describe('PTY terminal sessions', () => {
     await session.send({ text: '42', key: 'ENTER' });
     await session.waitFor('logged-in:42');
 
+    // The fixture exits on its own; wait for that instead of racing close()
+    // against it, because a kill during exit reports a signal exit code.
+    await session.exited;
     const capture = await session.close();
     expect(capture.exitCode).toBe(0);
     expect(capture.transcript).toContain('logged-in:42');
@@ -375,15 +379,19 @@ describe('PTY terminal sessions', () => {
       rows: 4,
     });
 
+    // Windows reports the teardown through the PTY host rather than a child
+    // exit status, so only the rejection itself is portable.
     await expect(session.waitFor('never-printed')).rejects.toThrow(
-      'Terminal exited with code 3'
+      isWindows ? /exited/ : 'Terminal exited with code 3'
     );
     await expect(session.send({ text: 'late' })).rejects.toThrow(
       'already exited'
     );
 
     const capture = await session.close();
-    expect(capture.exitCode).toBe(3);
+    if (!isWindows) {
+      expect(capture.exitCode).toBe(3);
+    }
     expect(capture.transcript).toContain('bye');
   });
 
