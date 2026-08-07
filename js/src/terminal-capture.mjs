@@ -251,16 +251,19 @@ const createCaptureRecorder = (asciicast, onTrace) => {
   };
 };
 
-const interactionAfter = (interaction, output) => {
-  if (interaction.after === undefined) {
+const matchesOutput = (pattern, output) => {
+  if (pattern === undefined) {
     return true;
   }
-  if (interaction.after instanceof RegExp) {
-    interaction.after.lastIndex = 0;
-    return interaction.after.test(output);
+  if (pattern instanceof RegExp) {
+    pattern.lastIndex = 0;
+    return pattern.test(output);
   }
-  return output.includes(interaction.after);
+  return output.includes(pattern);
 };
+
+const interactionAfter = (interaction, output) =>
+  matchesOutput(interaction.after, output);
 
 const applyInteraction = ({ interaction, process, terminal, record }) => {
   if (interaction.text !== undefined) {
@@ -401,19 +404,301 @@ const persistArtifacts = async ({
   }
 };
 
-const resolveTerminalRows = ({ cols, rows, aspectRatio }) => {
+const resolveTerminalRows = ({ cols, rows, aspectRatio, label }) => {
   if (!(aspectRatio > 0)) {
-    throw new TypeError(
-      'captureTerminal aspectRatio must be greater than zero'
-    );
+    throw new TypeError(`${label} aspectRatio must be greater than zero`);
   }
   return rows ?? Math.max(1, Math.round(cols / (2 * aspectRatio)));
 };
 
+const hasTimeout = (timeoutMilliseconds) =>
+  typeof timeoutMilliseconds === 'number' &&
+  timeoutMilliseconds > 0 &&
+  Number.isFinite(timeoutMilliseconds);
+
+const createWaiterRegistry = (output) => {
+  const waiters = new Set();
+  let finished = false;
+  const release = (waiter) => {
+    waiters.delete(waiter);
+    clearTimeout(waiter.idleTimer);
+    clearTimeout(waiter.deadline);
+  };
+  const check = () => {
+    for (const waiter of [...waiters]) {
+      if (!matchesOutput(waiter.pattern, output())) {
+        continue;
+      }
+      clearTimeout(waiter.idleTimer);
+      if (waiter.idleMilliseconds > 0 && !finished) {
+        waiter.idleTimer = setTimeout(() => {
+          release(waiter);
+          waiter.resolve();
+        }, waiter.idleMilliseconds);
+        continue;
+      }
+      release(waiter);
+      waiter.resolve();
+    }
+  };
+  return {
+    check,
+    add: ({ pattern, idleMilliseconds = 0, timeoutMilliseconds }) =>
+      new Promise((resolve, reject) => {
+        const waiter = { pattern, idleMilliseconds, resolve, reject };
+        if (hasTimeout(timeoutMilliseconds)) {
+          waiter.deadline = setTimeout(() => {
+            release(waiter);
+            reject(
+              new Error(
+                `Terminal waitFor timed out after ${timeoutMilliseconds} ms`
+              )
+            );
+          }, timeoutMilliseconds);
+        }
+        waiters.add(waiter);
+        check();
+      }),
+    finish: (reason) => {
+      finished = true;
+      check();
+      for (const waiter of [...waiters]) {
+        release(waiter);
+        waiter.reject(reason());
+      }
+    },
+  };
+};
+
+const watchTerminal = ({
+  child,
+  state,
+  outputWriter,
+  settle,
+  appendFrame,
+  waiters,
+  interactionCoordinator,
+  record,
+  trace,
+  stopMarker,
+  stopMarkerGraceMilliseconds,
+  timeoutMilliseconds,
+}) => {
+  let stopTimer, timeoutTimer;
+  let stopMarkerSeen = false;
+  return new Promise((resolve) => {
+    if (hasTimeout(timeoutMilliseconds)) {
+      timeoutTimer = setTimeout(() => {
+        state.error = new Error(
+          `Terminal command timed out after ${timeoutMilliseconds} ms`
+        );
+        trace('timeout', { timeoutMilliseconds });
+        child.kill('SIGTERM');
+      }, timeoutMilliseconds);
+    }
+
+    child.onData((data) => {
+      interactionCoordinator.outputArrived();
+      trace('output', { data });
+      state.output += data;
+      record('o', data);
+      outputWriter.write(data);
+      outputWriter.after(settle);
+      interactionCoordinator.advance();
+      waiters.check();
+
+      if (stopMarker && state.output.includes(stopMarker) && !stopMarkerSeen) {
+        stopMarkerSeen = true;
+        outputWriter.after(appendFrame);
+        stopTimer = setTimeout(
+          () => child.kill('SIGTERM'),
+          stopMarkerGraceMilliseconds
+        );
+      }
+    });
+    child.onExit(({ exitCode, signal, error }) => {
+      trace('exit', { exitCode, signal });
+      clearTimeout(timeoutTimer);
+      clearTimeout(stopTimer);
+      interactionCoordinator.close();
+      state.error ??= error;
+      state.exitStatus = { exitCode, signal };
+      waiters.finish(
+        () =>
+          state.error ??
+          new Error(
+            `Terminal exited with code ${exitCode} before the expected output arrived`
+          )
+      );
+      resolve(state.exitStatus);
+    });
+  });
+};
+
+const createTerminalSessionApi = ({
+  child,
+  terminal,
+  state,
+  frames,
+  asciicast,
+  outputWriter,
+  waiters,
+  interactionCoordinator,
+  record,
+  elapsed,
+  appendFrame,
+  clearSettle,
+  markDisposed,
+  isDisposed,
+  completion,
+  artifactDirectory,
+  artifactOptions,
+}) => {
+  let finalized;
+
+  const drain = async () => {
+    outputWriter.flush();
+    await outputWriter.settled();
+  };
+
+  const finalize = () => {
+    finalized ??= (async () => {
+      const status = await completion;
+      try {
+        await drain();
+        clearSettle();
+        appendFrame();
+      } finally {
+        markDisposed();
+        terminal.dispose();
+      }
+
+      const transcript = unrollTerminalFrames(frames);
+      await persistArtifacts({
+        artifactDirectory,
+        frames,
+        transcript,
+        asciicast,
+        artifactOptions,
+      });
+
+      return captureResult({
+        status,
+        output: state.output,
+        transcript,
+        frames,
+        interactionCount: interactionCoordinator.count(),
+        asciicast,
+      });
+    })();
+    return finalized;
+  };
+
+  const finished = async () => {
+    const capture = await finalize();
+    if (state.error) {
+      state.error.capture = capture;
+      throw state.error;
+    }
+    return capture;
+  };
+
+  const currentTranscript = () => {
+    if (isDisposed()) {
+      return unrollTerminalFrames(frames);
+    }
+    const frame = terminalFrame(terminal, elapsed);
+    const known = frames.at(-1);
+    return unrollTerminalFrames(
+      known && sameFrame(known, frame) ? frames : [...frames, frame]
+    );
+  };
+
+  const waitFor = async (pattern, options = {}) => {
+    await waiters.add({ pattern, ...options });
+    await drain();
+    return currentTranscript();
+  };
+
+  const send = async (input) => {
+    for (const interaction of Array.isArray(input) ? input : [input]) {
+      if (interaction.after !== undefined || interaction.idleMilliseconds) {
+        await waitFor(interaction.after, {
+          idleMilliseconds: interaction.idleMilliseconds,
+          timeoutMilliseconds: interaction.timeoutMilliseconds,
+        });
+      }
+      if (state.exitStatus) {
+        throw new Error('Terminal session has already exited');
+      }
+      await outputWriter.after(() => {
+        appendFrame();
+        applyInteraction({ interaction, process: child, terminal, record });
+      });
+    }
+    return currentTranscript();
+  };
+
+  const stop = async ({
+    signal = 'SIGTERM',
+    timeoutMilliseconds: killTimeout = 5_000,
+  } = {}) => {
+    if (!state.exitStatus) {
+      child.kill(signal);
+      const stopped = await Promise.race([
+        completion.then(() => true),
+        new Promise((resolve) => setTimeout(() => resolve(false), killTimeout)),
+      ]);
+      if (!stopped) {
+        child.kill('SIGKILL');
+      }
+    }
+    return finalize();
+  };
+
+  return {
+    get output() {
+      return state.output;
+    },
+    get transcript() {
+      return currentTranscript();
+    },
+    get frames() {
+      return frames;
+    },
+    get asciicast() {
+      return asciicast;
+    },
+    get exitStatus() {
+      return state.exitStatus;
+    },
+    get running() {
+      return state.exitStatus === undefined;
+    },
+    process: child,
+    terminal,
+    exited: completion,
+    waitFor,
+    send,
+    finished,
+    close: stop,
+    dispose: async (options) => {
+      try {
+        return await stop(options);
+      } catch {
+        return undefined;
+      }
+    },
+  };
+};
+
 /**
- * Run a command inside a real pseudoterminal and retain its settled TUI states.
+ * Open a pseudoterminal session that stays alive until the caller closes it.
+ *
+ * Unlike `captureTerminal`, input may be sent at any later point through
+ * `session.send()`, and readiness can be awaited with `session.waitFor()`.
  */
-export const captureTerminal = async ({
+export const openTerminal = async ({
   file,
   args = [],
   cwd = process.cwd(),
@@ -425,15 +710,16 @@ export const captureTerminal = async ({
   interactions = [],
   stopMarker,
   stopMarkerGraceMilliseconds = 250,
-  timeoutMilliseconds = 30_000,
+  timeoutMilliseconds,
   artifactDirectory,
   artifactOptions,
   onTrace,
+  label = 'openTerminal',
 } = {}) => {
   if (!file) {
-    throw new TypeError('captureTerminal requires a file');
+    throw new TypeError(`${label} requires a file`);
   }
-  const terminalRows = resolveTerminalRows({ cols, rows, aspectRatio });
+  const terminalRows = resolveTerminalRows({ cols, rows, aspectRatio, label });
 
   const { child, environment, terminal } = await startTerminal({
     file,
@@ -455,11 +741,13 @@ export const captureTerminal = async ({
     trace: traceCapture,
   } = createCaptureRecorder(asciicast, onTrace);
   const frames = [];
-  let output = '';
-  let settleTimer, stopTimer;
-  let stopMarkerSeen = false;
-  let captureError;
+  const state = { output: '', error: undefined, exitStatus: undefined };
+  let settleTimer;
+  let disposed = false;
   const appendFrame = () => {
+    if (disposed) {
+      return;
+    }
     const frame = terminalFrame(terminal, elapsed);
     if (!frames.at(-1) || !sameFrame(frames.at(-1), frame)) {
       frames.push(frame);
@@ -470,9 +758,10 @@ export const captureTerminal = async ({
     settleTimer = setTimeout(appendFrame, settleMilliseconds);
   };
   const outputWriter = createTerminalOutputWriter(terminal, appendFrame);
+  const waiters = createWaiterRegistry(() => state.output);
   const interactionCoordinator = createInteractionCoordinator({
     interactions,
-    output: () => output,
+    output: () => state.output,
     outputWriter,
     appendFrame,
     trace: traceCapture,
@@ -481,76 +770,54 @@ export const captureTerminal = async ({
     record,
   });
 
-  const completion = new Promise((resolve) => {
-    const timeout = setTimeout(() => {
-      captureError = new Error(
-        `Terminal command timed out after ${timeoutMilliseconds} ms`
-      );
-      traceCapture('timeout', { timeoutMilliseconds });
-      child.kill('SIGTERM');
-    }, timeoutMilliseconds);
-
-    child.onData((data) => {
-      interactionCoordinator.outputArrived();
-      traceCapture('output', { data });
-      output += data;
-      record('o', data);
-      outputWriter.write(data);
-      outputWriter.after(settle);
-      interactionCoordinator.advance();
-
-      if (stopMarker && output.includes(stopMarker) && !stopMarkerSeen) {
-        stopMarkerSeen = true;
-        outputWriter.after(appendFrame);
-        stopTimer = setTimeout(
-          () => child.kill('SIGTERM'),
-          stopMarkerGraceMilliseconds
-        );
-      }
-    });
-    child.onExit(({ exitCode, signal, error }) => {
-      traceCapture('exit', { exitCode, signal });
-      clearTimeout(timeout);
-      clearTimeout(stopTimer);
-      interactionCoordinator.close();
-      captureError ??= error;
-      resolve({ exitCode, signal });
-    });
+  const completion = watchTerminal({
+    child,
+    state,
+    outputWriter,
+    settle,
+    appendFrame,
+    waiters,
+    interactionCoordinator,
+    record,
+    trace: traceCapture,
+    stopMarker,
+    stopMarkerGraceMilliseconds,
+    timeoutMilliseconds,
   });
 
-  let status;
-  try {
-    status = await completion;
-    outputWriter.flush();
-    await outputWriter.settled();
-    clearTimeout(settleTimer);
-    appendFrame();
-  } finally {
-    terminal.dispose();
-  }
-
-  const transcript = unrollTerminalFrames(frames);
-  await persistArtifacts({
-    artifactDirectory,
+  return createTerminalSessionApi({
+    child,
+    terminal,
+    state,
     frames,
-    transcript,
     asciicast,
+    outputWriter,
+    waiters,
+    interactionCoordinator,
+    record,
+    elapsed,
+    appendFrame,
+    clearSettle: () => clearTimeout(settleTimer),
+    markDisposed: () => {
+      disposed = true;
+    },
+    isDisposed: () => disposed,
+    completion,
+    artifactDirectory,
     artifactOptions,
   });
+};
 
-  const capture = captureResult({
-    status,
-    output,
-    transcript,
-    frames,
-    interactionCount: interactionCoordinator.count(),
-    asciicast,
+/**
+ * Run a command inside a real pseudoterminal and retain its settled TUI states.
+ */
+export const captureTerminal = async (options = {}) => {
+  const session = await openTerminal({
+    ...options,
+    timeoutMilliseconds: options.timeoutMilliseconds ?? 30_000,
+    label: 'captureTerminal',
   });
-  if (captureError) {
-    captureError.capture = capture;
-    throw captureError;
-  }
-  return capture;
+  return session.finished();
 };
 
 export { readAsciicast, unrollTerminalFrames };

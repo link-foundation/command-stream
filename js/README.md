@@ -458,6 +458,62 @@ the idle wait. The complete, runnable
 [`tui-e2e.mjs`](examples/tui-e2e.mjs) example navigates a raw-mode menu and
 asserts on its captured output.
 
+#### Interactive sessions
+
+`captureTerminal()` is a batch call: every interaction is known up front and the
+child is killed after `timeoutMilliseconds` (30 s by default). When the input
+arrives later and from elsewhere — an authorization code a human pastes back
+minutes later, a chat-ops bridge, a test that interleaves assertions with input
+— use `openTerminal()`, which keeps the same PTY open until you close it:
+
+```javascript
+import { openTerminal } from 'command-stream';
+
+const session = await openTerminal({
+  file: 'my-cli',
+  args: ['login'],
+  cols: 80,
+});
+
+// Same readiness matcher as interactions, including idleMilliseconds.
+await session.waitFor(/https:\/\/\S+/, { idleMilliseconds: 50 });
+const url = session.transcript.match(/https:\/\/\S+/)[0];
+
+// ... arbitrary time passes; nothing terminates the child ...
+
+await session.send({ text: code, key: 'ENTER' });
+await session.waitFor('Logged in');
+
+const capture = await session.close(); // frames/transcript/asciicast as usual
+```
+
+`openTerminal()` accepts every `captureTerminal()` option, including
+`interactions` for the parts that _are_ known up front, but its
+`timeoutMilliseconds` has no default: a session runs until the child exits or
+you close it, and passing an explicit value opts back into a deadline.
+`captureTerminal()` is implemented on top of `openTerminal()`, so the two paths
+cannot drift.
+
+The session exposes:
+
+- `waitFor(pattern, { idleMilliseconds, timeoutMilliseconds })` — resolves with
+  the current transcript once `pattern` (string or RegExp) has been seen and,
+  with `idleMilliseconds`, output has been quiet for that long. It rejects if
+  the wait times out or the child exits first.
+- `send(interaction | interaction[])` — the `text`, `key`, and `resize`
+  vocabulary of `interactions`; an entry may also carry `after` /
+  `idleMilliseconds` to wait before it is applied.
+- `output`, `transcript`, `frames`, `asciicast`, `running`, `exitStatus`,
+  and `exited` (a promise for the child's exit) for live inspection.
+- `close({ signal, timeoutMilliseconds })` — signals the child (escalating to
+  `SIGKILL`), then returns the same result object `captureTerminal()` resolves
+  to and writes `artifactDirectory` artifacts. `dispose()` is the
+  never-throwing variant for cleanup paths, and `finished()` waits for a child
+  that exits on its own.
+
+The runnable [`tui-session.mjs`](examples/tui-session.mjs) example walks through
+a deferred-input login.
+
 The artifact directory contains an unrolled `transcript.txt`, machine-readable
 `frames.json`, an asciicast v2 `session.cast`, a final `snapshot.svg`, a
 self-contained animated `recording.svg`, and `recording.gif`. Frames retain
