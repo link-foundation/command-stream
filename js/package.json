@@ -1,6 +1,6 @@
 {
   "name": "command-stream",
-  "version": "0.18.0",
+  "version": "0.18.2",
   "description": "Modern $ shell utility library with streaming, async iteration, and EventEmitter support, optimized for Bun runtime",
   "type": "module",
   "main": "./src/$.cjs",
@@ -11,6 +11,7 @@
       "require": "./src/$.cjs",
       "default": "./src/$.mjs"
     },
+    "./process-runner": "./src/process-runner.mjs",
     "./package.json": "./package.json"
   },
   "repository": {

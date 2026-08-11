@@ -3,7 +3,12 @@
 
 import cp from 'child_process';
 import { trace } from './$.trace.mjs';
-import { findAvailableShell, resolveSpawnCwd } from './$.shell.mjs';
+import {
+  buildCommandArgv,
+  isShellArgvSpec,
+  isShellCommandSpec,
+  resolveSpawnCwd,
+} from './$.shell.mjs';
 import { StreamUtils, safeWrite, asBuffer } from './$.stream-utils.mjs';
 import { pumpReadable } from './$.quote.mjs';
 import { createResult } from './$.result.mjs';
@@ -115,7 +120,7 @@ function spawnWithBun(argv, config) {
  * @returns {object} Child process
  */
 function spawnWithNode(argv, config) {
-  const { cwd, env, isInteractive } = config;
+  const { cwd, env, isInteractive, shell } = config;
 
   trace(
     'ProcessRunner',
@@ -124,6 +129,7 @@ function spawnWithNode(argv, config) {
         command: argv[0],
         args: argv.slice(1),
         isInteractive,
+        shell,
         cwd,
         platform: process.platform,
       })}`
@@ -133,6 +139,7 @@ function spawnWithNode(argv, config) {
     return cp.spawn(argv[0], argv.slice(1), {
       cwd,
       env,
+      shell,
       stdio: 'inherit',
     });
   }
@@ -140,6 +147,7 @@ function spawnWithNode(argv, config) {
   const child = cp.spawn(argv[0], argv.slice(1), {
     cwd,
     env,
+    shell,
     stdio: ['pipe', 'pipe', 'pipe'],
     detached: process.platform !== 'win32',
   });
@@ -166,12 +174,13 @@ function spawnWithNode(argv, config) {
  * @returns {object} Child process
  */
 function spawnChild(argv, config) {
-  const { stdin } = config;
+  const { stdin, shell } = config;
   // Make sure we never try to spawn from a deleted/inaccessible working
   // directory, which would make the OS-level spawn fail (issue #44).
   config = { ...config, cwd: resolveSpawnCwd(config.cwd) };
   const needsExplicitPipe = stdin !== 'inherit' && stdin !== 'ignore';
   const preferNodeForInput = isBun && needsExplicitPipe;
+  const preferNodeForShellArgv = isBun && shell;
 
   trace(
     'ProcessRunner',
@@ -179,13 +188,14 @@ function spawnChild(argv, config) {
       `About to spawn process | ${JSON.stringify({
         needsExplicitPipe,
         preferNodeForInput,
+        preferNodeForShellArgv,
         runtime: isBun ? 'Bun' : 'Node',
         command: argv[0],
         args: argv.slice(1),
       })}`
   );
 
-  if (preferNodeForInput) {
+  if (preferNodeForInput || preferNodeForShellArgv) {
     return spawnWithNode(argv, config);
   }
   return isBun ? spawnWithBun(argv, config) : spawnWithNode(argv, config);
@@ -558,10 +568,11 @@ function executeSyncBun(argv, options) {
  * @returns {object} Result object
  */
 function executeSyncNode(argv, options) {
-  const { cwd, env, stdin } = options;
+  const { cwd, env, stdin, shell } = options;
   const proc = cp.spawnSync(argv[0], argv.slice(1), {
     cwd,
     env,
+    shell,
     input: getSyncStdinInput(stdin),
     encoding: 'utf8',
     stdio: ['pipe', 'pipe', 'pipe'],
@@ -586,7 +597,9 @@ function executeSyncNode(argv, options) {
 function executeSyncProcess(argv, options) {
   // Guard against a deleted/inaccessible working directory (issue #44).
   options = { ...options, cwd: resolveSpawnCwd(options.cwd) };
-  return isBun ? executeSyncBun(argv, options) : executeSyncNode(argv, options);
+  return isBun && !options.shell
+    ? executeSyncBun(argv, options)
+    : executeSyncNode(argv, options);
 }
 
 /**
@@ -1106,7 +1119,8 @@ export function attachExecutionMethods(ProcessRunner, deps) {
       }
 
       // Handle shell mode special cases
-      if (this.spec.mode === 'shell') {
+      const shellArgv = isShellArgvSpec(this.spec);
+      if (isShellCommandSpec(this.spec)) {
         const shellResult = await handleShellMode(this, deps);
         if (shellResult) {
           return this.finish(shellResult);
@@ -1114,11 +1128,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
       }
 
       // Build command arguments
-      const shell = findAvailableShell();
-      const argv =
-        this.spec.mode === 'shell'
-          ? [shell.cmd, ...shell.args, this.spec.command]
-          : [this.spec.file, ...this.spec.args];
+      const argv = buildCommandArgv(this.spec);
 
       trace(
         'ProcessRunner',
@@ -1126,13 +1136,16 @@ export function attachExecutionMethods(ProcessRunner, deps) {
           `Constructed argv | ${JSON.stringify({
             mode: this.spec.mode,
             argv,
+            shellArgv,
             originalCommand: this.spec.command,
           })}`
       );
 
       // Log command if tracing enabled
       const traceCmd =
-        this.spec.mode === 'shell' ? this.spec.command : argv.join(' ');
+        this.spec.mode === 'shell' && !shellArgv
+          ? this.spec.command
+          : argv.join(' ');
       logShellTrace(globalShellSettings, traceCmd);
 
       // Detect interactive mode
@@ -1157,6 +1170,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
         env,
         stdin,
         isInteractive,
+        shell: shellArgv,
       });
 
       this.finish(result);
@@ -1416,17 +1430,21 @@ export function attachExecutionMethods(ProcessRunner, deps) {
     this._mode = 'sync';
 
     const { cwd, env, stdin } = this.options;
-    const shell = findAvailableShell();
-    const argv =
-      this.spec.mode === 'shell'
-        ? [shell.cmd, ...shell.args, this.spec.command]
-        : [this.spec.file, ...this.spec.args];
+    const shellArgv = isShellArgvSpec(this.spec);
+    const argv = buildCommandArgv(this.spec);
 
     const traceCmd =
-      this.spec.mode === 'shell' ? this.spec.command : argv.join(' ');
+      this.spec.mode === 'shell' && !shellArgv
+        ? this.spec.command
+        : argv.join(' ');
     logShellTrace(globalShellSettings, traceCmd);
 
-    const result = executeSyncProcess(argv, { cwd, env, stdin });
+    const result = executeSyncProcess(argv, {
+      cwd,
+      env,
+      stdin,
+      shell: shellArgv,
+    });
     return processSyncResult(this, result, globalShellSettings);
   };
 
