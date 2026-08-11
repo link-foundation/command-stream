@@ -80,6 +80,30 @@ Parity guarantees with the JavaScript implementation:
   signal) or `stream.kill_with(signal)` (explicit override); dropping the stream
   (e.g. `break`) stops the process too.
 
+`StreamingRunner::new(command)` interprets a completed command string with the
+platform shell. When argument boundaries must be preserved exactly, pass the
+executable and arguments separately with `from_argv`:
+
+```rust,no_run
+use command_stream::StreamingRunner;
+
+#[tokio::main]
+async fn main() -> command_stream::Result<()> {
+    let runner = StreamingRunner::from_argv(
+        "my-program",
+        ["argument with spaces", "literal&metacharacters"],
+    );
+    let result = runner.collect().await?;
+
+    assert!(result.is_success());
+    Ok(())
+}
+```
+
+The exact-argv form bypasses `/bin/sh -c` and `cmd.exe /c`, so it does not
+require shell-specific quoting. It also accepts OS-native executable and
+argument values such as `PathBuf` and `OsString`.
+
 ## Command Line
 
 The crate also builds a `command-stream` binary:

@@ -55,6 +55,7 @@
 //! ```
 
 use std::collections::HashMap;
+use std::ffi::OsString;
 use std::path::PathBuf;
 use std::process::Stdio;
 use std::time::Duration;
@@ -86,7 +87,7 @@ pub enum OutputChunk {
 
 /// A streaming process runner that allows async iteration over output
 pub struct StreamingRunner {
-    command: String,
+    command: StreamingCommand,
     cwd: Option<PathBuf>,
     env: Option<HashMap<String, String>>,
     stdin_content: Option<String>,
@@ -94,11 +95,42 @@ pub struct StreamingRunner {
     exit_pump_grace_ms: u64,
 }
 
+#[derive(Clone)]
+enum StreamingCommand {
+    Shell(String),
+    Argv {
+        program: OsString,
+        args: Vec<OsString>,
+    },
+}
+
 impl StreamingRunner {
-    /// Create a new streaming runner
+    /// Create a streaming runner for a command string interpreted by the
+    /// platform shell.
     pub fn new(command: impl Into<String>) -> Self {
+        Self::with_command(StreamingCommand::Shell(command.into()))
+    }
+
+    /// Create a streaming runner for an executable and exact argument vector.
+    ///
+    /// Unlike [`StreamingRunner::new`], this constructor bypasses the platform
+    /// shell. Argument boundaries are therefore preserved on every platform,
+    /// including Windows, without requiring shell-specific quoting.
+    pub fn from_argv<P, I, S>(program: P, args: I) -> Self
+    where
+        P: Into<OsString>,
+        I: IntoIterator<Item = S>,
+        S: Into<OsString>,
+    {
+        Self::with_command(StreamingCommand::Argv {
+            program: program.into(),
+            args: args.into_iter().map(Into::into).collect(),
+        })
+    }
+
+    fn with_command(command: StreamingCommand) -> Self {
         StreamingRunner {
-            command: command.into(),
+            command,
             cwd: None,
             env: None,
             stdin_content: None,
@@ -279,7 +311,7 @@ impl Drop for OutputStream {
 
 /// Run a streaming process and send output to the channel
 async fn run_streaming_process(
-    command: String,
+    command: StreamingCommand,
     cwd: Option<PathBuf>,
     env: Option<HashMap<String, String>>,
     stdin_content: Option<String>,
@@ -287,14 +319,26 @@ async fn run_streaming_process(
     tx: mpsc::Sender<OutputChunk>,
     mut kill_rx: mpsc::UnboundedReceiver<String>,
 ) -> Result<()> {
-    trace_lazy("StreamingRunner", || format!("Starting: {}", command));
+    trace_lazy("StreamingRunner", || match &command {
+        StreamingCommand::Shell(command) => format!("Starting: {command}"),
+        StreamingCommand::Argv { program, args } => {
+            format!("Starting argv command: {program:?} {args:?}")
+        }
+    });
 
-    let shell = find_available_shell();
-    let mut cmd = Command::new(&shell.cmd);
-    for arg in &shell.args {
-        cmd.arg(arg);
-    }
-    cmd.arg(&command);
+    let mut cmd = match command {
+        StreamingCommand::Shell(command) => {
+            let shell = find_available_shell();
+            let mut cmd = Command::new(&shell.cmd);
+            cmd.args(&shell.args).arg(command);
+            cmd
+        }
+        StreamingCommand::Argv { program, args } => {
+            let mut cmd = Command::new(program);
+            cmd.args(args);
+            cmd
+        }
+    };
 
     // Configure stdio
     if stdin_content.is_some() {

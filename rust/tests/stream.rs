@@ -20,6 +20,29 @@ async fn test_streaming_runner_with_stdin() {
     assert!(result.stdout.contains("test input"));
 }
 
+/// An executable and its arguments must reach the OS as separate values rather
+/// than being reconstructed as a command string for the platform shell.
+#[tokio::test]
+async fn test_streaming_runner_preserves_exact_argv() {
+    let test_executable = std::env::current_exe().unwrap();
+    let shell_metacharacters = "argument with spaces & | < > ^ % ! ' \"";
+    let runner =
+        StreamingRunner::from_argv(test_executable, ["--list", "--skip", shell_metacharacters]);
+
+    let result = runner.collect().await.unwrap();
+
+    assert!(
+        result.is_success(),
+        "exact-argv child failed: {}",
+        result.stderr
+    );
+    assert!(
+        result.stdout.contains("test_streaming_runner_basic"),
+        "exact-argv child did not produce its test list: {}",
+        result.stdout
+    );
+}
+
 #[tokio::test]
 async fn test_output_stream_chunks() {
     let runner = StreamingRunner::new("echo chunk1 && echo chunk2");
