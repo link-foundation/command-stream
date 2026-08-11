@@ -10,6 +10,42 @@ import { trace } from './$.trace.mjs';
 let cachedShell = null;
 
 /**
+ * Check whether a shell spec supplies an executable and argument vector.
+ * @param {object} spec - ProcessRunner command specification
+ * @returns {boolean}
+ */
+export function isShellArgvSpec(spec) {
+  return spec.mode === 'shell' && typeof spec.file === 'string';
+}
+
+/**
+ * Check whether a shell spec supplies a completed command string.
+ * @param {object} spec - ProcessRunner command specification
+ * @returns {boolean}
+ */
+export function isShellCommandSpec(spec) {
+  return spec.mode === 'shell' && !isShellArgvSpec(spec);
+}
+
+/**
+ * Build the command vector for a ProcessRunner command specification.
+ * @param {object} spec - ProcessRunner command specification
+ * @returns {string[]}
+ */
+export function buildCommandArgv(spec) {
+  if (isShellArgvSpec(spec)) {
+    return [spec.file, ...(spec.args ?? [])];
+  }
+
+  if (isShellCommandSpec(spec)) {
+    const shell = findAvailableShell();
+    return [shell.cmd, ...shell.args, spec.command];
+  }
+
+  return [spec.file, ...spec.args];
+}
+
+/**
  * Pick a directory that is known to exist for spawning a child process.
  * @returns {string} An existing fallback directory
  */

@@ -1243,6 +1243,38 @@ $`download-large-file`
 
 The enhanced `$` function returns a `ProcessRunner` instance that extends `EventEmitter`.
 
+#### Command specifications
+
+`ProcessRunner` accepts three command specification shapes:
+
+```javascript
+// Exact argv execution without a shell (preferred for native executables)
+new ProcessRunner({ mode: 'exec', file, args });
+
+// A completed command string interpreted by the platform shell
+new ProcessRunner({ mode: 'shell', command });
+
+// An executable and arguments routed through the platform shell
+new ProcessRunner({ mode: 'shell', file, args });
+```
+
+The shell `file`/`args` form delegates to Node's shell-enabled process spawning. It is useful on Windows for command shims such as `code.cmd`, which cannot be executed directly:
+
+```javascript
+const install = new ProcessRunner(
+  {
+    mode: 'shell',
+    file: 'code.cmd',
+    args: ['--install-extension', 'publisher.extension'],
+  },
+  { mirror: false }
+);
+
+const result = await install;
+```
+
+As with any shell-enabled process, pass only trusted `file` and `args` values; shell metacharacters are interpreted by the platform shell. Use `mode: 'exec'` whenever the target is a native executable and exact argument boundaries are required.
+
 #### Events
 
 - `data`: Emitted for each chunk with `{type: 'stdout'|'stderr', data: Buffer}`
