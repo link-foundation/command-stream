@@ -190,7 +190,16 @@ jobs:
               process.exit(1);
             });
           "
+          node -e "
+          const commandStream = require('./js/src/\$.cjs');
+          if (typeof commandStream !== 'function') {
+            console.error('CommonJS entry did not export a callable \$');
+            process.exit(1);
+          }
+          console.log('CommonJS entry loads successfully in Node.js ${{ matrix.node-version }}');
+          "
           node --test js/tests/node-terminal-artifacts.mjs
+          node --test js/tests/node-commonjs-entry.mjs
 
   release:
     name: Release JavaScript package

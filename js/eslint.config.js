@@ -119,6 +119,33 @@ export default [
     },
   },
   {
+    // The CommonJS entry point ($.cjs) is parsed as a script, not a module
+    files: ['**/*.cjs'],
+    plugins: {
+      prettier: prettierPlugin,
+    },
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'commonjs',
+      globals: {
+        require: 'readonly',
+        module: 'writable',
+        exports: 'writable',
+        process: 'readonly',
+        console: 'readonly',
+        Buffer: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+      },
+    },
+    rules: {
+      'prettier/prettier': 'error',
+      curly: ['error', 'all'],
+      'no-var': 'error',
+      'prefer-const': 'error',
+    },
+  },
+  {
     // Test files have different requirements
     files: [
       'tests/**/*.js',
