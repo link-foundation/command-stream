@@ -6,6 +6,23 @@ import { fileURLToPath } from 'node:url';
 import { ProcessRunner } from '../src/$.mjs';
 import { isWindows } from './test-helper.mjs';
 
+// TEMPORARY CI DIAGNOSTIC: capture the caller if the unrelated issue-170
+// regression target is force-killed after these Windows shell-argv tests.
+const originalKill = ProcessRunner.prototype.kill;
+ProcessRunner.prototype.kill = function (...args) {
+  if (this.spec?.command?.includes("echo 'stdout'")) {
+    console.error(
+      `[issue-191 diagnostic] ${JSON.stringify({
+        spec: this.spec,
+        awaited: this._awaited,
+        started: this.started,
+        finished: this.finished,
+      })}\n${new Error('ProcessRunner.kill caller').stack}`
+    );
+  }
+  return originalKill.apply(this, args);
+};
+
 const fixturesDir = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   'fixtures'
