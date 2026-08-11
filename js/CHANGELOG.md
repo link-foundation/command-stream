@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.18.1
+
+### Patch Changes
+
+- 9ac5b4a: Add a lightweight `command-stream/process-runner` export that excludes optional PTY and terminal rendering dependencies from its module graph.
+
 ## 0.18.0
 
 ### Minor Changes
