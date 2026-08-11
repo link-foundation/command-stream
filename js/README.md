@@ -174,6 +174,34 @@ const result = await runner;
 The main `command-stream` entry point remains the supported import for `$` and
 terminal capture features.
 
+## Module Formats (ESM and CommonJS)
+
+The package ships both entry points and they resolve automatically:
+
+| Host     | Resolved entry | How to load                           |
+| -------- | -------------- | ------------------------------------- |
+| ESM      | `src/$.mjs`    | `import { $ } from 'command-stream'`  |
+| CommonJS | `src/$.cjs`    | `const $ = require('command-stream')` |
+
+```javascript
+// CommonJS: the exported value is the $ tagged template itself,
+// with every named export attached to it.
+const $ = require('command-stream');
+const { sh, run, ProcessRunner, shell } = require('command-stream');
+
+const result = $({ mirror: false })`echo hello`.sync();
+console.log(result.stdout.trim()); // "hello"
+```
+
+Both entry points load the same module instance, so virtual command
+registrations, shell settings, and cleanup state are shared no matter how the
+package was loaded.
+
+`require('command-stream')` needs a runtime with `require(esm)` support:
+Node.js >= 20.19.0, Node.js >= 22.12.0, or Bun. On older Node.js versions the
+package throws an explicit error asking you to upgrade or to use
+`await import('command-stream')` instead.
+
 ## Smart Quoting & Security
 
 Command-stream provides intelligent auto-quoting to protect against shell injection while avoiding unnecessary quotes for safe strings:
@@ -416,6 +444,17 @@ console.log(result.stdout); // "hello\n"
 
 // Events still work but are batched after completion
 $`echo "world"`.on('end', (result) => console.log('Done:', result)).sync();
+```
+
+`.sync()` is also reachable from CommonJS without any `await`, which makes it
+usable at synchronous launch-time boundaries such as availability probes:
+
+```javascript
+const $ = require('command-stream');
+
+function isGitAvailable() {
+  return $({ mirror: false })`git --version`.sync().code === 0;
+}
 ```
 
 ### TUI Capture

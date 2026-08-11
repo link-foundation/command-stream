@@ -3,10 +3,16 @@
   "version": "0.18.2",
   "description": "Modern $ shell utility library with streaming, async iteration, and EventEmitter support, optimized for Bun runtime",
   "type": "module",
-  "main": "src/$.mjs",
+  "main": "./src/$.cjs",
+  "module": "./src/$.mjs",
   "exports": {
-    ".": "./src/$.mjs",
-    "./process-runner": "./src/process-runner.mjs"
+    ".": {
+      "import": "./src/$.mjs",
+      "require": "./src/$.cjs",
+      "default": "./src/$.mjs"
+    },
+    "./process-runner": "./src/process-runner.mjs",
+    "./package.json": "./package.json"
   },
   "repository": {
     "type": "git",
