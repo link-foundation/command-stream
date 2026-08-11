@@ -48,7 +48,16 @@ test('exports a fully initialized ProcessRunner subpath', async () => {
   expect(processRunnerExport).toBe('./src/process-runner.mjs');
 
   const { ProcessRunner } = await import('command-stream/process-runner');
-  expect(typeof ProcessRunner.prototype.start).toBe('function');
+  for (const method of [
+    'start',
+    '_runPipeline',
+    'pipe',
+    '_runVirtual',
+    'stream',
+    'kill',
+  ]) {
+    expect(typeof ProcessRunner.prototype[method]).toBe('function');
+  }
 
   const runner = new ProcessRunner(
     {
