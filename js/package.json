@@ -5,7 +5,8 @@
   "type": "module",
   "main": "src/$.mjs",
   "exports": {
-    ".": "./src/$.mjs"
+    ".": "./src/$.mjs",
+    "./process-runner": "./src/process-runner.mjs"
   },
   "repository": {
     "type": "git",

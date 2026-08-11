@@ -5,7 +5,6 @@ import { trace } from './$.trace.mjs';
 import {
   globalShellSettings,
   virtualCommands,
-  isVirtualCommandsEnabled,
   enableVirtualCommands as enableVirtualCommandsState,
   disableVirtualCommands as disableVirtualCommandsState,
   forceCleanupAll,
@@ -25,32 +24,7 @@ import {
   unrollTerminalFrames,
 } from './terminal-capture.mjs';
 
-// Import ProcessRunner base and method modules
-import { ProcessRunner } from './$.process-runner-base.mjs';
-import { attachExecutionMethods } from './$.process-runner-execution.mjs';
-import { attachPipelineMethods } from './$.process-runner-pipeline.mjs';
-import { attachOrchestrationMethods } from './$.process-runner-orchestration.mjs';
-import { attachVirtualCommandMethods } from './$.process-runner-virtual.mjs';
-import { attachStreamKillMethods } from './$.process-runner-stream-kill.mjs';
-
-// Create dependencies object for method attachment
-const deps = {
-  virtualCommands,
-  globalShellSettings,
-  isVirtualCommandsEnabled,
-};
-
-// Attach all methods to ProcessRunner prototype using mixin pattern
-attachExecutionMethods(ProcessRunner, deps);
-attachPipelineMethods(ProcessRunner, deps);
-attachOrchestrationMethods(ProcessRunner, deps);
-attachVirtualCommandMethods(ProcessRunner, deps);
-attachStreamKillMethods(ProcessRunner, deps);
-
-trace(
-  'Initialization',
-  () => 'ProcessRunner methods attached via mixin pattern'
-);
+import { ProcessRunner } from './process-runner.mjs';
 
 // Public APIs
 async function sh(commandString, options = {}) {

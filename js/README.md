@@ -156,6 +156,24 @@ npm install command-stream
 bun add command-stream
 ```
 
+### Lightweight ProcessRunner entry point
+
+Consumers that only need direct process execution can import `ProcessRunner`
+without loading the optional PTY, terminal rendering, SVG, or GIF modules:
+
+```javascript
+import { ProcessRunner } from 'command-stream/process-runner';
+
+const runner = new ProcessRunner(
+  { mode: 'exec', file: 'git', args: ['status', '--short'] },
+  { mirror: false, capture: true, stdin: 'ignore' }
+);
+const result = await runner;
+```
+
+The main `command-stream` entry point remains the supported import for `$` and
+terminal capture features.
+
 ## Smart Quoting & Security
 
 Command-stream provides intelligent auto-quoting to protect against shell injection while avoiding unnecessary quotes for safe strings:
