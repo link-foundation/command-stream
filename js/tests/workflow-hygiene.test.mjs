@@ -8,7 +8,7 @@ import { describe, test, expect } from 'bun:test';
 import { readFileSync, readdirSync } from 'fs';
 import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const workflowDir = join(repoRoot, '.github', 'workflows');
@@ -549,12 +549,16 @@ describe('repository-wide checks are not hidden behind a paths filter', () => {
     // error in them does not start.
     const js = workflows.find((w) => w.name === 'js.yml');
     const patterns = js.doc.on.pull_request.paths;
-    const linted = execSync("git ls-files '*.mjs' '*.js' '*.cjs'", {
+    // execFileSync: with a shell, cmd.exe passes the quotes through to git on
+    // Windows, the pattern matches nothing, and the empty line that leaves
+    // behind is reported as an uncovered file.
+    const linted = execFileSync('git', ['ls-files', '*.mjs', '*.js', '*.cjs'], {
       cwd: repoRoot,
       encoding: 'utf8',
     })
       .trim()
       .split('\n')
+      .filter(Boolean)
       .filter(
         (file) =>
           !file.startsWith('js/') &&

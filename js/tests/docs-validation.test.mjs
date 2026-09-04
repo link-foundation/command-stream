@@ -16,11 +16,16 @@
 import { describe, test, expect } from 'bun:test';
 import { readFileSync, existsSync } from 'fs';
 import { join, dirname, resolve, relative, sep } from 'path';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 
 const repoRoot = join(dirname(Bun.fileURLToPath(import.meta.url)), '..', '..');
 
-const markdownFiles = execSync("git ls-files '*.md'", {
+// execFileSync, not execSync: `git ls-files '*.md'` goes through cmd.exe on
+// Windows, which does not strip single quotes, so git looked for a file named
+// `'*.md'`, matched nothing, and this file validated an empty list -- green on
+// Windows because it checked nothing at all (caught by the Windows leg of the
+// test matrix). Without a shell, git expands the pattern itself everywhere.
+const markdownFiles = execFileSync('git', ['ls-files', '*.md'], {
   cwd: repoRoot,
   encoding: 'utf8',
 })
