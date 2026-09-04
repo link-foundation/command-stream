@@ -9,9 +9,10 @@
 //   - a document that has outgrown any reasonable review size,
 //   - a key document losing the section a reader is sent to it for.
 //
-// External links are deliberately not checked: a link checker that reaches the
-// network turns unrelated pull requests red when a third-party site rots, which
-// is the class of false positive issue #199 is about.
+// External links are deliberately out of scope here: a link checker that
+// reaches the network turns unrelated pull requests red when a third-party site
+// rots, which is the class of false positive issue #199 is about. They are
+// fetched weekly instead, by .github/workflows/links.yml, which blocks nothing.
 import { describe, test, expect } from 'bun:test';
 import { readFileSync, existsSync } from 'fs';
 import { join, dirname, resolve, relative, sep } from 'path';

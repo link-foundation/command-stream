@@ -584,3 +584,76 @@ describe('repository-wide checks are not hidden behind a paths filter', () => {
     expect(scripts['format:check']).toContain('cd ..');
   });
 });
+
+describe('external links are checked without gating pull requests', () => {
+  // Best practice #12 names lychee. Both pipeline templates run it as a
+  // pull-request gate; here that would have turned unrelated pull requests red,
+  // because a run over this tree reports 20 errors and every one of them is a
+  // link that is correct in the document and unreachable from a runner
+  // (npmjs.com answers 403 to non-browser clients, GitHub serves the stargazers
+  // list and /settings/ only to a signed-in session). So the check is split:
+  // relative links -- the only ones a change here can break -- are resolved
+  // offline on every pull request by docs-validation.test.mjs, and the network
+  // is fetched on a schedule instead.
+  const links = workflows.find((w) => w.name === 'links.yml');
+
+  const lycheeStep = () =>
+    Object.values(links.doc.jobs)
+      .flatMap((job) => job.steps ?? [])
+      .find((step) =>
+        (step.uses ?? '').startsWith('lycheeverse/lychee-action')
+      );
+
+  test('the link workflow exists and runs lychee', () => {
+    expect(links).toBeDefined();
+    expect(lycheeStep()).toBeDefined();
+  });
+
+  test('it runs on a schedule and on demand, never on a pull request', () => {
+    const on = links.doc.on ?? {};
+    expect(on.schedule?.length).toBeGreaterThan(0);
+    expect('workflow_dispatch' in on).toBe(true);
+    // A third-party site going down is not a reason to block someone's merge,
+    // and a red check nobody can fix from the branch is how a pipeline teaches
+    // people to ignore red checks.
+    expect('pull_request' in on).toBe(false);
+    expect('push' in on).toBe(false);
+  });
+
+  test('a broken link fails the scheduled run', () => {
+    // `fail: false` is what the templates use, because a later step decides;
+    // there is no later step here, so the action itself has to fail the job or
+    // the schedule reports success no matter what it found.
+    expect(lycheeStep().with.fail).toBe(true);
+  });
+
+  test('archived copies of other repositories are excluded', () => {
+    // Same trees docs-validation.test.mjs treats as archived: their links point
+    // into the repository they were copied from. The archived hive-mind
+    // best-practices document alone contributes five unfixable errors.
+    const args = String(lycheeStep().with.args);
+    expect(args).toContain('--exclude-path dev/log');
+    expect(args).toContain('--exclude-path docs/case-studies');
+  });
+
+  test('every .lycheeignore entry is a valid regex with a stated reason', () => {
+    // An ignore list is where a link checker goes to die: one uncommented line
+    // and the next reader cannot tell a bot-walled host from a link somebody
+    // gave up on.
+    const lines = readFileSync(join(repoRoot, '.lycheeignore'), 'utf8').split(
+      '\n'
+    );
+    const patterns = [];
+    lines.forEach((line, index) => {
+      const value = line.trim();
+      if (!value || value.startsWith('#')) {
+        return;
+      }
+      patterns.push(value);
+      const previous = (lines[index - 1] ?? '').trim();
+      expect(`${value}: ${previous.startsWith('#')}`).toBe(`${value}: true`);
+      expect(() => new RegExp(value)).not.toThrow();
+    });
+    expect(patterns.length).toBeGreaterThan(0);
+  });
+});

@@ -1,6 +1,6 @@
 # CI/CD
 
-Six workflows guard this repository. Everything below is enforced by
+Seven workflows guard this repository. Everything below is enforced by
 `js/tests/workflow-hygiene.test.mjs` and `js/tests/repository-layout.test.mjs`,
 which parse the workflow files themselves — if a job drifts from what this
 document describes, those tests fail.
@@ -15,11 +15,12 @@ document describes, those tests fail.
 | `workflows.yml` | push to `main`, pull request, dispatch             | actionlint, zizmor                                                                                                                     |
 | `security.yml`  | push to `main`, pull request, **weekly**, dispatch | CodeQL, dependency review, npm/bun/cargo audit, secret scan                                                                            |
 | `quality.yml`   | push to `main`, pull request, dispatch             | formatting of every tracked file, documentation validation, workflow invariants                                                        |
+| `links.yml`     | **weekly**, dispatch                               | external link check (lychee)                                                                                                           |
 
-Every workflow except `quality.yml` is scoped by a `paths:` filter. The union of
-those filters is not the repository, which is why `quality.yml` has no filter at
-all: a pull request that only touches `docs/**` still runs the three checks that
-read the whole tree.
+Every workflow except `quality.yml` and `links.yml` is scoped by a `paths:`
+filter. The union of those filters is not the repository, which is why
+`quality.yml` has no filter at all: a pull request that only touches `docs/**`
+still runs the three checks that read the whole tree.
 
 ## Invariants
 
@@ -68,8 +69,19 @@ read the whole tree.
 - **Documentation is validated like code.** `js/tests/docs-validation.test.mjs`
   enforces a 2500-line ceiling, resolves every relative link, and checks that
   the documents other automation points readers at still carry their sections.
-  External links are deliberately not fetched: a network link checker turns
-  unrelated pull requests red when a third-party site rots.
+  External links are deliberately out of scope for that test; they are checked
+  separately, below.
+- **External links are checked weekly, not on pull requests.** Both pipeline
+  templates run lychee as a pull-request gate. The same job here reports 20
+  errors on an unmodified tree, and all 20 are links that are correct in the
+  document and unreachable from a runner: npmjs.com answers `403` to any
+  non-browser client, and GitHub serves the stargazers list and the `/settings/`
+  pages only to a signed-in session. So the check is split by who can break the
+  link. Relative links — the only ones a change here can break — are resolved
+  offline on every pull request; the network is fetched by `links.yml` on a
+  schedule, where a failure means a link that used to work has stopped working
+  and blocks no merge. `.lycheeignore` carries the known-unreachable URLs, one
+  commented entry each, and the hygiene test rejects an uncommented one.
 - **Lint and format configuration lives at the repository root.** eslint and
   prettier treat the directory holding their config as the project base path;
   while these files lived in `js/`, root-level JavaScript was outside that path
