@@ -15,7 +15,7 @@ import { join } from 'path';
 // Helper to normalize paths (handles macOS /var -> /private/var symlink)
 const normalizePath = (p) => {
   try {
-    return realpathSync(p);
+    return realpathSync.native ? realpathSync.native(p) : realpathSync(p);
   } catch {
     return p;
   }

@@ -8,8 +8,26 @@ import {
 } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { $, register, shell, unregister } from '../src/$.mjs';
+import {
+  $,
+  enableVirtualCommands,
+  register,
+  shell,
+  unregister,
+} from '../src/$.mjs';
 import { isWindows } from './test-helper.mjs';
+
+function canonicalPath(value) {
+  return realpathSync.native ? realpathSync.native(value) : realpathSync(value);
+}
+
+function observeCwd() {
+  try {
+    return { cwd: process.cwd() };
+  } catch (error) {
+    return { errorCode: error.code };
+  }
+}
 
 function restoreEnv(name, value) {
   if (value === undefined) {
@@ -25,6 +43,9 @@ describe('cd invocation isolation (issue #197)', () => {
   let otherTestDir;
 
   beforeEach(() => {
+    // This file can share a Bun worker with suites that intentionally disable
+    // virtual commands, so establish the mode required by every test here.
+    enableVirtualCommands();
     shell.errexit(false);
     hostContext = {
       cwd: process.cwd(),
@@ -33,8 +54,8 @@ describe('cd invocation isolation (issue #197)', () => {
     };
     process.env.PWD = 'host-pwd-sentinel';
     process.env.OLDPWD = 'host-oldpwd-sentinel';
-    testDir = realpathSync(mkdtempSync(join(tmpdir(), 'cd-isolation-')));
-    otherTestDir = realpathSync(
+    testDir = canonicalPath(mkdtempSync(join(tmpdir(), 'cd-isolation-')));
+    otherTestDir = canonicalPath(
       mkdtempSync(join(tmpdir(), 'cd-isolation-other-'))
     );
   });
@@ -270,12 +291,13 @@ describe('cd invocation isolation (issue #197)', () => {
         rmSync(deletedCwd, { recursive: true, force: true });
         process.env.HOME = missingHome;
         process.env.USERPROFILE = missingHome;
+        const invalidHostCwd = observeCwd();
 
         const result = await $`cd ${testDir} && pwd`;
 
         expect(result.code).toBe(0);
         expect(result.stdout.trim()).toBe(testDir);
-        expect(process.cwd()).toBe(deletedCwd);
+        expect(observeCwd()).toEqual(invalidHostCwd);
         expect(process.env.PWD).toBe('host-pwd-sentinel');
         expect(process.env.OLDPWD).toBe('host-oldpwd-sentinel');
       } finally {

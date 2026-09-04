@@ -1,6 +1,7 @@
 import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
 import { beforeTestCleanup, afterTestCleanup } from './test-cleanup.mjs';
 import { isWindows } from './test-helper.mjs';
+import { realpathSync } from 'fs';
 import {
   $,
   shell,
@@ -89,7 +90,7 @@ describe('Virtual Commands System', () => {
 
       const result = await $`cd /tmp && pwd`;
       expect(result.code).toBe(0);
-      expect(result.stdout.trim()).toBe('/tmp');
+      expect(realpathSync(result.stdout.trim())).toBe(realpathSync('/tmp'));
       expect(process.cwd()).toBe(originalCwd);
     });
 

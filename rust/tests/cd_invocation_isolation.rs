@@ -3,6 +3,17 @@ use std::collections::HashMap;
 use std::ffi::OsString;
 use std::path::Path;
 
+fn canonical(path: impl AsRef<Path>) -> std::path::PathBuf {
+    std::fs::canonicalize(path.as_ref()).unwrap_or_else(|_| path.as_ref().to_path_buf())
+}
+
+fn output_env<'a>(output: &'a str, name: &str) -> Option<&'a str> {
+    output.lines().find_map(|line| {
+        line.strip_prefix(name)
+            .and_then(|value| value.strip_prefix('='))
+    })
+}
+
 fn restore_env(name: &str, value: Option<OsString>) {
     match value {
         Some(value) => std::env::set_var(name, value),
@@ -254,9 +265,11 @@ async fn cd_is_scoped_to_each_invocation() {
         Some(Path::new("host-oldpwd-sentinel").as_os_str())
     );
     assert!(pipeline_result.is_success());
+    #[cfg(windows)]
+    assert!(!pipeline_result.stdout.trim().starts_with("\\\\?\\"));
     assert_eq!(
-        pipeline_result.stdout.trim(),
-        temp_dir.path().to_string_lossy()
+        canonical(pipeline_result.stdout.trim()),
+        canonical(temp_dir.path())
     );
     assert_eq!(pipeline_cwd, original_cwd);
     assert_eq!(
@@ -269,18 +282,18 @@ async fn cd_is_scoped_to_each_invocation() {
     );
     assert!(first_result.is_success());
     assert_eq!(
-        first_result.stdout.trim(),
-        temp_dir.path().to_string_lossy()
+        canonical(first_result.stdout.trim()),
+        canonical(temp_dir.path())
     );
     assert!(second_result.is_success());
     assert_eq!(
-        second_result.stdout.trim(),
-        other_temp_dir.path().to_string_lossy()
+        canonical(second_result.stdout.trim()),
+        canonical(other_temp_dir.path())
     );
     assert!(observer_result.is_success());
     assert_eq!(
-        observer_result.stdout.trim(),
-        original_cwd.to_string_lossy()
+        canonical(observer_result.stdout.trim()),
+        canonical(&original_cwd)
     );
     assert_eq!(concurrent_cwd, original_cwd);
     assert_eq!(
@@ -302,11 +315,14 @@ async fn cd_is_scoped_to_each_invocation() {
         Some(Path::new("host-oldpwd-sentinel").as_os_str())
     );
     assert!(partial_home.is_success());
-    assert_eq!(partial_home.stdout.trim(), inherited_home.to_string_lossy());
+    assert_eq!(
+        canonical(partial_home.stdout.trim()),
+        canonical(&inherited_home)
+    );
     assert!(partial_dash.is_success());
     assert_eq!(
-        partial_dash.stdout.trim(),
-        other_temp_dir.path().to_string_lossy()
+        canonical(partial_dash.stdout.trim()),
+        canonical(other_temp_dir.path())
     );
     assert!(partial_env_result.is_success());
     assert!(partial_env_result
@@ -315,11 +331,11 @@ async fn cd_is_scoped_to_each_invocation() {
     assert!(partial_env_result.stdout.contains("HOME="));
     assert!(configured_pwd.is_success());
     assert_eq!(
-        configured_pwd.stdout.trim(),
-        configured_dir.path().to_string_lossy()
+        canonical(configured_pwd.stdout.trim()),
+        canonical(configured_dir.path())
     );
     assert!(nested_pwd.is_success());
-    assert_eq!(nested_pwd.stdout.trim(), nested_dir.to_string_lossy());
+    assert_eq!(canonical(nested_pwd.stdout.trim()), canonical(&nested_dir));
     assert!(nested_cat.is_success());
     assert_eq!(nested_cat.stdout, "nested marker");
     assert!(nested_test.is_success());
@@ -327,29 +343,31 @@ async fn cd_is_scoped_to_each_invocation() {
     {
         assert!(nested_real_command.is_success());
         assert_eq!(
-            nested_real_command.stdout.trim(),
-            nested_dir.to_string_lossy()
+            canonical(nested_real_command.stdout.trim()),
+            canonical(&nested_dir)
         );
     }
     assert!(configured_home.is_success());
     assert_eq!(
-        configured_home.stdout.trim(),
-        other_temp_dir.path().to_string_lossy()
+        canonical(configured_home.stdout.trim()),
+        canonical(other_temp_dir.path())
     );
     assert!(configured_dash.is_success());
     assert_eq!(
-        configured_dash.stdout.trim(),
-        other_temp_dir.path().to_string_lossy()
+        canonical(configured_dash.stdout.trim()),
+        canonical(other_temp_dir.path())
     );
     #[cfg(unix)]
     {
         assert!(configured_child_env.is_success());
-        assert!(configured_child_env
-            .stdout
-            .contains(&format!("PWD={}\n", other_temp_dir.path().display())));
-        assert!(configured_child_env
-            .stdout
-            .contains(&format!("OLDPWD={}\n", temp_dir.path().display())));
+        assert_eq!(
+            output_env(&configured_child_env.stdout, "PWD").map(canonical),
+            Some(canonical(other_temp_dir.path()))
+        );
+        assert_eq!(
+            output_env(&configured_child_env.stdout, "OLDPWD").map(canonical),
+            Some(canonical(temp_dir.path()))
+        );
     }
     assert_eq!(
         configured_env.get("PWD").map(String::as_str),

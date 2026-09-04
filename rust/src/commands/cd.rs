@@ -5,6 +5,32 @@ use crate::utils::{trace, CommandResult};
 use std::env;
 use std::path::PathBuf;
 
+#[cfg(windows)]
+fn user_facing_path(path: PathBuf) -> PathBuf {
+    use std::ffi::OsString;
+    use std::os::windows::ffi::{OsStrExt, OsStringExt};
+
+    const VERBATIM_UNC: &[u16] = &[92, 92, 63, 92, 85, 78, 67, 92];
+    const VERBATIM: &[u16] = &[92, 92, 63, 92];
+    const UNC: &[u16] = &[92, 92];
+
+    let encoded: Vec<_> = path.as_os_str().encode_wide().collect();
+    if let Some(rest) = encoded.strip_prefix(VERBATIM_UNC) {
+        let mut normalized = UNC.to_vec();
+        normalized.extend_from_slice(rest);
+        return PathBuf::from(OsString::from_wide(&normalized));
+    }
+    if let Some(rest) = encoded.strip_prefix(VERBATIM) {
+        return PathBuf::from(OsString::from_wide(rest));
+    }
+    path
+}
+
+#[cfg(not(windows))]
+fn user_facing_path(path: PathBuf) -> PathBuf {
+    path
+}
+
 #[derive(Debug)]
 pub(crate) struct CdContext {
     pub(crate) cwd: PathBuf,
@@ -50,7 +76,7 @@ pub(crate) async fn resolve_cd(ctx: CommandContext) -> (CommandResult, Option<Cd
         .unwrap_or_else(|| "/".to_string());
 
     let base = ctx.get_cwd();
-    let previous_dir = std::fs::canonicalize(&base).unwrap_or(base.clone());
+    let previous_dir = user_facing_path(std::fs::canonicalize(&base).unwrap_or(base.clone()));
 
     let mut print_dir = false;
     let target: String = match ctx.args.first().map(|s| s.as_str()) {
@@ -97,6 +123,7 @@ pub(crate) async fn resolve_cd(ctx: CommandContext) -> (CommandResult, Option<Cd
         }
     }) {
         Ok(new_dir) => {
+            let new_dir = user_facing_path(new_dir);
             trace(
                 "VirtualCommand",
                 &format!("cd: success, new dir: {}", new_dir.display()),
