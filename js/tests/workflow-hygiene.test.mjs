@@ -253,6 +253,11 @@ describe('workflow linting is itself wired into CI', () => {
       .find((s) => (s.uses ?? '').startsWith('zizmorcore/zizmor-action@'));
     expect(step.with.config).toBe('.github/zizmor.yml');
     expect(String(step.with['min-confidence'])).toBe('medium');
+    // The action's default input is `.`, which walks the whole tree and picks up
+    // docs/case-studies/**/templates/**: verbatim archived copies of other
+    // repositories' workflows, kept as evidence. Auditing those reported 30
+    // findings in files that never run here and that a fix would falsify.
+    expect(step.with.inputs).toBe('.github/workflows');
   });
 
   test('the zizmor policy requires hash pins by default', () => {

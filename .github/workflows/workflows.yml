@@ -67,3 +67,10 @@ jobs:
           annotations: true
           config: .github/zizmor.yml
           min-confidence: medium
+          # Audit the workflows this repository runs, not every workflow file
+          # in the tree. The action's default input is `.`, which also collects
+          # docs/case-studies/**/templates/** -- verbatim archived copies of
+          # other repositories' workflows, kept as evidence and deliberately not
+          # edited. Auditing those reported 30 findings in files that never run
+          # here and that a fix would falsify.
+          inputs: .github/workflows

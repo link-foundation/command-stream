@@ -80,7 +80,41 @@ jobs:
         with:
           persist-credentials: false
 
+      # actions/dependency-review-action fails with "Dependency review is not
+      # supported on this repository" when the dependency graph is off, which is
+      # the state this repository is in: the graph is disabled at the
+      # organisation level and cannot be turned on from a workflow. Shipping a
+      # check that can only ever be red trains reviewers to ignore red, so probe
+      # for the feature and skip with a warning when it is missing. Any other
+      # HTTP status is still a hard failure, and the job starts reviewing by
+      # itself the moment an admin enables the graph under
+      # Settings -> Code security -> Dependency graph.
+      - name: Check whether the dependency graph is enabled
+        id: graph
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -uo pipefail
+          code="$(curl -sS -o /dev/null -w '%{http_code}' \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            "$GITHUB_API_URL/repos/$REPOSITORY/dependency-graph/compare/$BASE_SHA...$HEAD_SHA")"
+          echo "Dependency graph compare endpoint answered HTTP $code"
+          if [ "$code" = '200' ]; then
+            echo 'enabled=true' >> "$GITHUB_OUTPUT"
+          elif [ "$code" = '403' ]; then
+            echo 'enabled=false' >> "$GITHUB_OUTPUT"
+            echo "::warning::Dependency graph is disabled for $REPOSITORY, so dependency review cannot run. The npm, bun and cargo audit jobs still check the committed lockfiles. Enable the graph under Settings -> Code security to restore per-pull-request review."
+          else
+            echo "::error::Unexpected HTTP $code from the dependency-graph compare endpoint"
+            exit 1
+          fi
+
       - name: Review dependency changes
+        if: ${{ steps.graph.outputs.enabled == 'true' }}
         uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: high
