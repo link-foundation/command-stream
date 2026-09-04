@@ -307,6 +307,36 @@ describe('every shipped ecosystem is audited', () => {
     expect(languages).toContain('actions');
   });
 
+  test('the working tree is scanned for committed credentials', () => {
+    // Nothing looked for credentials in the tree: CodeQL does not, and the
+    // audit jobs only read lockfiles (issue #199, best practice #11).
+    expect(runs).toContain('secretlint');
+    const policy = JSON.parse(
+      readFileSync(join(repoRoot, '.secretlintrc.json'), 'utf8')
+    );
+    expect(policy.rules.map((rule) => rule.id)).toContain(
+      '@secretlint/secretlint-rule-preset-recommend'
+    );
+    // The ignore list may exclude generated trees, never authored source.
+    const ignored = readFileSync(join(repoRoot, '.secretlintignore'), 'utf8')
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith('#'));
+    for (const pattern of ignored) {
+      expect(
+        `${pattern}: ${/^(node_modules|rust\/target|js\/(reports|coverage))\//.test(pattern)}`
+      ).toBe(`${pattern}: true`);
+    }
+  });
+
+  test('the security workflow is not narrowed by a paths filter', () => {
+    // js.yml and rust.yml only run for their own language's files. The audits
+    // and the secret scan have to see every change, so this workflow must stay
+    // unfiltered -- a `paths:` here would let a credential in, say, a case
+    // study reach main unscanned.
+    expect(security.doc.on.pull_request?.paths).toBeUndefined();
+  });
+
   test('the audits also run on a schedule', () => {
     // A new advisory lands against code that has not changed, so the
     // push/pull_request triggers alone would leave it unreported until the

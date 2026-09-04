@@ -185,3 +185,33 @@ jobs:
       - name: Audit the committed Cargo.lock
         working-directory: rust
         run: cargo audit --file Cargo.lock
+
+  secret-scan:
+    name: Scan for committed secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-secret-scan
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      # Nothing checked whether a credential had been committed. CodeQL does not
+      # look for them and the audit jobs only read lockfiles, so a token pasted
+      # into a script, a fixture or a case study would have reached main with a
+      # green run (issue #199, best practice #11).
+      #
+      # Reproduce locally with the same command, and see
+      # experiments/secretlint-scope.sh for the probe that shows the glob does
+      # reach dot-directories such as .github/. Files that are generated rather
+      # than authored here are listed in .secretlintignore; the rule set is in
+      # .secretlintrc.json. The versions are pinned so a new rule release cannot
+      # turn an unrelated pull request red -- bump them deliberately.
+      - name: Run secretlint over the working tree
+        run: |
+          npx --yes \
+            -p secretlint@13.0.5 \
+            -p @secretlint/secretlint-rule-preset-recommend@13.0.5 \
+            secretlint "**/*"
