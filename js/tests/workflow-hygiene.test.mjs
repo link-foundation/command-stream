@@ -314,3 +314,74 @@ describe('every shipped ecosystem is audited', () => {
     expect(security.doc.on.schedule?.length).toBeGreaterThan(0);
   });
 });
+
+describe('the shipped quality gates are actually invoked', () => {
+  const rust = workflows.find((w) => w.name === 'rust.yml');
+  const rustRuns = Object.values(rust.doc.jobs)
+    .flatMap((job) => job.steps ?? [])
+    .map((step) => step.run)
+    .filter(Boolean)
+    .join('\n');
+
+  // rust/scripts/ shipped four `check-*.rs` guards, but only the changelog one
+  // was ever executed: the other three were referenced by no workflow, no
+  // script and no document (issue #199). A gate nobody runs is a silent false
+  // negative -- the pipeline reports "all checks passed" while the check does
+  // not exist.
+  test.each([
+    ['check-changelog-fragment.rs'],
+    ['check-version-modification.rs'],
+    ['check-file-size.rs'],
+    ['check-crate-size.rs'],
+  ])('rust.yml runs %s', (script) => {
+    expect(rustRuns).toContain(`rust-script rust/scripts/${script}`);
+  });
+
+  test('every rust/scripts entry is invoked or a documented exception', () => {
+    // Standalone entry points that this repository deliberately does not wire
+    // up. They come from the Rust pipeline template, where separate workflow
+    // steps call them; here the same work happens elsewhere.
+    const unwired = new Map([
+      // version-and-commit.rs does its own bumping (`Version::bump`) and its
+      // own fragment collection (`collect_changelog`), so these two standalone
+      // entry points would be a second implementation of the same steps.
+      ['bump-version.rs', 'version-and-commit.rs does both steps itself'],
+      ['collect-changelog.rs', 'version-and-commit.rs does both steps itself'],
+      // The workflows select what runs with `on: paths:` filters instead of
+      // computing a change matrix in a first job.
+      ['detect-code-changes.rs', 'replaced by on: paths: filters'],
+      // The release jobs set the bot identity inline, next to the commit they
+      // are about to make.
+      ['git-config.rs', 'release jobs configure git inline'],
+    ]);
+
+    const scriptDir = join(repoRoot, 'rust', 'scripts');
+    const scripts = readdirSync(scriptDir).filter((n) => n.endsWith('.rs'));
+    const sources = scripts.map((n) =>
+      readFileSync(join(scriptDir, n), 'utf8')
+    );
+    const workflowText = workflows.map((w) => w.text).join('\n');
+
+    for (const script of scripts) {
+      const referenced =
+        workflowText.includes(script) ||
+        sources.some(
+          (text, i) => scripts[i] !== script && text.includes(script)
+        );
+      expect(`${script}: ${referenced || unwired.has(script)}`).toBe(
+        `${script}: true`
+      );
+    }
+  });
+
+  test('both languages enforce a maximum file length', () => {
+    // Principle #2 of the hive-mind CI/CD best practices. JavaScript gets this
+    // from eslint; Rust had the script but no caller.
+    const eslint = readFileSync(
+      join(repoRoot, 'js', 'eslint.config.js'),
+      'utf8'
+    );
+    expect(eslint).toContain("'max-lines': ['error', 1500]");
+    expect(rustRuns).toContain('rust-script rust/scripts/check-file-size.rs');
+  });
+});
