@@ -4,7 +4,6 @@
 
 use command_stream::{create, exec, run, ProcessRunner, RunOptions, StdinOption};
 use std::collections::HashMap;
-use std::path::PathBuf;
 use tempfile::TempDir;
 
 // ============================================================================

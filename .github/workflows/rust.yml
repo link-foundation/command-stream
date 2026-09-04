@@ -45,6 +45,12 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
+  # Warnings must fail the build. Without this, `cargo clippy` reports problems
+  # and still exits 0, so every Rust check was a false negative (issue #199).
+  # Registry dependencies are compiled with `--cap-lints allow`, so this only
+  # denies warnings in this crate's own code.
+  RUSTFLAGS: -Dwarnings
+  RUSTDOCFLAGS: -Dwarnings
   CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN || secrets.CARGO_TOKEN }}
   CARGO_TOKEN: ${{ secrets.CARGO_TOKEN }}
 
@@ -101,7 +107,16 @@ jobs:
 
       - name: Run Clippy
         working-directory: rust
-        run: cargo clippy --all-targets --all-features
+        # Explicit despite the workflow-level RUSTFLAGS: clippy's own lints are
+        # not covered by RUSTFLAGS, only rustc's.
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Build documentation
+        working-directory: rust
+        # rustdoc-only lints (broken intra-doc links, unclosed HTML tags) are
+        # reported by neither clippy nor `cargo test --doc`, so they need their
+        # own gate. RUSTDOCFLAGS=-Dwarnings comes from the workflow env.
+        run: cargo doc --no-deps --all-features
 
   test:
     name: Test Rust (${{ matrix.os }})

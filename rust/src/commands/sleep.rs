@@ -47,7 +47,7 @@ pub async fn sleep(ctx: CommandContext) -> CommandResult {
             }
         } => {
             trace_lazy("VirtualCommand", || {
-                format!("sleep: cancelled after partial sleep")
+                "sleep: cancelled after partial sleep".to_string()
             });
             CommandResult::error_with_code("", 130) // SIGINT exit code
         }
