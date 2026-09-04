@@ -21,11 +21,18 @@ const workflows = workflowFiles.map((name) => {
   return { name, text, doc: Bun.YAML.parse(text) };
 });
 
-/** Jobs that push to main, publish a package, or open a PR. */
-const isWriterJob = (job) => {
-  const perms = job.permissions ?? {};
-  return perms['contents'] === 'write' || perms['pull-requests'] === 'write';
-};
+/**
+ * Jobs that mutate the repository: push a commit or a tag to main, publish a
+ * package, or open a release pull request. These are the ones that must never
+ * be cancelled halfway.
+ *
+ * `contents: write` is the test, not `pull-requests: write`. A job can hold the
+ * latter alone and still change nothing that outlives the run -- the security
+ * workflow's dependency-review only uses it to leave a review comment -- and
+ * putting such a job in the shared non-cancellable group would serialise every
+ * pull request behind main's releases for no benefit.
+ */
+const isWriterJob = (job) => (job.permissions ?? {})['contents'] === 'write';
 
 const WRITER_GROUP = 'main-writer-${{ github.repository }}-main';
 
@@ -34,8 +41,10 @@ describe('workflow files', () => {
     expect(workflowFiles).toContain('js.yml');
     expect(workflowFiles).toContain('rust.yml');
     expect(workflowFiles).toContain('parity.yml');
-    // Added for #199: nothing linted the workflows themselves before.
+    // Added for #199: nothing linted the workflows themselves before, and
+    // nothing audited the dependency trees or analysed the sources.
     expect(workflowFiles).toContain('workflows.yml');
+    expect(workflowFiles).toContain('security.yml');
   });
 
   test.each(workflows.map((w) => [w.name, w]))(
@@ -247,5 +256,40 @@ describe('workflow linting is itself wired into CI', () => {
       workflowFiles.length
     );
     expect(workflowFiles.length).toBeGreaterThanOrEqual(4);
+  });
+});
+
+describe('every shipped ecosystem is audited', () => {
+  const security = workflows.find((w) => w.name === 'security.yml');
+  const runs = Object.values(security.doc.jobs)
+    .flatMap((job) => job.steps ?? [])
+    .map((step) => step.run)
+    .filter(Boolean)
+    .join('\n');
+
+  test('both JavaScript lockfiles are audited, not just one', () => {
+    // package-lock.json and bun.lock resolve transitive versions
+    // independently, so one can be clean while the other is not: they differed
+    // by 8 high-severity advisories when this workflow was written.
+    expect(runs).toContain('npm audit --package-lock-only --audit-level=high');
+    expect(runs).toContain('bun audit --audit-level=high');
+  });
+
+  test('the Rust lockfile is audited', () => {
+    expect(runs).toContain('cargo audit --file Cargo.lock');
+  });
+
+  test('CodeQL covers both languages and the workflows', () => {
+    const languages = security.doc.jobs.codeql.strategy.matrix.language;
+    expect(languages).toContain('javascript-typescript');
+    expect(languages).toContain('rust');
+    expect(languages).toContain('actions');
+  });
+
+  test('the audits also run on a schedule', () => {
+    // A new advisory lands against code that has not changed, so the
+    // push/pull_request triggers alone would leave it unreported until the
+    // next commit.
+    expect(security.doc.on.schedule?.length).toBeGreaterThan(0);
   });
 });

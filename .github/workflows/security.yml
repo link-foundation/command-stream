@@ -1,0 +1,153 @@
+name: Security
+
+# Nothing in this repository read its own dependency tree for known
+# vulnerabilities, and no static analysis ran over the sources at all, so a
+# fully green build said nothing about either (issue #199). The audits below are
+# the two pipeline templates' security workflows merged, because this repository
+# ships both a JavaScript package and a Rust crate from the same tree:
+# link-foundation/js-ai-driven-development-pipeline-template and
+# link-foundation/rust-ai-driven-development-pipeline-template.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Advisories are published against code that has not changed, so a
+  # change-triggered audit alone goes stale between releases.
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+# Least-privilege default; the jobs that need more raise it themselves.
+permissions:
+  contents: read
+
+# Concurrency is per job, matching js.yml and rust.yml. Every job here is
+# read-only, so all of them are cancellable `check-*` groups.
+
+jobs:
+  codeql:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-codeql-${{ matrix.language }}
+      cancel-in-progress: true
+    permissions:
+      # Reading the workflow run is what lets CodeQL attribute results to it.
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        # `actions` analyses the workflows in this directory, which is where the
+        # findings fixed for #199 lived.
+        language: [javascript-typescript, rust, actions]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # Analysis reads the tree; it never pushes.
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          # All three languages here are extracted without compiling, so there
+          # is no autobuild step: asking CodeQL to build the crate would spend
+          # several minutes reproducing what the rust workflow already does.
+          build-mode: none
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v4
+
+  dependency-review:
+    name: Dependency Review
+    # Reviews the diff of a pull request; there is no diff to review on push.
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-dependency-review
+      cancel-in-progress: true
+    permissions:
+      contents: read
+      # Only used to post the summary comment below, never to push.
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@v5
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure
+
+  npm-audit:
+    name: Audit npm lockfile
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-npm-audit
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      # --package-lock-only audits what is committed, without installing it, so
+      # the result describes the lockfile a consumer would resolve rather than
+      # whatever the runner happened to fetch.
+      - name: Audit the committed package-lock.json
+        working-directory: js
+        run: npm audit --package-lock-only --audit-level=high
+
+  bun-audit:
+    name: Audit bun lockfile
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-bun-audit
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: latest
+
+      # bun.lock resolves versions independently of package-lock.json, so a
+      # clean npm audit does not imply a clean bun one: while fixing #199 the
+      # two lockfiles disagreed by 8 high-severity advisories.
+      - name: Audit the committed bun.lock
+        working-directory: js
+        run: bun audit --audit-level=high
+
+  cargo-audit:
+    name: Audit Cargo lockfile
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-cargo-audit
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: taiki-e/install-action@e67fa11c4b9316fa714ddf0abed07a0c3143b95b # v2.87.4
+        with:
+          tool: cargo-audit@0.22.2
+
+      - name: Audit the committed Cargo.lock
+        working-directory: rust
+        run: cargo audit --file Cargo.lock
