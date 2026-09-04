@@ -32,10 +32,10 @@
     "test:sync": "cd .. && bun test js/tests/sync.test.mjs --timeout 10000",
     "test:builtin": "cd .. && bun test js/tests/builtin-commands.test.mjs --timeout 10000",
     "test:pipe": "cd .. && bun test js/tests/pipe.test.mjs --timeout 10000",
-    "lint": "eslint . --max-warnings 0",
-    "lint:fix": "eslint . --fix --max-warnings 0",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "lint": "cd .. && js/node_modules/.bin/eslint . --max-warnings 0",
+    "lint:fix": "cd .. && js/node_modules/.bin/eslint . --fix --max-warnings 0",
+    "format": "cd .. && js/node_modules/.bin/prettier --write .",
+    "format:check": "cd .. && js/node_modules/.bin/prettier --check .",
     "check:duplication": "jscpd src scripts",
     "check": "bun run lint && bun run format:check && bun run check:duplication",
     "build:terminal-font": "node scripts/build-terminal-font.mjs",
@@ -80,17 +80,6 @@
     "lint-staged": "^16.2.6",
     "prettier": "^3.6.2",
     "subset-font": "^2.5.0"
-  },
-  "lint-staged": {
-    "*.{js,mjs,cjs}": [
-      "eslint --fix --max-warnings 0 --no-warn-ignored",
-      "prettier --write",
-      "prettier --check"
-    ],
-    "*.md": [
-      "prettier --write",
-      "prettier --check"
-    ]
   },
   "dependencies": {
     "@resvg/resvg-js": "^2.6.2",

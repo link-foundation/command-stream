@@ -18,23 +18,23 @@
  * observable; the NEW strategy is imported from the real module.
  */
 
-import { publishWithRetry } from "../js/scripts/publish-retry.mjs";
+import { publishWithRetry } from '../js/scripts/publish-retry.mjs';
 
 const E409_STAGED_OUTPUT = [
-  "npm error code E409",
+  'npm error code E409',
   'npm error 409 Conflict - PUT https://registry.npmjs.org/command-stream - Cannot publish over previously staged version "0.20.1"',
-].join("\n");
+].join('\n');
 
 const FAILURE_PATTERNS = [
-  "packages failed to publish",
-  "error occurred while publishing",
-  "npm error code e",
-  "npm error 404",
-  "npm error 401",
-  "npm error 403",
-  "access token expired",
-  "eneedauth",
-  "exited with code 1",
+  'packages failed to publish',
+  'error occurred while publishing',
+  'npm error code e',
+  'npm error 404',
+  'npm error 401',
+  'npm error 403',
+  'access token expired',
+  'eneedauth',
+  'exited with code 1',
 ];
 
 /**
@@ -69,7 +69,7 @@ function makePublisher() {
       if (calls === 1) {
         return {
           code: 0,
-          output: "🦋  success packages published successfully",
+          output: '🦋  success packages published successfully',
         };
       }
       return { code: 1, output: E409_STAGED_OUTPUT };
@@ -85,7 +85,7 @@ async function oldStrategy({ publisher, registry, maxRetries = 3 }) {
     const matched = FAILURE_PATTERNS.find((p) => lower.includes(p));
     if (matched) {
       console.log(
-        `  attempt ${attempt}: failed — detected "${matched}" in output`,
+        `  attempt ${attempt}: failed — detected "${matched}" in output`
       );
       continue;
     }
@@ -98,7 +98,7 @@ async function oldStrategy({ publisher, registry, maxRetries = 3 }) {
       return { success: true, attempts: attempt };
     }
     console.log(
-      `  attempt ${attempt}: verification missed, republishing (this is the bug)`,
+      `  attempt ${attempt}: verification missed, republishing (this is the bug)`
     );
   }
   return { success: false, attempts: maxRetries };
@@ -128,30 +128,30 @@ async function newStrategy({ publisher, registry }) {
 // sample misses, exactly as in the failing CI run.
 const VISIBLE_FROM_READ = 2;
 
-console.log("OLD strategy (single-shot verification, republish on a miss):");
+console.log('OLD strategy (single-shot verification, republish on a miss):');
 const oldPublisher = makePublisher();
 const oldResult = await oldStrategy({
   publisher: oldPublisher,
   registry: makeLaggingRegistry(VISIBLE_FROM_READ),
 });
 console.log(
-  `  => success=${oldResult.success}, publish invocations=${oldPublisher.calls}\n`,
+  `  => success=${oldResult.success}, publish invocations=${oldPublisher.calls}\n`
 );
 
-console.log("NEW strategy (bounded verification polling, no republish):");
+console.log('NEW strategy (bounded verification polling, no republish):');
 const newPublisher = makePublisher();
 const newResult = await newStrategy({
   publisher: newPublisher,
   registry: makeLaggingRegistry(VISIBLE_FROM_READ),
 });
 console.log(
-  `  => success=${newResult.success}, publish invocations=${newPublisher.calls}\n`,
+  `  => success=${newResult.success}, publish invocations=${newPublisher.calls}\n`
 );
 
 const reproduced = oldResult.success === false && newResult.success === true;
 console.log(
   reproduced
-    ? "✅ Reproduced: the old strategy fails a successful release, the new one does not."
-    : "❌ Not reproduced.",
+    ? '✅ Reproduced: the old strategy fails a successful release, the new one does not.'
+    : '❌ Not reproduced.'
 );
 process.exit(reproduced ? 0 : 1);
