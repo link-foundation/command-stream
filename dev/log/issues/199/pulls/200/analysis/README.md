@@ -247,6 +247,26 @@ themselves. Publishing credentials now sit on the publishing job only, and a
 test asserts no workflow-level `env:` value references `secrets.`. The same
 defect is in the Rust template — reported upstream (§7).
 
+### 4.16 FALSE NEGATIVE — two warnings that only exist off Linux
+
+Denying warnings surfaced two defects the pipeline had never been able to see,
+both of which failed the Rust job on `a00126b`:
+
+- `tests/cd_invocation_isolation.rs`: `output_env` is read only by the
+  `#[cfg(unix)]` assertions, because the dump it parses comes from
+  `/usr/bin/env`. On Windows it was an unused function and the test crate would
+  not compile. Confirmed both ways with
+  `cargo check --target x86_64-pc-windows-msvc --all-targets`.
+- `scripts/version-and-commit.rs`: `rust-script --test` builds the script as a
+  test harness, where `main` is not the entry point, so the twelve helpers
+  reachable only from `main` are unreferenced — exactly the twelve errors CI
+  reported. The imports were already gated on `not(test)` for the same reason.
+  `#![cfg_attr(test, allow(dead_code))]` covers the test build; the real build
+  still denies dead code.
+
+The second one exists in the Rust template too, where it is invisible because
+nothing there runs the script suites at all — reported upstream (§7).
+
 ## 5. File-by-file comparison against both templates
 
 Scripts (`analysis/js-scripts-diff.log`, `analysis/rust-scripts-diff.log`):
@@ -298,6 +318,7 @@ code-level fix:
 | [#157](https://github.com/link-foundation/js-ai-driven-development-pipeline-template/issues/157) | js template | `.jscpd.json` `"format": "console"` makes the duplication check analyse zero files and always pass (§4.10) |
 | [#158](https://github.com/link-foundation/js-ai-driven-development-pipeline-template/issues/158) | js template | `publish-retry.mjs` misses npm's E409 "Cannot publish over previously staged version", turning successful releases into failed jobs (§4.1) |
 | [#149](https://github.com/link-foundation/rust-ai-driven-development-pipeline-template/issues/149) | rust template | `release.yml` puts `CARGO_REGISTRY_TOKEN`/`CARGO_TOKEN` in the workflow-level `env:`, handing the publish token to seven jobs that compile pull-request code (§4.15) |
+| [#150](https://github.com/link-foundation/rust-ai-driven-development-pipeline-template/issues/150) | rust template | No workflow runs `rust-script --test`, so 78 tests across 9 scripts never execute; `create-github-release.rs` does not compile in test mode and `version-and-commit.rs` fails under the template's own `RUSTFLAGS: -Dwarnings` (§4.16) |
 
 Checked and deliberately **not** reported, because they are correct as written:
 the Rust template's `pipeline-status: if: always()` (it intentionally reports
