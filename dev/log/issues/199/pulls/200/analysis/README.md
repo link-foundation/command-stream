@@ -53,10 +53,10 @@ named in the issue title.**
 
 | # | Requirement (verbatim intent) | Where addressed |
 | --- | --- | --- |
-| R1 | Check for **all false positives** in CI/CD and fix them | §4.1, §4.9 |
-| R2 | Check for **all false negatives** in CI/CD and fix them | §4.2, §4.3, §4.4, §4.6 |
-| R3 | Check for **all warnings** in CI/CD and fix them | §4.2, §4.3, §4.5 |
-| R4 | Check for **all errors** in CI/CD and fix them | §4.1, §4.5 |
+| R1 | Check for **all false positives** in CI/CD and fix them | §4.1, §4.9, §4.13, §4.17, §4.21, §4.22 |
+| R2 | Check for **all false negatives** in CI/CD and fix them | §4.2, §4.3, §4.4, §4.6, §4.10, §4.11, §4.16, §4.17, §4.18, §4.19, §4.20, §4.23 |
+| R3 | Check for **all warnings** in CI/CD and fix them | §4.2, §4.3, §4.5, §4.16 |
+| R4 | Check for **all errors** in CI/CD and fix them | §4.1, §4.5, §4.12, §4.14, §4.15 |
 | R5 | Compare **all files** (full tree, all workflows and CI/CD scripts) against `link-foundation/js-ai-driven-development-pipeline-template` | §5 |
 | R6 | …and against `link-foundation/rust-ai-driven-development-pipeline-template` | §5 |
 | R7 | Reuse **all their best practices** | §5, §6 |
@@ -267,6 +267,124 @@ both of which failed the Rust job on `a00126b`:
 The second one exists in the Rust template too, where it is invisible because
 nothing there runs the script suites at all — reported upstream (§7).
 
+### 4.17 FALSE NEGATIVE — repository-wide checks were hidden behind `paths:` filters
+
+`js.yml` ran on `js/**`, `rust.yml` on `rust/**`, `workflows.yml` on
+`.github/**`, `parity.yml` on both source trees. The union of those filters is
+not the repository, so a pull request touching only `docs/**` matched no
+workflow and ran **nothing at all**. Worse, three checks that read the whole
+tree lived behind the `js/**` filter:
+
+* `format:check` runs prettier from the repository root over every tracked file,
+* `workflow-hygiene.test.mjs` parses `.github/workflows/*`,
+* the documentation checks added for §4.20.
+
+A formatting violation introduced in a workflow file or a markdown document
+therefore first turned red on the next unrelated JavaScript pull request — the
+textbook false positive: a red check on a change that did not cause it.
+
+Fix: `quality.yml`, deliberately without a `paths:` filter, runs those three
+checks on every pull request; `js.yml`'s filter gained the root-level files
+eslint reaches (`eslint.config.js`, `claude-profiles.mjs`, `experiments/**`);
+and two hygiene invariants keep it that way — every file eslint lints outside
+`js/` must appear in `js.yml`'s trigger, and a workflow's `push:` and
+`pull_request:` filters must be identical, so a green pull request keeps
+predicting a green `main`.
+
+### 4.18 FALSE NEGATIVE — three shipped quality gates were never invoked
+
+`rust/scripts/` contained `check-file-size.rs`, `check-crate-size.rs` and
+`check-version-modification.rs`. No workflow, script or document referenced any
+of them (`grep -rn` across the tree returned only their own definitions), so the
+pipeline reported "all checks passed" for gates that never ran — including the
+file-size limit that best practice #2 requires and that eslint already enforces
+on the JavaScript side. `rust.yml` now runs all three, and a hygiene test fails
+when a script under `rust/scripts/` is neither referenced by a workflow nor
+listed as a documented exception.
+
+### 4.19 FALSE NEGATIVE — nothing scanned the tree for committed credentials
+
+Best practice #11. CodeQL does not look for secrets, and the audit jobs only
+read lockfiles, so a committed credential would have reached `main` unnoticed.
+`security.yml` now runs secretlint with the recommended preset over every file
+on each pull request; `.secretlintrc.json` holds the rule set and
+`.secretlintignore` only generated trees — a hygiene test rejects any ignore
+pattern outside `node_modules/`, `rust/target/` and `js/{reports,coverage}/`.
+
+### 4.20 FALSE NEGATIVE — documentation was never validated
+
+Best practice #12. `js/tests/docs-validation.test.mjs` now enforces the
+2500-line ceiling, resolves every relative link in every authored markdown file
+and checks that the documents other automation points readers at still carry
+their sections. It found two real breakages on the first run: two case-study
+links pointed at release markers the release process had consumed, and one
+pointed one directory level too high.
+
+### 4.21 FALSE POSITIVE/NEGATIVE — the checks validated a stale merge preview
+
+Best practice #7. A `pull_request` run checks out `refs/pull/N/merge`, computed
+when the branch was last synchronised. If `main` moved since, every check
+validated a combination that will not exist after the merge — green pull
+request, broken `main`. Every pull-request job that reads the tree now runs
+`.github/scripts/simulate-fresh-merge.sh` first, which also turns a merge
+conflict into a clear failure instead of a surprise at merge time. Five jobs are
+exempt with the reason recorded next to them and in the hygiene test
+(`changeset-check`, the Rust changelog checks and `parity` are diff-based;
+`dependency-review` compares two SHAs through the API; CodeQL uploads results
+keyed to a commit GitHub has to know).
+
+### 4.22 FALSE POSITIVE — a link checker on pull requests reports 20 unfixable errors
+
+Best practice #12 names `lychee`, and both templates run it as a pull-request
+gate. Copying that verbatim would have imported a false-positive generator. A
+run over this tree (`lychee-run.log`):
+
+```
+🔍 114 Total 🔗 73 Unique ✅ 94 OK 🚫 20 Errors
+```
+
+All 20 are links that are correct in the document and unreachable from a
+runner — npmjs.com answers `403` to any non-browser client (verified with
+`curl -A 'Mozilla/5.0'`, still 403) and GitHub serves the stargazers list and
+`/settings/` pages only to a signed-in session (`404` anonymously, even though
+the repository is public). Including the archived trees adds five more, from a
+verbatim copy of hive-mind's own best-practices document whose links point into
+the repository it came from.
+
+The split is by who can break the link. Relative links — the only ones a change
+here can break — are resolved offline on every pull request (§4.20). External
+links are fetched weekly and on demand by `links.yml`, whose failure means a
+link that used to work has stopped working and blocks no merge.
+`.lycheeignore` records the known-unreachable URLs, one commented entry each,
+and with it the same run reports `0 Errors, 20 Excluded`
+(`lychee-with-ignore.log`).
+
+### 4.23 FALSE NEGATIVE — the new checks validated nothing on Windows
+
+Found by the Windows leg of the matrix on run 33930261205:
+
+```
+(fail) documentation validation > the file list is not empty ... Expected: > 20, Received: 0
+(fail) every file eslint lints outside js/ triggers the lint job ... Received [""]
+```
+
+`execSync("git ls-files '*.md'")` goes through the platform shell. `/bin/sh`
+strips the single quotes; `cmd.exe` does not, so git looked for a path literally
+named `'*.md'`, matched nothing and exited 0 — the documentation checks were
+validating an empty list. `execFileSync('git', ['ls-files', '*.md'])` uses no
+shell, so git expands the pattern itself everywhere.
+`experiments/git-ls-files-quoting.mjs` reproduces both behaviours on Linux:
+
+```
+execSync, shell strips the quotes (POSIX): 37 file(s)
+execSync, quotes reach git (what cmd.exe does): 0 file(s)
+execFileSync, no shell at all: 37 file(s)
+```
+
+Only the assertion that the list is non-empty made this visible, which is the
+argument for writing that assertion into every check that discovers its own
+inputs.
+
 ## 5. File-by-file comparison against both templates
 
 Scripts (`analysis/js-scripts-diff.log`, `analysis/rust-scripts-diff.log`):
@@ -289,6 +407,23 @@ Workflows — present in **both** templates, absent here:
 | `.github/workflows/security.yml` | CodeQL, dependency review, ecosystem audit |
 | `.github/zizmor.yml` | `unpinned-uses` policy |
 | `.github/actionlint.yaml` | known-runner-label allowlist |
+| `.github/workflows/links.yml` | lychee link check |
+| `.github/scripts/simulate-fresh-merge.sh` (js) / `scripts/simulate-fresh-merge.sh` (rust) | merge the base branch before checking |
+| `.secretlintrc.json`, `.secretlintignore` | committed-credential scan |
+
+All of them are now present here, with two deliberate divergences, both recorded
+in `docs/CI-CD.md` and enforced by the hygiene test:
+
+* **`links.yml` runs weekly, not on pull requests** (§4.22). Both templates gate
+  merges on it; on this tree that gate reports 20 errors that no change here can
+  fix.
+* **zizmor's input is `.github/workflows`, not `.`** (§4.13), because this
+  repository archives other projects' workflows under `docs/case-studies/`.
+
+Two defects in the templates' own copies of these files were reported upstream
+(§7): the js template's `links.yml` `paths:` filter omits the very files the job
+reads, and its zizmor job runs at `min-confidence: medium`, which hides the
+`artipacked` findings for all 25 of its checkouts that persist credentials.
 
 ## 6. Best practices applied from `CI-CD-BEST-PRACTICES.md`
 
@@ -306,6 +441,22 @@ Workflows — present in **both** templates, absent here:
 9. Warnings are errors (`-D warnings`, `--max-warnings 0`).
 10. Verification of published artifacts (`wait-for-npm.mjs`,
     `wait-for-crate.rs`) so a green release means an installable artifact.
+11. #7 *Validate the actual merge result* — every pull-request job that reads
+    the tree merges the base branch first
+    (`.github/scripts/simulate-fresh-merge.sh`), so a green pull request is a
+    statement about what `main` will contain; the five diff- or API-based jobs
+    that must not are exempt with the reason recorded (§4.21).
+12. #11 *Secrets detection* — secretlint with the recommended preset over every
+    file on each pull request (§4.19).
+13. #12 *Documentation validation* — size ceiling, relative-link resolution and
+    required-section checks offline on every pull request, external links
+    weekly (§4.20, §4.22).
+14. Repository-wide checks run without a `paths:` filter (`quality.yml`), and a
+    workflow's `push:` and `pull_request:` filters must be identical, so no
+    change class is left unchecked and a green pull request keeps predicting a
+    green `main` (§4.17).
+15. Every shipped quality gate is invoked by a workflow, or listed as
+    deliberately unwired (§4.18).
 
 ## 7. Upstream issues reported
 
@@ -319,12 +470,23 @@ code-level fix:
 | [#158](https://github.com/link-foundation/js-ai-driven-development-pipeline-template/issues/158) | js template | `publish-retry.mjs` misses npm's E409 "Cannot publish over previously staged version", turning successful releases into failed jobs (§4.1) |
 | [#149](https://github.com/link-foundation/rust-ai-driven-development-pipeline-template/issues/149) | rust template | `release.yml` puts `CARGO_REGISTRY_TOKEN`/`CARGO_TOKEN` in the workflow-level `env:`, handing the publish token to seven jobs that compile pull-request code (§4.15) |
 | [#150](https://github.com/link-foundation/rust-ai-driven-development-pipeline-template/issues/150) | rust template | No workflow runs `rust-script --test`, so 78 tests across 9 scripts never execute; `create-github-release.rs` does not compile in test mode and `version-and-commit.rs` fails under the template's own `RUSTFLAGS: -Dwarnings` (§4.16) |
+| [#159](https://github.com/link-foundation/js-ai-driven-development-pipeline-template/issues/159) | js template | `links.yml`'s `paths:` filter omits `.lycheeignore` and `scripts/check-web-archive.mjs`, so editing the ignore list or the archive helper does not re-run the job that reads them |
+| [#160](https://github.com/link-foundation/js-ai-driven-development-pipeline-template/issues/160) | js template | 25 of 27 checkouts persist credentials, and `min-confidence: medium` hides every `artipacked` finding (it is a Low-confidence check), so the audit reports 3 findings instead of 28 |
 
 Checked and deliberately **not** reported, because they are correct as written:
 the Rust template's `pipeline-status: if: always()` (it intentionally reports
 cancelled jobs), matrix job names that omit a `runner` key when another key
 already disambiguates them, and the JavaScript template's three low-confidence
-`self-repository` zizmor findings.
+`self-repository` zizmor findings. Two more were tested and dropped:
+
+* the js template's `secretlint "**/*"` runs after `npm install`, but with a
+  131 MB `node_modules/` present the exact command finishes in 19 s with zero
+  findings, so there is nothing to report;
+* both templates' `if: always() && steps.lychee.outputs.exit_code != 0` is
+  redundant rather than wrong — when the step is skipped the output is `''` and
+  `'' != 0` is false — and the js template's own
+  `tests/links-workflow.test.js` asserts that exact string, so changing it would
+  break its test suite for no behavioural gain.
 
 ### Detail: #158
 
@@ -367,3 +529,6 @@ the issue text (see §9 of the PR description).
 | `npm audit --package-lock-only --audit-level=high` | Dependency advisories without a network install. |
 | [`@changesets/cli`](https://github.com/changesets/changesets) | Already in use for versioning/publishing. |
 | npm registry metadata endpoint (`https://registry.npmjs.org/<pkg>`) | Publication check that does not depend on `npm view`'s cache/replica behaviour. |
+| [`secretlint`](https://github.com/secretlint/secretlint) + `@secretlint/secretlint-rule-preset-recommend` | Committed-credential scan (best practice #11). Chosen over gitleaks/trufflehog because it needs no extra toolchain in a repository that already runs npm, and its ignore file is reviewable text. |
+| [`lychee`](https://lychee.cloudflare.dev/) via `lycheeverse/lychee-action` | External link checking, weekly rather than per-pull-request (§4.22), with `.lycheeignore` for endpoints that answer only to a browser session. |
+| `git ls-files` via `execFileSync` | Input discovery for the documentation and hygiene tests. Deliberately not a glob library: git already knows what is tracked, and going through a shell is what broke it on Windows (§4.23). |
