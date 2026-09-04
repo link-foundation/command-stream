@@ -37,7 +37,6 @@ async function example2_SimulateRepoClone() {
   console.log('Example 2: Simulate Repository Clone Pattern\n');
 
   const tempDir = mkdtempSync(join(tmpdir(), 'gh-clone-'));
-  const originalCwd = process.cwd();
 
   try {
     // This simulates the pattern from solve.mjs
@@ -46,23 +45,17 @@ async function example2_SimulateRepoClone() {
 
     console.log(`Simulating clone of ${owner}/${repo} to ${tempDir}`);
 
-    // Navigate to temp directory
-    await $`cd ${tempDir}`;
-
     // In real scenario, this would clone the repo
     // For example purposes, we'll create a mock structure
-    await $`git init`;
-    await $`git config user.email "bot@example.com"`;
-    await $`git config user.name "Bot"`;
-    await $`echo "# ${repo}" > README.md`;
-    await $`git add . && git commit -m "Initial commit"`;
+    await $`cd ${tempDir} && git init`;
+    await $`cd ${tempDir} && git config user.email "bot@example.com"`;
+    await $`cd ${tempDir} && git config user.name "Bot"`;
+    await $`cd ${tempDir} && echo "# ${repo}" > README.md`;
+    await $`cd ${tempDir} && git add . && git commit -m "Initial commit"`;
 
     // Simulate gh commands that would work in a cloned repo
     console.log('\nSimulating gh pr list (would fail without remote):');
-    await $`gh pr list --limit 1 2>&1 || echo "No remote repository"`;
-
-    // Return to original directory
-    await $`cd ${originalCwd}`;
+    await $`cd ${tempDir} && gh pr list --limit 1 2>&1 || echo "No remote repository"`;
 
     console.log('✓ Clone pattern simulation completed\n');
   } catch (error) {
@@ -76,7 +69,6 @@ async function example3_WorkflowWithTempDir() {
   console.log('Example 3: Complete Workflow in Temp Directory\n');
 
   const tempDir = mkdtempSync(join(tmpdir(), 'workflow-'));
-  const originalCwd = process.cwd();
 
   try {
     // Step 1: Setup repository
@@ -113,9 +105,6 @@ async function example3_WorkflowWithTempDir() {
     await $`cd ${tempDir} && git log --oneline --graph --all`;
     await $`cd ${tempDir} && git status`;
 
-    // Return to original directory
-    await $`cd ${originalCwd}`;
-
     console.log('\n✓ Workflow completed successfully\n');
   } catch (error) {
     console.error('Error:', error.message);
@@ -130,7 +119,6 @@ async function example4_MultipleDirectoryOperations() {
   const baseDir = mkdtempSync(join(tmpdir(), 'multi-'));
   const project1 = join(baseDir, 'project1');
   const project2 = join(baseDir, 'project2');
-  const originalCwd = process.cwd();
 
   try {
     // Create project directories
@@ -158,8 +146,6 @@ async function example4_MultipleDirectoryOperations() {
     // Demonstrate that cd doesn't affect parent shell
     const pwdResult = await $`pwd`;
     console.log(`\nCurrent directory (unchanged): ${pwdResult.stdout.trim()}`);
-
-    await $`cd ${originalCwd}`;
 
     console.log('\n✓ Multiple directory operations completed\n');
   } catch (error) {

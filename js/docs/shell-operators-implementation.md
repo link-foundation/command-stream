@@ -27,9 +27,10 @@ Need to parse these operators:
 
 // New flow
 1. Parse: ["cd /tmp", "&&", "ls"]
-2. Execute "cd /tmp" via virtual command (changes process.cwd)
+2. Execute "cd /tmp" via virtual command (temporarily changes process.cwd)
 3. If exit code == 0, execute "ls"
 4. Both commands see the changed directory
+5. Restore the host process context when the invocation completes
 ```
 
 ### 3. Subshell Handling

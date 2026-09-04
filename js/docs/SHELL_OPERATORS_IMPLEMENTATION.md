@@ -24,7 +24,7 @@ We've successfully implemented support for shell operators (`&&`, `||`, `;`, `()
 ### 3. Fixed cd Command Behavior
 
 - `cd` now works correctly in all contexts:
-  - `cd /tmp` - changes directory (persists) ✓
+  - `cd /tmp` - changes directory for the current invocation, then restores it ✓
   - `cd /tmp && ls` - both commands see /tmp ✓
   - `(cd /tmp && ls)` - subshell isolation ✓
   - `cd /tmp ; pwd ; cd /usr ; pwd` - sequential execution ✓
@@ -37,7 +37,7 @@ We've successfully implemented support for shell operators (`&&`, `||`, `;`, `()
    - `||` - run next only if previous fails (exit code ≠ 0)
    - `;` - run next regardless
    - `()` - run in subshell with saved/restored directory
-3. Virtual commands execute in-process, maintaining state
+3. Virtual commands execute in-process, maintaining state within the current invocation
 4. Real commands spawn subprocesses as needed
 5. Falls back to `sh -c` for unsupported features
 
@@ -68,7 +68,7 @@ await $`(cd /tmp && (cd /usr && pwd) && pwd)`; // Output: /usr\n/tmp
 1. **Correct Shell Semantics** - cd and other virtual commands behave exactly like in a real shell
 2. **Performance** - No subprocess overhead for simple command chains
 3. **Cross-platform** - Consistent behavior across platforms
-4. **Backward Compatible** - Existing code continues to work
+4. **Host Isolation** - Process cwd and `PWD`/`OLDPWD` are restored after each invocation
 5. **Graceful Fallback** - Complex shell features still work via `sh -c`
 
 ## Testing
@@ -81,7 +81,7 @@ All major shell operator scenarios are tested and working:
 - ✓ Subshells (`()`)
 - ✓ Nested subshells
 - ✓ Complex command chains
-- ✓ Directory persistence
+- ✓ Directory persistence within an invocation
 - ✓ Path with spaces
 
 ## Files Modified

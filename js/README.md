@@ -943,37 +943,38 @@ await $`rm -r project numbers.txt`;
 
 ### Working Directory (`cd` and the `cwd` option)
 
-The built-in `cd` command behaves like `cd` in a POSIX `sh`/bash script, so shell
-scripts translate directly. Crucially, **a directory change persists across
-subsequent commands** — just like running successive lines in a shell script:
+The built-in `cd` command behaves like `cd` in a POSIX `sh`/bash command list.
+The new directory remains active for every command in the same `$` invocation,
+then command-stream restores the host process working directory:
 
 ```javascript
 import { $ } from 'command-stream';
 
-// In sh:                         // In command-stream (.mjs):
-// cd /some/directory             await $`cd /some/directory`;
-// pwd   # -> /some/directory     await $`pwd`; // -> /some/directory
+const before = process.cwd();
+const result = await $`cd /some/directory && pwd`;
+console.log(result.stdout); // /some/directory
+console.log(process.cwd() === before); // true
 ```
 
-This is the behavior described in [issue #50](https://github.com/link-foundation/command-stream/issues/50):
-each `cd` updates the process working directory, so the next command starts from
-the new location. All of the following sh idioms work identically:
+Keep dependent commands in one invocation. Separate invocations are isolated
+from one another:
 
 ```javascript
 await $`cd /tmp && pwd`; // chain with && -> /tmp
 await $`cd /tmp`;
-await $`pwd`; // separate commands -> /tmp (change persists)
-await $`cd`; // no argument -> $HOME
-await $`cd ~`; // ~ expands to $HOME
-await $`cd ~/projects`; // ~/ prefix expands to $HOME/projects
-await $`cd ..`; // parent directory
-await $`cd -`; // previous directory (prints it, like sh)
+await $`pwd`; // separate invocation -> the host process directory
+await $`cd && pwd`; // no argument -> $HOME
+await $`cd ~ && pwd`; // ~ expands to $HOME
+await $`cd ~/projects && pwd`; // ~/ prefix expands to $HOME/projects
+await $`cd /tmp && cd .. && pwd`; // parent directory
+await $`cd /tmp && cd /usr && cd -`; // previous directory (prints it)
 await $`cd /tmp && mkdir t && cd t && pwd`; // -> /tmp/t
 ```
 
-A successful `cd` updates the `PWD` and `OLDPWD` environment variables (used by
-`cd -`), exactly like a real shell. A failed `cd` prints a `sh`-style error to
-stderr, returns a non-zero exit code, and leaves the working directory unchanged:
+Within an invocation, a successful `cd` updates `PWD` and `OLDPWD` (used by
+`cd -`) exactly like a real shell. The host values are restored afterward,
+including when a command fails or `errexit` rejects. A failed `cd` prints a
+`sh`-style error to stderr and returns a non-zero exit code:
 
 ```javascript
 const r = await $`cd /does/not/exist`;
@@ -983,7 +984,8 @@ console.log(r.stderr); // cd: ENOENT: no such file or directory, ...
 
 #### Subshell isolation with `( … )`
 
-As in sh, a `cd` inside a subshell `( … )` does **not** leak to the parent:
+As in sh, a `cd` inside a subshell `( … )` does **not** affect the surrounding
+command list:
 
 ```javascript
 process.chdir('/tmp');
@@ -998,10 +1000,8 @@ There are two ways to control the working directory; pick whichever maps best to
 the script you are translating:
 
 ```javascript
-// 1) cd command — mutates the process working directory and persists,
-//    just like a line in a shell script.
-await $`cd /tmp`;
-await $`pwd`; // -> /tmp
+// 1) cd command — changes directory for one command invocation.
+await $`cd /tmp && pwd`; // -> /tmp; host process.cwd() is restored afterward
 
 // 2) cwd option — sets a fixed working directory for a single invocation
 //    (or a reusable $({ cwd }) binding) without changing process.cwd().
@@ -1009,7 +1009,8 @@ await $({ cwd: '/tmp' })`pwd`; // -> /tmp, process.cwd() is untouched
 ```
 
 Relative `cd` targets are resolved against the `cwd` option when one is provided,
-so `` $({ cwd: '/tmp' })`cd sub` `` changes into `/tmp/sub`.
+so `` $({ cwd: '/tmp' })`cd sub && /bin/pwd` `` prints `/tmp/sub` while that
+invocation is running.
 
 > **Note:** Virtual commands such as `echo` do not perform shell variable
 > expansion, so `echo $PWD` prints the literal string `$PWD`. Use `process.cwd()`

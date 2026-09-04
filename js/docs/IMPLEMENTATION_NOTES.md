@@ -117,7 +117,7 @@ async _runSimpleCommand(command) {
 After implementation:
 
 1. `cd /tmp && pwd` should output `/tmp`
-2. `cd /tmp` followed by `pwd` should output `/tmp`
+2. `cd /tmp` followed by a separate `pwd` should output the host directory
 3. `(cd /tmp && pwd) ; pwd` should output `/tmp` then original directory
 4. All existing tests should still pass
 

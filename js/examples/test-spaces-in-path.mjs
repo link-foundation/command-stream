@@ -19,25 +19,19 @@ console.log('Directory created:', dirWithSpaces);
 
 try {
   console.log('\nTest 1: cd with quoted path');
-  const result1 = await $`cd "${dirWithSpaces}"`;
+  const result1 = await $`cd "${dirWithSpaces}" && pwd`;
   console.log('Exit code:', result1.code);
-  console.log('Stdout:', result1.stdout);
+  console.log('Directory during invocation:', result1.stdout.trim());
   console.log('Stderr:', result1.stderr);
-
-  const pwd1 = await $`pwd`;
-  console.log('Current dir:', pwd1.stdout.trim());
   console.log('Expected:', dirWithSpaces);
-  console.log('Match:', pwd1.stdout.trim() === dirWithSpaces);
+  console.log('Match:', result1.stdout.trim() === dirWithSpaces);
+  console.log('Host cwd restored:', process.cwd() === originalCwd);
 
-  await $`cd ${originalCwd}`;
-
-  console.log('\nTest 2: cd with escaped spaces');
+  console.log('\nTest 2: pre-escaped interpolated paths are not supported');
   const escaped = dirWithSpaces.replace(/ /g, '\\ ');
-  const result2 = await $`cd ${escaped}`;
+  const result2 = await $`cd ${escaped} && pwd`;
   console.log('Exit code:', result2.code);
-
-  const pwd2 = await $`pwd`;
-  console.log('Current dir:', pwd2.stdout.trim());
+  console.log('Expected non-zero result:', result2.code !== 0);
 } catch (error) {
   console.error('Error:', error.message);
 } finally {
