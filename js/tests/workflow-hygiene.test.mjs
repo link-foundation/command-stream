@@ -57,6 +57,22 @@ describe('workflow files', () => {
   );
 
   test.each(workflows.map((w) => [w.name, w]))(
+    '%s keeps secrets out of the workflow-level env block',
+    (_name, workflow) => {
+      // A workflow-level `env:` is inherited by every job, so declaring the
+      // crates.io token there handed it to `cargo test` and `cargo clippy` on
+      // pull requests -- both of which compile and run code from the branch
+      // under review, via build.rs, proc macros or the tests themselves.
+      // Publishing credentials belong on the jobs that publish.
+      for (const [key, value] of Object.entries(workflow.doc.env ?? {})) {
+        expect(`${key}: ${String(value).includes('secrets.')}`).toBe(
+          `${key}: false`
+        );
+      }
+    }
+  );
+
+  test.each(workflows.map((w) => [w.name, w]))(
     '%s uses !cancelled() rather than always()',
     (_name, workflow) => {
       // `always()` keeps a job running after the run is cancelled, so a
