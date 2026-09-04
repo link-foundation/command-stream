@@ -10,7 +10,11 @@ import {
 } from './$.shell.mjs';
 import { StreamUtils, safeWrite, asBuffer } from './$.stream-utils.mjs';
 import { pumpReadable } from './$.quote.mjs';
-import { createResult } from './$.result.mjs';
+import {
+  createCancelledResult,
+  createResult,
+  finishExecutionError,
+} from './$.result.mjs';
 import {
   parseShellCommand,
   needsRealShell,
@@ -20,10 +24,7 @@ import {
   createExitPromise,
   drainPumpsAfterExit,
 } from './$.process-runner-exit.mjs';
-import {
-  needsProcessContextLock,
-  runWithRunnerProcessContext,
-} from './$.process-context-lock.mjs';
+import { effectiveCwd, effectiveEnv } from './$.process-context.mjs';
 
 const isBun = typeof globalThis.Bun !== 'undefined';
 
@@ -1090,15 +1091,18 @@ export function attachExecutionMethods(ProcessRunner, deps) {
   ProcessRunner.prototype._doStartAsync = async function () {
     // The await/then path can reach here without start()'s option merge.
     setupExternalAbortSignal(this);
-    // Preserve the public lifecycle contract while an invocation is waiting
-    // for the process-context lock. Accessing a stream starts the runner
-    // synchronously, even though the command itself may need to queue.
+    // Preserve the public lifecycle contract: accessing a stream starts the
+    // runner synchronously even though command execution is asynchronous.
     this.started = true;
     this._mode = 'async';
     this._effectiveCwd = this.options.cwd;
+    this._effectiveEnv = this.options.env;
 
-    if (needsProcessContextLock(this)) {
-      return runWithRunnerProcessContext(this, () => this._doStartAsync());
+    if (this._cancelled) {
+      return (
+        this.result ??
+        this.finish(createCancelledResult(this._cancellationSignal))
+      );
     }
 
     trace(
@@ -1177,8 +1181,8 @@ export function attachExecutionMethods(ProcessRunner, deps) {
 
       // Execute child process
       const result = await executeChildProcess(this, argv, {
-        cwd,
-        env,
+        cwd: effectiveCwd(this) ?? cwd,
+        env: effectiveEnv(this) ?? env,
         stdin,
         isInteractive,
         shell: shellArgv,
@@ -1211,15 +1215,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
           })}`
       );
 
-      if (!this.finished) {
-        const errorResult = createResult({
-          code: error.code ?? 1,
-          stdout: error.stdout ?? '',
-          stderr: error.stderr ?? error.message ?? '',
-          stdin: '',
-        });
-        this.finish(errorResult);
-      }
+      finishExecutionError(this, error);
 
       throw error;
     }

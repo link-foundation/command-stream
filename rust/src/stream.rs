@@ -366,11 +366,7 @@ async fn run_streaming_process(
         }
     }
 
-    // A virtual `cd` invocation may temporarily use the process cwd while it
-    // computes its invocation-local state. Do not inherit that transient cwd.
-    let process_context = crate::lock_process_context().await;
     let mut child = cmd.spawn()?;
-    drop(process_context);
 
     // Write stdin if needed
     if let Some(content) = stdin_content {

@@ -79,16 +79,18 @@ async _runSequence(sequence) {
 
 ```javascript
 async _runSubshell(subshell) {
-  // Save current directory
-  const savedCwd = process.cwd();
+  // Save invocation-local context
+  const savedCwd = this._effectiveCwd;
+  const savedEnv = this._effectiveEnv;
 
   try {
     // Execute subshell command
     const result = await this._runSequence(subshell.command);
     return result;
   } finally {
-    // Restore directory
-    process.chdir(savedCwd);
+    // Discard subshell changes
+    this._effectiveCwd = savedCwd;
+    this._effectiveEnv = savedEnv;
   }
 }
 ```

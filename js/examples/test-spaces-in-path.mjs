@@ -25,7 +25,7 @@ try {
   console.log('Stderr:', result1.stderr);
   console.log('Expected:', dirWithSpaces);
   console.log('Match:', result1.stdout.trim() === dirWithSpaces);
-  console.log('Host cwd restored:', process.cwd() === originalCwd);
+  console.log('Host cwd unchanged:', process.cwd() === originalCwd);
 
   console.log('\nTest 2: pre-escaped interpolated paths are not supported');
   const escaped = dirWithSpaces.replace(/ /g, '\\ ');

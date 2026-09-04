@@ -2,7 +2,7 @@
 // Example for issue #197: translating invocation-scoped `cd` patterns to .mjs.
 //
 // The built-in `cd` command behaves like POSIX sh/bash within one tagged
-// template invocation and restores the host process afterward. Run with:
+// template invocation while leaving the host process untouched. Run with:
 //   node examples/cd-cwd-sh-translation.mjs
 import { $ } from '../src/$.mjs';
 import { mkdtempSync, rmSync } from 'fs';

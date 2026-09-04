@@ -1,5 +1,8 @@
 import path from 'path';
+import os from 'os';
+import { realpath, stat } from 'fs/promises';
 import { trace, VirtualUtils } from '../$.utils.mjs';
+import { withVirtualProcessContext } from '../$.process-context.mjs';
 
 /**
  * Virtual `cd` command.
@@ -11,14 +14,16 @@ import { trace, VirtualUtils } from '../$.utils.mjs';
  *   - `cd <dir>`      -> change to <dir> (relative paths resolve against the
  *                        current working directory, or the `cwd` option)
  *
- * Like a real shell, a successful `cd` updates the `PWD` and `OLDPWD`
- * environment variables and changes the Node.js process directory so that
- * subsequent commands in the active invocation observe the new location. The
- * ProcessRunner restores the host process context when the invocation ends.
+ * Like a real shell, a successful `cd` updates the invocation's logical cwd,
+ * `PWD`, and `OLDPWD`. The Node.js process context is never mutated.
  */
-export default async function cd({ args, cwd }) {
-  const home = process.env.HOME || process.env.USERPROFILE || '/';
-  const base = cwd || process.cwd();
+export default async function cd({ args, cwd, env }) {
+  const invocationEnv = env ?? process.env;
+  const home =
+    invocationEnv.HOME ||
+    invocationEnv.USERPROFILE ||
+    path.parse(process.execPath).root;
+  const base = await resolveBaseDirectory(cwd, invocationEnv);
   const previousDir = base;
 
   let target = args[0];
@@ -29,7 +34,7 @@ export default async function cd({ args, cwd }) {
     target = home;
   } else if (target === '-') {
     // `cd -` switches to the previous directory and prints it (sh behavior).
-    const oldpwd = process.env.OLDPWD;
+    const oldpwd = invocationEnv.OLDPWD;
     if (!oldpwd) {
       trace('VirtualCommand', () => 'cd: OLDPWD not set');
       return { stdout: '', stderr: 'cd: OLDPWD not set\n', code: 1 };
@@ -55,18 +60,22 @@ export default async function cd({ args, cwd }) {
   );
 
   try {
-    process.chdir(resolved);
-    const newDir = process.cwd();
-    // Keep PWD/OLDPWD in sync with the real shell so `$PWD`-style lookups and
-    // child processes observe the change.
-    process.env.OLDPWD = previousDir;
-    process.env.PWD = newDir;
+    const newDir = await realpath(resolved);
+    const metadata = await stat(newDir);
+    if (!metadata.isDirectory()) {
+      const error = new Error(`ENOTDIR: not a directory, chdir '${resolved}'`);
+      error.code = 'ENOTDIR';
+      throw error;
+    }
     trace(
       'VirtualCommand',
       () => `cd: success | ${JSON.stringify({ newDir }, null, 2)}`
     );
     // A successful `cd` is silent, except for `cd -` which echoes the new dir.
-    return VirtualUtils.success(printDir ? `${newDir}\n` : '');
+    return withVirtualProcessContext(
+      VirtualUtils.success(printDir ? `${newDir}\n` : ''),
+      { cwd: newDir, oldpwd: previousDir }
+    );
   } catch (error) {
     trace(
       'VirtualCommand',
@@ -74,4 +83,40 @@ export default async function cd({ args, cwd }) {
     );
     return { stderr: `cd: ${error.message}\n`, code: 1 };
   }
+}
+
+async function resolveBaseDirectory(cwd, env) {
+  const candidates = [];
+  if (cwd) {
+    candidates.push(cwd);
+  } else {
+    try {
+      candidates.push(process.cwd());
+    } catch (error) {
+      trace('VirtualCommand', () => `cd: current cwd unavailable: ${error}`);
+    }
+  }
+  candidates.push(
+    env.PWD,
+    env.HOME,
+    env.USERPROFILE,
+    os.tmpdir(),
+    path.parse(process.execPath).root
+  );
+
+  for (const candidate of new Set(candidates)) {
+    if (!candidate) {
+      continue;
+    }
+    try {
+      const canonical = await realpath(candidate);
+      if ((await stat(canonical)).isDirectory()) {
+        return canonical;
+      }
+    } catch {
+      // Try the next invocation-local fallback.
+    }
+  }
+
+  return path.parse(process.execPath).root;
 }

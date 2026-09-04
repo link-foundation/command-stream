@@ -5,6 +5,12 @@ use crate::utils::{trace, CommandResult};
 use std::env;
 use std::path::PathBuf;
 
+#[derive(Debug)]
+pub(crate) struct CdContext {
+    pub(crate) cwd: PathBuf,
+    pub(crate) oldpwd: PathBuf,
+}
+
 /// Execute the cd command
 ///
 /// Mirrors POSIX `sh`/bash semantics so that shell scripts translate directly:
@@ -14,31 +20,51 @@ use std::path::PathBuf;
 ///   - `cd <dir>`      -> change to <dir> (relative paths resolve against the
 ///     current working directory, or the `cwd` option)
 ///
-/// Like a real shell, a successful `cd` updates the `PWD` and `OLDPWD`
-/// environment variables and changes the process directory so that subsequent
-/// commands in the active invocation observe the new location. The runner
-/// restores the host process context when the invocation ends.
+/// This low-level command API retains its original process-mutating behavior.
+/// `ProcessRunner` and `Pipeline` use `resolve_cd` instead so their cwd and
+/// environment remain invocation-local.
 pub async fn cd(ctx: CommandContext) -> CommandResult {
-    let home = env::var("HOME")
-        .or_else(|_| env::var("USERPROFILE"))
-        .unwrap_or_else(|_| "/".to_string());
+    let (result, context) = resolve_cd(ctx).await;
+    let Some(context) = context else {
+        return result;
+    };
+
+    if let Err(error) = env::set_current_dir(&context.cwd) {
+        trace("VirtualCommand", &format!("cd: failed: {}", error));
+        return CommandResult::error(format!("cd: {}\n", error));
+    }
+    env::set_var("OLDPWD", &context.oldpwd);
+    env::set_var("PWD", &context.cwd);
+    result
+}
+
+pub(crate) async fn resolve_cd(ctx: CommandContext) -> (CommandResult, Option<CdContext>) {
+    let invocation_env = ctx.env.as_ref();
+    let env_value = |name: &str| {
+        invocation_env
+            .and_then(|values| values.get(name).cloned())
+            .or_else(|| env::var(name).ok())
+    };
+    let home = env_value("HOME")
+        .or_else(|| env_value("USERPROFILE"))
+        .unwrap_or_else(|| "/".to_string());
 
     let base = ctx.get_cwd();
-    let previous_dir = Some(base.clone());
+    let previous_dir = std::fs::canonicalize(&base).unwrap_or(base.clone());
 
     let mut print_dir = false;
     let target: String = match ctx.args.first().map(|s| s.as_str()) {
         // `cd` with no argument goes to $HOME, just like sh.
         None | Some("") => home.clone(),
         // `cd -` switches to the previous directory and prints it (sh behavior).
-        Some("-") => match env::var("OLDPWD") {
-            Ok(oldpwd) if !oldpwd.is_empty() => {
+        Some("-") => match env_value("OLDPWD") {
+            Some(oldpwd) if !oldpwd.is_empty() => {
                 print_dir = true;
                 oldpwd
             }
             _ => {
                 trace("VirtualCommand", "cd: OLDPWD not set");
-                return CommandResult::error("cd: OLDPWD not set\n");
+                return (CommandResult::error("cd: OLDPWD not set\n"), None);
             }
         },
         Some("~") => home.clone(),
@@ -60,31 +86,38 @@ pub async fn cd(ctx: CommandContext) -> CommandResult {
         &format!("cd: changing directory to {:?}", resolved),
     );
 
-    match env::set_current_dir(&resolved) {
-        Ok(()) => {
-            let new_dir = env::current_dir()
-                .map(|p| p.display().to_string())
-                .unwrap_or_default();
-            // Keep PWD/OLDPWD in sync with the real shell so `$PWD`-style lookups
-            // and child processes observe the change.
-            if let Some(prev) = previous_dir {
-                env::set_var("OLDPWD", prev);
-            }
-            env::set_var("PWD", &new_dir);
+    match std::fs::canonicalize(&resolved).and_then(|new_dir| {
+        if new_dir.is_dir() {
+            Ok(new_dir)
+        } else {
+            Err(std::io::Error::new(
+                std::io::ErrorKind::NotADirectory,
+                "not a directory",
+            ))
+        }
+    }) {
+        Ok(new_dir) => {
             trace(
                 "VirtualCommand",
-                &format!("cd: success, new dir: {}", new_dir),
+                &format!("cd: success, new dir: {}", new_dir.display()),
             );
             // A successful `cd` is silent, except for `cd -` which echoes the dir.
-            if print_dir {
-                CommandResult::success(format!("{}\n", new_dir))
+            let result = if print_dir {
+                CommandResult::success(format!("{}\n", new_dir.display()))
             } else {
                 CommandResult::success_empty()
-            }
+            };
+            (
+                result,
+                Some(CdContext {
+                    cwd: new_dir,
+                    oldpwd: previous_dir,
+                }),
+            )
         }
         Err(e) => {
             trace("VirtualCommand", &format!("cd: failed: {}", e));
-            CommandResult::error(format!("cd: {}\n", e))
+            (CommandResult::error(format!("cd: {}\n", e)), None)
         }
     }
 }

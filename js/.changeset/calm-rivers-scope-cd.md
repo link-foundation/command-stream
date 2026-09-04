@@ -2,4 +2,4 @@
 'command-stream': patch
 ---
 
-Isolate virtual `cd` changes to one invocation, including overlapping commands and explicit `cwd` command chains, then restore the host working directory and `PWD`/`OLDPWD`.
+Track virtual `cd` changes in invocation-local cwd and environment state, including overlapping commands, subshells, and explicit `cwd` command chains, without mutating the host working directory or `PWD`/`OLDPWD`.

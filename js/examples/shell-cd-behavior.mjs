@@ -32,7 +32,7 @@ async function testShellBehavior() {
   console.log('   Actual:', result2.stdout.trim());
   console.log('   Status:', result2.stdout.trim() === '/usr' ? '✓' : '✗');
 
-  console.log('\n3. After a chain, the host directory should be restored:');
+  console.log('\n3. A chain should leave the host directory untouched:');
   console.log('   $ pwd');
   console.log(`   Expected: ${originalCwd}`);
 
@@ -66,12 +66,9 @@ async function testShellBehavior() {
   console.log('   Actual:', result6.stdout.trim());
   console.log('   Status:', result6.stdout.trim() === '/var' ? '✓' : '✗');
 
-  // Return to original directory
-  process.chdir(originalCwd);
-
   console.log('\n=== Test Complete ===');
-  console.log('Directory state is shared inside one $ invocation and restored');
-  console.log('before control returns to the host process.');
+  console.log('Directory state is shared inside one $ invocation without');
+  console.log('changing the host process.');
 }
 
 testShellBehavior().catch(console.error);

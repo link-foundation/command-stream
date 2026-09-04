@@ -27,19 +27,19 @@ Need to parse these operators:
 
 // New flow
 1. Parse: ["cd /tmp", "&&", "ls"]
-2. Execute "cd /tmp" via virtual command (temporarily changes process.cwd)
+2. Execute "cd /tmp" via virtual command (updates invocation-local cwd/env)
 3. If exit code == 0, execute "ls"
 4. Both commands see the changed directory
-5. Restore the host process context when the invocation completes
+5. Discard the invocation-local context when the invocation completes
 ```
 
 ### 3. Subshell Handling
 
 For `(cd /tmp && ls)`:
 
-1. Save current process.cwd()
+1. Clone the current invocation-local cwd and environment
 2. Execute commands inside ()
-3. Restore original cwd after subshell completes
+3. Discard subshell changes after it completes
 
 ### 4. Parser Implementation
 

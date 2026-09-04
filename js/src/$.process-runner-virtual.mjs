@@ -3,6 +3,11 @@
 
 import { trace } from './$.trace.mjs';
 import { safeWrite } from './$.stream-utils.mjs';
+import {
+  applyVirtualProcessContext,
+  effectiveCwd,
+  effectiveEnv,
+} from './$.process-context.mjs';
 
 /**
  * Get stdin data from options
@@ -114,8 +119,8 @@ function handleVirtualError(runner, error, shellSettings, shouldFinish) {
 async function runGeneratorHandler(runner, handler, argValues, stdinData) {
   const chunks = [];
   const commandOptions = {
-    cwd: runner._effectiveCwd ?? runner.options.cwd,
-    env: runner.options.env,
+    cwd: effectiveCwd(runner),
+    env: effectiveEnv(runner) ?? process.env,
     options: runner.options,
     isCancelled: () => runner._cancelled,
   };
@@ -186,8 +191,8 @@ async function runGeneratorHandler(runner, handler, argValues, stdinData) {
  */
 async function runRegularHandler(runner, handler, argValues, stdinData) {
   const commandOptions = {
-    cwd: runner._effectiveCwd ?? runner.options.cwd,
-    env: runner.options.env,
+    cwd: effectiveCwd(runner),
+    env: effectiveEnv(runner) ?? process.env,
     options: runner.options,
     isCancelled: () => runner._cancelled,
   };
@@ -227,18 +232,6 @@ async function runRegularHandler(runner, handler, argValues, stdinData) {
   return result;
 }
 
-function updateEffectiveCwdAfterVirtualCd(runner, cmd, result) {
-  if (cmd !== 'cd' || result.code !== 0) {
-    return;
-  }
-
-  try {
-    runner._effectiveCwd = process.cwd();
-  } catch {
-    runner._effectiveCwd = undefined;
-  }
-}
-
 /**
  * Attach virtual command methods to ProcessRunner prototype
  * @param {Function} ProcessRunner - The ProcessRunner class
@@ -265,6 +258,8 @@ export function attachVirtualCommandMethods(ProcessRunner, deps) {
       if (this.options.stdin === 'pipe') {
         const modifiedOptions = {
           ...this.options,
+          cwd: effectiveCwd(this),
+          env: effectiveEnv(this),
           stdin: 'pipe',
           _bypassVirtual: true,
         };
@@ -293,7 +288,7 @@ export function attachVirtualCommandMethods(ProcessRunner, deps) {
         ? await runGeneratorHandler(this, handler, argValues, stdinData)
         : await runRegularHandler(this, handler, argValues, stdinData);
 
-      updateEffectiveCwdAfterVirtualCd(this, cmd, result);
+      applyVirtualProcessContext(this, result);
 
       if (shouldFinish) {
         this.finish(result);

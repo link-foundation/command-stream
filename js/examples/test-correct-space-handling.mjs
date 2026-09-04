@@ -25,7 +25,7 @@ try {
   console.log('Directory during invocation:', result1.stdout.trim());
   console.log('Expected:', dirWithSpaces);
   console.log('Match:', result1.stdout.trim() === dirWithSpaces);
-  console.log('Host cwd restored:', process.cwd() === originalCwd);
+  console.log('Host cwd unchanged:', process.cwd() === originalCwd);
 
   console.log('\nAlso works: cd with && chain');
   const result2 = await $`cd ${dirWithSpaces} && pwd`;

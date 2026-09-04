@@ -32,7 +32,7 @@ await test('&& operator works', async () => {
     throw new Error(`Expected /tmp, got ${result.stdout.trim()}`);
   }
   if (process.cwd() !== originalCwd) {
-    throw new Error('Host cwd was not restored');
+    throw new Error('Host cwd was changed');
   }
 });
 
@@ -52,7 +52,7 @@ await test('; operator works', async () => {
     throw new Error(`Expected /tmp and /usr, got ${lines.join(', ')}`);
   }
   if (process.cwd() !== originalCwd) {
-    throw new Error('Host cwd was not restored');
+    throw new Error('Host cwd was changed');
   }
 });
 
@@ -64,7 +64,7 @@ await test('Subshell isolation works', async () => {
     throw new Error(`Expected /usr then /tmp, got ${lines.join(', ')}`);
   }
   if (process.cwd() !== originalCwd) {
-    throw new Error('Host cwd was not restored');
+    throw new Error('Host cwd was changed');
   }
 });
 

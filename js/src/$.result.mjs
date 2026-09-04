@@ -23,3 +23,28 @@ export function createResult({ code, stdout = '', stderr = '', stdin = '' }) {
     },
   };
 }
+
+export function createCancelledResult(signal) {
+  const signalCodes = { SIGINT: 130, SIGKILL: 137, SIGTERM: 143 };
+  return createResult({
+    code: signalCodes[signal] ?? 1,
+    stdout: '',
+    stderr: '',
+    stdin: '',
+  });
+}
+
+export function finishExecutionError(runner, error) {
+  if (runner.finished) {
+    return;
+  }
+
+  runner.finish(
+    createResult({
+      code: error.code ?? 1,
+      stdout: error.stdout ?? '',
+      stderr: error.stderr ?? error.message ?? '',
+      stdin: '',
+    })
+  );
+}

@@ -17,14 +17,14 @@ We've successfully implemented support for shell operators (`&&`, `||`, `;`, `()
 ### 2. ProcessRunner Enhancements (`src/$.mjs`)
 
 - `_runSequence()` - Executes command sequences with proper operator semantics
-- `_runSubshell()` - Handles subshell isolation (saves/restores cwd)
+- `_runSubshell()` - Handles subshell isolation (clones/discards local cwd and env)
 - `_runSimpleCommand()` - Executes individual commands (virtual or real)
 - Integration with existing pipeline support
 
 ### 3. Fixed cd Command Behavior
 
 - `cd` now works correctly in all contexts:
-  - `cd /tmp` - changes directory for the current invocation, then restores it ✓
+  - `cd /tmp` - changes the invocation-local directory without mutating the host ✓
   - `cd /tmp && ls` - both commands see /tmp ✓
   - `(cd /tmp && ls)` - subshell isolation ✓
   - `cd /tmp ; pwd ; cd /usr ; pwd` - sequential execution ✓
@@ -36,7 +36,7 @@ We've successfully implemented support for shell operators (`&&`, `||`, `;`, `()
    - `&&` - run next only if previous succeeds (exit code 0)
    - `||` - run next only if previous fails (exit code ≠ 0)
    - `;` - run next regardless
-   - `()` - run in subshell with saved/restored directory
+   - `()` - run in a subshell with cloned/discarded local directory state
 3. Virtual commands execute in-process, maintaining state within the current invocation
 4. Real commands spawn subprocesses as needed
 5. Falls back to `sh -c` for unsupported features
@@ -68,7 +68,7 @@ await $`(cd /tmp && (cd /usr && pwd) && pwd)`; // Output: /usr\n/tmp
 1. **Correct Shell Semantics** - cd and other virtual commands behave exactly like in a real shell
 2. **Performance** - No subprocess overhead for simple command chains
 3. **Cross-platform** - Consistent behavior across platforms
-4. **Host Isolation** - Process cwd and `PWD`/`OLDPWD` are restored after each invocation
+4. **Host Isolation** - Process cwd and `PWD`/`OLDPWD` are never mutated
 5. **Graceful Fallback** - Complex shell features still work via `sh -c`
 
 ## Testing

@@ -79,12 +79,11 @@ pub mod shell_parser;
 pub mod utils;
 
 use std::collections::HashMap;
-use std::ffi::OsString;
 use std::path::PathBuf;
 use std::process::Stdio;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, Command};
-use tokio::sync::{mpsc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use tokio::sync::mpsc;
 
 pub use commands::{CommandContext, StreamChunk};
 pub use shell_parser::{needs_real_shell, parse_shell_command, ParsedCommand};
@@ -105,68 +104,12 @@ pub use state::{
 pub use stream::{AsyncIterator, IntoStream, OutputChunk, OutputStream, StreamingRunner};
 pub use trace::trace;
 
-static PROCESS_CONTEXT_LOCK: RwLock<()> = RwLock::const_new(());
-
-pub(crate) async fn lock_process_context() -> RwLockReadGuard<'static, ()> {
-    PROCESS_CONTEXT_LOCK.read().await
-}
-
 fn fallback_cwd() -> PathBuf {
     std::env::var_os("HOME")
         .or_else(|| std::env::var_os("USERPROFILE"))
         .map(PathBuf::from)
         .filter(|path| path.is_dir())
         .unwrap_or_else(std::env::temp_dir)
-}
-
-pub(crate) struct ProcessContextGuard {
-    _lock: RwLockWriteGuard<'static, ()>,
-    cwd: Option<PathBuf>,
-    pwd: Option<OsString>,
-    oldpwd: Option<OsString>,
-}
-
-impl ProcessContextGuard {
-    pub(crate) async fn capture() -> Self {
-        let lock = PROCESS_CONTEXT_LOCK.write().await;
-        Self {
-            _lock: lock,
-            cwd: std::env::current_dir().ok(),
-            pwd: std::env::var_os("PWD"),
-            oldpwd: std::env::var_os("OLDPWD"),
-        }
-    }
-}
-
-impl Drop for ProcessContextGuard {
-    fn drop(&mut self) {
-        let restored = self
-            .cwd
-            .as_ref()
-            .is_some_and(|cwd| std::env::set_current_dir(cwd).is_ok());
-        if !restored {
-            let fallback = fallback_cwd();
-            if let Err(error) = std::env::set_current_dir(&fallback) {
-                trace(
-                    "ProcessRunner",
-                    &format!(
-                        "failed to restore cwd to fallback {}: {}",
-                        fallback.display(),
-                        error
-                    ),
-                );
-            }
-        }
-
-        match self.pwd.take() {
-            Some(value) => std::env::set_var("PWD", value),
-            None => std::env::remove_var("PWD"),
-        }
-        match self.oldpwd.take() {
-            Some(value) => std::env::set_var("OLDPWD", value),
-            None => std::env::remove_var("OLDPWD"),
-        }
-    }
 }
 
 /// Resolve a working directory that is safe to spawn a child process in.
@@ -324,12 +267,6 @@ impl ProcessRunner {
             ""
         } else {
             self.command.split_whitespace().next().unwrap_or("")
-        };
-        let uses_virtual_cd = first_word == "cd";
-        let (_process_context, _shared_process_context) = if uses_virtual_cd {
-            (Some(ProcessContextGuard::capture().await), None)
-        } else {
-            (None, Some(lock_process_context().await))
         };
         if let Some(result) = self.try_virtual_command(first_word).await {
             self.result = Some(result);
@@ -489,7 +426,7 @@ impl ProcessRunner {
         match cmd_name {
             "echo" => Some(commands::echo(ctx).await),
             "pwd" => Some(commands::pwd(ctx).await),
-            "cd" => Some(commands::cd(ctx).await),
+            "cd" => Some(commands::cd::resolve_cd(ctx).await.0),
             "true" => Some(commands::r#true(ctx).await),
             "false" => Some(commands::r#false(ctx).await),
             "sleep" => Some(commands::sleep(ctx).await),

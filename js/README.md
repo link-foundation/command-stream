@@ -945,7 +945,8 @@ await $`rm -r project numbers.txt`;
 
 The built-in `cd` command behaves like `cd` in a POSIX `sh`/bash command list.
 The new directory remains active for every command in the same `$` invocation,
-then command-stream restores the host process working directory:
+while the host process working directory remains untouched—even while the
+invocation is still running:
 
 ```javascript
 import { $ } from 'command-stream';
@@ -972,8 +973,9 @@ await $`cd /tmp && mkdir t && cd t && pwd`; // -> /tmp/t
 ```
 
 Within an invocation, a successful `cd` updates `PWD` and `OLDPWD` (used by
-`cd -`) exactly like a real shell. The host values are restored afterward,
-including when a command fails or `errexit` rejects. A failed `cd` prints a
+`cd -`) exactly like a real shell. These values are passed to later virtual and
+real commands without changing `process.env`, including when a command fails or
+`errexit` rejects. A failed `cd` prints a
 `sh`-style error to stderr and returns a non-zero exit code:
 
 ```javascript
@@ -1000,8 +1002,8 @@ There are two ways to control the working directory; pick whichever maps best to
 the script you are translating:
 
 ```javascript
-// 1) cd command — changes directory for one command invocation.
-await $`cd /tmp && pwd`; // -> /tmp; host process.cwd() is restored afterward
+// 1) cd command — changes the invocation-local directory.
+await $`cd /tmp && pwd`; // -> /tmp; host process.cwd() stays untouched
 
 // 2) cwd option — sets a fixed working directory for a single invocation
 //    (or a reusable $({ cwd }) binding) without changing process.cwd().
@@ -1013,9 +1015,10 @@ so `` $({ cwd: '/tmp' })`cd sub && /bin/pwd` `` prints `/tmp/sub` while that
 invocation is running.
 
 > **Note:** Virtual commands such as `echo` do not perform shell variable
-> expansion, so `echo $PWD` prints the literal string `$PWD`. Use `process.cwd()`
-> in JavaScript, the `pwd` command, or a real binary (e.g. `/bin/echo $PWD`) when
-> you need the expanded value.
+> expansion, so `echo $PWD` prints the literal string `$PWD`. Use the `pwd`
+> command or a real child command (e.g. `/bin/sh -c 'echo "$PWD"'`) when you
+> need the invocation-local value. `process.cwd()` intentionally stays at the
+> host directory.
 
 ### Virtual Commands (Extensible Shell)
 

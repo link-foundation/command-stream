@@ -66,7 +66,7 @@ describe.skipIf(isWindows)('Issue #197: invocation-scoped cd', () => {
     expect(result.code).toBe(0);
     expect(result.stdout.trim()).toBe(testDir);
 
-    // The host cwd is restored after the chain finishes.
+    // The chain's invocation-local cwd never changes the host cwd.
     expect(process.cwd()).toBe(originalCwd);
   });
 

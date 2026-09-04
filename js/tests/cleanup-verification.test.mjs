@@ -44,7 +44,7 @@ describe('Cleanup Verification', () => {
     expect(currentCwd).toBe(originalCwd);
   });
 
-  test('should restore cwd after simple cd command', async () => {
+  test('should preserve host cwd after simple cd command', async () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'cleanup-test-'));
     testDirs.push(tempDir);
 
@@ -52,7 +52,7 @@ describe('Cleanup Verification', () => {
     const result = await $`cd ${tempDir} && pwd`;
     expect(normalizePath(result.stdout.trim())).toBe(normalizePath(tempDir));
 
-    // The host process is restored as soon as the invocation completes.
+    // The invocation-local change never reaches the host process.
     expect(process.cwd()).toBe(originalCwd);
   });
 
@@ -62,7 +62,7 @@ describe('Cleanup Verification', () => {
     expect(currentCwd).toBe(originalCwd);
   });
 
-  test('should restore cwd after cd with && operator', async () => {
+  test('should preserve host cwd after cd with && operator', async () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'cleanup-test2-'));
     testDirs.push(tempDir);
 
@@ -75,7 +75,7 @@ describe('Cleanup Verification', () => {
     expect(process.cwd()).toBe(originalCwd);
   });
 
-  test('should verify restoration after && cd test', () => {
+  test('should verify host cwd after && cd test', () => {
     const currentCwd = process.cwd();
     expect(currentCwd).toBe(originalCwd);
   });
@@ -97,7 +97,7 @@ describe('Cleanup Verification', () => {
     }
   );
 
-  test('should restore cwd after multiple cd commands', async () => {
+  test('should preserve host cwd after multiple cd commands', async () => {
     const tempDir1 = mkdtempSync(join(tmpdir(), 'cleanup-test4-'));
     const tempDir2 = mkdtempSync(join(tmpdir(), 'cleanup-test5-'));
     testDirs.push(tempDir1, tempDir2);

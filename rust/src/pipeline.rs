@@ -31,7 +31,12 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::process::Command;
 
 use crate::trace::trace_lazy;
-use crate::{CommandResult, ProcessContextGuard, Result, RunOptions, StdinOption};
+use crate::{CommandResult, Result, RunOptions, StdinOption};
+
+struct VirtualCommandResult {
+    result: CommandResult,
+    cd_context: Option<crate::commands::cd::CdContext>,
+}
 
 /// A pipeline of commands to be executed sequentially
 ///
@@ -109,15 +114,6 @@ impl Pipeline {
 
     /// Execute the pipeline and return the result
     pub async fn run(self) -> Result<CommandResult> {
-        let uses_virtual_cd = self
-            .commands
-            .iter()
-            .any(|command| command.split_whitespace().next() == Some("cd"));
-        let (_process_context, _shared_process_context) = if uses_virtual_cd {
-            (Some(ProcessContextGuard::capture().await), None)
-        } else {
-            (None, Some(crate::lock_process_context().await))
-        };
         if self.commands.is_empty() {
             return Ok(CommandResult {
                 stdout: String::new(),
@@ -132,6 +128,7 @@ impl Pipeline {
 
         let mut current_stdin = self.stdin.clone();
         let mut effective_cwd = self.cwd.clone();
+        let mut effective_env = self.env.clone();
         let mut last_result = CommandResult {
             stdout: String::new(),
             stderr: String::new(),
@@ -160,9 +157,11 @@ impl Pipeline {
                         cmd_str,
                         &current_stdin,
                         effective_cwd.as_ref(),
+                        effective_env.as_ref(),
                     )
                     .await
                 {
+                    let VirtualCommandResult { result, cd_context } = result;
                     if result.code != 0 {
                         return Ok(CommandResult {
                             stdout: result.stdout,
@@ -172,8 +171,14 @@ impl Pipeline {
                     }
                     current_stdin = Some(result.stdout.clone());
                     accumulated_stderr.push_str(&result.stderr);
-                    if first_word == "cd" {
-                        effective_cwd = std::env::current_dir().ok();
+                    if let Some(context) = cd_context {
+                        let env = effective_env.get_or_insert_with(|| std::env::vars().collect());
+                        env.insert(
+                            "OLDPWD".to_string(),
+                            context.oldpwd.to_string_lossy().to_string(),
+                        );
+                        env.insert("PWD".to_string(), context.cwd.to_string_lossy().to_string());
+                        effective_cwd = Some(context.cwd);
                     }
                     last_result = result;
                     continue;
@@ -200,7 +205,7 @@ impl Pipeline {
             }
 
             // Set environment
-            if let Some(ref env_vars) = self.env {
+            if let Some(ref env_vars) = effective_env {
                 for (key, value) in env_vars {
                     cmd.env(key, value);
                 }
@@ -279,7 +284,8 @@ impl Pipeline {
         full_cmd: &str,
         stdin: &Option<String>,
         cwd: Option<&PathBuf>,
-    ) -> Option<CommandResult> {
+        env: Option<&HashMap<String, String>>,
+    ) -> Option<VirtualCommandResult> {
         let parts: Vec<&str> = full_cmd.split_whitespace().collect();
         let args: Vec<String> = parts.iter().skip(1).map(|s| s.to_string()).collect();
 
@@ -287,35 +293,36 @@ impl Pipeline {
             args,
             stdin: stdin.clone(),
             cwd: cwd.cloned(),
-            env: self.env.clone(),
+            env: env.cloned(),
             output_tx: None,
             is_cancelled: None,
         };
 
-        match cmd_name {
-            "echo" => Some(crate::commands::echo(ctx).await),
-            "pwd" => Some(crate::commands::pwd(ctx).await),
-            "cd" => Some(crate::commands::cd(ctx).await),
-            "true" => Some(crate::commands::r#true(ctx).await),
-            "false" => Some(crate::commands::r#false(ctx).await),
-            "sleep" => Some(crate::commands::sleep(ctx).await),
-            "cat" => Some(crate::commands::cat(ctx).await),
-            "ls" => Some(crate::commands::ls(ctx).await),
-            "mkdir" => Some(crate::commands::mkdir(ctx).await),
-            "rm" => Some(crate::commands::rm(ctx).await),
-            "touch" => Some(crate::commands::touch(ctx).await),
-            "cp" => Some(crate::commands::cp(ctx).await),
-            "mv" => Some(crate::commands::mv(ctx).await),
-            "basename" => Some(crate::commands::basename(ctx).await),
-            "dirname" => Some(crate::commands::dirname(ctx).await),
-            "env" => Some(crate::commands::env(ctx).await),
-            "exit" => Some(crate::commands::exit(ctx).await),
-            "which" => Some(crate::commands::which(ctx).await),
-            "yes" => Some(crate::commands::yes(ctx).await),
-            "seq" => Some(crate::commands::seq(ctx).await),
-            "test" => Some(crate::commands::test(ctx).await),
-            _ => None,
-        }
+        let (result, cd_context) = match cmd_name {
+            "echo" => (crate::commands::echo(ctx).await, None),
+            "pwd" => (crate::commands::pwd(ctx).await, None),
+            "cd" => crate::commands::cd::resolve_cd(ctx).await,
+            "true" => (crate::commands::r#true(ctx).await, None),
+            "false" => (crate::commands::r#false(ctx).await, None),
+            "sleep" => (crate::commands::sleep(ctx).await, None),
+            "cat" => (crate::commands::cat(ctx).await, None),
+            "ls" => (crate::commands::ls(ctx).await, None),
+            "mkdir" => (crate::commands::mkdir(ctx).await, None),
+            "rm" => (crate::commands::rm(ctx).await, None),
+            "touch" => (crate::commands::touch(ctx).await, None),
+            "cp" => (crate::commands::cp(ctx).await, None),
+            "mv" => (crate::commands::mv(ctx).await, None),
+            "basename" => (crate::commands::basename(ctx).await, None),
+            "dirname" => (crate::commands::dirname(ctx).await, None),
+            "env" => (crate::commands::env(ctx).await, None),
+            "exit" => (crate::commands::exit(ctx).await, None),
+            "which" => (crate::commands::which(ctx).await, None),
+            "yes" => (crate::commands::yes(ctx).await, None),
+            "seq" => (crate::commands::seq(ctx).await, None),
+            "test" => (crate::commands::test(ctx).await, None),
+            _ => return None,
+        };
+        Some(VirtualCommandResult { result, cd_context })
     }
 }
 
