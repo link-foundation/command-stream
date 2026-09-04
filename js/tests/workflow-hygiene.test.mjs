@@ -415,3 +415,58 @@ describe('the shipped quality gates are actually invoked', () => {
     expect(rustRuns).toContain('rust-script rust/scripts/check-file-size.rs');
   });
 });
+
+describe('checks validate the merge result, not a stale preview', () => {
+  const simulation = '.github/scripts/simulate-fresh-merge.sh';
+
+  // Best practice #7. A pull-request run checks out refs/pull/N/merge, computed
+  // when the pull request was last synchronised; if main moved since, the checks
+  // pass on a combination that will not exist after the merge.
+  test.each([
+    ['js.yml', 'lint'],
+    ['js.yml', 'test'],
+    ['rust.yml', 'lint'],
+    ['rust.yml', 'test'],
+    ['rust.yml', 'scripts'],
+  ])(
+    '%s / %s merges the base branch before it checks anything',
+    (file, jobId) => {
+      const steps = workflows.find((w) => w.name === file).doc.jobs[jobId]
+        .steps;
+      const index = steps.findIndex((step) =>
+        (step.run ?? '').includes(simulation)
+      );
+      expect(`${file}/${jobId}: ${index !== -1}`).toBe(
+        `${file}/${jobId}: true`
+      );
+      // Everything that inspects the tree has to come after the merge.
+      const checkout = steps.findIndex((step) =>
+        (step.uses ?? '').startsWith('actions/checkout@')
+      );
+      expect(checkout).toBeLessThan(index);
+      expect(index).toBeLessThan(steps.length - 1);
+    }
+  );
+
+  test.each(workflows.map((w) => [w.name, w]))(
+    '%s only simulates a merge where it can work',
+    (_name, workflow) => {
+      for (const [jobId, job] of Object.entries(workflow.doc.jobs)) {
+        const steps = job.steps ?? [];
+        if (!steps.some((step) => (step.run ?? '').includes(simulation))) {
+          continue;
+        }
+        const step = steps.find((s) => (s.run ?? '').includes(simulation));
+        // `github.base_ref` is empty outside a pull request, and the merge
+        // needs history a shallow checkout does not have.
+        expect(`${jobId}: ${step.if}`).toBe(
+          `${jobId}: github.event_name == 'pull_request'`
+        );
+        const checkout = steps.find((s) =>
+          (s.uses ?? '').startsWith('actions/checkout@')
+        );
+        expect(`${jobId}: ${checkout.with['fetch-depth']}`).toBe(`${jobId}: 0`);
+      }
+    }
+  );
+});
