@@ -7,6 +7,11 @@ fn canonical(path: impl AsRef<Path>) -> std::path::PathBuf {
     std::fs::canonicalize(path.as_ref()).unwrap_or_else(|_| path.as_ref().to_path_buf())
 }
 
+// Only the `#[cfg(unix)]` assertions read this, because the environment dump
+// they parse comes from `/usr/bin/env`, which the Windows runner does not have.
+// Without the same cfg on the helper, the Windows build sees an unused function
+// and `-D warnings` turns that into a hard error.
+#[cfg(unix)]
 fn output_env<'a>(output: &'a str, name: &str) -> Option<&'a str> {
     output.lines().find_map(|line| {
         line.strip_prefix(name)

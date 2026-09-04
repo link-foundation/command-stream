@@ -56,9 +56,11 @@ describe('repository language layout', () => {
     // as the base path of the linted project. While these files lived in js/,
     // repository-root JavaScript (claude-profiles.mjs, experiments/) was outside
     // that base path and silently unlintable, and js/.prettierignore's
-    // docs/case-studies patterns named a js/docs/ that does not exist. The root
-    // copies are what put the whole tree in scope; js/eslint.config.js stays as
-    // the rule set they re-export.
+    // docs/case-studies/**/{data,templates}/** patterns resolved against js/,
+    // where no such directories exist -- the archived evidence they were meant
+    // to protect is under the repository-root docs/. The root copies are what
+    // put the whole tree in scope; js/eslint.config.js stays as the rule set
+    // they re-export.
     expect(existsFromRepo('eslint.config.js')).toBe(true);
     expect(existsFromRepo('.prettierrc')).toBe(true);
     expect(existsFromRepo('.prettierignore')).toBe(true);

@@ -157,6 +157,96 @@ all named `Test JavaScript (node on ubuntu-latest)`. Required-status-check rules
 and humans cannot tell them apart, and a failure in one is indistinguishable
 from a failure in another.
 
+### 4.10 FALSE NEGATIVE — the duplication gate analysed zero files
+
+`.jscpd.json` carried `"format": "console"`. In jscpd, `format` is the list of
+**languages** to analyse, not the reporter: `@jscpd/finder` filters every
+candidate with `options.format.includes(detectedLanguage)`. No file's language
+is `console`, so the detector matched nothing:
+
+```
+"format": "console"     -> exit 0, 0 clones, 0 files analysed
+"format": ["javascript"] -> exit 1, 1 clone,  2 files analysed
+```
+
+Reproduction: `experiments/jscpd-format/run.mjs`. With the correct language list
+the repository reports 65 files / 47 clones / 4.84 %, under the 5 % threshold.
+The same defect is in the JavaScript template — reported upstream (§7).
+
+### 4.11 FALSE NEGATIVE — half the repository was outside the lint base path
+
+`eslint.config.js`, `.prettierrc`, `.prettierignore` and `.lintstagedrc.json`
+lived in `js/`. Both tools treat the directory holding their configuration as
+the project base path, so repository-root JavaScript (`claude-profiles.mjs`,
+`experiments/**`) was reported as "ignored because it is located outside of the
+base path" and was silently never linted; lint-staged likewise only considered
+files under `js/`. `js/.prettierignore` also listed
+`docs/case-studies/**/{data,templates}/**`, which resolved against `js/`:
+`js/docs/case-studies` has no `data/` or `templates/` subdirectory, and the
+archived upstream copies those rules exist to protect live under the
+repository-root `docs/case-studies` — outside prettier's reach entirely. The
+configs now live at the root and `js/eslint.config.js` remains the rule set they
+re-export.
+
+### 4.12 ERROR — nothing audited dependencies or analysed sources
+
+There was no security workflow at all: no dependency advisory check for any of
+the three lockfiles, no static analysis, no scheduled re-run. `cargo audit`
+found a live advisory on the first run:
+
+```
+RUSTSEC-2026-0007  bytes 1.11.0  integer overflow in BytesMut::reserve
+```
+
+Fixed by `cargo update -p bytes` (1.12.1). `npm audit` and `bun audit` were
+cleared by the dev-dependency refresh. `.github/workflows/security.yml` now runs
+CodeQL (`javascript-typescript`, `rust`, `actions`, all with `build-mode: none`),
+dependency review, and the three audits, weekly as well as per push and pull
+request — a lockfile that is clean today is not clean in a month.
+
+### 4.13 FALSE POSITIVE — zizmor audited archived evidence
+
+The first CI run of the Zizmor job reported 30 findings, all in `release.yml` —
+a file `.github/workflows/` does not contain. `zizmorcore/zizmor-action` defaults
+to `inputs: .`, walking the whole tree and collecting the 14 verbatim copies of
+other repositories' workflows archived under `docs/case-studies/**/templates/**`.
+Those never execute here and editing them would falsify the evidence they exist
+to preserve, so the audit is scoped to `.github/workflows` and the scope is
+pinned by a test.
+
+### 4.14 ERROR — dependency review cannot run on this repository
+
+```
+Dependency review is not supported on this repository. Please ensure that
+Dependency graph is enabled
+```
+
+`GET /repos/link-foundation/command-stream` returns no `dependency_graph` key
+under `security_and_analysis`; the compare endpoint returns `403 Forbidden` and
+the SBOM endpoint `404 Not Found`. A `PATCH` with
+`security_and_analysis[dependency_graph][status]=enabled` was accepted but had
+no effect — the setting is controlled at the organisation level and could not be
+changed from here.
+
+**Manual step required:** enable the dependency graph at
+<https://github.com/link-foundation/command-stream/settings/security_analysis>.
+
+Until then the job probes the compare endpoint and skips with a warning on 403,
+rather than failing forever. A check that can only ever be red is itself a false
+positive: it teaches reviewers to ignore red. Any status other than 200 or 403
+still fails the job, and the review starts running by itself once the graph is
+on. The three audit jobs cover the committed lockfiles in the meantime.
+
+### 4.15 ERROR — a publish token was handed to every pull-request job
+
+`rust.yml` declared `CARGO_REGISTRY_TOKEN` in the workflow-level `env:`. That
+block is inherited by every job, so the crates.io token was in the environment of
+`cargo test` and `cargo clippy` on `pull_request` — both of which compile and run
+code from the branch under review, via `build.rs`, proc macros or the tests
+themselves. Publishing credentials now sit on the publishing job only, and a
+test asserts no workflow-level `env:` value references `secrets.`. The same
+defect is in the Rust template — reported upstream (§7).
+
 ## 5. File-by-file comparison against both templates
 
 Scripts (`analysis/js-scripts-diff.log`, `analysis/rust-scripts-diff.log`):
@@ -197,7 +287,25 @@ Workflows — present in **both** templates, absent here:
 10. Verification of published artifacts (`wait-for-npm.mjs`,
     `wait-for-crate.rs`) so a green release means an installable artifact.
 
-## 7. Upstream issue to report
+## 7. Upstream issues reported
+
+Three defects found here also exist in the templates the issue asks to compare
+against, so each was reported with a reproducible example, a workaround and the
+code-level fix:
+
+| Issue | Repository | Defect |
+| --- | --- | --- |
+| [#157](https://github.com/link-foundation/js-ai-driven-development-pipeline-template/issues/157) | js template | `.jscpd.json` `"format": "console"` makes the duplication check analyse zero files and always pass (§4.10) |
+| [#158](https://github.com/link-foundation/js-ai-driven-development-pipeline-template/issues/158) | js template | `publish-retry.mjs` misses npm's E409 "Cannot publish over previously staged version", turning successful releases into failed jobs (§4.1) |
+| [#149](https://github.com/link-foundation/rust-ai-driven-development-pipeline-template/issues/149) | rust template | `release.yml` puts `CARGO_REGISTRY_TOKEN`/`CARGO_TOKEN` in the workflow-level `env:`, handing the publish token to seven jobs that compile pull-request code (§4.15) |
+
+Checked and deliberately **not** reported, because they are correct as written:
+the Rust template's `pipeline-status: if: always()` (it intentionally reports
+cancelled jobs), matrix job names that omit a `runner` key when another key
+already disambiguates them, and the JavaScript template's three low-confidence
+`self-repository` zizmor findings.
+
+### Detail: #158
 
 **Repository:** `link-foundation/js-ai-driven-development-pipeline-template`
 
