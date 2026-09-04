@@ -1,0 +1,251 @@
+// Guards the CI/CD invariants fixed for issue #199. actionlint and zizmor run in
+// .github/workflows/workflows.yml and cover syntax and security, but neither one
+// knows about the repository-specific rules below: how concurrency has to be
+// shaped so a release is never cancelled mid-publish, that `always()` must not
+// be used where `!cancelled()` is meant, and that matrix job names must stay
+// distinguishable.
+import { describe, test, expect } from 'bun:test';
+import { readFileSync, readdirSync } from 'fs';
+import { join, dirname, basename } from 'path';
+import { fileURLToPath } from 'url';
+
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+const workflowDir = join(repoRoot, '.github', 'workflows');
+
+const workflowFiles = readdirSync(workflowDir)
+  .filter((name) => name.endsWith('.yml') || name.endsWith('.yaml'))
+  .sort();
+
+const workflows = workflowFiles.map((name) => {
+  const text = readFileSync(join(workflowDir, name), 'utf8');
+  return { name, text, doc: Bun.YAML.parse(text) };
+});
+
+/** Jobs that push to main, publish a package, or open a PR. */
+const isWriterJob = (job) => {
+  const perms = job.permissions ?? {};
+  return perms['contents'] === 'write' || perms['pull-requests'] === 'write';
+};
+
+const WRITER_GROUP = 'main-writer-${{ github.repository }}-main';
+
+describe('workflow files', () => {
+  test('at least the four known workflows are present', () => {
+    expect(workflowFiles).toContain('js.yml');
+    expect(workflowFiles).toContain('rust.yml');
+    expect(workflowFiles).toContain('parity.yml');
+    // Added for #199: nothing linted the workflows themselves before.
+    expect(workflowFiles).toContain('workflows.yml');
+  });
+
+  test.each(workflows.map((w) => [w.name, w]))(
+    '%s declares a least-privilege top-level permissions block',
+    (_name, workflow) => {
+      // Without an explicit block the job token keeps whatever the repository
+      // default is, which is `write-all` on older repositories.
+      expect(workflow.doc.permissions).toEqual({ contents: 'read' });
+    }
+  );
+
+  test.each(workflows.map((w) => [w.name, w]))(
+    '%s uses !cancelled() rather than always()',
+    (_name, workflow) => {
+      // `always()` keeps a job running after the run is cancelled, so a
+      // cancelled prerequisite still lets its dependents start.
+      const conditions = Object.values(workflow.doc.jobs)
+        .map((job) => String(job.if ?? ''))
+        .filter((cond) => cond.includes('always()'));
+      expect(conditions).toEqual([]);
+    }
+  );
+
+  test.each(workflows.map((w) => [w.name, w]))(
+    '%s has no expression interpolation inside run: blocks',
+    (_name, workflow) => {
+      // `${{ }}` is pasted into the shell before it runs; an attacker-controlled
+      // value (a branch name on a fork PR) becomes shell code. Pass values
+      // through `env:` instead.
+      const offenders = [];
+      for (const [jobId, job] of Object.entries(workflow.doc.jobs)) {
+        for (const step of job.steps ?? []) {
+          if (typeof step.run === 'string' && step.run.includes('${{')) {
+            offenders.push(`${jobId}: ${step.name ?? step.run.slice(0, 40)}`);
+          }
+        }
+      }
+      expect(offenders).toEqual([]);
+    }
+  );
+
+  test.each(workflows.map((w) => [w.name, w]))(
+    '%s pins every third-party action to a full commit hash',
+    (_name, workflow) => {
+      // Matches .github/zizmor.yml: these publishers are trusted at tag
+      // granularity, everything else must be hash-pinned.
+      const refPinnedOwners = [
+        'actions',
+        'github',
+        'docker',
+        'astral-sh',
+        'lycheeverse',
+        'zizmorcore',
+        'changesets',
+      ];
+      const offenders = [];
+      for (const job of Object.values(workflow.doc.jobs)) {
+        for (const step of job.steps ?? []) {
+          const uses = step.uses;
+          if (typeof uses !== 'string' || uses.startsWith('docker://')) {
+            continue;
+          }
+          const [path, ref] = uses.split('@');
+          if (refPinnedOwners.includes(path.split('/')[0])) {
+            continue;
+          }
+          if (!/^[0-9a-f]{40}$/.test(ref ?? '')) {
+            offenders.push(uses);
+          }
+        }
+      }
+      expect(offenders).toEqual([]);
+    }
+  );
+
+  test.each(workflows.map((w) => [w.name, w]))(
+    '%s scopes concurrency per job instead of per workflow when it can write',
+    (_name, workflow) => {
+      const jobs = Object.values(workflow.doc.jobs);
+      if (!jobs.some(isWriterJob)) {
+        return;
+      }
+      // A workflow-level cancellable group cancels the whole run, including a
+      // release that has already started publishing.
+      expect(workflow.doc.concurrency).toBeUndefined();
+    }
+  );
+
+  test.each(workflows.map((w) => [w.name, w]))(
+    '%s gives every job a concurrency group',
+    (_name, workflow) => {
+      const missing = Object.entries(workflow.doc.jobs)
+        .filter(([, job]) => !job.concurrency?.group)
+        .map(([jobId]) => jobId);
+      expect(missing).toEqual([]);
+    }
+  );
+
+  test.each(workflows.map((w) => [w.name, w]))(
+    '%s puts writer jobs in the shared non-cancellable group',
+    (_name, workflow) => {
+      for (const [jobId, job] of Object.entries(workflow.doc.jobs)) {
+        if (!isWriterJob(job)) {
+          continue;
+        }
+        expect(`${jobId}: ${job.concurrency.group}`).toBe(
+          `${jobId}: ${WRITER_GROUP}`
+        );
+        expect(`${jobId}: ${job.concurrency['cancel-in-progress']}`).toBe(
+          `${jobId}: false`
+        );
+      }
+    }
+  );
+
+  test.each(workflows.map((w) => [w.name, w]))(
+    '%s keeps check jobs cancellable and matrix entries independent',
+    (_name, workflow) => {
+      for (const [jobId, job] of Object.entries(workflow.doc.jobs)) {
+        if (isWriterJob(job)) {
+          continue;
+        }
+        const group = job.concurrency.group;
+        expect(`${jobId}: ${group.startsWith('check-')}`).toBe(
+          `${jobId}: true`
+        );
+        expect(`${jobId}: ${job.concurrency['cancel-in-progress']}`).toBe(
+          `${jobId}: true`
+        );
+        // Every matrix dimension must appear in the group, otherwise the matrix
+        // entries share one group and cancel each other.
+        for (const key of Object.keys(job.strategy?.matrix ?? {})) {
+          if (key === 'include' || key === 'exclude') {
+            continue;
+          }
+          expect(`${jobId}/${key}: ${group.includes(`matrix.${key}`)}`).toBe(
+            `${jobId}/${key}: true`
+          );
+        }
+      }
+    }
+  );
+
+  test.each(workflows.map((w) => [w.name, w]))(
+    '%s gives every matrix job a name that distinguishes its entries',
+    (_name, workflow) => {
+      // Three Node entries in js.yml differed only by `node-version`, which was
+      // missing from the name, so all three reported as "Test JavaScript (node
+      // on ubuntu-latest)" and no branch rule could require a specific one.
+      for (const [jobId, job] of Object.entries(workflow.doc.jobs)) {
+        const matrix = job.strategy?.matrix;
+        if (!matrix) {
+          continue;
+        }
+        const keys = new Set(
+          Object.keys(matrix).filter((k) => k !== 'include')
+        );
+        for (const entry of matrix.include ?? []) {
+          Object.keys(entry).forEach((k) => keys.add(k));
+        }
+        const name = job.name ?? jobId;
+        for (const key of keys) {
+          expect(`${jobId}/${key}: ${name.includes(`matrix.${key}`)}`).toBe(
+            `${jobId}/${key}: true`
+          );
+        }
+      }
+    }
+  );
+});
+
+describe('workflow linting is itself wired into CI', () => {
+  const lintWorkflow = workflows.find((w) => w.name === 'workflows.yml');
+
+  test('actionlint runs from the Docker image that bundles shellcheck', () => {
+    // A native actionlint binary without shellcheck on PATH skips every `run:`
+    // check and still exits 0.
+    const uses = Object.values(lintWorkflow.doc.jobs)
+      .flatMap((job) => job.steps ?? [])
+      .map((step) => step.uses)
+      .filter(Boolean);
+    expect(uses.some((u) => u.startsWith('docker://rhysd/actionlint:'))).toBe(
+      true
+    );
+  });
+
+  test('zizmor runs with the repository policy and medium confidence', () => {
+    const step = Object.values(lintWorkflow.doc.jobs)
+      .flatMap((job) => job.steps ?? [])
+      .find((s) => (s.uses ?? '').startsWith('zizmorcore/zizmor-action@'));
+    expect(step.with.config).toBe('.github/zizmor.yml');
+    expect(String(step.with['min-confidence'])).toBe('medium');
+  });
+
+  test('the zizmor policy requires hash pins by default', () => {
+    const policy = Bun.YAML.parse(
+      readFileSync(join(repoRoot, '.github', 'zizmor.yml'), 'utf8')
+    );
+    expect(policy.rules['unpinned-uses'].config.policies['*']).toBe('hash-pin');
+  });
+
+  test('the lint workflow triggers on changes to .github', () => {
+    const paths = lintWorkflow.doc.on.pull_request.paths;
+    expect(paths.some((p) => p.startsWith('.github'))).toBe(true);
+  });
+
+  test('every workflow file is covered by these checks', () => {
+    expect(workflows.map((w) => basename(w.name)).length).toBe(
+      workflowFiles.length
+    );
+    expect(workflowFiles.length).toBeGreaterThanOrEqual(4);
+  });
+});

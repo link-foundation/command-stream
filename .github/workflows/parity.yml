@@ -12,10 +12,6 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, labeled, unlabeled]
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 permissions:
   contents: read
 
@@ -26,10 +22,15 @@ jobs:
     timeout-minutes: 10
     # Skip entirely when the PR is explicitly marked as a single-language change.
     if: ${{ !contains(github.event.pull_request.labels.*.name, 'parity-exempt') }}
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-parity
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          # Read-only job: the parity script only diffs the checked-out history.
+          persist-credentials: false
 
       - name: Check JavaScript/Rust source parity
         env:

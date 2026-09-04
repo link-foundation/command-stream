@@ -1,0 +1,69 @@
+name: Workflows
+
+# Lints the workflows themselves. Nothing else in CI reads .github/workflows/**,
+# so before this existed a broken `if:` condition, an unquoted variable in a
+# `run:` block or an unpinned third-party action reached main unchallenged.
+
+on:
+  push:
+    branches: [main]
+    paths: ['.github/**']
+  pull_request:
+    paths: ['.github/**']
+  workflow_dispatch:
+
+# Keep the workflow read-only unless a job explicitly needs an additional scope.
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    name: Actionlint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-actionlint
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      # The Docker image bundles shellcheck and pyflakes, so this also lints
+      # every `run:` block. A *native* actionlint binary without shellcheck on
+      # PATH silently skips the shell checks and exits 0. Reproduce locally with
+      # the same image:
+      #   docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -color
+      - uses: docker://rhysd/actionlint:1.7.7
+        with:
+          args: -color
+
+  zizmor:
+    name: Zizmor
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-zizmor
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      # actionlint cannot see workflow *security* defects: unpinned third-party
+      # actions, checkouts that persist `GITHUB_TOKEN` in `.git/config`, or
+      # template injection into `run:` blocks. zizmor covers those. Reproduce
+      # locally with the same configuration:
+      #   pipx run zizmor --config .github/zizmor.yml \
+      #     --min-confidence medium --persona regular .github/workflows
+      #
+      # Annotations instead of SARIF: code scanning is not enabled on forks, and
+      # the job should fail loudly either way.
+      - uses: zizmorcore/zizmor-action@v0.6.2
+        with:
+          advanced-security: false
+          annotations: true
+          config: .github/zizmor.yml
+          min-confidence: medium
