@@ -28,18 +28,52 @@ export function isShellCommandSpec(spec) {
 }
 
 /**
+ * Re-export invocation-local directory variables inside POSIX shells.
+ *
+ * Some shells, notably the macOS system shell, import OLDPWD as an internal
+ * variable but drop its export flag during startup. Prefixing the command
+ * keeps both variables visible to the real child without touching process.env.
+ *
+ * @param {string} command - Command passed to the platform shell
+ * @param {object|undefined|null} env - Effective invocation environment
+ * @returns {string} Command with invocation-local directory variables exported
+ */
+export function withExportedProcessContext(command, env) {
+  if (process.platform === 'win32' || !env) {
+    return command;
+  }
+
+  const assignments = ['PWD', 'OLDPWD'].flatMap((name) => {
+    if (env[name] === undefined) {
+      return [];
+    }
+    const value = String(env[name]).replace(/'/g, "'\\''");
+    return [`${name}='${value}'`];
+  });
+
+  return assignments.length > 0
+    ? `export ${assignments.join(' ')}; ${command}`
+    : command;
+}
+
+/**
  * Build the command vector for a ProcessRunner command specification.
  * @param {object} spec - ProcessRunner command specification
+ * @param {object|undefined|null} env - Effective invocation environment
  * @returns {string[]}
  */
-export function buildCommandArgv(spec) {
+export function buildCommandArgv(spec, env) {
   if (isShellArgvSpec(spec)) {
     return [spec.file, ...(spec.args ?? [])];
   }
 
   if (isShellCommandSpec(spec)) {
     const shell = findAvailableShell();
-    return [shell.cmd, ...shell.args, spec.command];
+    return [
+      shell.cmd,
+      ...shell.args,
+      withExportedProcessContext(spec.command, env),
+    ];
   }
 
   return [spec.file, ...spec.args];

@@ -3,7 +3,7 @@
 
 import cp from 'child_process';
 import { trace } from './$.trace.mjs';
-import { findAvailableShell } from './$.shell.mjs';
+import { findAvailableShell, withExportedProcessContext } from './$.shell.mjs';
 import { StreamUtils, safeWrite } from './$.stream-utils.mjs';
 import { createResult } from './$.result.mjs';
 import {
@@ -126,12 +126,17 @@ function needsShellExecution(commandStr) {
  * @param {string} cmd - Command name
  * @param {Array} args - Command args
  * @param {string} commandStr - Full command string
+ * @param {object|undefined|null} env - Effective invocation environment
  * @returns {string[]} Spawn arguments
  */
-function getSpawnArgs(needsShell, cmd, args, commandStr) {
+function getSpawnArgs(needsShell, cmd, args, commandStr, env) {
   if (needsShell) {
     const shell = findAvailableShell();
-    return [shell.cmd, ...shell.args.filter((arg) => arg !== '-l'), commandStr];
+    return [
+      shell.cmd,
+      ...shell.args.filter((arg) => arg !== '-l'),
+      withExportedProcessContext(commandStr, env),
+    ];
   }
   return [cmd, ...args.map((a) => (a.value !== undefined ? a.value : a))];
 }
@@ -356,7 +361,11 @@ function pipeStreamToProcess(stream, proc) {
 function spawnShellCommand(commandStr, options) {
   const shell = findAvailableShell();
   return Bun.spawn(
-    [shell.cmd, ...shell.args.filter((arg) => arg !== '-l'), commandStr],
+    [
+      shell.cmd,
+      ...shell.args.filter((arg) => arg !== '-l'),
+      withExportedProcessContext(commandStr, options.env),
+    ],
     {
       cwd: options.cwd,
       env: options.env,
@@ -661,7 +670,11 @@ async function handleShellPipelineCommand(
   logShellTrace(globalShellSettings, commandStr, []);
 
   const shell = findAvailableShell();
-  const argv = [shell.cmd, ...shell.args.filter((a) => a !== '-l'), commandStr];
+  const argv = [
+    shell.cmd,
+    ...shell.args.filter((a) => a !== '-l'),
+    withExportedProcessContext(commandStr, effectiveEnv(runner)),
+  ];
   const proc = await spawnNodeAsync(runner, argv, currentInput, isLastCommand);
   const result = {
     code: proc.status || 0,
@@ -745,7 +758,8 @@ export function attachPipelineMethods(ProcessRunner, deps) {
         needsShell,
         command.cmd,
         command.args,
-        commandStr
+        commandStr,
+        effectiveEnv(this)
       );
 
       let stdin;
@@ -818,7 +832,8 @@ export function attachPipelineMethods(ProcessRunner, deps) {
         needsShell,
         command.cmd,
         command.args,
-        commandStr
+        commandStr,
+        effectiveEnv(this)
       );
 
       let stdin;

@@ -280,3 +280,34 @@ async fn test_streaming_runner_env() {
     assert!(result.is_success());
     assert!(result.stdout.contains("test_value"));
 }
+
+#[cfg(unix)]
+#[tokio::test]
+async fn test_streaming_runner_exports_directory_environment_safely() {
+    use std::collections::HashMap;
+
+    let oldpwd = "old dir ' $(printf injected) `printf injected`; end";
+    let env = HashMap::from([
+        (
+            "PWD".to_string(),
+            std::env::current_dir()
+                .unwrap()
+                .to_string_lossy()
+                .to_string(),
+        ),
+        ("OLDPWD".to_string(), oldpwd.to_string()),
+    ]);
+    let runner = StreamingRunner::new("/usr/bin/env").env(env);
+
+    let result = runner.collect().await.unwrap();
+
+    assert!(result.is_success(), "child failed: {}", result.stderr);
+    assert!(
+        result
+            .stdout
+            .lines()
+            .any(|line| line == format!("OLDPWD={oldpwd}")),
+        "child environment did not preserve OLDPWD: {}",
+        result.stdout
+    );
+}

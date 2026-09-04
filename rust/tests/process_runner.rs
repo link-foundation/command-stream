@@ -144,6 +144,42 @@ async fn test_custom_environment_variable() {
     assert!(result.stdout.contains("test_value"));
 }
 
+#[cfg(unix)]
+#[tokio::test]
+async fn test_process_runner_exports_directory_environment_safely() {
+    let oldpwd = "old dir ' $(printf injected) `printf injected`; end";
+    let env_vars = HashMap::from([
+        (
+            "PWD".to_string(),
+            std::env::current_dir()
+                .unwrap()
+                .to_string_lossy()
+                .to_string(),
+        ),
+        ("OLDPWD".to_string(), oldpwd.to_string()),
+    ]);
+    let mut runner = ProcessRunner::new(
+        "/usr/bin/env",
+        RunOptions {
+            mirror: false,
+            env: Some(env_vars),
+            ..Default::default()
+        },
+    );
+
+    let result = runner.run().await.unwrap();
+
+    assert!(result.is_success(), "child failed: {}", result.stderr);
+    assert!(
+        result
+            .stdout
+            .lines()
+            .any(|line| line == format!("OLDPWD={oldpwd}")),
+        "child environment did not preserve OLDPWD: {}",
+        result.stdout
+    );
+}
+
 // ============================================================================
 // Stdin Tests
 // ============================================================================

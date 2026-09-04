@@ -1143,7 +1143,8 @@ export function attachExecutionMethods(ProcessRunner, deps) {
       }
 
       // Build command arguments
-      const argv = buildCommandArgv(this.spec);
+      const childEnv = effectiveEnv(this) ?? env;
+      const argv = buildCommandArgv(this.spec, childEnv);
 
       trace(
         'ProcessRunner',
@@ -1182,7 +1183,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
       // Execute child process
       const result = await executeChildProcess(this, argv, {
         cwd: effectiveCwd(this) ?? cwd,
-        env: effectiveEnv(this) ?? env,
+        env: childEnv,
         stdin,
         isInteractive,
         shell: shellArgv,
@@ -1438,7 +1439,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
 
     const { cwd, env, stdin } = this.options;
     const shellArgv = isShellArgvSpec(this.spec);
-    const argv = buildCommandArgv(this.spec);
+    const argv = buildCommandArgv(this.spec, env);
 
     const traceCmd =
       this.spec.mode === 'shell' && !shellArgv

@@ -287,7 +287,10 @@ impl ProcessRunner {
         for arg in &shell.args {
             cmd.arg(arg);
         }
-        cmd.arg(&self.command);
+        cmd.arg(utils::with_exported_process_context(
+            &self.command,
+            self.options.env.as_ref(),
+        ));
 
         // Configure stdin
         match &self.options.stdin {
