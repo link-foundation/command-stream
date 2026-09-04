@@ -230,6 +230,53 @@ const doubleQuoted = '"/path with spaces/file"';
 await $`cat ${doubleQuoted}`; // → cat '"/path with spaces/file"' (preserves intent)
 ```
 
+### Interpolating Inside Your Own Quotes
+
+Quoting is context-aware: an interpolated value is quoted only where a quote is
+actually needed. When you wrote the quotes yourself, the value is spliced in as
+escaped literal text, exactly like `"$var"` in a POSIX shell.
+
+```javascript
+// Outside quotes: the value is quoted for you
+await $`echo ${'hello world'}`; // → echo 'hello world'
+
+// Inside your own double quotes: spliced in like "$var"
+const script = 'for f in *.js; do echo "Processing: $f"; done';
+await $`bash -c "${script}"`; // → bash -c "for f in *.js; do echo \"Processing: \$f\"; done"
+
+// Inside your own single quotes: spliced in like '...', apostrophes escaped
+await $`echo '${"it's here"}'`; // → echo 'it'\''s here'
+```
+
+This matches how the same line behaves in `sh`, and it is what fixes the classic
+`bash -c "${cmd}"` failure, where the extra quotes used to turn the whole script
+into a single unrunnable word (issue #49).
+
+Splicing is still injection-safe: a value cannot end a quote or start a new
+command, because every character the shell would interpret is escaped.
+
+```javascript
+const evil = '"; rm -rf /; echo "';
+await $`bash -c "echo ${evil}"`; // prints the text; no second command runs
+```
+
+The behavior of `raw()` and `literal()` is unchanged — `raw()` still inserts its
+value verbatim, and `literal()` still preserves apostrophes.
+
+**Opting out.** If you depend on the previous behavior of always quoting every
+value, turn context-aware quoting off:
+
+```javascript
+import { shell, setQuoteContextEnabled } from 'command-stream';
+
+shell.quoteContext(false); // or: setQuoteContextEnabled(false)
+shell.quoteContext(true); // back on
+setQuoteContextEnabled(null); // follow the environment again
+```
+
+Or set `COMMAND_STREAM_QUOTE_CONTEXT=0` in the environment to disable it for a
+whole process without touching code.
+
 ### Go templates & `{{ }}` arguments
 
 `command-stream` gives you a real shell's word-splitting, including for tokens

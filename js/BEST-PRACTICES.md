@@ -84,6 +84,37 @@ await $`echo ${userInput}`;
 // Executed safely - input is quoted, not executed
 ```
 
+### Interpolating Inside Your Own Quotes
+
+A value placed inside quotes you wrote yourself is spliced in as escaped literal
+text instead of being wrapped in a second pair of quotes, exactly like `"$var"`
+in a POSIX shell:
+
+```javascript
+const script = 'for f in *.js; do echo "Processing: $f"; done';
+await $`bash -c "${script}"`; // runs the script, like: bash -c "$script"
+
+const name = "it's here";
+await $`echo '${name}'`; // → echo 'it'\''s here'
+```
+
+This is still injection-safe - the value cannot close the quote or start a new
+command - and it is what makes the common `bash -c "${cmd}"` form work.
+
+Prefer letting command-stream quote for you (no quotes in the template) unless
+the value has to reach another program as a single script argument:
+
+```javascript
+// Preferred: no quotes needed
+await $`cat ${path}`;
+
+// Use your own quotes when the value is a script for another shell
+await $`bash -c "${script}"`;
+```
+
+To restore the old always-quote behavior, call `shell.quoteContext(false)` or set
+`COMMAND_STREAM_QUOTE_CONTEXT=0`.
+
 ### Using raw() for Trusted Commands
 
 Only use `raw()` with trusted, hardcoded command strings:

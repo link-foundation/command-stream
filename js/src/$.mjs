@@ -10,7 +10,15 @@ import {
   forceCleanupAll,
   resetGlobalState,
 } from './$.state.mjs';
-import { buildShellCommand, quote, quoteLiteral, raw } from './$.quote.mjs';
+import {
+  buildShellCommand,
+  isQuoteContextEnabled,
+  quote,
+  quoteForContext,
+  quoteLiteral,
+  raw,
+  setQuoteContextEnabled,
+} from './$.quote.mjs';
 import {
   AnsiUtils,
   configureAnsi,
@@ -310,6 +318,11 @@ const shell = {
   pipefail: (enable = true) =>
     enable ? set('o pipefail') : unset('o pipefail'),
   nounset: (enable = true) => (enable ? set('u') : unset('u')),
+
+  // Quote-context aware interpolation (on by default). Pass false to restore
+  // the historical behaviour of always single-quoting interpolated values,
+  // or null to follow COMMAND_STREAM_QUOTE_CONTEXT again.
+  quoteContext: (enable = true) => setQuoteContextEnabled(enable),
 };
 
 // Virtual command registration API
@@ -419,7 +432,10 @@ export {
   exec,
   run,
   quote,
+  quoteForContext,
   quoteLiteral,
+  isQuoteContextEnabled,
+  setQuoteContextEnabled,
   create,
   raw,
   literal,

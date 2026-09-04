@@ -12,7 +12,11 @@ import {
 import { StreamUtils, safeWrite, asBuffer } from './$.stream-utils.mjs';
 import { pumpReadable } from './$.quote.mjs';
 import { createResult } from './$.result.mjs';
-import { parseShellCommand, needsRealShell } from './shell-parser.mjs';
+import {
+  parseShellCommand,
+  needsRealShell,
+  hasShellEscapes,
+} from './shell-parser.mjs';
 import {
   createExitPromise,
   drainPumpsAfterExit,
@@ -857,7 +861,11 @@ async function handleShellMode(runner, deps) {
   );
 
   const useShellOps = shouldUseShellOperators(runner, command);
-  const requiresRealShell = useShellOps && needsRealShell(command);
+  // Backslash escapes are removed by a real shell but not by our lightweight
+  // tokenizer, so such commands always go to the system shell rather than to
+  // the built-in commands (issue #49).
+  const requiresRealShell =
+    (useShellOps && needsRealShell(command)) || hasShellEscapes(command);
 
   trace(
     'ProcessRunner',
