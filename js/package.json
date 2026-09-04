@@ -70,21 +70,21 @@
     "examples/"
   ],
   "devDependencies": {
-    "@changesets/cli": "^2.29.7",
+    "@changesets/cli": "^2.31.1",
     "dejavu-fonts-ttf": "^2.37.3",
-    "eslint": "^9.38.0",
+    "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-prettier": "^5.5.4",
+    "eslint-plugin-prettier": "^5.5.6",
     "husky": "^9.1.7",
-    "jscpd": "^4.0.5",
-    "lint-staged": "^16.2.6",
-    "prettier": "^3.6.2",
-    "subset-font": "^2.5.0"
+    "jscpd": "^4.3.0",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.9.6",
+    "subset-font": "^2.7.0"
   },
   "dependencies": {
     "@resvg/resvg-js": "^2.6.2",
     "@xterm/headless": "^6.0.0",
     "gifenc": "^1.0.3",
-    "node-pty": "^1.2.0-beta.14"
+    "node-pty": "^1.2.0-beta.15"
   }
 }
