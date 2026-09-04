@@ -16,7 +16,8 @@ use std::path::PathBuf;
 ///
 /// Like a real shell, a successful `cd` updates the `PWD` and `OLDPWD`
 /// environment variables and changes the process directory so that subsequent
-/// commands (virtual or real) observe the new location.
+/// commands in the active invocation observe the new location. The runner
+/// restores the host process context when the invocation ends.
 pub async fn cd(ctx: CommandContext) -> CommandResult {
     let home = env::var("HOME")
         .or_else(|_| env::var("USERPROFILE"))

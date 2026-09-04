@@ -1129,7 +1129,9 @@ export function attachExecutionMethods(ProcessRunner, deps) {
       // Handle shell mode special cases
       const shellArgv = isShellArgvSpec(this.spec);
       if (isShellCommandSpec(this.spec)) {
-        const shellResult = await handleShellMode(this, deps);
+        const shellResult = await this._runWithIsolatedProcessContext(() =>
+          handleShellMode(this, deps)
+        );
         if (shellResult) {
           return this.finish(shellResult);
         }

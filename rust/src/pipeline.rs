@@ -31,7 +31,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::process::Command;
 
 use crate::trace::trace_lazy;
-use crate::{CommandResult, Result, RunOptions, StdinOption};
+use crate::{CommandResult, ProcessContextGuard, Result, RunOptions, StdinOption};
 
 /// A pipeline of commands to be executed sequentially
 ///
@@ -109,6 +109,7 @@ impl Pipeline {
 
     /// Execute the pipeline and return the result
     pub async fn run(self) -> Result<CommandResult> {
+        let _process_context = ProcessContextGuard::capture();
         if self.commands.is_empty() {
             return Ok(CommandResult {
                 stdout: String::new(),

@@ -87,14 +87,10 @@ describe('Virtual Commands System', () => {
     test.skipIf(isWindows)('should execute virtual cd command', async () => {
       const originalCwd = process.cwd();
 
-      try {
-        const result = await $`cd /tmp`;
-        expect(result.code).toBe(0);
-        expect(process.cwd()).not.toBe(originalCwd);
-        expect(process.cwd()).toMatch(/tmp/);
-      } finally {
-        process.chdir(originalCwd);
-      }
+      const result = await $`cd /tmp && pwd`;
+      expect(result.code).toBe(0);
+      expect(result.stdout.trim()).toBe('/tmp');
+      expect(process.cwd()).toBe(originalCwd);
     });
 
     test('should execute virtual pwd command', async () => {

@@ -79,6 +79,7 @@ pub mod shell_parser;
 pub mod utils;
 
 use std::collections::HashMap;
+use std::ffi::OsString;
 use std::path::PathBuf;
 use std::process::Stdio;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
@@ -104,6 +105,61 @@ pub use state::{
 pub use stream::{AsyncIterator, IntoStream, OutputChunk, OutputStream, StreamingRunner};
 pub use trace::trace;
 
+fn fallback_cwd() -> PathBuf {
+    std::env::var_os("HOME")
+        .or_else(|| std::env::var_os("USERPROFILE"))
+        .map(PathBuf::from)
+        .filter(|path| path.is_dir())
+        .unwrap_or_else(std::env::temp_dir)
+}
+
+pub(crate) struct ProcessContextGuard {
+    cwd: Option<PathBuf>,
+    pwd: Option<OsString>,
+    oldpwd: Option<OsString>,
+}
+
+impl ProcessContextGuard {
+    pub(crate) fn capture() -> Self {
+        Self {
+            cwd: std::env::current_dir().ok(),
+            pwd: std::env::var_os("PWD"),
+            oldpwd: std::env::var_os("OLDPWD"),
+        }
+    }
+}
+
+impl Drop for ProcessContextGuard {
+    fn drop(&mut self) {
+        let restored = self
+            .cwd
+            .as_ref()
+            .is_some_and(|cwd| std::env::set_current_dir(cwd).is_ok());
+        if !restored {
+            let fallback = fallback_cwd();
+            if let Err(error) = std::env::set_current_dir(&fallback) {
+                trace(
+                    "ProcessRunner",
+                    &format!(
+                        "failed to restore cwd to fallback {}: {}",
+                        fallback.display(),
+                        error
+                    ),
+                );
+            }
+        }
+
+        match self.pwd.take() {
+            Some(value) => std::env::set_var("PWD", value),
+            None => std::env::remove_var("PWD"),
+        }
+        match self.oldpwd.take() {
+            Some(value) => std::env::set_var("OLDPWD", value),
+            None => std::env::remove_var("OLDPWD"),
+        }
+    }
+}
+
 /// Resolve a working directory that is safe to spawn a child process in.
 ///
 /// When no explicit cwd is requested the child normally inherits the parent's
@@ -126,10 +182,7 @@ fn resolve_spawn_cwd(cwd: Option<&PathBuf>) -> Option<PathBuf> {
     match std::env::current_dir() {
         Ok(_) => None,
         Err(e) => {
-            let fallback = std::env::var_os("HOME")
-                .or_else(|| std::env::var_os("USERPROFILE"))
-                .map(PathBuf::from)
-                .unwrap_or_else(std::env::temp_dir);
+            let fallback = fallback_cwd();
             trace(
                 "ProcessRunner",
                 &format!(
@@ -138,11 +191,7 @@ fn resolve_spawn_cwd(cwd: Option<&PathBuf>) -> Option<PathBuf> {
                     fallback.display()
                 ),
             );
-            if fallback.exists() {
-                Some(fallback)
-            } else {
-                Some(std::env::temp_dir())
-            }
+            Some(fallback)
         }
     }
 }
@@ -267,11 +316,13 @@ impl ProcessRunner {
         } else {
             self.command.split_whitespace().next().unwrap_or("")
         };
+        let process_context = ProcessContextGuard::capture();
         if let Some(result) = self.try_virtual_command(first_word).await {
             self.result = Some(result);
             self.finished = true;
             return Ok(());
         }
+        drop(process_context);
 
         // Parse command for shell operators (for future use with virtual command pipelines)
         let _parsed = if self.options.shell_operators && !needs_real_shell(&self.command) {

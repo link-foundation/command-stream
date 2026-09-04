@@ -239,7 +239,7 @@ export function attachVirtualCommandMethods(ProcessRunner, deps) {
     cmd,
     args,
     originalCommand = null,
-    shouldFinish = true
+    shouldFinish = false
   ) {
     trace('ProcessRunner', () => `_runVirtual | cmd=${cmd}`);
 

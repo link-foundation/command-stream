@@ -13,7 +13,8 @@ import { trace, VirtualUtils } from '../$.utils.mjs';
  *
  * Like a real shell, a successful `cd` updates the `PWD` and `OLDPWD`
  * environment variables and changes the Node.js process directory so that
- * subsequent commands (virtual or real) observe the new location.
+ * subsequent commands in the active invocation observe the new location. The
+ * ProcessRunner restores the host process context when the invocation ends.
  */
 export default async function cd({ args, cwd }) {
   const home = process.env.HOME || process.env.USERPROFILE || '/';
@@ -65,7 +66,7 @@ export default async function cd({ args, cwd }) {
       () => `cd: success | ${JSON.stringify({ newDir }, null, 2)}`
     );
     // A successful `cd` is silent, except for `cd -` which echoes the new dir.
-    return VirtualUtils.success(printDir ? newDir + '\n' : '');
+    return VirtualUtils.success(printDir ? `${newDir}\n` : '');
   } catch (error) {
     trace(
       'VirtualCommand',

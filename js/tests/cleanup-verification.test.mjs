@@ -48,15 +48,12 @@ describe('Cleanup Verification', () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'cleanup-test-'));
     testDirs.push(tempDir);
 
-    // Change directory
-    await $`cd ${tempDir}`;
-
-    // Verify we changed
-    const result = await $`pwd`;
+    // The command sees the changed directory within its invocation.
+    const result = await $`cd ${tempDir} && pwd`;
     expect(normalizePath(result.stdout.trim())).toBe(normalizePath(tempDir));
 
-    // Cwd should be changed within test
-    expect(normalizePath(process.cwd())).toBe(normalizePath(tempDir));
+    // The host process is restored as soon as the invocation completes.
+    expect(process.cwd()).toBe(originalCwd);
   });
 
   test('should be back in original directory after cd test', () => {
@@ -69,11 +66,13 @@ describe('Cleanup Verification', () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'cleanup-test2-'));
     testDirs.push(tempDir);
 
-    // Change directory with && operator
-    await $`cd ${tempDir} && echo "test"`;
+    const result = await $`cd ${tempDir} && echo "test" && pwd`;
 
-    // Should be in temp dir
-    expect(normalizePath(process.cwd())).toBe(normalizePath(tempDir));
+    expect(result.stdout).toContain('test');
+    expect(normalizePath(result.stdout.trim().split('\n').at(-1))).toBe(
+      normalizePath(tempDir)
+    );
+    expect(process.cwd()).toBe(originalCwd);
   });
 
   test('should verify restoration after && cd test', () => {
@@ -103,15 +102,15 @@ describe('Cleanup Verification', () => {
     const tempDir2 = mkdtempSync(join(tmpdir(), 'cleanup-test5-'));
     testDirs.push(tempDir1, tempDir2);
 
-    // Multiple cd commands
+    // Each standalone cd is isolated from the next invocation.
     await $`cd ${tempDir1}`;
-    expect(normalizePath(process.cwd())).toBe(normalizePath(tempDir1));
+    expect(process.cwd()).toBe(originalCwd);
 
     await $`cd ${tempDir2}`;
-    expect(normalizePath(process.cwd())).toBe(normalizePath(tempDir2));
+    expect(process.cwd()).toBe(originalCwd);
 
     await $`cd ${tempDir1}`;
-    expect(normalizePath(process.cwd())).toBe(normalizePath(tempDir1));
+    expect(process.cwd()).toBe(originalCwd);
   });
 
   test('final verification - should still be in original directory', () => {

@@ -80,6 +80,37 @@ async function restoreCwd(savedCwd) {
   }
 }
 
+function captureProcessContext() {
+  return {
+    cwd: safeCwd(),
+    pwd: process.env.PWD,
+    oldpwd: process.env.OLDPWD,
+  };
+}
+
+function restoreEnv(name, value) {
+  if (value === undefined) {
+    delete process.env[name];
+  } else {
+    process.env[name] = value;
+  }
+}
+
+async function restoreProcessContext(savedContext) {
+  await restoreCwd(savedContext.cwd);
+  restoreEnv('PWD', savedContext.pwd);
+  restoreEnv('OLDPWD', savedContext.oldpwd);
+}
+
+async function runWithIsolatedProcessContext(operation) {
+  const savedContext = captureProcessContext();
+  try {
+    return await operation();
+  } finally {
+    await restoreProcessContext(savedContext);
+  }
+}
+
 /**
  * Handle file redirections for virtual command output
  * @param {object} result - Command result
@@ -135,6 +166,9 @@ function buildCommandString(cmd, args, redirects) {
  */
 export function attachOrchestrationMethods(ProcessRunner, deps) {
   const { virtualCommands, isVirtualCommandsEnabled } = deps;
+
+  ProcessRunner.prototype._runWithIsolatedProcessContext =
+    runWithIsolatedProcessContext;
 
   ProcessRunner.prototype._runSequence = async function (sequence) {
     trace(
@@ -197,16 +231,9 @@ export function attachOrchestrationMethods(ProcessRunner, deps) {
       () =>
         `_runSubshell ENTER | ${JSON.stringify({ commandType: subshell.command.type }, null, 2)}`
     );
-    // Capture the current directory so it can be restored after the subshell.
-    // Use safeCwd() because process.cwd() throws "getcwd() failed" when the
-    // current directory has been deleted; in that case restoreCwd() falls back
-    // to a safe location.
-    const savedCwd = safeCwd();
-    try {
-      return await executeCommand(this, subshell.command);
-    } finally {
-      await restoreCwd(savedCwd);
-    }
+    return await this._runWithIsolatedProcessContext(() =>
+      executeCommand(this, subshell.command)
+    );
   };
 
   ProcessRunner.prototype._runSimpleCommand = async function (command) {
