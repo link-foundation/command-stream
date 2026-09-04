@@ -298,7 +298,19 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          # The merge simulation below needs the base branch's history.
+          fetch-depth: 0
           persist-credentials: false
+
+      # Run the checks below against the real merge result rather than a
+      # possibly stale merge preview, and fail on a conflict here rather than at
+      # merge time. Rationale in .github/scripts/simulate-fresh-merge.sh.
+      - name: Simulate a fresh merge with the base branch
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash .github/scripts/simulate-fresh-merge.sh
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable branch @ 2026-09-03

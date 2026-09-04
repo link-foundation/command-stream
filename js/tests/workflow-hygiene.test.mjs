@@ -8,6 +8,7 @@ import { describe, test, expect } from 'bun:test';
 import { readFileSync, readdirSync } from 'fs';
 import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const workflowDir = join(repoRoot, '.github', 'workflows');
@@ -422,23 +423,54 @@ describe('checks validate the merge result, not a stale preview', () => {
   // Best practice #7. A pull-request run checks out refs/pull/N/merge, computed
   // when the pull request was last synchronised; if main moved since, the checks
   // pass on a combination that will not exist after the merge.
-  test.each([
-    ['js.yml', 'lint'],
-    ['js.yml', 'test'],
-    ['rust.yml', 'lint'],
-    ['rust.yml', 'test'],
-    ['rust.yml', 'scripts'],
-  ])(
-    '%s / %s merges the base branch before it checks anything',
-    (file, jobId) => {
-      const steps = workflows.find((w) => w.name === file).doc.jobs[jobId]
-        .steps;
-      const index = steps.findIndex((step) =>
-        (step.run ?? '').includes(simulation)
-      );
-      expect(`${file}/${jobId}: ${index !== -1}`).toBe(
-        `${file}/${jobId}: true`
-      );
+  const simulationStep = (job) =>
+    (job.steps ?? []).find((step) => (step.run ?? '').includes(simulation));
+
+  /**
+   * Jobs that run on pull requests and deliberately do not merge the base
+   * branch first, with the reason. Anything not listed here has to simulate the
+   * merge, so a new job cannot quietly go back to checking a stale preview.
+   */
+  const exempt = new Map([
+    [
+      'js.yml/changeset-check',
+      'diffs base against head; a local merge changes neither side of that diff',
+    ],
+    ['rust.yml/changelog', 'same: the two guards it runs are diff-based'],
+    ['parity.yml/parity', 'same: it diffs the merge base against HEAD'],
+    [
+      'security.yml/codeql',
+      'uploads results keyed to the checked-out commit, and GitHub rejects a commit it has never seen',
+    ],
+    [
+      'security.yml/dependency-review',
+      'compares two commit SHAs through the API and never reads the tree',
+    ],
+  ]);
+
+  const pullRequestJobs = workflows
+    .filter((workflow) => 'pull_request' in (workflow.doc.on ?? {}))
+    .flatMap((workflow) =>
+      Object.entries(workflow.doc.jobs)
+        // Writers run on push and workflow_dispatch, never on a pull request.
+        .filter(([, job]) => !isWriterJob(job))
+        .map(([jobId, job]) => [`${workflow.name}/${jobId}`, job])
+    );
+
+  test('the exemption list has no stale entries', () => {
+    const known = new Set(pullRequestJobs.map(([key]) => key));
+    expect([...exempt.keys()].filter((key) => !known.has(key))).toEqual([]);
+  });
+
+  test.each(pullRequestJobs)(
+    '%s merges the base branch before it checks anything',
+    (key, job) => {
+      if (exempt.has(key)) {
+        return;
+      }
+      const steps = job.steps;
+      const index = steps.indexOf(simulationStep(job));
+      expect(`${key}: ${index !== -1}`).toBe(`${key}: true`);
       // Everything that inspects the tree has to come after the merge.
       const checkout = steps.findIndex((step) =>
         (step.uses ?? '').startsWith('actions/checkout@')
@@ -452,21 +484,103 @@ describe('checks validate the merge result, not a stale preview', () => {
     '%s only simulates a merge where it can work',
     (_name, workflow) => {
       for (const [jobId, job] of Object.entries(workflow.doc.jobs)) {
-        const steps = job.steps ?? [];
-        if (!steps.some((step) => (step.run ?? '').includes(simulation))) {
+        const step = simulationStep(job);
+        if (!step) {
           continue;
         }
-        const step = steps.find((s) => (s.run ?? '').includes(simulation));
         // `github.base_ref` is empty outside a pull request, and the merge
         // needs history a shallow checkout does not have.
         expect(`${jobId}: ${step.if}`).toBe(
           `${jobId}: github.event_name == 'pull_request'`
         );
-        const checkout = steps.find((s) =>
+        const checkout = job.steps.find((s) =>
           (s.uses ?? '').startsWith('actions/checkout@')
         );
         expect(`${jobId}: ${checkout.with['fetch-depth']}`).toBe(`${jobId}: 0`);
       }
     }
   );
+});
+
+describe('repository-wide checks are not hidden behind a paths filter', () => {
+  // Every other workflow is scoped: js.yml to `js/**`, rust.yml to `rust/**`,
+  // workflows.yml to `.github/**`. A pull request touching only `docs/**` used
+  // to match none of them and ran nothing at all, and the formatter -- which
+  // reads every tracked file -- only ran behind the `js/**` filter, so a
+  // violation introduced in a workflow or a markdown file first turned red on
+  // an unrelated JavaScript pull request.
+  const quality = workflows.find((w) => w.name === 'quality.yml');
+
+  test('the quality workflow exists and runs on every pull request', () => {
+    expect(quality).toBeDefined();
+    expect(quality.doc.on.pull_request?.paths).toBeUndefined();
+    expect(quality.doc.on.push.paths).toBeUndefined();
+  });
+
+  test.each([
+    ['format', 'bun run format:check'],
+    ['docs', 'bun test js/tests/docs-validation.test.mjs'],
+    ['hygiene', 'bun test js/tests/workflow-hygiene.test.mjs'],
+  ])('the %s job runs %s', (jobId, command) => {
+    const runs = (quality.doc.jobs[jobId].steps ?? [])
+      .map((step) => step.run ?? '')
+      .join('\n');
+    expect(`${jobId}: ${runs.includes(command)}`).toBe(`${jobId}: true`);
+  });
+
+  test.each(workflows.map((w) => [w.name, w]))(
+    '%s filters push and pull_request identically',
+    (_name, workflow) => {
+      // Two lists that drift apart mean a check runs on the pull request and
+      // then not on the merge to main, or the other way round. Keeping them
+      // equal is what makes a green pull request predict a green main.
+      const on = workflow.doc.on ?? {};
+      if (!on.push?.paths || !on.pull_request?.paths) {
+        return;
+      }
+      expect(on.push.paths).toEqual(on.pull_request.paths);
+    }
+  );
+
+  test('every file eslint lints outside js/ triggers the lint job', () => {
+    // ESLint's configuration sits at the repository root so that experiments/
+    // and claude-profiles.mjs are inside the lint scope. js.yml's `paths:`
+    // filter has to list them too, otherwise the lint job that would catch an
+    // error in them does not start.
+    const js = workflows.find((w) => w.name === 'js.yml');
+    const patterns = js.doc.on.pull_request.paths;
+    const linted = execSync("git ls-files '*.mjs' '*.js' '*.cjs'", {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    })
+      .trim()
+      .split('\n')
+      .filter(
+        (file) =>
+          !file.startsWith('js/') &&
+          !file.startsWith('dev/log/') &&
+          // Mirrors the ignores in js/eslint.config.js: archived evidence.
+          !/docs\/case-studies\/[^/]+\/(templates|data|log-excerpts)\//.test(
+            file
+          )
+      );
+    const uncovered = linted.filter(
+      (file) =>
+        !patterns.some((pattern) =>
+          pattern.endsWith('/**')
+            ? file.startsWith(pattern.slice(0, -2))
+            : file === pattern
+        )
+    );
+    expect(uncovered).toEqual([]);
+  });
+
+  test('the formatter is not confined to one language directory', () => {
+    // js/package.json's format:check steps out of js/ on purpose; the ignore
+    // rules that matter live in the repository-root .prettierignore.
+    const scripts = JSON.parse(
+      readFileSync(join(repoRoot, 'js', 'package.json'), 'utf8')
+    ).scripts;
+    expect(scripts['format:check']).toContain('cd ..');
+  });
 });

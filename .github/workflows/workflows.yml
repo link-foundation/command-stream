@@ -27,7 +27,19 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          # The merge simulation below needs the base branch's history.
+          fetch-depth: 0
           persist-credentials: false
+
+      # Run the checks below against the real merge result rather than a
+      # possibly stale merge preview, and fail on a conflict here rather than at
+      # merge time. Rationale in .github/scripts/simulate-fresh-merge.sh.
+      - name: Simulate a fresh merge with the base branch
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash .github/scripts/simulate-fresh-merge.sh
 
       # The Docker image bundles shellcheck and pyflakes, so this also lints
       # every `run:` block. A *native* actionlint binary without shellcheck on
@@ -50,7 +62,19 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          # The merge simulation below needs the base branch's history.
+          fetch-depth: 0
           persist-credentials: false
+
+      # Run the checks below against the real merge result rather than a
+      # possibly stale merge preview, and fail on a conflict here rather than at
+      # merge time. Rationale in .github/scripts/simulate-fresh-merge.sh.
+      - name: Simulate a fresh merge with the base branch
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash .github/scripts/simulate-fresh-merge.sh
 
       # actionlint cannot see workflow *security* defects: unpinned third-party
       # actions, checkouts that persist `GITHUB_TOKEN` in `.git/config`, or

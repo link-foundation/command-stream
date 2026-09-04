@@ -6,6 +6,12 @@ on:
       - main
     paths:
       - 'js/**'
+      # ESLint runs from the repository root, so it also lints these; without
+      # them here a lint error in an experiment or in claude-profiles.mjs first
+      # surfaced on an unrelated pull request that happened to touch js/**.
+      - 'eslint.config.js'
+      - 'claude-profiles.mjs'
+      - 'experiments/**'
       - '.github/workflows/js.yml'
       - 'README.md'
       - 'LICENSE'
@@ -13,6 +19,12 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - 'js/**'
+      # ESLint runs from the repository root, so it also lints these; without
+      # them here a lint error in an experiment or in claude-profiles.mjs first
+      # surfaced on an unrelated pull request that happened to touch js/**.
+      - 'eslint.config.js'
+      - 'claude-profiles.mjs'
+      - 'experiments/**'
       - '.github/workflows/js.yml'
       - 'README.md'
       - 'LICENSE'
