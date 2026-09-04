@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.20.1
+
+### Patch Changes
+
+- e47f684: Track virtual `cd` changes in invocation-local cwd and environment state, including overlapping commands, subshells, and explicit `cwd` command chains, without mutating the host working directory or `PWD`/`OLDPWD`.
+
 ## 0.20.0
 
 ### Minor Changes
