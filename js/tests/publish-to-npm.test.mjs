@@ -151,3 +151,206 @@ test('reports published for a version already on npm (legit success path)', () =
   expect(output).toContain('already_published=true');
   expect(status).toBe(0);
 }, 130000);
+
+// ---------------------------------------------------------------------------
+// Issue #199 — a slow registry after a successful publish must not fail the
+// release.
+//
+// The three tests above run against the real npm registry, which cannot be made
+// to lag on demand. These run the same real script against a stub registry
+// served over HTTP (PUBLISH_REGISTRY_URL redirects the publication check only),
+// so the exact production sequence from run 33914574283 is reproducible:
+//
+//   pre-check      -> 404 (version not published yet)
+//   publish        -> npm E409 "Cannot publish over previously staged version"
+//   verification   -> 404 on the first poll, then the version appears
+//
+// Before the fix this ended in "❌ Failed to publish after 3 attempts" while
+// the version was live on npm.
+
+/**
+ * Serve npm package metadata that reveals `version` only from the Nth read on.
+ * @param {object} options
+ * @param {string} options.packageName
+ * @param {string} options.version
+ * @param {number} options.visibleFromRead - 1-based read index
+ * @returns {Promise<{url: string, reads: () => number, stop: () => void}>}
+ */
+async function startLaggingRegistry({ packageName, version, visibleFromRead }) {
+  let reads = 0;
+  const server = Bun.serve({
+    port: 0,
+    fetch(request) {
+      const wanted = `/${encodeURIComponent(packageName)}`;
+      if (new URL(request.url).pathname !== wanted) {
+        return new Response('not found', { status: 404 });
+      }
+      reads++;
+      if (reads < visibleFromRead) {
+        return new Response('{}', { status: 404 });
+      }
+      return Response.json({ name: packageName, versions: { [version]: {} } });
+    },
+  });
+
+  return {
+    url: `http://127.0.0.1:${server.port}`,
+    reads: () => reads,
+    stop: () => server.stop(true),
+  };
+}
+
+/**
+ * Run publish-to-npm.mjs against a stub registry.
+ * @param {object} opts
+ * @param {string} opts.version
+ * @param {string} opts.publishScript
+ * @param {string} opts.registryUrl
+ * @returns {Promise<{status:number, stdout:string, stderr:string, output:string}>}
+ */
+async function runPublishAgainstRegistry({
+  version,
+  publishScript,
+  registryUrl,
+}) {
+  const dir = mkdtempSync(join(tmpdir(), 'issue199-publish-'));
+  writeFileSync(
+    join(dir, 'package.json'),
+    JSON.stringify(
+      {
+        name: 'command-stream',
+        version,
+        scripts: { 'changeset:publish': publishScript },
+      },
+      null,
+      2
+    )
+  );
+  const outputFile = join(dir, 'gh-output.txt');
+  writeFileSync(outputFile, '');
+
+  // Must be asynchronous: the stub registry runs in this process, so a
+  // synchronous spawn would block the event loop and never answer a request.
+  const child = Bun.spawn(['bun', SCRIPT], {
+    cwd: dir,
+    stdout: 'pipe',
+    stderr: 'pipe',
+    env: {
+      ...process.env,
+      GITHUB_OUTPUT: outputFile,
+      // Only the publication check is redirected. Overriding NPM_CONFIG_REGISTRY
+      // would also redirect use-m's module installation, which must keep
+      // talking to the real registry.
+      PUBLISH_REGISTRY_URL: registryUrl,
+      PUBLISH_RETRY_DELAY: '0',
+      PUBLISH_VERIFY_DELAY: '0',
+      PUBLISH_VERIFY_MAX_DELAY: '0',
+    },
+  });
+
+  const [stdout, stderr, status] = await Promise.all([
+    new Response(child.stdout).text(),
+    new Response(child.stderr).text(),
+    child.exited,
+  ]);
+
+  return {
+    status,
+    stdout,
+    stderr,
+    output: existsSync(outputFile) ? readFileSync(outputFile, 'utf8') : '',
+  };
+}
+
+// The verbatim npm output from the failed run, escaped for `node -e`.
+const E409_STAGED_OUTPUT =
+  'npm error code E409\\nnpm error 409 Conflict - PUT https://registry.npmjs.org/command-stream - Cannot publish over previously staged version "0.20.1"';
+
+test('issue #199: an E409 "previously staged version" resolves to a successful release', async () => {
+  if (!networkAvailable) {
+    return;
+  } // offline: skip (the script still fetches use-m from unpkg)
+
+  const registry = await startLaggingRegistry({
+    packageName: 'command-stream',
+    version: '0.20.1',
+    // read 1 = the pre-check (404), read 2 = first verification poll (404),
+    // read 3 = the version becomes visible.
+    visibleFromRead: 3,
+  });
+
+  try {
+    const { status, output, stdout } = await runPublishAgainstRegistry({
+      version: '0.20.1',
+      publishScript: `node -e "console.error('${E409_STAGED_OUTPUT}'); process.exit(1)"`,
+      registryUrl: registry.url,
+    });
+
+    expect(output).toContain('published=true');
+    expect(output).toContain('published_version=0.20.1');
+    expect(output).not.toContain('published=false');
+    expect(status).toBe(0);
+    // The publish command must not be re-run: republishing is what produced the
+    // E409 in the first place.
+    expect(stdout).toContain('Publish attempt 1 of 3');
+    expect(stdout).not.toContain('Publish attempt 2 of 3');
+  } finally {
+    registry.stop();
+  }
+}, 130000);
+
+test('issue #199: registry propagation lag after a clean publish is not a failure', async () => {
+  if (!networkAvailable) {
+    return;
+  } // offline: skip
+
+  const registry = await startLaggingRegistry({
+    packageName: 'command-stream',
+    version: '0.20.1',
+    visibleFromRead: 4,
+  });
+
+  try {
+    const { status, output, stdout } = await runPublishAgainstRegistry({
+      version: '0.20.1',
+      publishScript:
+        'node -e "console.log(\'🦋  success packages published successfully\'); process.exit(0)"',
+      registryUrl: registry.url,
+    });
+
+    expect(output).toContain('published=true');
+    expect(status).toBe(0);
+    expect(stdout).not.toContain('Publish attempt 2 of 3');
+    // Polling, not a single sample, is what makes this pass.
+    expect(registry.reads()).toBeGreaterThan(2);
+  } finally {
+    registry.stop();
+  }
+}, 130000);
+
+test('issue #166 stays fixed: verification exhaustion still fails the release', async () => {
+  if (!networkAvailable) {
+    return;
+  } // offline: skip
+
+  const registry = await startLaggingRegistry({
+    packageName: 'command-stream',
+    version: '0.20.1',
+    visibleFromRead: Number.MAX_SAFE_INTEGER, // never becomes visible
+  });
+
+  try {
+    const { status, output } = await runPublishAgainstRegistry({
+      version: '0.20.1',
+      publishScript:
+        'node -e "console.log(\'no projects to publish\'); process.exit(0)"',
+      registryUrl: registry.url,
+    });
+
+    expect(output).toContain('published=false');
+    expect(output).not.toContain('published=true');
+    expect(status).not.toBe(0);
+  } finally {
+    registry.stop();
+  }
+}, 130000);
