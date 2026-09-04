@@ -13,6 +13,7 @@
 //! - `quote` - Shell quoting utilities
 //! - `utils` (this module) - Command results and virtual command helpers
 
+use std::collections::HashMap;
 use std::env;
 use std::path::{Path, PathBuf};
 
@@ -20,6 +21,44 @@ use std::path::{Path, PathBuf};
 pub use crate::ansi::{AnsiConfig, AnsiUtils};
 pub use crate::quote::quote;
 pub use crate::trace::{is_trace_enabled, trace, trace_lazy};
+
+/// Re-export invocation-local directory variables inside POSIX shells.
+///
+/// Some shells, notably the macOS system shell, import `OLDPWD` as an
+/// internal variable but drop its export flag during startup. Prefixing the
+/// command keeps both variables visible to the real child process.
+#[cfg(unix)]
+pub(crate) fn with_exported_process_context(
+    command: &str,
+    env: Option<&HashMap<String, String>>,
+) -> String {
+    let Some(env) = env else {
+        return command.to_string();
+    };
+    let assignments = ["PWD", "OLDPWD"]
+        .into_iter()
+        .filter_map(|name| {
+            env.get(name).map(|value| {
+                let value = value.replace('\'', "'\\''");
+                format!("{name}='{value}'")
+            })
+        })
+        .collect::<Vec<_>>();
+
+    if assignments.is_empty() {
+        command.to_string()
+    } else {
+        format!("export {}; {command}", assignments.join(" "))
+    }
+}
+
+#[cfg(not(unix))]
+pub(crate) fn with_exported_process_context(
+    command: &str,
+    _env: Option<&HashMap<String, String>>,
+) -> String {
+    command.to_string()
+}
 
 /// Result type for virtual command operations
 #[derive(Debug, Clone)]
@@ -236,5 +275,22 @@ mod tests {
         let config = AnsiConfig::default();
         assert!(config.preserve_ansi);
         assert!(config.preserve_control_chars);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn safely_exports_invocation_directory_variables() {
+        let env = HashMap::from([
+            ("PWD".to_string(), "/tmp/new dir".to_string()),
+            (
+                "OLDPWD".to_string(),
+                "/tmp/old' dir\n$() `cmd`; end".to_string(),
+            ),
+        ]);
+
+        assert_eq!(
+            with_exported_process_context("printf done", Some(&env)),
+            "export PWD='/tmp/new dir' OLDPWD='/tmp/old'\\'' dir\n$() `cmd`; end'; printf done"
+        );
     }
 }

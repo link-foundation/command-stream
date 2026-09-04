@@ -3,7 +3,7 @@
 use crate::commands::CommandContext;
 use crate::utils::CommandResult;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// Execute the test command
 ///
@@ -13,7 +13,8 @@ pub async fn test(ctx: CommandContext) -> CommandResult {
         return CommandResult::error_with_code("", 1);
     }
 
-    let result = evaluate_expression(&ctx.args);
+    let cwd = ctx.get_cwd();
+    let result = evaluate_expression(&ctx.args, &cwd);
 
     if result {
         CommandResult::success_empty()
@@ -22,7 +23,7 @@ pub async fn test(ctx: CommandContext) -> CommandResult {
     }
 }
 
-fn evaluate_expression(args: &[String]) -> bool {
+fn evaluate_expression(args: &[String], cwd: &Path) -> bool {
     if args.is_empty() {
         return false;
     }
@@ -31,18 +32,19 @@ fn evaluate_expression(args: &[String]) -> bool {
     if args.len() == 2 {
         let op = &args[0];
         let arg = &args[1];
+        let resolved_arg = resolve_path(arg, cwd);
 
         return match op.as_str() {
-            "-e" => Path::new(arg).exists(),
-            "-f" => Path::new(arg).is_file(),
-            "-d" => Path::new(arg).is_dir(),
+            "-e" => resolved_arg.exists(),
+            "-f" => resolved_arg.is_file(),
+            "-d" => resolved_arg.is_dir(),
             "-r" => {
                 // Check if readable (simplified)
-                fs::metadata(arg).is_ok()
+                fs::metadata(&resolved_arg).is_ok()
             }
             "-w" => {
                 // Check if writable (simplified)
-                fs::metadata(arg)
+                fs::metadata(&resolved_arg)
                     .map(|m| !m.permissions().readonly())
                     .unwrap_or(false)
             }
@@ -51,22 +53,24 @@ fn evaluate_expression(args: &[String]) -> bool {
                 #[cfg(unix)]
                 {
                     use std::os::unix::fs::PermissionsExt;
-                    fs::metadata(arg)
+                    fs::metadata(&resolved_arg)
                         .map(|m| m.permissions().mode() & 0o111 != 0)
                         .unwrap_or(false)
                 }
                 #[cfg(not(unix))]
                 {
-                    Path::new(arg).exists()
+                    resolved_arg.exists()
                 }
             }
             "-s" => {
                 // Check if file has size > 0
-                fs::metadata(arg).map(|m| m.len() > 0).unwrap_or(false)
+                fs::metadata(&resolved_arg)
+                    .map(|m| m.len() > 0)
+                    .unwrap_or(false)
             }
             "-z" => arg.is_empty(),
             "-n" => !arg.is_empty(),
-            "!" => !evaluate_expression(&args[1..]),
+            "!" => !evaluate_expression(&args[1..], cwd),
             _ => false,
         };
     }
@@ -120,6 +124,15 @@ fn evaluate_expression(args: &[String]) -> bool {
     }
 
     false
+}
+
+fn resolve_path(arg: &str, cwd: &Path) -> PathBuf {
+    let path = Path::new(arg);
+    if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        cwd.join(path)
+    }
 }
 
 #[cfg(test)]

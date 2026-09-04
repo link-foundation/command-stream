@@ -65,20 +65,16 @@ describe.skipIf(isWindows)(
       test('should initialize git repo after cd to temp directory', async () => {
         const originalCwd = process.cwd();
 
-        const cdResult = await $`cd ${tempDir}`;
-        expect(cdResult.code).toBe(0);
-
-        const initResult = await $`git init`;
+        const initResult = await $`cd ${tempDir} && git init`;
         expect(initResult.code).toBe(0);
         // Git init outputs to stderr
         const output = initResult.stdout + initResult.stderr;
         expect(output).toContain('Initialized empty Git repository');
 
-        const statusResult = await $`git status`;
+        const statusResult = await $`cd ${tempDir} && git status`;
         expect(statusResult.code).toBe(0);
         expect(statusResult.stdout).toContain('On branch');
-
-        await $`cd ${originalCwd}`;
+        expect(process.cwd()).toBe(originalCwd);
       });
 
       test('should handle git commands in temp directory with cd chain', async () => {
@@ -92,30 +88,29 @@ describe.skipIf(isWindows)(
         const output = result.stdout + result.stderr;
         expect(output).toContain('Initialized empty Git repository');
 
-        await $`cd ${originalCwd}`;
+        expect(process.cwd()).toBe(originalCwd);
       });
 
       test('should create and commit files in temp git repo', async () => {
         const originalCwd = process.cwd();
 
-        await $`cd ${tempDir}`;
-        await $`git init`;
-        await $`git config user.email "test@example.com"`;
-        await $`git config user.name "Test User"`;
+        await $`cd ${tempDir} && git init`;
+        await $`cd ${tempDir} && git config user.email "test@example.com"`;
+        await $`cd ${tempDir} && git config user.name "Test User"`;
 
         // Use bash -c to properly handle redirection
-        await $`bash -c 'echo "test content" > test.txt'`;
-        await $`git add test.txt`;
+        await $`cd ${tempDir} && bash -c 'echo "test content" > test.txt'`;
+        await $`cd ${tempDir} && git add test.txt`;
 
-        const commitResult = await $`git commit -m "Initial commit"`;
+        const commitResult =
+          await $`cd ${tempDir} && git commit -m "Initial commit"`;
         expect(commitResult.code).toBe(0);
         expect(commitResult.stdout).toContain('1 file changed');
 
-        const logResult = await $`git log --oneline`;
+        const logResult = await $`cd ${tempDir} && git log --oneline`;
         expect(logResult.code).toBe(0);
         expect(logResult.stdout).toContain('Initial commit');
-
-        await $`cd ${originalCwd}`;
+        expect(process.cwd()).toBe(originalCwd);
       });
 
       test('should handle git branch operations with cd', async () => {
@@ -139,7 +134,7 @@ describe.skipIf(isWindows)(
         expect(newBranchResult.code).toBe(0);
         expect(newBranchResult.stdout.trim()).toBe('feature-branch');
 
-        await $`cd ${originalCwd}`;
+        expect(process.cwd()).toBe(originalCwd);
       });
 
       test('should handle multiple temp directories with cd', async () => {
@@ -163,7 +158,7 @@ describe.skipIf(isWindows)(
           expect(repo2Status.stdout).toContain('file.txt');
         } finally {
           rmSync(tempDir2, { recursive: true, force: true });
-          await $`cd ${originalCwd}`;
+          expect(process.cwd()).toBe(originalCwd);
         }
       });
 
@@ -183,7 +178,7 @@ describe.skipIf(isWindows)(
         const statusResult = await $`cd ${tempDir} && git status --porcelain`;
         expect(statusResult.stdout).toContain(' M file.txt');
 
-        await $`cd ${originalCwd}`;
+        expect(process.cwd()).toBe(originalCwd);
       });
 
       test('should work with git in subshells', async () => {
@@ -200,7 +195,7 @@ describe.skipIf(isWindows)(
         const checkResult = await $`cd ${tempDir} && git status`;
         expect(checkResult.code).toBe(0);
 
-        await $`cd ${originalCwd}`;
+        expect(process.cwd()).toBe(originalCwd);
       });
     });
 
@@ -226,15 +221,12 @@ describe.skipIf(isWindows)(
         const originalCwd = process.cwd();
 
         try {
-          await $`cd ${tempDir}`;
-
           const result =
-            await $`gh api user --jq .login 2>/dev/null || echo "not-authenticated"`;
+            await $`cd ${tempDir} && gh api user --jq .login 2>/dev/null || echo "not-authenticated"`;
           expect(result.code).toBe(0);
           // Result will be either a username or "not-authenticated"
           expect(result.stdout.trim().length).toBeGreaterThan(0);
-
-          await $`cd ${originalCwd}`;
+          expect(process.cwd()).toBe(originalCwd);
         } finally {
           rmSync(tempDir, { recursive: true, force: true });
         }
@@ -249,20 +241,17 @@ describe.skipIf(isWindows)(
           const owner = 'octocat';
           const repo = 'Hello-World';
 
-          await $`cd ${tempDir}`;
-
           // Test the command structure (use -- to separate git flags as per gh documentation)
           const cloneCmd = `gh repo clone ${owner}/${repo} . -- --depth 1 2>&1 || echo "Clone would execute here"`;
-          const result = await $`bash -c ${cloneCmd}`;
+          const result = await $`cd ${tempDir} && bash -c ${cloneCmd}`;
           expect(result.code).toBe(0);
 
           // Test that we're in the right directory
-          const pwdResult = await $`pwd`;
+          const pwdResult = await $`cd ${tempDir} && pwd`;
           expect(normalizePath(pwdResult.stdout.trim())).toBe(
             normalizePath(tempDir)
           );
-
-          await $`cd ${originalCwd}`;
+          expect(process.cwd()).toBe(originalCwd);
         } finally {
           rmSync(tempDir, { recursive: true, force: true });
         }
@@ -290,7 +279,7 @@ describe.skipIf(isWindows)(
             await $`cd ${tempDir} && gh pr list --limit 1 2>&1 || echo "No remote configured"`;
           expect(prListCmd.code).toBe(0);
 
-          await $`cd ${originalCwd}`;
+          expect(process.cwd()).toBe(originalCwd);
         } finally {
           rmSync(tempDir, { recursive: true, force: true });
         }
@@ -303,42 +292,41 @@ describe.skipIf(isWindows)(
         const originalCwd = process.cwd();
 
         try {
-          // Step 1: Navigate to temp directory
-          await $`cd ${tempDir}`;
+          // Step 1: Initialize a repo in the invocation-scoped directory.
+          await $`cd ${tempDir} && git init`;
+          await $`cd ${tempDir} && git config user.email "bot@example.com"`;
+          await $`cd ${tempDir} && git config user.name "Bot User"`;
 
-          // Step 2: Initialize git repo (simulating clone)
-          await $`git init`;
-          await $`git config user.email "bot@example.com"`;
-          await $`git config user.name "Bot User"`;
-
-          // Step 3: Check current branch
-          const branchResult = await $`git branch --show-current`;
+          // Step 2: Check current branch
+          const branchResult =
+            await $`cd ${tempDir} && git branch --show-current`;
           const currentBranch = branchResult.stdout.trim() || 'master';
+          expect(['main', 'master']).toContain(currentBranch);
 
-          // Step 4: Create new feature branch
+          // Step 3: Create new feature branch
           const branchName = `feature-${Date.now()}`;
-          await $`git checkout -b ${branchName}`;
+          await $`cd ${tempDir} && git checkout -b ${branchName}`;
 
-          // Step 5: Verify branch switch
-          const newBranchResult = await $`git branch --show-current`;
+          // Step 4: Verify branch switch
+          const newBranchResult =
+            await $`cd ${tempDir} && git branch --show-current`;
           expect(newBranchResult.stdout.trim()).toBe(branchName);
 
-          // Step 6: Make changes
-          await $`bash -c 'echo "feature implementation" > feature.js'`;
-          await $`git add .`;
+          // Step 5: Make changes
+          await $`cd ${tempDir} && bash -c 'echo "feature implementation" > feature.js'`;
+          await $`cd ${tempDir} && git add .`;
 
-          // Step 7: Check status
-          const statusResult = await $`git status --porcelain`;
+          // Step 6: Check status
+          const statusResult = await $`cd ${tempDir} && git status --porcelain`;
           expect(statusResult.stdout.trim()).toMatch(/A.*feature\.js/);
 
-          // Step 8: Commit changes
-          await $`git commit -m "Add feature implementation"`;
+          // Step 7: Commit changes
+          await $`cd ${tempDir} && git commit -m "Add feature implementation"`;
 
-          // Step 9: Verify commit
-          const logResult = await $`git log --oneline -1`;
+          // Step 8: Verify commit
+          const logResult = await $`cd ${tempDir} && git log --oneline -1`;
           expect(logResult.stdout).toContain('Add feature implementation');
-
-          await $`cd ${originalCwd}`;
+          expect(process.cwd()).toBe(originalCwd);
         } finally {
           rmSync(tempDir, { recursive: true, force: true });
         }
@@ -350,20 +338,19 @@ describe.skipIf(isWindows)(
 
         try {
           // Test invalid git command in temp directory
-          await $`cd ${tempDir}`;
           // Git status will fail in non-git directory
-          const result = await $`git status 2>&1 || echo "not a git repo"`;
+          const result =
+            await $`cd ${tempDir} && git status 2>&1 || echo "not a git repo"`;
           const output = result.stdout + result.stderr;
           expect(output.toLowerCase()).toMatch(
             /not a git repo|fatal.*not a git repository/
           );
 
           // Test recovery after error
-          await $`git init`;
-          const retryResult = await $`git status`;
+          await $`cd ${tempDir} && git init`;
+          const retryResult = await $`cd ${tempDir} && git status`;
           expect(retryResult.code).toBe(0);
-
-          await $`cd ${originalCwd}`;
+          expect(process.cwd()).toBe(originalCwd);
         } finally {
           rmSync(tempDir, { recursive: true, force: true });
         }
@@ -411,7 +398,7 @@ describe.skipIf(isWindows)(
           const logCheck = await $`cd ${tempDir} && git log --oneline`;
           expect(logCheck.stdout).toContain('test');
 
-          await $`cd ${originalCwd}`;
+          expect(process.cwd()).toBe(originalCwd);
         } finally {
           rmSync(tempDir, { recursive: true, force: true });
         }

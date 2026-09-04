@@ -4,6 +4,7 @@ import { describe, expect, test } from 'bun:test';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ProcessRunner } from '../src/$.mjs';
+import { buildCommandArgv } from '../src/$.shell.mjs';
 import { isWindows } from './test-helper.mjs';
 
 const fixturesDir = path.join(
@@ -29,6 +30,20 @@ function shellArgvSpec() {
 }
 
 describe('ProcessRunner shell file/args mode', () => {
+  test.skipIf(isWindows)(
+    'exports invocation-local directory variables safely',
+    () => {
+      const argv = buildCommandArgv(
+        { mode: 'shell', command: 'printf done' },
+        { PWD: '/tmp/new dir', OLDPWD: "/tmp/old' dir" }
+      );
+
+      expect(argv.at(-1)).toBe(
+        "export PWD='/tmp/new dir' OLDPWD='/tmp/old'\\'' dir'; printf done"
+      );
+    }
+  );
+
   test('runs argv through the platform shell asynchronously', async () => {
     const runner = new ProcessRunner(shellArgvSpec(), {
       mirror: false,

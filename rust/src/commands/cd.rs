@@ -5,6 +5,38 @@ use crate::utils::{trace, CommandResult};
 use std::env;
 use std::path::PathBuf;
 
+#[cfg(windows)]
+fn user_facing_path(path: PathBuf) -> PathBuf {
+    use std::ffi::OsString;
+    use std::os::windows::ffi::{OsStrExt, OsStringExt};
+
+    const VERBATIM_UNC: &[u16] = &[92, 92, 63, 92, 85, 78, 67, 92];
+    const VERBATIM: &[u16] = &[92, 92, 63, 92];
+    const UNC: &[u16] = &[92, 92];
+
+    let encoded: Vec<_> = path.as_os_str().encode_wide().collect();
+    if let Some(rest) = encoded.strip_prefix(VERBATIM_UNC) {
+        let mut normalized = UNC.to_vec();
+        normalized.extend_from_slice(rest);
+        return PathBuf::from(OsString::from_wide(&normalized));
+    }
+    if let Some(rest) = encoded.strip_prefix(VERBATIM) {
+        return PathBuf::from(OsString::from_wide(rest));
+    }
+    path
+}
+
+#[cfg(not(windows))]
+fn user_facing_path(path: PathBuf) -> PathBuf {
+    path
+}
+
+#[derive(Debug)]
+pub(crate) struct CdContext {
+    pub(crate) cwd: PathBuf,
+    pub(crate) oldpwd: PathBuf,
+}
+
 /// Execute the cd command
 ///
 /// Mirrors POSIX `sh`/bash semantics so that shell scripts translate directly:
@@ -14,30 +46,51 @@ use std::path::PathBuf;
 ///   - `cd <dir>`      -> change to <dir> (relative paths resolve against the
 ///     current working directory, or the `cwd` option)
 ///
-/// Like a real shell, a successful `cd` updates the `PWD` and `OLDPWD`
-/// environment variables and changes the process directory so that subsequent
-/// commands (virtual or real) observe the new location.
+/// This low-level command API retains its original process-mutating behavior.
+/// `ProcessRunner` and `Pipeline` use `resolve_cd` instead so their cwd and
+/// environment remain invocation-local.
 pub async fn cd(ctx: CommandContext) -> CommandResult {
-    let home = env::var("HOME")
-        .or_else(|_| env::var("USERPROFILE"))
-        .unwrap_or_else(|_| "/".to_string());
+    let (result, context) = resolve_cd(ctx).await;
+    let Some(context) = context else {
+        return result;
+    };
 
-    let previous_dir = env::current_dir().ok();
+    if let Err(error) = env::set_current_dir(&context.cwd) {
+        trace("VirtualCommand", &format!("cd: failed: {}", error));
+        return CommandResult::error(format!("cd: {}\n", error));
+    }
+    env::set_var("OLDPWD", &context.oldpwd);
+    env::set_var("PWD", &context.cwd);
+    result
+}
+
+pub(crate) async fn resolve_cd(ctx: CommandContext) -> (CommandResult, Option<CdContext>) {
+    let invocation_env = ctx.env.as_ref();
+    let env_value = |name: &str| {
+        invocation_env
+            .and_then(|values| values.get(name).cloned())
+            .or_else(|| env::var(name).ok())
+    };
+    let home = env_value("HOME")
+        .or_else(|| env_value("USERPROFILE"))
+        .unwrap_or_else(|| "/".to_string());
+
     let base = ctx.get_cwd();
+    let previous_dir = user_facing_path(std::fs::canonicalize(&base).unwrap_or(base.clone()));
 
     let mut print_dir = false;
     let target: String = match ctx.args.first().map(|s| s.as_str()) {
         // `cd` with no argument goes to $HOME, just like sh.
         None | Some("") => home.clone(),
         // `cd -` switches to the previous directory and prints it (sh behavior).
-        Some("-") => match env::var("OLDPWD") {
-            Ok(oldpwd) if !oldpwd.is_empty() => {
+        Some("-") => match env_value("OLDPWD") {
+            Some(oldpwd) if !oldpwd.is_empty() => {
                 print_dir = true;
                 oldpwd
             }
             _ => {
                 trace("VirtualCommand", "cd: OLDPWD not set");
-                return CommandResult::error("cd: OLDPWD not set\n");
+                return (CommandResult::error("cd: OLDPWD not set\n"), None);
             }
         },
         Some("~") => home.clone(),
@@ -59,31 +112,39 @@ pub async fn cd(ctx: CommandContext) -> CommandResult {
         &format!("cd: changing directory to {:?}", resolved),
     );
 
-    match env::set_current_dir(&resolved) {
-        Ok(()) => {
-            let new_dir = env::current_dir()
-                .map(|p| p.display().to_string())
-                .unwrap_or_default();
-            // Keep PWD/OLDPWD in sync with the real shell so `$PWD`-style lookups
-            // and child processes observe the change.
-            if let Some(prev) = previous_dir {
-                env::set_var("OLDPWD", prev);
-            }
-            env::set_var("PWD", &new_dir);
+    match std::fs::canonicalize(&resolved).and_then(|new_dir| {
+        if new_dir.is_dir() {
+            Ok(new_dir)
+        } else {
+            Err(std::io::Error::new(
+                std::io::ErrorKind::NotADirectory,
+                "not a directory",
+            ))
+        }
+    }) {
+        Ok(new_dir) => {
+            let new_dir = user_facing_path(new_dir);
             trace(
                 "VirtualCommand",
-                &format!("cd: success, new dir: {}", new_dir),
+                &format!("cd: success, new dir: {}", new_dir.display()),
             );
             // A successful `cd` is silent, except for `cd -` which echoes the dir.
-            if print_dir {
-                CommandResult::success(format!("{}\n", new_dir))
+            let result = if print_dir {
+                CommandResult::success(format!("{}\n", new_dir.display()))
             } else {
                 CommandResult::success_empty()
-            }
+            };
+            (
+                result,
+                Some(CdContext {
+                    cwd: new_dir,
+                    oldpwd: previous_dir,
+                }),
+            )
         }
         Err(e) => {
             trace("VirtualCommand", &format!("cd: failed: {}", e));
-            CommandResult::error(format!("cd: {}\n", e))
+            (CommandResult::error(format!("cd: {}\n", e)), None)
         }
     }
 }

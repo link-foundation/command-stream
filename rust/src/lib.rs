@@ -104,6 +104,14 @@ pub use state::{
 pub use stream::{AsyncIterator, IntoStream, OutputChunk, OutputStream, StreamingRunner};
 pub use trace::trace;
 
+fn fallback_cwd() -> PathBuf {
+    std::env::var_os("HOME")
+        .or_else(|| std::env::var_os("USERPROFILE"))
+        .map(PathBuf::from)
+        .filter(|path| path.is_dir())
+        .unwrap_or_else(std::env::temp_dir)
+}
+
 /// Resolve a working directory that is safe to spawn a child process in.
 ///
 /// When no explicit cwd is requested the child normally inherits the parent's
@@ -126,10 +134,7 @@ fn resolve_spawn_cwd(cwd: Option<&PathBuf>) -> Option<PathBuf> {
     match std::env::current_dir() {
         Ok(_) => None,
         Err(e) => {
-            let fallback = std::env::var_os("HOME")
-                .or_else(|| std::env::var_os("USERPROFILE"))
-                .map(PathBuf::from)
-                .unwrap_or_else(std::env::temp_dir);
+            let fallback = fallback_cwd();
             trace(
                 "ProcessRunner",
                 &format!(
@@ -138,11 +143,7 @@ fn resolve_spawn_cwd(cwd: Option<&PathBuf>) -> Option<PathBuf> {
                     fallback.display()
                 ),
             );
-            if fallback.exists() {
-                Some(fallback)
-            } else {
-                Some(std::env::temp_dir())
-            }
+            Some(fallback)
         }
     }
 }
@@ -272,7 +273,6 @@ impl ProcessRunner {
             self.finished = true;
             return Ok(());
         }
-
         // Parse command for shell operators (for future use with virtual command pipelines)
         let _parsed = if self.options.shell_operators && !needs_real_shell(&self.command) {
             parse_shell_command(&self.command)
@@ -287,7 +287,10 @@ impl ProcessRunner {
         for arg in &shell.args {
             cmd.arg(arg);
         }
-        cmd.arg(&self.command);
+        cmd.arg(utils::with_exported_process_context(
+            &self.command,
+            self.options.env.as_ref(),
+        ));
 
         // Configure stdin
         match &self.options.stdin {
@@ -426,7 +429,7 @@ impl ProcessRunner {
         match cmd_name {
             "echo" => Some(commands::echo(ctx).await),
             "pwd" => Some(commands::pwd(ctx).await),
-            "cd" => Some(commands::cd(ctx).await),
+            "cd" => Some(commands::cd::resolve_cd(ctx).await.0),
             "true" => Some(commands::r#true(ctx).await),
             "false" => Some(commands::r#false(ctx).await),
             "sleep" => Some(commands::sleep(ctx).await),

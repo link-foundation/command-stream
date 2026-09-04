@@ -3,9 +3,14 @@
 
 import cp from 'child_process';
 import { trace } from './$.trace.mjs';
-import { findAvailableShell } from './$.shell.mjs';
+import { findAvailableShell, withExportedProcessContext } from './$.shell.mjs';
 import { StreamUtils, safeWrite } from './$.stream-utils.mjs';
 import { createResult } from './$.result.mjs';
+import {
+  applyVirtualProcessContext,
+  effectiveCwd,
+  effectiveEnv,
+} from './$.process-context.mjs';
 
 const isBun = typeof globalThis.Bun !== 'undefined';
 
@@ -121,12 +126,17 @@ function needsShellExecution(commandStr) {
  * @param {string} cmd - Command name
  * @param {Array} args - Command args
  * @param {string} commandStr - Full command string
+ * @param {object|undefined|null} env - Effective invocation environment
  * @returns {string[]} Spawn arguments
  */
-function getSpawnArgs(needsShell, cmd, args, commandStr) {
+function getSpawnArgs(needsShell, cmd, args, commandStr, env) {
   if (needsShell) {
     const shell = findAvailableShell();
-    return [shell.cmd, ...shell.args.filter((arg) => arg !== '-l'), commandStr];
+    return [
+      shell.cmd,
+      ...shell.args.filter((arg) => arg !== '-l'),
+      withExportedProcessContext(commandStr, env),
+    ];
   }
   return [cmd, ...args.map((a) => (a.value !== undefined ? a.value : a))];
 }
@@ -351,7 +361,11 @@ function pipeStreamToProcess(stream, proc) {
 function spawnShellCommand(commandStr, options) {
   const shell = findAvailableShell();
   return Bun.spawn(
-    [shell.cmd, ...shell.args.filter((arg) => arg !== '-l'), commandStr],
+    [
+      shell.cmd,
+      ...shell.args.filter((arg) => arg !== '-l'),
+      withExportedProcessContext(commandStr, options.env),
+    ],
     {
       cwd: options.cwd,
       env: options.env,
@@ -392,8 +406,8 @@ async function collectFinalStdout(runner, proc) {
 function spawnNodeAsync(runner, argv, stdin, isLastCommand) {
   return new Promise((resolve, reject) => {
     const proc = cp.spawn(argv[0], argv.slice(1), {
-      cwd: runner.options.cwd,
-      env: runner.options.env,
+      cwd: effectiveCwd(runner),
+      env: effectiveEnv(runner),
       stdio: ['pipe', 'pipe', 'pipe'],
     });
 
@@ -603,8 +617,13 @@ async function handleVirtualPipelineCommand(
     handler,
     argValues,
     currentInput,
-    runner.options
+    {
+      ...runner.options,
+      cwd: effectiveCwd(runner),
+      env: effectiveEnv(runner) ?? process.env,
+    }
   );
+  applyVirtualProcessContext(runner, result);
 
   if (isLastCommand) {
     emitFinalOutput(runner, result);
@@ -651,7 +670,11 @@ async function handleShellPipelineCommand(
   logShellTrace(globalShellSettings, commandStr, []);
 
   const shell = findAvailableShell();
-  const argv = [shell.cmd, ...shell.args.filter((a) => a !== '-l'), commandStr];
+  const argv = [
+    shell.cmd,
+    ...shell.args.filter((a) => a !== '-l'),
+    withExportedProcessContext(commandStr, effectiveEnv(runner)),
+  ];
   const proc = await spawnNodeAsync(runner, argv, currentInput, isLastCommand);
   const result = {
     code: proc.status || 0,
@@ -735,7 +758,8 @@ export function attachPipelineMethods(ProcessRunner, deps) {
         needsShell,
         command.cmd,
         command.args,
-        commandStr
+        commandStr,
+        effectiveEnv(this)
       );
 
       let stdin;
@@ -748,8 +772,8 @@ export function attachPipelineMethods(ProcessRunner, deps) {
       }
 
       const proc = Bun.spawn(spawnArgs, {
-        cwd: this.options.cwd,
-        env: this.options.env,
+        cwd: effectiveCwd(this),
+        env: effectiveEnv(this),
         stdin,
         stdout: 'pipe',
         stderr: 'pipe',
@@ -808,7 +832,8 @@ export function attachPipelineMethods(ProcessRunner, deps) {
         needsShell,
         command.cmd,
         command.args,
-        commandStr
+        commandStr,
+        effectiveEnv(this)
       );
 
       let stdin;
@@ -821,8 +846,8 @@ export function attachPipelineMethods(ProcessRunner, deps) {
       }
 
       const proc = Bun.spawn(spawnArgs, {
-        cwd: this.options.cwd,
-        env: this.options.env,
+        cwd: effectiveCwd(this),
+        env: effectiveEnv(this),
         stdin,
         stdout: 'pipe',
         stderr: 'pipe',
@@ -914,6 +939,8 @@ export function attachPipelineMethods(ProcessRunner, deps) {
                 args: argValues,
                 stdin: inputData,
                 ...opts,
+                cwd: effectiveCwd(self),
+                env: effectiveEnv(self) ?? process.env,
               })) {
                 const data = Buffer.from(chunk);
                 controller.enqueue(data);
@@ -938,7 +965,10 @@ export function attachPipelineMethods(ProcessRunner, deps) {
             args: argValues,
             stdin: inputData,
             ...opts,
+            cwd: effectiveCwd(this),
+            env: effectiveEnv(this) ?? process.env,
           });
+          applyVirtualProcessContext(this, result);
           const outputData = result.stdout || '';
           if (isLastCommand) {
             finalOutput = outputData;
@@ -956,8 +986,8 @@ export function attachPipelineMethods(ProcessRunner, deps) {
       } else {
         const commandStr = buildCommandParts(command).join(' ');
         const proc = spawnShellCommand(commandStr, {
-          cwd: this.options.cwd,
-          env: this.options.env,
+          cwd: effectiveCwd(this),
+          env: effectiveEnv(this),
           stdin: currentInputStream ? 'pipe' : 'ignore',
         });
 

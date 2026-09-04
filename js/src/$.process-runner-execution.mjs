@@ -1,5 +1,4 @@
 // ProcessRunner execution methods - start, sync, async, and related methods
-// Part of the modular ProcessRunner architecture
 
 import cp from 'child_process';
 import { trace } from './$.trace.mjs';
@@ -11,7 +10,11 @@ import {
 } from './$.shell.mjs';
 import { StreamUtils, safeWrite, asBuffer } from './$.stream-utils.mjs';
 import { pumpReadable } from './$.quote.mjs';
-import { createResult } from './$.result.mjs';
+import {
+  createCancelledResult,
+  createResult,
+  finishExecutionError,
+} from './$.result.mjs';
 import {
   parseShellCommand,
   needsRealShell,
@@ -21,14 +24,11 @@ import {
   createExitPromise,
   drainPumpsAfterExit,
 } from './$.process-runner-exit.mjs';
+import { effectiveCwd, effectiveEnv } from './$.process-context.mjs';
 
 const isBun = typeof globalThis.Bun !== 'undefined';
 
-/**
- * Check for shell operators in command
- * @param {string} command - Command to check
- * @returns {boolean}
- */
+/** Check for shell operators in command. */
 function hasShellOperators(command) {
   return (
     command.includes('&&') ||
@@ -1089,6 +1089,22 @@ export function attachExecutionMethods(ProcessRunner, deps) {
   };
 
   ProcessRunner.prototype._doStartAsync = async function () {
+    // The await/then path can reach here without start()'s option merge.
+    setupExternalAbortSignal(this);
+    // Preserve the public lifecycle contract: accessing a stream starts the
+    // runner synchronously even though command execution is asynchronous.
+    this.started = true;
+    this._mode = 'async';
+    this._effectiveCwd = this.options.cwd;
+    this._effectiveEnv = this.options.env;
+
+    if (this._cancelled) {
+      return (
+        this.result ??
+        this.finish(createCancelledResult(this._cancellationSignal))
+      );
+    }
+
     trace(
       'ProcessRunner',
       () =>
@@ -1097,15 +1113,6 @@ export function attachExecutionMethods(ProcessRunner, deps) {
           command: this.spec.command?.slice(0, 100),
         })}`
     );
-
-    this.started = true;
-    this._mode = 'async';
-
-    // Ensure an external AbortSignal (options.signal) is honored regardless of
-    // how the runner was started. The await/then path reaches here without
-    // going through start()'s option-merge branch, so register the listener
-    // here too (idempotent via the _externalAbortSetup guard).
-    setupExternalAbortSignal(this);
 
     try {
       const { cwd, env, stdin } = this.options;
@@ -1136,7 +1143,8 @@ export function attachExecutionMethods(ProcessRunner, deps) {
       }
 
       // Build command arguments
-      const argv = buildCommandArgv(this.spec);
+      const childEnv = effectiveEnv(this) ?? env;
+      const argv = buildCommandArgv(this.spec, childEnv);
 
       trace(
         'ProcessRunner',
@@ -1174,8 +1182,8 @@ export function attachExecutionMethods(ProcessRunner, deps) {
 
       // Execute child process
       const result = await executeChildProcess(this, argv, {
-        cwd,
-        env,
+        cwd: effectiveCwd(this) ?? cwd,
+        env: childEnv,
         stdin,
         isInteractive,
         shell: shellArgv,
@@ -1208,15 +1216,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
           })}`
       );
 
-      if (!this.finished) {
-        const errorResult = createResult({
-          code: error.code ?? 1,
-          stdout: error.stdout ?? '',
-          stderr: error.stderr ?? error.message ?? '',
-          stdin: '',
-        });
-        this.finish(errorResult);
-      }
+      finishExecutionError(this, error);
 
       throw error;
     }
@@ -1439,7 +1439,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
 
     const { cwd, env, stdin } = this.options;
     const shellArgv = isShellArgvSpec(this.spec);
-    const argv = buildCommandArgv(this.spec);
+    const argv = buildCommandArgv(this.spec, env);
 
     const traceCmd =
       this.spec.mode === 'shell' && !shellArgv

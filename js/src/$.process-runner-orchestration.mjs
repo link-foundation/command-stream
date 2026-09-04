@@ -2,6 +2,7 @@
 // Part of the modular ProcessRunner architecture
 
 import { trace } from './$.trace.mjs';
+import { effectiveCwd, effectiveEnv } from './$.process-context.mjs';
 
 /**
  * Safely get the current working directory.
@@ -41,43 +42,30 @@ function executeCommand(runner, command) {
   return Promise.resolve({ code: 0, stdout: '', stderr: '' });
 }
 
-/**
- * Restore working directory after subshell execution
- * @param {string} savedCwd - Directory to restore
- */
-async function restoreCwd(savedCwd) {
-  trace(
-    'ProcessRunner',
-    () => `Restoring cwd from ${safeCwd() ?? '<unavailable>'} to ${savedCwd}`
-  );
-  const fs = await import('fs');
-  const fallbackDir = process.env.HOME || process.env.USERPROFILE || '/';
+function attachQuietMethod(ProcessRunner) {
+  ProcessRunner.prototype.quiet = function () {
+    trace('ProcessRunner', () => `quiet() called - disabling console output`);
+    this.options.mirror = false;
+    return this;
+  };
+}
 
-  // If we never captured the original directory (getcwd() failed), or the
-  // saved directory no longer exists, restore to a safe fallback location.
-  if (savedCwd && fs.existsSync(savedCwd)) {
-    try {
-      process.chdir(savedCwd);
-      return;
-    } catch (e) {
-      trace(
-        'ProcessRunner',
-        () => `Failed to restore to saved directory: ${e.message}`
-      );
-    }
-  } else {
+function attachSubshellMethod(ProcessRunner) {
+  ProcessRunner.prototype._runSubshell = async function (subshell) {
     trace(
       'ProcessRunner',
       () =>
-        `Saved directory ${savedCwd ?? '<unavailable>'} cannot be restored, falling back to ${fallbackDir}`
+        `_runSubshell ENTER | ${JSON.stringify({ commandType: subshell.command.type }, null, 2)}`
     );
-  }
-
-  try {
-    process.chdir(fallbackDir);
-  } catch (e) {
-    trace('ProcessRunner', () => `Failed to restore directory: ${e.message}`);
-  }
+    const savedEffectiveCwd = this._effectiveCwd;
+    const savedEffectiveEnv = this._effectiveEnv;
+    try {
+      return await executeCommand(this, subshell.command);
+    } finally {
+      this._effectiveCwd = savedEffectiveCwd;
+      this._effectiveEnv = savedEffectiveEnv;
+    }
+  };
 }
 
 /**
@@ -85,17 +73,19 @@ async function restoreCwd(savedCwd) {
  * @param {object} result - Command result
  * @param {Array} redirects - Redirect specifications
  */
-async function handleRedirects(result, redirects) {
+async function handleRedirects(result, redirects, cwd) {
   if (!redirects || redirects.length === 0) {
     return;
   }
   for (const redirect of redirects) {
     if (redirect.type === '>' || redirect.type === '>>') {
       const fs = await import('fs');
+      const path = await import('path');
+      const target = cwd ? path.resolve(cwd, redirect.target) : redirect.target;
       if (redirect.type === '>') {
-        fs.writeFileSync(redirect.target, result.stdout);
+        fs.writeFileSync(target, result.stdout);
       } else {
-        fs.appendFileSync(redirect.target, result.stdout);
+        fs.appendFileSync(target, result.stdout);
       }
       result.stdout = '';
     }
@@ -135,6 +125,9 @@ function buildCommandString(cmd, args, redirects) {
  */
 export function attachOrchestrationMethods(ProcessRunner, deps) {
   const { virtualCommands, isVirtualCommandsEnabled } = deps;
+
+  attachQuietMethod(ProcessRunner);
+  attachSubshellMethod(ProcessRunner);
 
   ProcessRunner.prototype._runSequence = async function (sequence) {
     trace(
@@ -191,24 +184,6 @@ export function attachOrchestrationMethods(ProcessRunner, deps) {
     };
   };
 
-  ProcessRunner.prototype._runSubshell = async function (subshell) {
-    trace(
-      'ProcessRunner',
-      () =>
-        `_runSubshell ENTER | ${JSON.stringify({ commandType: subshell.command.type }, null, 2)}`
-    );
-    // Capture the current directory so it can be restored after the subshell.
-    // Use safeCwd() because process.cwd() throws "getcwd() failed" when the
-    // current directory has been deleted; in that case restoreCwd() falls back
-    // to a safe location.
-    const savedCwd = safeCwd();
-    try {
-      return await executeCommand(this, subshell.command);
-    } finally {
-      await restoreCwd(savedCwd);
-    }
-  };
-
   ProcessRunner.prototype._runSimpleCommand = async function (command) {
     trace(
       'ProcessRunner',
@@ -222,7 +197,7 @@ export function attachOrchestrationMethods(ProcessRunner, deps) {
       trace('ProcessRunner', () => `Using virtual command: ${cmd}`);
       const argValues = args.map((a) => a.value || a);
       const result = await this._runVirtual(cmd, argValues, null, false);
-      await handleRedirects(result, redirects);
+      await handleRedirects(result, redirects, effectiveCwd(this));
       return result;
     }
 
@@ -232,10 +207,15 @@ export function attachOrchestrationMethods(ProcessRunner, deps) {
     const ProcessRunnerRef = this.constructor;
     // Fall back to the inherited cwd (or undefined) when getcwd() fails so the
     // command still runs instead of crashing with "getcwd() failed".
-    const currentCwd = safeCwd() ?? this.options.cwd;
+    const currentCwd = effectiveCwd(this) ?? safeCwd();
     const runner = new ProcessRunnerRef(
       { mode: 'shell', command: commandStr },
-      { ...this.options, cwd: currentCwd, _bypassVirtual: true }
+      {
+        ...this.options,
+        cwd: currentCwd,
+        env: effectiveEnv(this),
+        _bypassVirtual: true,
+      }
     );
 
     const forwardData = (chunk) => {
@@ -304,11 +284,5 @@ export function attachOrchestrationMethods(ProcessRunner, deps) {
     throw new Error(
       'pipe() destination must be a ProcessRunner or $`command` result'
     );
-  };
-
-  ProcessRunner.prototype.quiet = function () {
-    trace('ProcessRunner', () => `quiet() called - disabling console output`);
-    this.options.mirror = false;
-    return this;
   };
 }

@@ -6,7 +6,7 @@
 
 mod basename;
 mod cat;
-mod cd;
+pub(crate) mod cd;
 mod cp;
 mod dirname;
 mod echo;

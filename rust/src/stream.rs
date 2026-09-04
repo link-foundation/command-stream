@@ -330,7 +330,11 @@ async fn run_streaming_process(
         StreamingCommand::Shell(command) => {
             let shell = find_available_shell();
             let mut cmd = Command::new(&shell.cmd);
-            cmd.args(&shell.args).arg(command);
+            cmd.args(&shell.args)
+                .arg(crate::utils::with_exported_process_context(
+                    &command,
+                    env.as_ref(),
+                ));
             cmd
         }
         StreamingCommand::Argv { program, args } => {
@@ -366,7 +370,6 @@ async fn run_streaming_process(
         }
     }
 
-    // Spawn the process
     let mut child = cmd.spawn()?;
 
     // Write stdin if needed

@@ -15,25 +15,20 @@ async function example1_BasicGitWorkflow() {
   console.log('Example 1: Basic Git Workflow with cd\n');
 
   const tempDir = mkdtempSync(join(tmpdir(), 'git-example-'));
-  const originalCwd = process.cwd();
 
   try {
-    // Navigate to temp directory and initialize git
-    await $`cd ${tempDir}`;
-    await $`git init`;
-    await $`git config user.email "example@test.com"`;
-    await $`git config user.name "Example User"`;
+    // Keep each operation that depends on cd in the same invocation.
+    await $`cd ${tempDir} && git init`;
+    await $`cd ${tempDir} && git config user.email "example@test.com"`;
+    await $`cd ${tempDir} && git config user.name "Example User"`;
 
     // Create and commit a file
-    await $`echo "# My Project" > README.md`;
-    await $`git add README.md`;
-    await $`git commit -m "Initial commit"`;
+    await $`cd ${tempDir} && echo "# My Project" > README.md`;
+    await $`cd ${tempDir} && git add README.md`;
+    await $`cd ${tempDir} && git commit -m "Initial commit"`;
 
     // Show the log
-    await $`git log --oneline`;
-
-    // Return to original directory
-    await $`cd ${originalCwd}`;
+    await $`cd ${tempDir} && git log --oneline`;
 
     console.log(`✓ Successfully created git repo in ${tempDir}\n`);
   } catch (error) {
@@ -48,7 +43,6 @@ async function example2_MultipleTempRepos() {
 
   const repo1 = mkdtempSync(join(tmpdir(), 'repo1-'));
   const repo2 = mkdtempSync(join(tmpdir(), 'repo2-'));
-  const originalCwd = process.cwd();
 
   try {
     // Initialize first repository
@@ -68,8 +62,6 @@ async function example2_MultipleTempRepos() {
     console.log('\nRepo 2 log:');
     await $`cd ${repo2} && git log --oneline`;
 
-    await $`cd ${originalCwd}`;
-
     console.log('✓ Successfully managed multiple repositories\n');
   } catch (error) {
     console.error('Error:', error.message);
@@ -83,39 +75,35 @@ async function example3_BranchingWorkflow() {
   console.log('Example 3: Git Branching Workflow\n');
 
   const tempDir = mkdtempSync(join(tmpdir(), 'branch-example-'));
-  const originalCwd = process.cwd();
 
   try {
     // Setup repository
-    await $`cd ${tempDir}`;
-    await $`git init`;
-    await $`git config user.email "branch@test.com"`;
-    await $`git config user.name "Branch Example"`;
+    await $`cd ${tempDir} && git init`;
+    await $`cd ${tempDir} && git config user.email "branch@test.com"`;
+    await $`cd ${tempDir} && git config user.name "Branch Example"`;
 
     // Create initial commit
-    await $`echo "Initial content" > main.txt`;
-    await $`git add .`;
-    await $`git commit -m "Initial commit"`;
+    await $`cd ${tempDir} && echo "Initial content" > main.txt`;
+    await $`cd ${tempDir} && git add .`;
+    await $`cd ${tempDir} && git commit -m "Initial commit"`;
 
     // Create and switch to feature branch
-    await $`git checkout -b feature-branch`;
-    await $`echo "Feature content" > feature.txt`;
-    await $`git add .`;
-    await $`git commit -m "Add feature"`;
+    await $`cd ${tempDir} && git checkout -b feature-branch`;
+    await $`cd ${tempDir} && echo "Feature content" > feature.txt`;
+    await $`cd ${tempDir} && git add .`;
+    await $`cd ${tempDir} && git commit -m "Add feature"`;
 
     // Show branch info
-    const currentBranch = await $`git branch --show-current`;
+    const currentBranch = await $`cd ${tempDir} && git branch --show-current`;
     console.log(`Current branch: ${currentBranch.stdout.trim()}`);
 
     // List all branches
-    await $`git branch -a`;
+    await $`cd ${tempDir} && git branch -a`;
 
     // Switch back to main/master
     const mainBranch =
-      await $`git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "master"`;
-    await $`git checkout ${mainBranch.stdout.trim() || 'master'}`;
-
-    await $`cd ${originalCwd}`;
+      await $`cd ${tempDir} && git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "master"`;
+    await $`cd ${tempDir} && git checkout ${mainBranch.stdout.trim() || 'master'}`;
 
     console.log('✓ Branching workflow completed\n');
   } catch (error) {
@@ -129,7 +117,6 @@ async function example4_GitDiffWorkflow() {
   console.log('Example 4: Git Diff and Status Workflow\n');
 
   const tempDir = mkdtempSync(join(tmpdir(), 'diff-example-'));
-  const originalCwd = process.cwd();
 
   try {
     // Use cd chains for all operations
@@ -157,8 +144,6 @@ async function example4_GitDiffWorkflow() {
 
     // Show final log
     await $`cd ${tempDir} && git log --oneline`;
-
-    await $`cd ${originalCwd}`;
 
     console.log('✓ Diff workflow completed\n');
   } catch (error) {

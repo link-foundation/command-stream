@@ -3,6 +3,11 @@
 
 import { trace } from './$.trace.mjs';
 import { safeWrite } from './$.stream-utils.mjs';
+import {
+  applyVirtualProcessContext,
+  effectiveCwd,
+  effectiveEnv,
+} from './$.process-context.mjs';
 
 /**
  * Get stdin data from options
@@ -114,8 +119,8 @@ function handleVirtualError(runner, error, shellSettings, shouldFinish) {
 async function runGeneratorHandler(runner, handler, argValues, stdinData) {
   const chunks = [];
   const commandOptions = {
-    cwd: runner.options.cwd,
-    env: runner.options.env,
+    cwd: effectiveCwd(runner),
+    env: effectiveEnv(runner) ?? process.env,
     options: runner.options,
     isCancelled: () => runner._cancelled,
   };
@@ -186,8 +191,8 @@ async function runGeneratorHandler(runner, handler, argValues, stdinData) {
  */
 async function runRegularHandler(runner, handler, argValues, stdinData) {
   const commandOptions = {
-    cwd: runner.options.cwd,
-    env: runner.options.env,
+    cwd: effectiveCwd(runner),
+    env: effectiveEnv(runner) ?? process.env,
     options: runner.options,
     isCancelled: () => runner._cancelled,
   };
@@ -239,7 +244,7 @@ export function attachVirtualCommandMethods(ProcessRunner, deps) {
     cmd,
     args,
     originalCommand = null,
-    shouldFinish = true
+    shouldFinish = false
   ) {
     trace('ProcessRunner', () => `_runVirtual | cmd=${cmd}`);
 
@@ -253,6 +258,8 @@ export function attachVirtualCommandMethods(ProcessRunner, deps) {
       if (this.options.stdin === 'pipe') {
         const modifiedOptions = {
           ...this.options,
+          cwd: effectiveCwd(this),
+          env: effectiveEnv(this),
           stdin: 'pipe',
           _bypassVirtual: true,
         };
@@ -280,6 +287,8 @@ export function attachVirtualCommandMethods(ProcessRunner, deps) {
       const result = isGenerator
         ? await runGeneratorHandler(this, handler, argValues, stdinData)
         : await runRegularHandler(this, handler, argValues, stdinData);
+
+      applyVirtualProcessContext(this, result);
 
       if (shouldFinish) {
         this.finish(result);

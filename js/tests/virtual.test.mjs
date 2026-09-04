@@ -1,6 +1,7 @@
 import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
 import { beforeTestCleanup, afterTestCleanup } from './test-cleanup.mjs';
 import { isWindows } from './test-helper.mjs';
+import { realpathSync } from 'fs';
 import {
   $,
   shell,
@@ -87,14 +88,10 @@ describe('Virtual Commands System', () => {
     test.skipIf(isWindows)('should execute virtual cd command', async () => {
       const originalCwd = process.cwd();
 
-      try {
-        const result = await $`cd /tmp`;
-        expect(result.code).toBe(0);
-        expect(process.cwd()).not.toBe(originalCwd);
-        expect(process.cwd()).toMatch(/tmp/);
-      } finally {
-        process.chdir(originalCwd);
-      }
+      const result = await $`cd /tmp && pwd`;
+      expect(result.code).toBe(0);
+      expect(realpathSync(result.stdout.trim())).toBe(realpathSync('/tmp'));
+      expect(process.cwd()).toBe(originalCwd);
     });
 
     test('should execute virtual pwd command', async () => {
