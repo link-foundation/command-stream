@@ -152,6 +152,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [0.17.1] - 2026-09-04
+
+### Fixed
+- Track runner and pipeline virtual `cd` changes in invocation-local cwd and environment state, including overlapping commands and explicit working directories, without mutating the host working directory or `PWD`/`OLDPWD`.
+
 ## [0.17.0] - 2026-09-04
 
 ### Fixed
