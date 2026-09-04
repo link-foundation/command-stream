@@ -1,6 +1,6 @@
 # CI/CD
 
-Five workflows guard this repository. Everything below is enforced by
+Six workflows guard this repository. Everything below is enforced by
 `js/tests/workflow-hygiene.test.mjs` and `js/tests/repository-layout.test.mjs`,
 which parse the workflow files themselves — if a job drifts from what this
 document describes, those tests fail.
@@ -13,7 +13,13 @@ document describes, those tests fail.
 | `rust.yml`      | push to `main`, pull request, dispatch             | changelog fragment check, lint and format, test (ubuntu/macos/windows), release scripts, build, release, instant release, changelog PR |
 | `parity.yml`    | pull request                                       | JS/Rust source parity                                                                                                                  |
 | `workflows.yml` | push to `main`, pull request, dispatch             | actionlint, zizmor                                                                                                                     |
-| `security.yml`  | push to `main`, pull request, **weekly**, dispatch | CodeQL, dependency review, npm/bun/cargo audit                                                                                         |
+| `security.yml`  | push to `main`, pull request, **weekly**, dispatch | CodeQL, dependency review, npm/bun/cargo audit, secret scan                                                                            |
+| `quality.yml`   | push to `main`, pull request, dispatch             | formatting of every tracked file, documentation validation, workflow invariants                                                        |
+
+Every workflow except `quality.yml` is scoped by a `paths:` filter. The union of
+those filters is not the repository, which is why `quality.yml` has no filter at
+all: a pull request that only touches `docs/**` still runs the three checks that
+read the whole tree.
 
 ## Invariants
 
@@ -37,11 +43,40 @@ document describes, those tests fail.
   is skipped when a dependency is skipped, and _any_ non-`success()` condition
   lifts that — so `always()` adds nothing except the risk of running after a
   real failure.
+- **A pull-request job that reads the tree merges the base branch first.**
+  A pull-request run checks out `refs/pull/N/merge`, computed when the branch
+  was last synchronised; if `main` moved since, the checks pass on a combination
+  that will not exist after the merge.
+  `.github/scripts/simulate-fresh-merge.sh` closes that window and turns a merge
+  conflict into a clear failure. Five jobs are exempt, each with the reason
+  recorded next to it and in the hygiene test: `changeset-check`, the Rust
+  changelog checks and `parity` are diff-based, `dependency-review` compares two
+  SHAs through the API, and CodeQL uploads results keyed to the checked-out
+  commit — GitHub rejects a merge commit created on the runner.
+- **A workflow's `push:` and `pull_request:` path filters are identical.** Two
+  lists that drift mean a check runs on the pull request and then not on the
+  merge to `main`, or the reverse, so a green pull request stops predicting a
+  green `main`.
+- **Every quality gate that ships is invoked.** `rust/scripts/` held a
+  file-size, a crate-size and a version-modification check that no workflow ran;
+  the hygiene test now fails when a script under `rust/scripts/` is neither
+  referenced by a workflow nor listed as deliberately unwired.
+- **The tree is scanned for committed credentials.** secretlint runs over every
+  file on each pull request; `.secretlintrc.json` holds the rule set and
+  `.secretlintignore` only the generated trees. Neither CodeQL nor the audit
+  jobs look for secrets.
+- **Documentation is validated like code.** `js/tests/docs-validation.test.mjs`
+  enforces a 2500-line ceiling, resolves every relative link, and checks that
+  the documents other automation points readers at still carry their sections.
+  External links are deliberately not fetched: a network link checker turns
+  unrelated pull requests red when a third-party site rots.
 - **Lint and format configuration lives at the repository root.** eslint and
   prettier treat the directory holding their config as the project base path;
   while these files lived in `js/`, root-level JavaScript was outside that path
   and silently unlintable. `js/eslint.config.js` remains the rule set the root
-  copies re-export.
+  copies re-export, and `js.yml`'s trigger lists the root-level files eslint
+  reaches (`eslint.config.js`, `claude-profiles.mjs`, `experiments/**`) so a
+  lint error in them cannot first surface on an unrelated pull request.
 
 ## Required repository settings
 
