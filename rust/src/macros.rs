@@ -41,11 +41,16 @@
 /// shell commands with properly quoted interpolated values.
 pub fn build_shell_command(parts: &[&str], values: &[&str]) -> String {
     let mut result = String::new();
+    let context_aware = crate::quote::is_quote_context_enabled();
+    let mut context = crate::quote::QuoteContext::Unquoted;
 
     for (i, part) in parts.iter().enumerate() {
         result.push_str(part);
+        if context_aware {
+            context = crate::quote::scan_quote_context(part, context);
+        }
         if i < values.len() {
-            result.push_str(&crate::quote::quote(values[i]));
+            result.push_str(&crate::quote::quote_for_context(values[i], context));
         }
     }
 
@@ -125,10 +130,18 @@ macro_rules! cmd {
         let values: Vec<String> = vec![$(format!("{}", $arg)),+];
         let values_ref: Vec<&str> = values.iter().map(|s| s.as_str()).collect();
         let fmt_parts: Vec<&str> = $fmt.split("{}").collect();
+        // Values are quoted for the context they land in: fully quoted outside
+        // quotes, spliced in as escaped literal text inside the author's own
+        // quotes (issue #49).
+        let context_aware = $crate::quote::is_quote_context_enabled();
+        let mut context = $crate::quote::QuoteContext::Unquoted;
         for (i, part) in fmt_parts.iter().enumerate() {
             result.push_str(part);
+            if context_aware {
+                context = $crate::quote::scan_quote_context(part, context);
+            }
             if i < values_ref.len() {
-                result.push_str(&$crate::quote::quote(values_ref[i]));
+                result.push_str(&$crate::quote::quote_for_context(values_ref[i], context));
             }
         }
         $crate::quote::warn_on_split_template(&result);

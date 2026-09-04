@@ -54,6 +54,159 @@ export function quote(value) {
   return `'${value.replace(/'/g, "'\\''")}'`;
 }
 
+// ---------------------------------------------------------------------------
+// Quote-context aware interpolation
+//
+// A tagged template can place an interpolation inside quotes the author wrote
+// themselves, e.g. $`bash -c "${script}"`. Wrapping the value in single quotes
+// there (the default for an unquoted position) produces `bash -c "'...'"`,
+// which the inner shell then refuses to run (issue #49).
+//
+// Instead we mirror what a POSIX shell does with "$var": the value is inserted
+// as literal text *inside* the quotes the author opened, escaped just enough
+// that it cannot terminate them or introduce new syntax. That keeps
+// interpolation injection-safe while making quoted positions behave the way
+// bash/sh users expect, which is also what Bun's $ does.
+// ---------------------------------------------------------------------------
+
+/** Interpolation happens outside any quotes; value gets fully quoted. */
+export const CONTEXT_UNQUOTED = 'unquoted';
+/** Interpolation happens inside '...' written in the template. */
+export const CONTEXT_SINGLE = 'single';
+/** Interpolation happens inside "..." written in the template. */
+export const CONTEXT_DOUBLE = 'double';
+
+// Context-aware quoting is on by default. It can be disabled globally with
+// COMMAND_STREAM_QUOTE_CONTEXT=0 (or programmatically via
+// setQuoteContextEnabled) to restore the pre-0.20 behaviour of always
+// single-quoting interpolated values.
+let quoteContextEnabled = null;
+
+/**
+ * Enable or disable quote-context aware interpolation.
+ * @param {boolean|null} enabled - true/false to force, null to follow the env
+ * @returns {boolean} The effective setting after the change
+ */
+export function setQuoteContextEnabled(enabled) {
+  quoteContextEnabled = enabled === null ? null : Boolean(enabled);
+  return isQuoteContextEnabled();
+}
+
+/**
+ * Whether quote-context aware interpolation is currently active.
+ * @returns {boolean} true when enabled
+ */
+export function isQuoteContextEnabled() {
+  if (quoteContextEnabled !== null) {
+    return quoteContextEnabled;
+  }
+  return process.env.COMMAND_STREAM_QUOTE_CONTEXT !== '0';
+}
+
+/**
+ * Advance the shell quoting state across a literal chunk of a template.
+ *
+ * Only the template's own text is scanned - interpolated values never change
+ * the state, which is exactly why they cannot break out of their quotes.
+ *
+ * @param {string} text - Literal template chunk
+ * @param {string} context - Context in effect before the chunk
+ * @returns {string} Context in effect after the chunk
+ */
+export function scanQuoteContext(text, context = CONTEXT_UNQUOTED) {
+  let current = context;
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (current === CONTEXT_SINGLE) {
+      // Inside '...' nothing is special except the closing quote.
+      if (char === "'") {
+        current = CONTEXT_UNQUOTED;
+      }
+      continue;
+    }
+    if (current === CONTEXT_DOUBLE) {
+      // Inside "..." a backslash escapes the next character.
+      if (char === '\\') {
+        i++;
+        continue;
+      }
+      if (char === '"') {
+        current = CONTEXT_UNQUOTED;
+      }
+      continue;
+    }
+    if (char === '\\') {
+      i++;
+      continue;
+    }
+    if (char === "'") {
+      current = CONTEXT_SINGLE;
+    } else if (char === '"') {
+      current = CONTEXT_DOUBLE;
+    }
+  }
+  return current;
+}
+
+/**
+ * Escape a value so it can sit inside '...' as literal text.
+ *
+ * A single quote is emitted as '\'' - close, escaped quote, reopen - which is
+ * the standard POSIX idiom.
+ *
+ * @param {string} value - Raw value
+ * @returns {string} Escaped fragment (no surrounding quotes)
+ */
+export function escapeForSingleQuotes(value) {
+  return value.replace(/'/g, "'\\''");
+}
+
+/**
+ * Escape a value so it can sit inside "..." as literal text.
+ *
+ * Backslash, dollar, backtick and double quote are the only characters the
+ * shell still interprets inside double quotes, so escaping them makes the
+ * value literal - the inner program (e.g. `bash -c`) sees the original text.
+ *
+ * @param {string} value - Raw value
+ * @returns {string} Escaped fragment (no surrounding quotes)
+ */
+export function escapeForDoubleQuotes(value) {
+  return value
+    .replace(/\\/g, '\\\\')
+    .replace(/\$/g, '\\$')
+    .replace(/`/g, '\\`')
+    .replace(/"/g, '\\"');
+}
+
+/**
+ * Quote a value for a specific quoting context.
+ *
+ * In an unquoted position this is plain {@link quote}. Inside quotes the value
+ * is inserted as escaped literal text, without adding another layer of quotes.
+ *
+ * @param {*} value - Value to interpolate
+ * @param {string} context - One of CONTEXT_UNQUOTED / CONTEXT_SINGLE / CONTEXT_DOUBLE
+ * @returns {string} Fragment to splice into the command
+ */
+export function quoteForContext(value, context = CONTEXT_UNQUOTED) {
+  if (context === CONTEXT_UNQUOTED) {
+    return quote(value);
+  }
+  // Inside quotes an unset value expands to nothing, just like "$missing".
+  if (value === null || value === undefined) {
+    return '';
+  }
+  if (Array.isArray(value)) {
+    // Matches "${array[*]}" in sh: one word, elements separated by spaces.
+    return value.map((v) => quoteForContext(v, context)).join(' ');
+  }
+  const text = typeof value === 'string' ? value : String(value);
+  return context === CONTEXT_SINGLE
+    ? escapeForSingleQuotes(text)
+    : escapeForDoubleQuotes(text);
+}
+
 // Remember which split-template snippets we've already warned about so a hot
 // loop doesn't spam stderr with the same diagnostic over and over.
 const warnedTemplateSnippets = new Set();
@@ -217,11 +370,16 @@ export function buildShellCommand(strings, values) {
     }
   }
 
+  const contextAware = isQuoteContextEnabled();
+  let context = CONTEXT_UNQUOTED;
   let out = '';
   for (let i = 0; i < strings.length; i++) {
     out += strings[i];
+    if (contextAware) {
+      context = scanQuoteContext(strings[i], context);
+    }
     if (i < values.length) {
-      out += formatInterpolatedValue(values[i]);
+      out += formatInterpolatedValue(values[i], context);
     }
   }
 
@@ -237,11 +395,12 @@ export function buildShellCommand(strings, values) {
 /**
  * Format a single interpolated value for a shell command: raw values are
  * inserted verbatim, { literal } values are double-quoted, everything else is
- * shell-quoted.
+ * quoted for the context it appears in.
  * @param {*} v - Interpolated value
+ * @param {string} [context] - Quoting context at the interpolation point
  * @returns {string} Formatted fragment
  */
-function formatInterpolatedValue(v) {
+function formatInterpolatedValue(v, context = CONTEXT_UNQUOTED) {
   const isWrapper = (key) =>
     v && typeof v === 'object' && Object.prototype.hasOwnProperty.call(v, key);
 
@@ -255,20 +414,26 @@ function formatInterpolatedValue(v) {
   }
 
   if (isWrapper('literal')) {
-    const literalQuoted = quoteLiteral(v.literal);
+    // Inside quotes the extra pair of double quotes quoteLiteral() adds would
+    // land in the middle of the author's own quoting, so escape for the
+    // surrounding context instead - the resulting text is identical.
+    const literalQuoted =
+      context === CONTEXT_UNQUOTED
+        ? quoteLiteral(v.literal)
+        : quoteForContext(v.literal, context);
     trace(
       'Utils',
       () =>
-        `BRANCH: buildShellCommand => LITERAL_VALUE | ${JSON.stringify({ original: v.literal, quoted: literalQuoted }, null, 2)}`
+        `BRANCH: buildShellCommand => LITERAL_VALUE | ${JSON.stringify({ original: v.literal, quoted: literalQuoted, context }, null, 2)}`
     );
     return literalQuoted;
   }
 
-  const quoted = quote(v);
+  const quoted = quoteForContext(v, context);
   trace(
     'Utils',
     () =>
-      `BRANCH: buildShellCommand => QUOTED_VALUE | ${JSON.stringify({ original: v, quoted }, null, 2)}`
+      `BRANCH: buildShellCommand => QUOTED_VALUE | ${JSON.stringify({ original: v, quoted, context }, null, 2)}`
   );
   return quoted;
 }

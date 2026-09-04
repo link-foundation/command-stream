@@ -436,7 +436,16 @@ function scanQuotedFeature(command, index, quote) {
     };
   }
   if (char === '\\') {
-    return { quote, skip: 1, unsupported: false };
+    // Inside double quotes a backslash escapes $ ` " \ and newline. Our
+    // lightweight tokenizer keeps words verbatim and never unescapes them, so
+    // handing such a command to the built-in commands would leak the
+    // backslashes into the arguments. Delegate to a real shell instead, which
+    // applies exactly the POSIX rules.
+    return {
+      quote,
+      skip: 1,
+      unsupported: isDoubleQuoteEscape(command[index + 1]),
+    };
   }
   if (char === quote) {
     return { quote: null, skip: 0, unsupported: false };
@@ -448,6 +457,82 @@ function scanQuotedFeature(command, index, quote) {
     skip: 0,
     unsupported: char === '`' || char === '$',
   };
+}
+
+/**
+ * Characters a backslash may escape inside double quotes, per POSIX: only
+ * these keep the backslash meaningful - anything else stays literal.
+ *
+ * @param {string|undefined} char - The character following the backslash
+ * @returns {boolean} true when the pair is a real double-quote escape
+ */
+function isDoubleQuoteEscape(char) {
+  return (
+    char === '$' ||
+    char === '`' ||
+    char === '"' ||
+    char === '\\' ||
+    char === '\n'
+  );
+}
+
+/**
+ * Detect backslash escapes that a real shell removes but our lightweight
+ * tokenizer keeps verbatim.
+ *
+ * Two cases matter:
+ *  - inside `"..."`, a backslash before $ ` " \\ or a newline;
+ *  - outside quotes, any backslash escape - including the POSIX `'\\''` idiom
+ *    used to embed an apostrophe in a single-quoted string.
+ *
+ * The built-in (virtual) command path would pass those backslashes on to the
+ * command, so `echo "5 \\$US"` would print the backslash while a shell prints
+ * `5 $US`. Commands like this are routed to the system shell instead, which is
+ * the only way to get exactly the POSIX result - important now that
+ * interpolating a value into a quoted position escapes it (issue #49).
+ *
+ * @param {string} command - The full command string
+ * @returns {boolean} true when the command must be run by a real shell
+ */
+export function hasShellEscapes(command) {
+  if (typeof command !== 'string' || !command.includes('\\')) {
+    return false;
+  }
+  let quote = null;
+  for (let i = 0; i < command.length; i++) {
+    const char = command[i];
+    if (quote === "'") {
+      // Inside '...' a backslash is an ordinary character.
+      if (char === "'") {
+        quote = null;
+      }
+      continue;
+    }
+    if (quote === '"') {
+      if (char === '\\') {
+        if (isDoubleQuoteEscape(command[i + 1])) {
+          return true;
+        }
+        i++;
+        continue;
+      }
+      if (char === '"') {
+        quote = null;
+      }
+      continue;
+    }
+    if (char === '\\') {
+      // Outside quotes a backslash escapes whatever follows it.
+      if (i + 1 < command.length) {
+        return true;
+      }
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+    }
+  }
+  return false;
 }
 
 function isSingleAmpersand(command, index) {
@@ -509,4 +594,4 @@ export function needsRealShell(command) {
   return false;
 }
 
-export default { parseShellCommand, needsRealShell };
+export default { parseShellCommand, needsRealShell, hasShellEscapes };

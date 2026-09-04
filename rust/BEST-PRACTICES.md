@@ -107,6 +107,36 @@ let safe = quote(dangerous);
 // Shell will treat this as a literal string
 ```
 
+### Interpolating Inside Your Own Quotes
+
+The macros track the quoting context of the format string. A value that lands
+inside quotes you wrote yourself is spliced in as escaped literal text rather
+than wrapped in another pair of quotes, exactly like `"$var"` in a POSIX shell:
+
+```rust,no_run
+use command_stream::s;
+
+# async fn example() -> Result<(), command_stream::Error> {
+let script = "for f in *.js; do echo \"Processing: $f\"; done";
+// Runs the script, like: bash -c "$script"
+let result = s!("bash -c \"{}\"", script).await?;
+# Ok(())
+# }
+```
+
+The same rules are available directly:
+
+```rust
+use command_stream::{quote_for_context, QuoteContext};
+
+assert_eq!(quote_for_context("hello world", QuoteContext::Unquoted), "'hello world'");
+assert_eq!(quote_for_context("hello world", QuoteContext::Double), "hello world");
+assert_eq!(quote_for_context("it's", QuoteContext::Single), "it'\\''s");
+```
+
+Set `COMMAND_STREAM_QUOTE_CONTEXT=0` to restore the previous behavior of always
+quoting every interpolated value.
+
 ### When Quoting is Applied
 
 ```rust
