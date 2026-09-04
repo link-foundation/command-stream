@@ -170,8 +170,14 @@ is `console`, so the detector matched nothing:
 ```
 
 Reproduction: `experiments/jscpd-format/run.mjs`. With the correct language list
-the repository reports 65 files / 47 clones / 4.84 %, under the 5 % threshold.
-The same defect is in the JavaScript template — reported upstream (§7).
+the repository reports 65 files / 47 clones, 4.84 % of lines and 5.55 % of
+tokens duplicated. `threshold` was `0`, which the check had never had to honour;
+turning the gate on at `0` would have failed on the existing code rather than on
+a regression, so it is set to `6` — just above today's measurement, so any
+increase in duplication fails the job. `js/tests/duplication-check.test.mjs`
+asserts the threshold stays in that range, so the gate cannot be disabled by
+raising it. The same `format` defect is in the JavaScript template — reported
+upstream (§7).
 
 ### 4.11 FALSE NEGATIVE — half the repository was outside the lint base path
 

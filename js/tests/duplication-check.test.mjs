@@ -126,3 +126,14 @@ test('the duplication script points at directories that exist', () => {
     expect(existsSync(join(jsDir, target))).toBe(true);
   }
 });
+
+test('the threshold is a real gate, not a way to switch the check off', () => {
+  // The check had never run, so the tree already contained 5.55% duplicated
+  // tokens when it was switched on: a threshold of 0 would have failed on
+  // existing code instead of on a regression. 6 sits just above today's
+  // measurement. Anything much higher passes whatever is added, which is the
+  // same false negative in a different disguise.
+  expect(typeof repoConfig.threshold).toBe('number');
+  expect(repoConfig.threshold).toBeGreaterThan(0);
+  expect(repoConfig.threshold).toBeLessThanOrEqual(10);
+});

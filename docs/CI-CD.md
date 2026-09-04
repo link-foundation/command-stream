@@ -82,6 +82,14 @@ still runs the three checks that read the whole tree.
   schedule, where a failure means a link that used to work has stopped working
   and blocks no merge. `.lycheeignore` carries the known-unreachable URLs, one
   commented entry each, and the hygiene test rejects an uncommented one.
+- **The duplication gate has a threshold just above the current measurement.**
+  jscpd's `format` is the list of _languages_ to analyse, not the reporter; it
+  read `"console"`, matched no file and passed in under a millisecond. With the
+  language list corrected the tree measures 4.84 % of lines and 5.55 % of tokens
+  duplicated, so the threshold is `6`: high enough not to fail on code that was
+  already there, low enough that adding duplication fails the job.
+  `js/tests/duplication-check.test.mjs` pins both the language list and the
+  threshold range.
 - **Lint and format configuration lives at the repository root.** eslint and
   prettier treat the directory holding their config as the project base path;
   while these files lived in `js/`, root-level JavaScript was outside that path
