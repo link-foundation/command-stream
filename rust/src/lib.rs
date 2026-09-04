@@ -84,7 +84,7 @@ use std::path::PathBuf;
 use std::process::Stdio;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, Command};
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 pub use commands::{CommandContext, StreamChunk};
 pub use shell_parser::{needs_real_shell, parse_shell_command, ParsedCommand};
@@ -105,6 +105,12 @@ pub use state::{
 pub use stream::{AsyncIterator, IntoStream, OutputChunk, OutputStream, StreamingRunner};
 pub use trace::trace;
 
+static PROCESS_CONTEXT_LOCK: RwLock<()> = RwLock::const_new(());
+
+pub(crate) async fn lock_process_context() -> RwLockReadGuard<'static, ()> {
+    PROCESS_CONTEXT_LOCK.read().await
+}
+
 fn fallback_cwd() -> PathBuf {
     std::env::var_os("HOME")
         .or_else(|| std::env::var_os("USERPROFILE"))
@@ -114,14 +120,17 @@ fn fallback_cwd() -> PathBuf {
 }
 
 pub(crate) struct ProcessContextGuard {
+    _lock: RwLockWriteGuard<'static, ()>,
     cwd: Option<PathBuf>,
     pwd: Option<OsString>,
     oldpwd: Option<OsString>,
 }
 
 impl ProcessContextGuard {
-    pub(crate) fn capture() -> Self {
+    pub(crate) async fn capture() -> Self {
+        let lock = PROCESS_CONTEXT_LOCK.write().await;
         Self {
+            _lock: lock,
             cwd: std::env::current_dir().ok(),
             pwd: std::env::var_os("PWD"),
             oldpwd: std::env::var_os("OLDPWD"),
@@ -316,14 +325,17 @@ impl ProcessRunner {
         } else {
             self.command.split_whitespace().next().unwrap_or("")
         };
-        let process_context = ProcessContextGuard::capture();
+        let uses_virtual_cd = first_word == "cd";
+        let (_process_context, _shared_process_context) = if uses_virtual_cd {
+            (Some(ProcessContextGuard::capture().await), None)
+        } else {
+            (None, Some(lock_process_context().await))
+        };
         if let Some(result) = self.try_virtual_command(first_word).await {
             self.result = Some(result);
             self.finished = true;
             return Ok(());
         }
-        drop(process_context);
-
         // Parse command for shell operators (for future use with virtual command pipelines)
         let _parsed = if self.options.shell_operators && !needs_real_shell(&self.command) {
             parse_shell_command(&self.command)

@@ -109,7 +109,15 @@ impl Pipeline {
 
     /// Execute the pipeline and return the result
     pub async fn run(self) -> Result<CommandResult> {
-        let _process_context = ProcessContextGuard::capture();
+        let uses_virtual_cd = self
+            .commands
+            .iter()
+            .any(|command| command.split_whitespace().next() == Some("cd"));
+        let (_process_context, _shared_process_context) = if uses_virtual_cd {
+            (Some(ProcessContextGuard::capture().await), None)
+        } else {
+            (None, Some(crate::lock_process_context().await))
+        };
         if self.commands.is_empty() {
             return Ok(CommandResult {
                 stdout: String::new(),
@@ -123,6 +131,7 @@ impl Pipeline {
         });
 
         let mut current_stdin = self.stdin.clone();
+        let mut effective_cwd = self.cwd.clone();
         let mut last_result = CommandResult {
             stdout: String::new(),
             stderr: String::new(),
@@ -146,7 +155,12 @@ impl Pipeline {
             let first_word = cmd_str.split_whitespace().next().unwrap_or("");
             if crate::commands::are_virtual_commands_enabled() {
                 if let Some(result) = self
-                    .try_virtual_command(first_word, cmd_str, &current_stdin)
+                    .try_virtual_command(
+                        first_word,
+                        cmd_str,
+                        &current_stdin,
+                        effective_cwd.as_ref(),
+                    )
                     .await
                 {
                     if result.code != 0 {
@@ -158,6 +172,9 @@ impl Pipeline {
                     }
                     current_stdin = Some(result.stdout.clone());
                     accumulated_stderr.push_str(&result.stderr);
+                    if first_word == "cd" {
+                        effective_cwd = std::env::current_dir().ok();
+                    }
                     last_result = result;
                     continue;
                 }
@@ -178,7 +195,7 @@ impl Pipeline {
 
             // Set working directory. Fall back to a valid directory when the
             // inherited working directory has been deleted (issue #44).
-            if let Some(cwd) = crate::resolve_spawn_cwd(self.cwd.as_ref()) {
+            if let Some(cwd) = crate::resolve_spawn_cwd(effective_cwd.as_ref()) {
                 cmd.current_dir(cwd);
             }
 
@@ -261,6 +278,7 @@ impl Pipeline {
         cmd_name: &str,
         full_cmd: &str,
         stdin: &Option<String>,
+        cwd: Option<&PathBuf>,
     ) -> Option<CommandResult> {
         let parts: Vec<&str> = full_cmd.split_whitespace().collect();
         let args: Vec<String> = parts.iter().skip(1).map(|s| s.to_string()).collect();
@@ -268,7 +286,7 @@ impl Pipeline {
         let ctx = crate::commands::CommandContext {
             args,
             stdin: stdin.clone(),
-            cwd: self.cwd.clone(),
+            cwd: cwd.cloned(),
             env: self.env.clone(),
             output_tx: None,
             is_cancelled: None,

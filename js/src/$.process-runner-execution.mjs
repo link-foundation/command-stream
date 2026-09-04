@@ -1,5 +1,4 @@
 // ProcessRunner execution methods - start, sync, async, and related methods
-// Part of the modular ProcessRunner architecture
 
 import cp from 'child_process';
 import { trace } from './$.trace.mjs';
@@ -21,14 +20,14 @@ import {
   createExitPromise,
   drainPumpsAfterExit,
 } from './$.process-runner-exit.mjs';
+import {
+  needsProcessContextLock,
+  runWithRunnerProcessContext,
+} from './$.process-context-lock.mjs';
 
 const isBun = typeof globalThis.Bun !== 'undefined';
 
-/**
- * Check for shell operators in command
- * @param {string} command - Command to check
- * @returns {boolean}
- */
+/** Check for shell operators in command. */
 function hasShellOperators(command) {
   return (
     command.includes('&&') ||
@@ -1089,6 +1088,19 @@ export function attachExecutionMethods(ProcessRunner, deps) {
   };
 
   ProcessRunner.prototype._doStartAsync = async function () {
+    // The await/then path can reach here without start()'s option merge.
+    setupExternalAbortSignal(this);
+    // Preserve the public lifecycle contract while an invocation is waiting
+    // for the process-context lock. Accessing a stream starts the runner
+    // synchronously, even though the command itself may need to queue.
+    this.started = true;
+    this._mode = 'async';
+    this._effectiveCwd = this.options.cwd;
+
+    if (needsProcessContextLock(this)) {
+      return runWithRunnerProcessContext(this, () => this._doStartAsync());
+    }
+
     trace(
       'ProcessRunner',
       () =>
@@ -1097,15 +1109,6 @@ export function attachExecutionMethods(ProcessRunner, deps) {
           command: this.spec.command?.slice(0, 100),
         })}`
     );
-
-    this.started = true;
-    this._mode = 'async';
-
-    // Ensure an external AbortSignal (options.signal) is honored regardless of
-    // how the runner was started. The await/then path reaches here without
-    // going through start()'s option-merge branch, so register the listener
-    // here too (idempotent via the _externalAbortSetup guard).
-    setupExternalAbortSignal(this);
 
     try {
       const { cwd, env, stdin } = this.options;
@@ -1129,9 +1132,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
       // Handle shell mode special cases
       const shellArgv = isShellArgvSpec(this.spec);
       if (isShellCommandSpec(this.spec)) {
-        const shellResult = await this._runWithIsolatedProcessContext(() =>
-          handleShellMode(this, deps)
-        );
+        const shellResult = await handleShellMode(this, deps);
         if (shellResult) {
           return this.finish(shellResult);
         }

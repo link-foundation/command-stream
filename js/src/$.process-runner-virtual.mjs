@@ -114,7 +114,7 @@ function handleVirtualError(runner, error, shellSettings, shouldFinish) {
 async function runGeneratorHandler(runner, handler, argValues, stdinData) {
   const chunks = [];
   const commandOptions = {
-    cwd: runner.options.cwd,
+    cwd: runner._effectiveCwd ?? runner.options.cwd,
     env: runner.options.env,
     options: runner.options,
     isCancelled: () => runner._cancelled,
@@ -186,7 +186,7 @@ async function runGeneratorHandler(runner, handler, argValues, stdinData) {
  */
 async function runRegularHandler(runner, handler, argValues, stdinData) {
   const commandOptions = {
-    cwd: runner.options.cwd,
+    cwd: runner._effectiveCwd ?? runner.options.cwd,
     env: runner.options.env,
     options: runner.options,
     isCancelled: () => runner._cancelled,
@@ -225,6 +225,18 @@ async function runRegularHandler(runner, handler, argValues, stdinData) {
   emitOutput(runner, 'stderr', result.stderr);
 
   return result;
+}
+
+function updateEffectiveCwdAfterVirtualCd(runner, cmd, result) {
+  if (cmd !== 'cd' || result.code !== 0) {
+    return;
+  }
+
+  try {
+    runner._effectiveCwd = process.cwd();
+  } catch {
+    runner._effectiveCwd = undefined;
+  }
 }
 
 /**
@@ -280,6 +292,8 @@ export function attachVirtualCommandMethods(ProcessRunner, deps) {
       const result = isGenerator
         ? await runGeneratorHandler(this, handler, argValues, stdinData)
         : await runRegularHandler(this, handler, argValues, stdinData);
+
+      updateEffectiveCwdAfterVirtualCd(this, cmd, result);
 
       if (shouldFinish) {
         this.finish(result);

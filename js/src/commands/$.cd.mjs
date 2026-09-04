@@ -19,7 +19,7 @@ import { trace, VirtualUtils } from '../$.utils.mjs';
 export default async function cd({ args, cwd }) {
   const home = process.env.HOME || process.env.USERPROFILE || '/';
   const base = cwd || process.cwd();
-  const previousDir = process.cwd();
+  const previousDir = base;
 
   let target = args[0];
   let printDir = false;

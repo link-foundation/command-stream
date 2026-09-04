@@ -23,8 +23,8 @@ pub async fn cd(ctx: CommandContext) -> CommandResult {
         .or_else(|_| env::var("USERPROFILE"))
         .unwrap_or_else(|_| "/".to_string());
 
-    let previous_dir = env::current_dir().ok();
     let base = ctx.get_cwd();
+    let previous_dir = Some(base.clone());
 
     let mut print_dir = false;
     let target: String = match ctx.args.first().map(|s| s.as_str()) {

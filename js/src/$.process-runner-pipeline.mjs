@@ -14,6 +14,21 @@ const isBun = typeof globalThis.Bun !== 'undefined';
  */
 const STREAMING_COMMANDS = ['jq', 'grep', 'sed', 'cat', 'awk'];
 
+function effectiveCwd(runner) {
+  return runner._effectiveCwd ?? runner.options.cwd;
+}
+
+function updateEffectiveCwdAfterCd(runner, command, result) {
+  if (command.cmd !== 'cd' || result.code !== 0) {
+    return;
+  }
+  try {
+    runner._effectiveCwd = process.cwd();
+  } catch {
+    runner._effectiveCwd = undefined;
+  }
+}
+
 /**
  * Check if command needs streaming workaround
  * @param {object} command - Command object
@@ -392,7 +407,7 @@ async function collectFinalStdout(runner, proc) {
 function spawnNodeAsync(runner, argv, stdin, isLastCommand) {
   return new Promise((resolve, reject) => {
     const proc = cp.spawn(argv[0], argv.slice(1), {
-      cwd: runner.options.cwd,
+      cwd: effectiveCwd(runner),
       env: runner.options.env,
       stdio: ['pipe', 'pipe', 'pipe'],
     });
@@ -603,8 +618,9 @@ async function handleVirtualPipelineCommand(
     handler,
     argValues,
     currentInput,
-    runner.options
+    { ...runner.options, cwd: effectiveCwd(runner) }
   );
+  updateEffectiveCwdAfterCd(runner, command, result);
 
   if (isLastCommand) {
     emitFinalOutput(runner, result);
@@ -748,7 +764,7 @@ export function attachPipelineMethods(ProcessRunner, deps) {
       }
 
       const proc = Bun.spawn(spawnArgs, {
-        cwd: this.options.cwd,
+        cwd: effectiveCwd(this),
         env: this.options.env,
         stdin,
         stdout: 'pipe',
@@ -821,7 +837,7 @@ export function attachPipelineMethods(ProcessRunner, deps) {
       }
 
       const proc = Bun.spawn(spawnArgs, {
-        cwd: this.options.cwd,
+        cwd: effectiveCwd(this),
         env: this.options.env,
         stdin,
         stdout: 'pipe',
@@ -914,6 +930,7 @@ export function attachPipelineMethods(ProcessRunner, deps) {
                 args: argValues,
                 stdin: inputData,
                 ...opts,
+                cwd: effectiveCwd(self),
               })) {
                 const data = Buffer.from(chunk);
                 controller.enqueue(data);
@@ -938,7 +955,9 @@ export function attachPipelineMethods(ProcessRunner, deps) {
             args: argValues,
             stdin: inputData,
             ...opts,
+            cwd: effectiveCwd(this),
           });
+          updateEffectiveCwdAfterCd(this, command, result);
           const outputData = result.stdout || '';
           if (isLastCommand) {
             finalOutput = outputData;
@@ -956,7 +975,7 @@ export function attachPipelineMethods(ProcessRunner, deps) {
       } else {
         const commandStr = buildCommandParts(command).join(' ');
         const proc = spawnShellCommand(commandStr, {
-          cwd: this.options.cwd,
+          cwd: effectiveCwd(this),
           env: this.options.env,
           stdin: currentInputStream ? 'pipe' : 'ignore',
         });

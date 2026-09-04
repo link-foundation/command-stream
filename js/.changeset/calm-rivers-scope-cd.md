@@ -2,4 +2,4 @@
 'command-stream': patch
 ---
 
-Restore the host process working directory and `PWD`/`OLDPWD` after each `cd` invocation while preserving directory changes inside command chains.
+Isolate virtual `cd` changes to one invocation, including overlapping commands and explicit `cwd` command chains, then restore the host working directory and `PWD`/`OLDPWD`.

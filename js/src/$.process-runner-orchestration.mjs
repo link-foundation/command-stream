@@ -50,34 +50,34 @@ async function restoreCwd(savedCwd) {
     'ProcessRunner',
     () => `Restoring cwd from ${safeCwd() ?? '<unavailable>'} to ${savedCwd}`
   );
-  const fs = await import('fs');
-  const fallbackDir = process.env.HOME || process.env.USERPROFILE || '/';
+  const os = await import('os');
+  const path = await import('path');
+  const candidates = [
+    savedCwd,
+    process.env.HOME,
+    process.env.USERPROFILE,
+    os.tmpdir(),
+    path.parse(process.execPath).root,
+    '/',
+  ];
 
-  // If we never captured the original directory (getcwd() failed), or the
-  // saved directory no longer exists, restore to a safe fallback location.
-  if (savedCwd && fs.existsSync(savedCwd)) {
+  for (const candidate of new Set(candidates)) {
+    if (!candidate) {
+      continue;
+    }
     try {
-      process.chdir(savedCwd);
+      process.chdir(candidate);
       return;
     } catch (e) {
       trace(
         'ProcessRunner',
-        () => `Failed to restore to saved directory: ${e.message}`
+        () =>
+          `Cannot restore cwd to ${candidate}; trying next fallback: ${e.message}`
       );
     }
-  } else {
-    trace(
-      'ProcessRunner',
-      () =>
-        `Saved directory ${savedCwd ?? '<unavailable>'} cannot be restored, falling back to ${fallbackDir}`
-    );
   }
 
-  try {
-    process.chdir(fallbackDir);
-  } catch (e) {
-    trace('ProcessRunner', () => `Failed to restore directory: ${e.message}`);
-  }
+  trace('ProcessRunner', () => 'Failed to restore any working directory');
 }
 
 function captureProcessContext() {
@@ -109,6 +109,121 @@ async function runWithIsolatedProcessContext(operation) {
   } finally {
     await restoreProcessContext(savedContext);
   }
+}
+
+const processContextWaiters = [];
+let activeProcessContextReaders = 0;
+let processContextWriterActive = false;
+
+function drainProcessContextWaiters() {
+  if (processContextWriterActive || processContextWaiters.length === 0) {
+    return;
+  }
+
+  if (processContextWaiters[0].mode === 'write') {
+    if (activeProcessContextReaders === 0) {
+      processContextWriterActive = true;
+      const waiter = processContextWaiters.shift();
+      waiter.resolve(() => {
+        processContextWriterActive = false;
+        drainProcessContextWaiters();
+      });
+    }
+    return;
+  }
+
+  while (processContextWaiters[0]?.mode === 'read') {
+    activeProcessContextReaders++;
+    const waiter = processContextWaiters.shift();
+    waiter.resolve(() => {
+      activeProcessContextReaders--;
+      drainProcessContextWaiters();
+    });
+  }
+}
+
+function acquireProcessContextLock(mode) {
+  if (processContextWaiters.length === 0 && !processContextWriterActive) {
+    if (mode === 'read') {
+      activeProcessContextReaders++;
+      return () => {
+        activeProcessContextReaders--;
+        drainProcessContextWaiters();
+      };
+    }
+
+    if (activeProcessContextReaders === 0) {
+      processContextWriterActive = true;
+      return () => {
+        processContextWriterActive = false;
+        drainProcessContextWaiters();
+      };
+    }
+  }
+
+  return new Promise((resolve) => {
+    processContextWaiters.push({ mode, resolve });
+    drainProcessContextWaiters();
+  });
+}
+
+async function runWithAcquiredSharedProcessContext(operation, release) {
+  trace('ProcessRunner', () => 'Acquired shared process-context lock');
+
+  try {
+    return await operation();
+  } finally {
+    release();
+    trace('ProcessRunner', () => 'Released shared process-context lock');
+  }
+}
+
+function runWithSharedProcessContext(operation) {
+  trace('ProcessRunner', () => 'Waiting for shared process-context lock');
+  const lock = acquireProcessContextLock('read');
+  return typeof lock === 'function'
+    ? runWithAcquiredSharedProcessContext(operation, lock)
+    : lock.then((release) =>
+        runWithAcquiredSharedProcessContext(operation, release)
+      );
+}
+
+async function runWithAcquiredSerializedProcessContext(operation, release) {
+  trace('ProcessRunner', () => 'Acquired virtual cd process-context lock');
+
+  try {
+    return await runWithIsolatedProcessContext(operation);
+  } finally {
+    release();
+    trace('ProcessRunner', () => 'Released virtual cd process-context lock');
+  }
+}
+
+function runWithSerializedProcessContext(operation) {
+  trace('ProcessRunner', () => 'Waiting for virtual cd process-context lock');
+  const lock = acquireProcessContextLock('write');
+  return typeof lock === 'function'
+    ? runWithAcquiredSerializedProcessContext(operation, lock)
+    : lock.then((release) =>
+        runWithAcquiredSerializedProcessContext(operation, release)
+      );
+}
+
+function attachProcessContextMethods(ProcessRunner) {
+  ProcessRunner.prototype._runWithIsolatedProcessContext =
+    runWithIsolatedProcessContext;
+  ProcessRunner.prototype._runWithSharedProcessContext =
+    runWithSharedProcessContext;
+  ProcessRunner.prototype._runWithSerializedProcessContext =
+    runWithSerializedProcessContext;
+}
+
+function attachQuietMethod(ProcessRunner) {
+  ProcessRunner.prototype.quiet = function () {
+    trace('ProcessRunner', () => `quiet() called - disabling console output`);
+    this.options.mirror = false;
+    return this;
+  };
 }
 
 /**
@@ -167,8 +282,8 @@ function buildCommandString(cmd, args, redirects) {
 export function attachOrchestrationMethods(ProcessRunner, deps) {
   const { virtualCommands, isVirtualCommandsEnabled } = deps;
 
-  ProcessRunner.prototype._runWithIsolatedProcessContext =
-    runWithIsolatedProcessContext;
+  attachProcessContextMethods(ProcessRunner);
+  attachQuietMethod(ProcessRunner);
 
   ProcessRunner.prototype._runSequence = async function (sequence) {
     trace(
@@ -231,9 +346,14 @@ export function attachOrchestrationMethods(ProcessRunner, deps) {
       () =>
         `_runSubshell ENTER | ${JSON.stringify({ commandType: subshell.command.type }, null, 2)}`
     );
-    return await this._runWithIsolatedProcessContext(() =>
-      executeCommand(this, subshell.command)
-    );
+    const savedEffectiveCwd = this._effectiveCwd;
+    try {
+      return await this._runWithIsolatedProcessContext(() =>
+        executeCommand(this, subshell.command)
+      );
+    } finally {
+      this._effectiveCwd = savedEffectiveCwd;
+    }
   };
 
   ProcessRunner.prototype._runSimpleCommand = async function (command) {
@@ -259,7 +379,7 @@ export function attachOrchestrationMethods(ProcessRunner, deps) {
     const ProcessRunnerRef = this.constructor;
     // Fall back to the inherited cwd (or undefined) when getcwd() fails so the
     // command still runs instead of crashing with "getcwd() failed".
-    const currentCwd = safeCwd() ?? this.options.cwd;
+    const currentCwd = this._effectiveCwd ?? safeCwd();
     const runner = new ProcessRunnerRef(
       { mode: 'shell', command: commandStr },
       { ...this.options, cwd: currentCwd, _bypassVirtual: true }
@@ -331,11 +451,5 @@ export function attachOrchestrationMethods(ProcessRunner, deps) {
     throw new Error(
       'pipe() destination must be a ProcessRunner or $`command` result'
     );
-  };
-
-  ProcessRunner.prototype.quiet = function () {
-    trace('ProcessRunner', () => `quiet() called - disabling console output`);
-    this.options.mirror = false;
-    return this;
   };
 }
