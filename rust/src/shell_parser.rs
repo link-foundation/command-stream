@@ -409,31 +409,29 @@ pub fn parse_shell_command(command: &str) -> Option<ParsedCommand> {
     parser.parse()
 }
 
-/// Check if a command needs shell features we don't handle
+/// Check if a command needs shell features we don't handle.
+///
+/// Redirection counts as such a feature. Virtual commands receive a plain
+/// argument list built by splitting on whitespace, so a redirection left in
+/// that list is passed through as a literal argument: `echo hello > out.txt`
+/// would print `hello > out.txt` and write no file, and `git push ... 2>&1`
+/// would report success while nothing was pushed. Handing the whole command to
+/// the system shell is the only way to get exactly the POSIX result
+/// (issue #46).
 pub fn needs_real_shell(command: &str) -> bool {
     // Check for features we don't handle yet
     let unsupported = [
-        "`",   // Command substitution
-        "$(",  // Command substitution
-        "${",  // Variable expansion
-        "~",   // Home expansion (at start of word)
-        "*",   // Glob patterns
-        "?",   // Glob patterns
-        "[",   // Glob patterns
-        "2>",  // stderr redirection
-        "&>",  // Combined redirection
-        ">&",  // File descriptor duplication
-        "<<",  // Here documents
-        "<<<", // Here strings
+        '`', // Command substitution
+        '$', // Command substitution and variable expansion
+        '~', // Home expansion (at start of word)
+        '*', // Glob patterns
+        '?', // Glob patterns
+        '[', // Glob patterns
+        '>', // Output redirection, in every form (>, >>, 2>, &>, >&)
+        '<', // Input redirection, in every form (<, <<, <<<)
     ];
 
-    for feature in &unsupported {
-        if command.contains(feature) {
-            return true;
-        }
-    }
-
-    false
+    command.chars().any(|c| unsupported.contains(&c))
 }
 
 #[cfg(test)]

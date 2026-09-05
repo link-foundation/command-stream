@@ -268,7 +268,12 @@ impl ProcessRunner {
         // Check if this is a virtual command. Backslash escapes are removed by a
         // real shell but not by the whitespace splitting used for virtual
         // command args, so such commands always go to the system shell (#49).
-        let first_word = if has_shell_escapes(&self.command) {
+        // The same applies to redirection and expansions: whitespace splitting
+        // would hand `>`, `out.txt` to the virtual command as two ordinary
+        // arguments, so `echo hello > out.txt` printed the redirection instead
+        // of writing the file, and `git push ... 2>&1` reported success while
+        // nothing was pushed (#46).
+        let first_word = if has_shell_escapes(&self.command) || needs_real_shell(&self.command) {
             ""
         } else {
             self.command.split_whitespace().next().unwrap_or("")
