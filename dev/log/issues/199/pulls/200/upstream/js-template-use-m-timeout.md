@@ -1,6 +1,6 @@
 ## Summary
 
-`scripts/use-module.mjs`'s `loadUse()` fetches `https://unpkg.com/use-m/use.js` with a bare `fetch()` — **no deadline, no retry** — and eight release scripts call it (through `loadCommandStream()`) at **module scope**, outside their own `main()`/`try`. When the CDN is unreachable or slow, the script dies during module initialisation: it prints nothing, writes nothing to `GITHUB_OUTPUT`, and the job's only diagnostic is `TypeError: fetch failed`, which names neither the CDN nor the URL.
+`scripts/use-module.mjs`'s `loadUse()` fetches `https://unpkg.com/use-m/use.js` with a bare `fetch()` — **no deadline, no retry** — and seven release scripts call it (through `loadCommandStream()`) at **module scope**, outside their own `main()`/`try`. When the CDN is unreachable or slow, the script dies during module initialisation: it prints nothing, writes nothing to `GITHUB_OUTPUT`, and the job's only diagnostic is `TypeError: fetch failed`, which names neither the CDN nor the URL.
 
 That turns a third-party outage into what looks like a defect in the release logic. In `link-foundation/command-stream` (which uses this template's scripts) the same shape made the publish suite fail intermittently with
 
