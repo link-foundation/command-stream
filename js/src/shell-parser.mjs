@@ -545,21 +545,26 @@ function isSingleAmpersand(command, index) {
 
 function isUnsupportedUnquotedFeature(command, index) {
   const char = command[index];
-  if ('`$~*?['.includes(char) || isSingleAmpersand(command, index)) {
+  if ('`$~*?[<>'.includes(char) || isSingleAmpersand(command, index)) {
     return true;
   }
 
-  const remainder = command.slice(index);
-  return (
-    remainder.startsWith('2>') ||
-    remainder.startsWith('&>') ||
-    remainder.startsWith('>&') ||
-    remainder.startsWith('<<')
-  );
+  return false;
 }
 
 /**
- * Check if a command needs shell features we don't handle
+ * Check if a command needs shell features we don't handle.
+ *
+ * Redirection (`>`, `>>`, `<`, `2>`, `&>`, `<<`, ...) counts as such a
+ * feature. The built-in (virtual) commands take a plain argument list, so a
+ * redirection left in that list is passed through as a literal argument:
+ * `echo hello > out.txt` would print `hello > out.txt` and write no file, and
+ * `git push ... 2>&1` would report success while nothing was pushed. Sending
+ * the whole command to the system shell is the only way to get exactly the
+ * POSIX result (issue #46).
+ *
+ * @param {string} command - The full command string
+ * @returns {boolean} true when the command must be run by a real shell
  */
 export function needsRealShell(command) {
   let quote = null;

@@ -863,9 +863,12 @@ async function handleShellMode(runner, deps) {
   const useShellOps = shouldUseShellOperators(runner, command);
   // Backslash escapes are removed by a real shell but not by our lightweight
   // tokenizer, so such commands always go to the system shell rather than to
-  // the built-in commands (issue #49).
-  const requiresRealShell =
-    (useShellOps && needsRealShell(command)) || hasShellEscapes(command);
+  // the built-in commands (issue #49). needsRealShell() is asked
+  // unconditionally: gating it on useShellOps made the verdict depend on
+  // whether the command happened to also contain `&&`, `||`, `;`, `&` or `(`,
+  // so `echo hi > f` handed `>` and `f` to the built-in `echo` as two literal
+  // arguments while `echo $(echo hi) > f` did not (issue #46).
+  const requiresRealShell = needsRealShell(command) || hasShellEscapes(command);
 
   trace(
     'ProcessRunner',
