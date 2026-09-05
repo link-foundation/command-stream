@@ -448,11 +448,12 @@ Two defects compound:
   diagnosable from the CI log alone.
 
 `experiments/publish-cdn-unreachable.mjs` reproduces it on demand by routing the
-fetch through a proxy on a closed port, instead of waiting for a real outage:
+fetch through a proxy at an unroutable TEST-NET-3 address (RFC 5737), instead of
+waiting for a real outage:
 
 ```
 unpkg unreachable (what the opaque failure looked like):
-  exit status      null
+  exit status      null (killed after 20000ms)
   reached main()   false
   GITHUB_OUTPUT    ""
 unpkg reachable (normal run):
@@ -460,6 +461,10 @@ unpkg reachable (normal run):
   reached main()   true
   GITHUB_OUTPUT    "published=true\npublished_version=0.9.5\nalready_published=true\n"
 ```
+
+The null status is the experiment's own timeout killing a child still blocked in
+the module-scope fetch. A real outage fails faster, but lands in the same place:
+no `GITHUB_OUTPUT`, no log line, nothing for the assertion to name.
 
 With the fix, the same unreachable-CDN run skips all six tests rather than
 failing them:

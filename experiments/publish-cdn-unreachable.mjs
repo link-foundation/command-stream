@@ -27,6 +27,10 @@ import { mkdtempSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
+// Capped so an unroutable proxy stalls the run for a bounded time instead of
+// hanging until the connect attempt gives up on its own.
+const TIMEOUT_MS = 20000;
+
 const SCRIPT = resolve(
   new URL('..', import.meta.url).pathname,
   'js/scripts/publish-to-npm.mjs'
@@ -58,14 +62,19 @@ function run(label, extraEnv) {
   const res = spawnSync('bun', [SCRIPT], {
     cwd: dir,
     encoding: 'utf8',
-    timeout: 20000,
+    timeout: TIMEOUT_MS,
     env: { ...process.env, GITHUB_OUTPUT: outputFile, ...extraEnv },
   });
 
   const output = readFileSync(outputFile, 'utf8');
   const started = (res.stdout || '').includes('Current version to publish:');
+  // A null status means spawnSync hit its own timeout and killed the child: the
+  // script was still blocked in the module-scope fetch, never reaching main().
+  // A real outage fails faster, but lands in the same place -- no output at all.
+  const status =
+    res.status === null ? `null (killed after ${TIMEOUT_MS}ms)` : res.status;
   console.log(`${label}:`);
-  console.log(`  exit status      ${res.status}`);
+  console.log(`  exit status      ${status}`);
   console.log(`  reached main()   ${started}`);
   console.log(`  GITHUB_OUTPUT    ${JSON.stringify(output)}`);
   console.log(
