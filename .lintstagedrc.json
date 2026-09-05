@@ -1,0 +1,11 @@
+{
+  "*.{js,mjs,cjs}": [
+    "js/node_modules/.bin/eslint --fix --max-warnings 0 --no-warn-ignored",
+    "js/node_modules/.bin/prettier --write --ignore-unknown",
+    "js/node_modules/.bin/prettier --check --ignore-unknown"
+  ],
+  "*.md": [
+    "js/node_modules/.bin/prettier --write --ignore-unknown",
+    "js/node_modules/.bin/prettier --check --ignore-unknown"
+  ]
+}

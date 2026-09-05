@@ -1,0 +1,290 @@
+# Changelog
+
+## 0.9.5
+
+### Patch Changes
+
+- Document try/catch anti-pattern with errexit=false default (issue #156)
+  - Add js/docs/case-studies/issue-156/README.md with comprehensive case study including:
+    - Reconstructed timeline and sequence of events from calculator#78 silent bug
+    - Root cause analysis with code evidence from command-stream source
+    - Bash vs command-stream behavior comparison table
+    - Full configuration API documentation (shell.errexit(), set(), unset())
+    - Recommended patterns for mixed strict/optional error handling
+    - Comparison with similar libraries (execa, zx, bash, child_process)
+    - Proposed solutions ranked by impact
+  - Add Pitfall #7 to js/BEST-PRACTICES.md: try/catch anti-pattern with errexit=false, with examples and correct fix patterns
+  - Add 4 reproducible experiment scripts in experiments/issue-156/:
+    - 01-default-behavior.mjs — demonstrates default errexit=false behavior
+    - 02-errexit-enabled.mjs — demonstrates shell.errexit(true) configuration
+    - 03-bash-comparison.sh — bash set -e reference comparison
+    - 04-calculator-bug-repro.mjs — exact reproduction of calculator#78 bug
+
+  Publish the Rust crate from CI, sync Cargo release versions, and harden shell option isolation in Bun tests.
+
+## 0.9.4
+
+### Patch Changes
+
+- 3265939: Document Array.join() pitfall and add best practices (fixes #153)
+  - Add js/BEST-PRACTICES.md with detailed usage patterns for arrays, security, and error handling
+  - Add Common Pitfalls section to README.md explaining the Array.join() issue
+  - Add js/docs/case-studies/issue-153/ with real-world bug investigation from hive-mind#1096
+  - Add rust/BEST-PRACTICES.md for Rust-specific patterns
+  - Add 34 tests for array interpolation covering correct usage and anti-patterns
+  - Reorganize file structure: move JS-related docs to js/ folder, case studies to js/docs/case-studies/
+
+## 0.9.2
+
+### Patch Changes
+
+- 535eb02: Reorganize Rust code with modular utilities (matching JS pattern)
+  - Extract trace.rs (152 lines) - Logging and tracing utilities
+  - Extract ansi.rs (194 lines) - ANSI escape code handling
+  - Extract quote.rs (161 lines) - Shell quoting utilities
+  - Update utils.rs to re-export from new modules and focus on CommandResult/VirtualUtils
+  - Update lib.rs with new module declarations and re-exports
+
+  The Rust structure now mirrors the JavaScript modular organization for consistency.
+  All modules remain well under the 1500-line limit guideline.
+
+## 0.9.1
+
+### Patch Changes
+
+- 38dc1c3: Reorganize codebase with modular utilities for better maintainability
+  - Extract trace/logging utilities to $.trace.mjs
+  - Extract shell detection to $.shell.mjs
+  - Extract stream utilities to $.stream-utils.mjs and $.stream-emitter.mjs
+  - Extract shell quoting to $.quote.mjs
+  - Extract result creation to $.result.mjs
+  - Extract ANSI utilities to $.ansi.mjs
+  - Extract global state management to $.state.mjs
+  - Extract shell settings to $.shell-settings.mjs
+  - Extract virtual command registration to $.virtual-commands.mjs
+  - Add commands/index.mjs for module exports
+  - Update $.utils.mjs to use shared trace module
+
+  All new modules follow the 1500-line limit guideline. The Rust code
+  structure already follows best practices with tests in separate files.
+
+## 0.9.0
+
+### Minor Changes
+
+- 60e2a36: Add Rust translation and reorganize codebase
+  - Reorganize JavaScript source files into `js/` folder structure
+  - Move tests from root `tests/` to `js/tests/`
+  - Add complete Rust translation in `rust/` folder with:
+    - Shell parser supporting &&, ||, ;, |, (), and redirections
+    - All 21 virtual commands (cat, cp, mv, rm, touch, mkdir, ls, cd, pwd, echo, yes, seq, sleep, env, which, test, exit, basename, dirname, true, false)
+    - ProcessRunner for async command execution with tokio
+    - Comprehensive test suite mirroring JavaScript tests
+    - Case study documentation in docs/case-studies/issue-146/
+
+## 0.8.3
+
+### Patch Changes
+
+- 0e1c9e0: Fix trace logs interfering with output when CI=true
+  - Removed automatic trace log enabling when CI environment variable is set
+  - Trace logs no longer pollute stderr in CI/CD environments (GitHub Actions, GitLab CI, etc.)
+  - Added COMMAND_STREAM_TRACE environment variable for explicit trace control
+  - COMMAND_STREAM_TRACE=true explicitly enables tracing
+  - COMMAND_STREAM_TRACE=false explicitly disables tracing (overrides COMMAND_STREAM_VERBOSE)
+  - COMMAND_STREAM_VERBOSE=true continues to work as before
+  - JSON parsing works reliably in CI environments
+
+  Fixes #135
+
+## 0.8.2
+
+### Patch Changes
+
+- b3dac3d: Add Windows shell detection support
+  - Added Windows-specific shell detection (Git Bash, PowerShell, cmd.exe)
+  - Use 'where' command on Windows instead of 'which' for PATH lookups
+  - Fallback to cmd.exe on Windows when no Unix-compatible shell is found
+  - Updated timing expectations in tests for slower Windows shell spawning
+  - Created case study documentation for Windows CI failures (Issue #144)
+
+## 0.8.1
+
+### Patch Changes
+
+- Test patch release
+
+## 0.8.0
+
+### Minor Changes
+
+- f4dbb49: Transition to new CI/CD template with modern best practices
+
+  Features:
+  - Changeset-based versioning for semantic version management
+  - OIDC trusted publishing to npm (no tokens required)
+  - Manual and automatic release workflows
+  - Multi-platform testing (Ubuntu, macOS, Windows)
+  - Node.js compatibility testing (v20, v22, v24)
+  - ESLint + Prettier with Husky pre-commit hooks
+  - Code duplication detection with jscpd
+  - Consolidated release workflow for all publishing
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## 0.7.1
+
+### Patch Changes
+
+- Current stable release with streaming support, async iteration, and EventEmitter support
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## [0.17.2] - 2026-09-05
+
+### Fixed
+
+- `bytes` bumped to 1.12.1, clearing RUSTSEC-2026-0007 (integer overflow in `BytesMut::reserve`). The advisory went unnoticed because nothing in the pipeline audited the lockfile; `cargo audit` now runs on every push, pull request and weekly.
+- `ls` no longer computes a file type character it never used, and iterates directory entries with `.flatten()` instead of matching on each `Result`.
+
+### Changed
+
+- The Rust pipeline denies warnings: `RUSTFLAGS`/`RUSTDOCFLAGS` are `-Dwarnings`, clippy runs with `-- -D warnings`, and `cargo doc --no-deps` gates the rustdoc-only lints. Clippy previously printed 15 warnings and exited 0. `Cargo.toml` forbids `unsafe_code` and warns on `clippy::all`.
+- `CommandContext::cwd` is covered by tests: `pwd` honours it, and `ls` resolves both a relative path and its default argument against it.
+
+## [0.17.1] - 2026-09-04
+
+### Fixed
+- Track runner and pipeline virtual `cd` changes in invocation-local cwd and environment state, including overlapping commands and explicit working directories, without mutating the host working directory or `PWD`/`OLDPWD`.
+
+## [0.17.0] - 2026-09-04
+
+### Fixed
+- Quote interpolated values according to the shell quoting context they land in:
+  a value inside quotes written by the author is spliced in as escaped literal
+  text, like `"$var"` in a POSIX shell, so `s!("bash -c \"{}\"", script)` runs
+  the script instead of failing on an extra layer of quotes (issue #49).
+
+### Added
+- `QuoteContext`, `scan_quote_context`, `quote_for_context`,
+  `escape_for_single_quotes`, `escape_for_double_quotes`, `has_shell_escapes`
+  and `is_quote_context_enabled` are exported from the crate root.
+- `COMMAND_STREAM_QUOTE_CONTEXT=0` restores the previous behavior of always
+  quoting every interpolated value.
+
+## [0.16.0] - 2026-08-11
+
+### Added
+
+- Add `StreamingRunner::from_argv` for shell-free streaming execution with exact executable and argument boundaries on every platform.
+
+## [0.15.0] - 2026-08-07
+
+### Added
+- `open_terminal` returns a `TerminalSession` that keeps a PTY open with no implicit timeout, so input that only becomes available later can be sent with `send`, awaited with `wait_for` (the same readiness matcher as `interactions`, including the idle wait), and finalized with `close`/`finish`.
+
+### Changed
+- `TerminalCaptureOptions::timeout` is now `Option<Duration>` (`Some(30s)` by default, `None` for sessions), and `capture_terminal` is implemented on top of `TerminalSession`.
+
+## [0.14.0] - 2026-07-25
+
+### Added
+
+- Add regex readiness markers and per-interaction output-idle waits to PTY
+  terminal capture.
+
+## [0.13.1] - 2026-07-24
+
+### Fixed
+
+- Preserve the current terminal frame before a later full-screen repaint,
+  including when its control sequence is split across PTY output chunks.
+
+## [0.13.0] - 2026-07-24
+
+### Added
+
+- Added PTY-backed terminal capture with input and resize controls, settled
+  frames, unrolled transcripts, asciicast v2 recordings, SVG artifacts, and
+  partial timeout diagnostics.
+
+## [0.12.1] - 2026-06-21
+
+### Added
+- Diagnostic warning for Go/Docker template arguments with an internal space
+  (issue #172). When a built command contains an unquoted `{{ … }}` token that
+  contains a space (e.g. `--format {{json .Config.Env}}`), the shell — and
+  command-stream, which mirrors shell word-splitting — splits it into multiple
+  argv words. `command-stream` now prints a one-line warning to stderr pointing
+  at the gotcha (fired once per unique token, silenced via
+  `COMMAND_STREAM_NO_TEMPLATE_WARNING`). Quote the token (`'{{json .Config.Env}}'`)
+  or interpolate it as a single value to pass it through untouched.
+
+## [0.12.0] - 2026-06-11
+
+### Added
+- `CommandResult::exit_code()` accessor as an alias for the `code` field, mirroring the `exitCode` alias exposed by the JavaScript implementation (issue #36).
+
+## [0.11.1] - 2026-06-10
+
+### Fixed
+- Handle `getcwd()`/`current_dir()` failures during command execution (issue #44). When the inherited working directory has been deleted or becomes inaccessible, the child process is now spawned from a valid fallback directory (`HOME`, `USERPROFILE`, the temp dir, then `/`) instead of failing at the OS level. Applies to both `ProcessRunner` and `Pipeline`.
+
+## [0.11.0] - 2026-06-10
+
+### Changed
+- Make the built-in `cd` command fully `sh`/bash compatible so shell scripts translate directly to Rust (issue #50):
+  - `cd -` switches to the previous directory and prints it, like `sh`
+  - `~` and `~/path` tilde expansion
+  - a successful `cd` updates the `PWD` and `OLDPWD` environment variables
+  - relative targets resolve against the `cwd` option for consistency
+
+## [0.10.0] - 2026-06-10
+
+### Added
+- `StreamingRunner::kill_signal` to configure the signal used to stop a process
+  (default `SIGTERM`), mirroring the JavaScript `killSignal` option.
+- `StreamingRunner::exit_pump_grace_ms` to configure the post-exit pipe drain
+  grace period (default 100ms).
+- `OutputStream::kill` / `OutputStream::kill_with` to stop a streaming process
+  from inside the consumption loop; abandoning the stream (drop/`break`) now
+  stops the process too.
+
+### Fixed
+- `OutputStream` no longer hangs when the process has exited but a grandchild
+  keeps the stdio pipes open: readers are drained with a grace period and then
+  aborted, and the exit chunk is always delivered (parity with the JavaScript
+  fix for issue #155).
+
+## [0.9.6] - 2026-06-09
+
+### Changed
+
+- Separate Rust crate documentation, release scripts, changelog fragments, and
+  GitHub release tags from the JavaScript npm package release path.
+
+### Fixed
+
+- Ensure the Rust release job still evaluates on main pushes after the
+  pull-request-only changelog gate is skipped.
+
+### Fixed
+
+- Rebase onto the latest `origin/<branch>` **before** staging the version bump
+  in the Rust release script, so concurrent releases no longer abort with
+  "cannot rebase: Your index contains uncommitted changes". The release now
+  syncs on a clean working tree, matching the JavaScript release script.
