@@ -1,0 +1,13 @@
+[33m.github/workflows/js.yml[0m[90m:[0m72[90m:[0m9[90m: [0m[1mshellcheck reported issue in this script: SC2193:warning:1:32: The arguments to this comparison can never be equal. Make sure your syntax is correct[0m[90m [shellcheck]
+[0m[90m   |
+[0m[90m72 | [0m        run: |
+[90m   | [0m[32m        ^~~~[0m
+[33m.github/workflows/js.yml[0m[90m:[0m72[90m:[0m25[90m: [0m[1m"github.head_ref" is potentially untrusted. avoid using it directly in inline scripts. instead, pass it through an environment variable. see https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions for more details[0m[90m [expression]
+[0m[33m.github/workflows/js.yml[0m[90m:[0m248[90m:[0m9[90m: [0m[1mshellcheck reported issue in this script: SC2086:info:3:89: Double quote to prevent globbing and word splitting[0m[90m [shellcheck]
+[0m[90m    |
+[0m[90m248 | [0m        run: |
+[90m    | [0m[32m        ^~~~[0m
+[33m.github/workflows/js.yml[0m[90m:[0m248[90m:[0m9[90m: [0m[1mshellcheck reported issue in this script: SC2086:info:4:44: Double quote to prevent globbing and word splitting[0m[90m [shellcheck]
+[0m[90m    |
+[0m[90m248 | [0m        run: |
+[90m    | [0m[32m        ^~~~[0m

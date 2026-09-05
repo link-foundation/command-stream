@@ -1,0 +1,90 @@
+{
+  "name": "command-stream",
+  "version": "0.20.3",
+  "description": "Modern $ shell utility library with streaming, async iteration, and EventEmitter support, optimized for Bun runtime",
+  "type": "module",
+  "main": "./src/$.cjs",
+  "module": "./src/$.mjs",
+  "exports": {
+    ".": {
+      "import": "./src/$.mjs",
+      "require": "./src/$.cjs",
+      "default": "./src/$.mjs"
+    },
+    "./process-runner": "./src/process-runner.mjs",
+    "./package.json": "./package.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/link-foundation/command-stream.git",
+    "directory": "js"
+  },
+  "homepage": "https://github.com/link-foundation/command-stream/tree/main/js#readme",
+  "bugs": {
+    "url": "https://github.com/link-foundation/command-stream/issues"
+  },
+  "scripts": {
+    "test": "cd .. && bun test js/tests/ --timeout 10000",
+    "test:coverage": "cd .. && bun test js/tests/ --coverage --timeout 10000",
+    "test:features": "cd .. && bun test js/tests/*.features.test.mjs --timeout 10000",
+    "test:comparison": "cd .. && bun test js/tests/*.features.test.mjs --reporter=verbose --timeout 10000",
+    "test:readme": "cd .. && bun test js/tests/readme-examples.test.mjs --timeout 10000",
+    "test:sync": "cd .. && bun test js/tests/sync.test.mjs --timeout 10000",
+    "test:builtin": "cd .. && bun test js/tests/builtin-commands.test.mjs --timeout 10000",
+    "test:pipe": "cd .. && bun test js/tests/pipe.test.mjs --timeout 10000",
+    "lint": "cd .. && js/node_modules/.bin/eslint . --max-warnings 0",
+    "lint:fix": "cd .. && js/node_modules/.bin/eslint . --fix --max-warnings 0",
+    "format": "cd .. && js/node_modules/.bin/prettier --write .",
+    "format:check": "cd .. && js/node_modules/.bin/prettier --check .",
+    "check:duplication": "jscpd src scripts",
+    "check": "bun run lint && bun run format:check && bun run check:duplication",
+    "build:terminal-font": "node scripts/build-terminal-font.mjs",
+    "prepare": "cd .. && js/node_modules/.bin/husky || true",
+    "changeset": "changeset",
+    "changeset:version": "bun scripts/changeset-version.mjs",
+    "changeset:publish": "changeset publish",
+    "changeset:status": "changeset status --since=origin/main"
+  },
+  "keywords": [
+    "shell",
+    "command",
+    "streaming",
+    "async",
+    "iteration",
+    "eventemitter",
+    "bun",
+    "node",
+    "cross-runtime"
+  ],
+  "author": "link-foundation",
+  "license": "Unlicense",
+  "engines": {
+    "bun": ">=1.0.0",
+    "node": ">=20.0.0"
+  },
+  "files": [
+    "README.md",
+    "BEST-PRACTICES.md",
+    "src/",
+    "docs/",
+    "examples/"
+  ],
+  "devDependencies": {
+    "@changesets/cli": "^2.31.1",
+    "dejavu-fonts-ttf": "^2.37.3",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.6",
+    "husky": "^9.1.7",
+    "jscpd": "^4.3.0",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.9.6",
+    "subset-font": "^2.7.0"
+  },
+  "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "@xterm/headless": "^6.0.0",
+    "gifenc": "^1.0.3",
+    "node-pty": "^1.2.0-beta.15"
+  }
+}

@@ -1,0 +1,14 @@
+# Bun configuration file
+
+[test]
+# Only run tests from the package-local tests/ directory
+root = "./tests"
+
+# Increase timeout from default 5000ms to 10000ms (2x) for CI stability
+timeout = 10000
+
+# Optional: specify test file patterns
+# pattern = ["*.test.mjs", "*.spec.mjs"]
+
+# Optional: exclude certain patterns
+# exclude = ["*.skip.test.mjs"]
