@@ -170,7 +170,7 @@ dependencies = [
 
 [[package]]
 name = "command-stream"
-version = "0.17.3"
+version = "0.17.4"
 dependencies = [
  "assert_cmd",
  "async-trait",
