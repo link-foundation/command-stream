@@ -53,11 +53,10 @@
  */
 
 import { readFileSync, appendFileSync } from 'fs';
+import { loadUseM } from './use-m-loader.mjs';
 
 // Load use-m dynamically (matches the other release scripts in this folder).
-const { use } = eval(
-  await (await fetch('https://unpkg.com/use-m/use.js')).text()
-);
+const use = await loadUseM();
 
 const { $ } = await use('command-stream');
 

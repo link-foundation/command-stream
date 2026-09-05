@@ -37,14 +37,19 @@ const isWindows = process.platform === 'win32';
 
 let networkAvailable = !isWindows;
 
-// The very first thing publish-to-npm.mjs does is
-// `await fetch('https://unpkg.com/use-m/use.js')` at module scope. That await is
-// not inside main()'s try/catch, so when the CDN is unreachable the script dies
-// during module initialisation: it never writes a line to GITHUB_OUTPUT and
-// never prints its first log. Probing only `npm view` misses this — the npm
-// registry and unpkg fail independently — and the suite then reports
+// The very first thing publish-to-npm.mjs does is load use-m from
+// https://unpkg.com/use-m/use.js, at module scope — outside main()'s
+// try/catch. When the CDN is unreachable the script dies during module
+// initialisation: it never writes a line to GITHUB_OUTPUT and never prints its
+// first log. Probing only `npm view` misses this — the npm registry and unpkg
+// fail independently — and the suite then reports
 // `Expected to contain: "published=true" / Received: ""`, which names neither
 // the CDN nor the network as the cause. Both endpoints are probed.
+//
+// scripts/use-m-loader.mjs now gives that load a deadline, retries and an error
+// naming the URL, so an outage is reported honestly instead of opaquely. The
+// probe stays: it is cheaper to skip the suite once than to let every spawned
+// case spend the loader's whole retry budget on a CDN that is down.
 const USE_M_URL = 'https://unpkg.com/use-m/use.js';
 
 beforeAll(async () => {
@@ -82,9 +87,10 @@ beforeAll(async () => {
  *
  * `publish-to-npm.mjs` prints "Current version to publish: ..." before it does
  * anything else, so stdout without that line means module initialisation threw
- * (almost always the unpkg fetch above) and every later assertion would compare
+ * (almost always the use-m load above) and every later assertion would compare
  * against an empty string. Raising here puts the child's exit status and stderr
- * in the failure message instead.
+ * in the failure message instead — since the loader landed, that stderr names
+ * the CDN and the URL.
  *
  * @param {{status:number|null, stdout:string, stderr:string, output:string}} result
  * @returns {{status:number|null, stdout:string, stderr:string, output:string}} the same result
