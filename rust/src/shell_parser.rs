@@ -57,6 +57,105 @@ pub struct ParsedArg {
     pub value: String,
     pub quoted: bool,
     pub quote_char: Option<char>,
+    /// The original word exactly as written, including any quote characters, so
+    /// callers that re-serialize the command back to a real shell round-trip it
+    /// without having to re-quote from `value`.
+    pub raw: String,
+}
+
+/// Perform POSIX quote removal on a single already-tokenized word.
+///
+/// A shell word may carry quotes anywhere inside it, not just wrapped around
+/// the whole thing: `label:'help wanted'`, `--flag="a b"` and `a'b c'd` are all
+/// one word each. The shell strips the quote characters and concatenates the
+/// quoted and unquoted pieces into a single argument. Our tokenizer keeps the
+/// quotes in the word (so it can split correctly and hand a valid command back
+/// to a real shell when needed); this function turns that raw word into the
+/// literal value a built-in command should receive, exactly as `/bin/sh` would
+/// (issue #48).
+///
+/// Rules mirrored from POSIX:
+///   - Outside quotes, a backslash escapes the next character (it becomes
+///     literal and loses any quoting role).
+///   - Inside `'...'`, every character is literal, including backslash.
+///   - Inside `"..."`, a backslash only escapes `$`, `` ` ``, `"`, `\` and
+///     newline; before anything else it stays a literal backslash.
+///
+/// Returns the quote-removed value, whether any quoting/escaping was applied,
+/// and the first quote character seen.
+pub fn remove_shell_quotes(word: &str) -> (String, bool, Option<char>) {
+    let chars: Vec<char> = word.chars().collect();
+    let mut value = String::new();
+    let mut quoted = false;
+    let mut quote_char: Option<char> = None;
+    let mut i = 0;
+
+    while i < chars.len() {
+        let c = chars[i];
+
+        if c == '\'' {
+            quoted = true;
+            if quote_char.is_none() {
+                quote_char = Some('\'');
+            }
+            i += 1;
+            while i < chars.len() && chars[i] != '\'' {
+                value.push(chars[i]);
+                i += 1;
+            }
+            i += 1; // skip the closing quote (if any)
+            continue;
+        }
+
+        if c == '"' {
+            quoted = true;
+            if quote_char.is_none() {
+                quote_char = Some('"');
+            }
+            i += 1;
+            while i < chars.len() && chars[i] != '"' {
+                if chars[i] == '\\'
+                    && i + 1 < chars.len()
+                    && matches!(chars[i + 1], '$' | '`' | '"' | '\\' | '\n')
+                {
+                    value.push(chars[i + 1]);
+                    i += 2;
+                    continue;
+                }
+                value.push(chars[i]);
+                i += 1;
+            }
+            i += 1; // skip the closing quote (if any)
+            continue;
+        }
+
+        if c == '\\' && i + 1 < chars.len() {
+            quoted = true;
+            value.push(chars[i + 1]);
+            i += 2;
+            continue;
+        }
+
+        value.push(c);
+        i += 1;
+    }
+
+    (value, quoted, quote_char)
+}
+
+/// Split a simple command string into its words, respecting quotes and applying
+/// POSIX quote removal to each word. Operators are ignored, so this is meant for
+/// simple commands (the virtual-command dispatch path). Mirrors the JS parser's
+/// per-argument quote removal so `echo label:'help wanted'` yields
+/// `["echo", "label:help wanted"]` rather than splitting inside the quotes.
+pub fn split_command_words(command: &str) -> Vec<String> {
+    tokenize(command)
+        .into_iter()
+        .filter_map(|token| match token.token_type {
+            TokenType::Word(w) => Some(remove_shell_quotes(&w).0),
+            _ => None,
+        })
+        .collect()
 }
 
 /// Types of parsed commands
@@ -102,6 +201,15 @@ pub fn tokenize(command: &str) -> Vec<Token> {
                 value: "&&".to_string(),
             });
             i += 2;
+        } else if chars[i] == '&' {
+            // A lone `&` (backgrounding, or the fd-duplication form in `2>&1`)
+            // is not modeled by this parser. Consume it so the tokenizer always
+            // makes progress: the word branch below lists `&` in its stop set,
+            // so without this arm it would break without advancing `i` and spin
+            // forever. Commands that truly rely on `&`/redirection are routed to
+            // a real shell (needs_real_shell) before we tokenize for virtual
+            // command dispatch, so dropping the token here is safe.
+            i += 1;
         } else if chars[i] == '|' && i + 1 < chars.len() && chars[i + 1] == '|' {
             tokens.push(Token {
                 token_type: TokenType::Or,
@@ -376,21 +484,17 @@ impl ShellParser {
         let args: Vec<ParsedArg> = words
             .into_iter()
             .map(|word| {
-                // Remove quotes if present
-                if (word.starts_with('"') && word.ends_with('"'))
-                    || (word.starts_with('\'') && word.ends_with('\''))
-                {
-                    ParsedArg {
-                        value: word[1..word.len() - 1].to_string(),
-                        quoted: true,
-                        quote_char: Some(word.chars().next().unwrap()),
-                    }
-                } else {
-                    ParsedArg {
-                        value: word,
-                        quoted: false,
-                        quote_char: None,
-                    }
+                // POSIX quote removal: strip quotes wherever they appear in the
+                // word and concatenate the pieces, so `label:'help wanted'`
+                // becomes one argument `label:help wanted` (issue #48). `raw`
+                // keeps the original text for paths that re-serialize the
+                // command back to a real shell.
+                let (value, quoted, quote_char) = remove_shell_quotes(&word);
+                ParsedArg {
+                    value,
+                    quoted,
+                    quote_char,
+                    raw: word,
                 }
             })
             .collect();
@@ -551,6 +655,123 @@ mod tests {
                 assert!(matches!(commands[0], ParsedCommand::Subshell { .. }));
             }
             _ => panic!("Expected Sequence with Subshell"),
+        }
+    }
+
+    // ------------------------------------------------------------------------
+    // Quote removal (issue #48)
+    // ------------------------------------------------------------------------
+
+    #[test]
+    fn test_remove_shell_quotes_whole_word() {
+        assert_eq!(remove_shell_quotes("'help wanted'").0, "help wanted");
+        assert_eq!(remove_shell_quotes("\"help wanted\"").0, "help wanted");
+    }
+
+    #[test]
+    fn test_remove_shell_quotes_embedded() {
+        // The shape from the issue: an interpolated label inside a search term.
+        assert_eq!(
+            remove_shell_quotes("label:'help wanted'").0,
+            "label:help wanted"
+        );
+        assert_eq!(
+            remove_shell_quotes("label:\"help wanted\"").0,
+            "label:help wanted"
+        );
+        assert_eq!(
+            remove_shell_quotes("--label='help wanted'").0,
+            "--label=help wanted"
+        );
+    }
+
+    #[test]
+    fn test_remove_shell_quotes_concatenation() {
+        assert_eq!(remove_shell_quotes("a'b c'd").0, "ab cd");
+        assert_eq!(remove_shell_quotes("pre'post'").0, "prepost");
+        assert_eq!(remove_shell_quotes("'a''b'").0, "ab");
+        assert_eq!(remove_shell_quotes("a''b").0, "ab");
+    }
+
+    #[test]
+    fn test_remove_shell_quotes_escapes() {
+        // POSIX single-quote idiom produced by quote() for a value with a quote.
+        assert_eq!(remove_shell_quotes("'it'\\''s here'").0, "it's here");
+        // Backslash escapes a space outside quotes.
+        assert_eq!(remove_shell_quotes("a\\ b").0, "a b");
+        // Inside double quotes, backslash only escapes a small set.
+        assert_eq!(remove_shell_quotes("\"a\\\"b\"").0, "a\"b");
+        assert_eq!(remove_shell_quotes("\"a\\nb\"").0, "a\\nb");
+    }
+
+    #[test]
+    fn test_remove_shell_quotes_flags() {
+        let (value, quoted, quote_char) = remove_shell_quotes("'x'");
+        assert_eq!(value, "x");
+        assert!(quoted);
+        assert_eq!(quote_char, Some('\''));
+
+        let (value, quoted, quote_char) = remove_shell_quotes("plain");
+        assert_eq!(value, "plain");
+        assert!(!quoted);
+        assert_eq!(quote_char, None);
+    }
+
+    #[test]
+    fn test_tokenize_terminates_on_lone_ampersand() {
+        // Regression: a lone `&` (fd duplication `2>&1`, or backgrounding) used
+        // to spin the tokenizer forever because it matched neither the `&&`
+        // operator nor advanced the word scanner. It must now terminate.
+        let tokens = tokenize("git push origin HEAD 2>&1");
+        let words: Vec<String> = tokens
+            .into_iter()
+            .filter_map(|t| match t.token_type {
+                TokenType::Word(w) => Some(w),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(words, vec!["git", "push", "origin", "HEAD", "2", "1"]);
+    }
+
+    #[test]
+    fn test_split_command_words_terminates_on_background() {
+        // `echo a & echo b` is not caught by needs_real_shell, so it can reach
+        // the tokenizer with a lone `&`; it must terminate rather than hang.
+        assert_eq!(
+            split_command_words("echo a & echo b"),
+            vec![
+                "echo".to_string(),
+                "a".to_string(),
+                "echo".to_string(),
+                "b".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn test_split_command_words_quote_removal() {
+        assert_eq!(
+            split_command_words("echo label:'help wanted' is:open"),
+            vec![
+                "echo".to_string(),
+                "label:help wanted".to_string(),
+                "is:open".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn test_parse_simple_command_embedded_quotes() {
+        let cmd = parse_shell_command("gh search issues label:'help wanted'").unwrap();
+        match cmd {
+            ParsedCommand::Simple { cmd, args, .. } => {
+                assert_eq!(cmd, "gh");
+                assert_eq!(args.last().unwrap().value, "label:help wanted");
+                assert!(args.last().unwrap().quoted);
+                // `raw` keeps the original word for re-serialization.
+                assert_eq!(args.last().unwrap().raw, "label:'help wanted'");
+            }
+            _ => panic!("Expected Simple command"),
         }
     }
 }

@@ -81,7 +81,11 @@ function buildCommandParts(command) {
   const parts = [cmd];
   for (const arg of args) {
     if (arg.value !== undefined) {
-      if (arg.quoted) {
+      // `raw` preserves the word exactly as written (quotes and all), so
+      // handing it back to a real shell round-trips without re-quoting guesses.
+      if (arg.raw !== undefined) {
+        parts.push(arg.raw);
+      } else if (arg.quoted) {
         parts.push(`${arg.quoteChar}${arg.value}${arg.quoteChar}`);
       } else if (arg.value.includes(' ')) {
         parts.push(`"${arg.value}"`);

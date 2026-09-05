@@ -122,6 +122,36 @@ async fn test_execute_virtual_echo() {
     assert!(result.stdout.contains("Hello World"));
 }
 
+// Quote removal for embedded quotes (issue #48): a search term whose value
+// contains a space, e.g. `gh issue list --label "help wanted"`, must reach the
+// virtual command as a single argument with the quotes removed.
+#[tokio::test]
+async fn test_execute_virtual_echo_embedded_single_quotes() {
+    let _guard = lock_virtual_commands().await;
+    enable_virtual_commands();
+    let result = run("echo label:'help wanted'").await.unwrap();
+    assert!(result.is_success());
+    assert_eq!(result.stdout.trim_end(), "label:help wanted");
+}
+
+#[tokio::test]
+async fn test_execute_virtual_echo_embedded_double_quotes() {
+    let _guard = lock_virtual_commands().await;
+    enable_virtual_commands();
+    let result = run("echo label:\"help wanted\"").await.unwrap();
+    assert!(result.is_success());
+    assert_eq!(result.stdout.trim_end(), "label:help wanted");
+}
+
+#[tokio::test]
+async fn test_execute_virtual_echo_multiple_embedded_terms() {
+    let _guard = lock_virtual_commands().await;
+    enable_virtual_commands();
+    let result = run("echo label:'help wanted' is:open").await.unwrap();
+    assert!(result.is_success());
+    assert_eq!(result.stdout.trim_end(), "label:help wanted is:open");
+}
+
 #[tokio::test]
 async fn test_execute_virtual_pwd() {
     let _guard = lock_virtual_commands().await;

@@ -418,9 +418,19 @@ impl ProcessRunner {
             return None;
         }
 
-        // Parse args from command string
-        let parts: Vec<&str> = self.command.split_whitespace().collect();
-        let args: Vec<String> = parts.iter().skip(1).map(|s| s.to_string()).collect();
+        // An empty command name means the caller already decided this command
+        // must go to a real shell (redirection, expansions, escapes). Bail out
+        // before tokenizing so we neither waste work nor parse shell syntax we
+        // deliberately delegate.
+        if cmd_name.is_empty() {
+            return None;
+        }
+
+        // Parse args from command string, respecting quotes and performing
+        // POSIX quote removal so `echo label:'help wanted'` reaches the built-in
+        // as the single argument `label:help wanted` (issue #48).
+        let words = shell_parser::split_command_words(&self.command);
+        let args: Vec<String> = words.into_iter().skip(1).collect();
 
         let ctx = CommandContext {
             args,
