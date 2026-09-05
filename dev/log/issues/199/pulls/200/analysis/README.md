@@ -439,7 +439,7 @@ outside `main()`'s `try/catch`, so an unreachable CDN kills the script during
 module initialisation — before it writes a single line to `GITHUB_OUTPUT` and
 before its first `console.log`.
 
-Two defects compound:
+Three defects compound:
 
 * **The offline guard probed the wrong endpoint.** `beforeAll` ran
   `npm view command-stream version` and treated success as "we are online".
@@ -453,27 +453,54 @@ Two defects compound:
   script's first log line and, when it is absent, raises with the child's exit
   status, stderr and `GITHUB_OUTPUT` contents, so the next occurrence is
   diagnosable from the CI log alone.
+* **The load itself had no deadline, no retry and no diagnostics.** Eleven
+  scripts in `js/scripts/` opened with the same inline statement, so the
+  hardening had to be applied in all of them, not only in the one the tests
+  spawn. Three failure modes follow from that shape: a network failure rejects
+  with a bare `TypeError: fetch failed` thrown during module initialisation; a
+  CDN *error page* is HTML, and eval-ing HTML raises `SyntaxError: Unexpected
+  token '<'`, which points at this repository's code for a response it never
+  inspected; and a stalled connection has no deadline of its own — undici bounds
+  only the connect (10 s), while `headersTimeout` defaults to 300 s, so one
+  fetch can burn five minutes of a job's `timeout-minutes`.
 
-`experiments/publish-cdn-unreachable.mjs` reproduces it on demand by routing the
-fetch through a proxy at an unroutable TEST-NET-3 address (RFC 5737), instead of
-waiting for a real outage:
+  `js/scripts/use-m-loader.mjs` is now the single place that loads use-m: a
+  per-attempt `AbortSignal.timeout(15000)`, three attempts with exponential
+  backoff (a CDN blip is transient by nature), `response.ok` checked before the
+  eval, one `::debug::` line per attempt (off by default, per the verbose-mode
+  requirement), and a final error naming the URL, the attempt count and the
+  cause. All eleven scripts call it; `js/tests/use-m-loader.test.mjs` pins the
+  behaviour and asserts that no script fetches use.js inline again.
+
+`experiments/publish-cdn-unreachable.mjs` reproduces it on demand by pointing
+the fetch at an unroutable TEST-NET-3 address (RFC 5737), instead of waiting for
+a real outage, and runs both shapes side by side:
 
 ```
-unpkg unreachable (what the opaque failure looked like):
-  exit status      null (killed after 20000ms)
-  reached main()   false
-  GITHUB_OUTPUT    ""
-unpkg reachable (normal run):
-  exit status      0
-  reached main()   true
-  GITHUB_OUTPUT    "published=true\npublished_version=0.9.5\nalready_published=true\n"
+legacy inline fetch:
+  exit status       1
+  elapsed           10718ms
+  stdout            ""
+  failure reported  "TypeError: fetch failed"
+
+shared loader:
+  exit status       1
+  elapsed           6314ms
+  stdout            ""
+  failure reported  "Error: Failed to load use-m from https://203.0.113.1/use-m/use.js
+                     after 2 attempt(s): The operation was aborted due to timeout. This
+                     is a network dependency of the release scripts, not a defect in the
+                     published package; re-run the job when the CDN answers again."
 ```
 
-The null status is the experiment's own timeout killing a child still blocked in
-the module-scope fetch. A real outage fails faster, but lands in the same place:
-no `GITHUB_OUTPUT`, no log line, nothing for the assertion to name.
+Neither run reaches the script body — the load is still at module scope, so the
+script cannot write `published=false` itself — but the second one says who
+failed, which is the difference between re-running a job and investigating a
+publish defect. Moving the loads inside `main()` is the remaining step; it is
+listed as follow-up 1 in the upstream report, because the same module-scope
+shape is what the template ships.
 
-With the fix, the same unreachable-CDN run skips all six tests rather than
+With the offline guard fixed, an unreachable CDN skips all six tests rather than
 failing them:
 
 ```
@@ -558,7 +585,7 @@ reads, and its zizmor job runs at `min-confidence: medium`, which hides the
 
 ## 7. Upstream issues reported
 
-Three defects found here also exist in the templates the issue asks to compare
+Seven defects found here also exist in the templates the issue asks to compare
 against, so each was reported with a reproducible example, a workaround and the
 code-level fix:
 
@@ -570,6 +597,7 @@ code-level fix:
 | [#150](https://github.com/link-foundation/rust-ai-driven-development-pipeline-template/issues/150) | rust template | No workflow runs `rust-script --test`, so 78 tests across 9 scripts never execute; `create-github-release.rs` does not compile in test mode and `version-and-commit.rs` fails under the template's own `RUSTFLAGS: -Dwarnings` (§4.16) |
 | [#159](https://github.com/link-foundation/js-ai-driven-development-pipeline-template/issues/159) | js template | `links.yml`'s `paths:` filter omits `.lycheeignore` and `scripts/check-web-archive.mjs`, so editing the ignore list or the archive helper does not re-run the job that reads them |
 | [#160](https://github.com/link-foundation/js-ai-driven-development-pipeline-template/issues/160) | js template | 25 of 27 checkouts persist credentials, and `min-confidence: medium` hides every `artipacked` finding (it is a Low-confidence check), so the audit reports 3 findings instead of 28 |
+| [#161](https://github.com/link-foundation/js-ai-driven-development-pipeline-template/issues/161) | js template | `use-module.mjs` fetches use-m with no timeout and no retry, and eight scripts call it at module scope, so a CDN blip kills them with a bare `TypeError: fetch failed` and an empty `GITHUB_OUTPUT` (§4.25) |
 
 Checked and deliberately **not** reported, because they are correct as written:
 the Rust template's `pipeline-status: if: always()` (it intentionally reports
@@ -616,6 +644,43 @@ A retry after a slow-propagating publish therefore fails the release even though
 the version is live. Reproducible example, workaround and the code fix are in
 the issue text (see §9 of the PR description).
 
+### Detail: #161
+
+**Repository:** `link-foundation/js-ai-driven-development-pipeline-template`
+**Archived report body:** `../upstream/js-template-use-m-timeout.md`
+
+`scripts/use-module.mjs:113` is `const response = await fetchImpl(url);` — no
+`signal`, no retry — and seven scripts call it through `loadCommandStream()` at
+module scope (`publish-to-npm.mjs:38`, `changeset-version.mjs:30`,
+`create-manual-changeset.mjs:22`, `instant-version-bump.mjs:36`,
+`format-github-release.mjs:23`, `format-release-notes.mjs:33`,
+`version-and-commit.mjs:31`); only `setup-npm.mjs:257` loads inside a function
+and can therefore report the failure itself. Checked at `7ae16b0` (0.11.28).
+
+Two reproductions were run against the template checkout. An unreachable CDN:
+
+```
+$ node repro.mjs          # loadUse({ url: 'https://203.0.113.1/use-m/use.js' })
+elapsed 10620ms
+name    TypeError
+message fetch failed
+cause   Connect Timeout Error (attempted address: 203.0.113.1:443, timeout: 10000ms)
+```
+
+The 10 s bound is undici's connect timeout, not the template's. A CDN that
+accepts the connection and never answers is not bounded at all:
+
+```
+$ node stall.mjs          # server accepts, never responds
+after 25047ms: still waiting
+```
+
+The report includes both reproductions, the workaround (re-run the job; probe
+unpkg as well as `npm view` in test guards), the diff adding the timeout and the
+bounded retry, and two follow-ups: move the module-scope loads into `main()` so
+the script can still write to `GITHUB_OUTPUT`, and keep the worst case inside
+`timeout-minutes`.
+
 ## 8. Existing components / libraries surveyed
 
 | Component | Used for |
@@ -629,4 +694,5 @@ the issue text (see §9 of the PR description).
 | npm registry metadata endpoint (`https://registry.npmjs.org/<pkg>`) | Publication check that does not depend on `npm view`'s cache/replica behaviour. |
 | [`secretlint`](https://github.com/secretlint/secretlint) + `@secretlint/secretlint-rule-preset-recommend` | Committed-credential scan (best practice #11). Chosen over gitleaks/trufflehog because it needs no extra toolchain in a repository that already runs npm, and its ignore file is reviewable text. |
 | [`lychee`](https://lychee.cloudflare.dev/) via `lycheeverse/lychee-action` | External link checking, weekly rather than per-pull-request (§4.22), with `.lycheeignore` for endpoints that answer only to a browser session. |
+| `AbortSignal.timeout()` (Node 18+, Bun, Deno) | Per-attempt deadline for the use-m CDN fetch (§4.25). Chosen over `p-retry`/`node-fetch-retry`/`fetch-retry`, which do the same job well, because these scripts run with **no `package.json` dependencies at all** — that constraint is the reason use-m exists — so a retry library would have to be fetched over the very network path it is meant to protect. The whole policy is 40 lines of `js/scripts/use-m-loader.mjs`. |
 | `git ls-files` via `execFileSync` | Input discovery for the documentation and hygiene tests. Deliberately not a glob library: git already knows what is tracked, and going through a shell is what broke it on Windows (§4.23). |

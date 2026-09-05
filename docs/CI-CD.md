@@ -96,6 +96,18 @@ still runs the three checks that read the whole tree.
   already there, low enough that adding duplication fails the job.
   `js/tests/duplication-check.test.mjs` pins both the language list and the
   threshold range.
+- **Every network dependency of the release scripts loads with a deadline and a
+  retry.** The scripts carry no `package.json` dependencies: they fetch `use-m`
+  from `https://unpkg.com/use-m/use.js` and eval it. Done inline, at module
+  scope, that load has no deadline, no retry and no diagnostics, so a CDN blip
+  killed the script during module initialisation — before its first log line and
+  before anything reached `GITHUB_OUTPUT` — and the job reported a publish
+  defect. `js/scripts/use-m-loader.mjs` is the single loader: a 15 s deadline per
+  attempt, three attempts with exponential backoff, the HTTP status checked
+  before the eval (an error page is HTML, and eval-ing HTML blames this
+  repository for `Unexpected token '<'`), and a final error naming the URL, the
+  attempts and the cause. `js/tests/use-m-loader.test.mjs` asserts that no script
+  fetches use.js inline again.
 - **Lint and format configuration lives at the repository root.** eslint and
   prettier treat the directory holding their config as the project base path;
   while these files lived in `js/`, root-level JavaScript was outside that path
@@ -128,6 +140,26 @@ than failing on every pull request; it starts reviewing on its own once the
 graph is on. Any other API status still fails the job. The npm, bun and cargo
 audit jobs cover the committed lockfiles in the meantime.
 
+## Debugging a failed run
+
+The release scripts keep their tracing in the code with the default state
+switched off, so a run that failed can be re-run with the tracing on and no code
+change. Any of these enables it:
+
+- `CI_SCRIPTS_DEBUG=1` — the local switch, e.g.
+  `CI_SCRIPTS_DEBUG=1 bun js/scripts/check-release-needed.mjs`;
+- `RUNNER_DEBUG=1` — set by GitHub's **Re-run all jobs with debug logging**;
+- `ACTIONS_STEP_DEBUG=true` — the secret-gated workflow debug switch.
+
+Every line is prefixed with `::debug::`, so Actions renders it in the
+collapsible debug stream and the main log stays readable. What it reports: the
+publish, registry-verification and resolved-package decisions in
+`publish-to-npm.mjs`, and one line per use-m load attempt including the URL and
+the failure that caused a retry. `js/scripts/debug-print.mjs` is the
+helper; it never throws, because tracing must not be the reason a script fails
+(Deno denies `process.env` without `--allow-env`, and the denial surfaces on the
+property read itself).
+
 ## Releasing
 
 JavaScript uses changesets: add a `js/.changeset/*.md` entry describing the
@@ -135,7 +167,7 @@ change and its bump type, or the `Check for JavaScript changesets` job fails.
 Rust uses changelog fragments: add `rust/changelog.d/YYYYMMDD_HHMMSS_*.md` with
 `bump:` frontmatter, or `Rust changelog fragment check` fails.
 
-`scripts/publish-retry.mjs` treats an "already published" registry error as
+`js/scripts/publish-retry.mjs` treats an "already published" registry error as
 success, including npm's E409 `Cannot publish over previously staged version` —
 a slow-propagating publish used to be reported as a failed release even though
 the version was live.
