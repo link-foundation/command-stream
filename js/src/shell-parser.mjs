@@ -35,7 +35,9 @@ const TokenType = {
  *
  * Rules mirrored from POSIX:
  *   - Outside quotes, a backslash escapes the next character (it becomes
- *     literal and loses any quoting role).
+ *     literal and loses any quoting role). On Windows the backslash is the
+ *     path separator, so an unquoted backslash is kept literal there - eating
+ *     it would corrupt paths such as `cd C:\Users\foo`.
  *   - Inside '...', every character is literal, including backslash.
  *   - Inside "...", a backslash only escapes $, `, ", \ and newline; before
  *     anything else it stays a literal backslash.
@@ -46,6 +48,31 @@ const TokenType = {
  *   escaping was applied, and `quoteChar` is the first quote character seen
  *   (kept for callers that re-serialize simple wholly-quoted words).
  */
+/**
+ * Read the body of a double-quoted segment starting just after the opening
+ * quote. Backslash only escapes the small POSIX set inside double quotes; any
+ * other backslash stays literal.
+ *
+ * @param {string} word - The full word being scanned
+ * @param {number} start - Index of the first character inside the quotes
+ * @returns {{value: string, next: number}} The unescaped body and the index
+ *   just past the closing quote (or the end of the word if unterminated).
+ */
+function readDoubleQuotedSegment(word, start) {
+  let value = '';
+  let i = start;
+  while (i < word.length && word[i] !== '"') {
+    if (word[i] === '\\' && isDoubleQuoteEscape(word[i + 1])) {
+      value += word[i + 1];
+      i += 2;
+      continue;
+    }
+    value += word[i];
+    i++;
+  }
+  return { value, next: i + 1 };
+}
+
 export function removeShellQuotes(word) {
   let value = '';
   let quoted = false;
@@ -74,25 +101,13 @@ export function removeShellQuotes(word) {
       if (quoteChar === null) {
         quoteChar = '"';
       }
-      i++;
-      while (i < word.length && word[i] !== '"') {
-        if (
-          word[i] === '\\' &&
-          i + 1 < word.length &&
-          '$`"\\\n'.includes(word[i + 1])
-        ) {
-          value += word[i + 1];
-          i += 2;
-          continue;
-        }
-        value += word[i];
-        i++;
-      }
-      i++; // skip the closing quote (if any)
+      const segment = readDoubleQuotedSegment(word, i + 1);
+      value += segment.value;
+      i = segment.next; // position past the closing quote (if any)
       continue;
     }
 
-    if (char === '\\' && i + 1 < word.length) {
+    if (char === '\\' && i + 1 < word.length && process.platform !== 'win32') {
       quoted = true;
       value += word[i + 1];
       i += 2;

@@ -76,7 +76,9 @@ pub struct ParsedArg {
 ///
 /// Rules mirrored from POSIX:
 ///   - Outside quotes, a backslash escapes the next character (it becomes
-///     literal and loses any quoting role).
+///     literal and loses any quoting role). On Windows the backslash is the
+///     path separator, so an unquoted backslash is kept literal there — eating
+///     it would corrupt paths such as `cd C:\Users\foo`.
 ///   - Inside `'...'`, every character is literal, including backslash.
 ///   - Inside `"..."`, a backslash only escapes `$`, `` ` ``, `"`, `\` and
 ///     newline; before anything else it stays a literal backslash.
@@ -129,7 +131,7 @@ pub fn remove_shell_quotes(word: &str) -> (String, bool, Option<char>) {
             continue;
         }
 
-        if c == '\\' && i + 1 < chars.len() {
+        if c == '\\' && i + 1 < chars.len() && !cfg!(windows) {
             quoted = true;
             value.push(chars[i + 1]);
             i += 2;
@@ -695,13 +697,36 @@ mod tests {
 
     #[test]
     fn test_remove_shell_quotes_escapes() {
-        // POSIX single-quote idiom produced by quote() for a value with a quote.
-        assert_eq!(remove_shell_quotes("'it'\\''s here'").0, "it's here");
-        // Backslash escapes a space outside quotes.
-        assert_eq!(remove_shell_quotes("a\\ b").0, "a b");
-        // Inside double quotes, backslash only escapes a small set.
+        // Inside double quotes, backslash only escapes a small set (this is the
+        // same on every platform).
         assert_eq!(remove_shell_quotes("\"a\\\"b\"").0, "a\"b");
         assert_eq!(remove_shell_quotes("\"a\\nb\"").0, "a\\nb");
+
+        // Unquoted backslash escaping is POSIX-only. On Windows the backslash is
+        // the path separator, so it stays literal (see the Windows path test).
+        #[cfg(not(windows))]
+        {
+            // POSIX single-quote idiom produced by quote() for a quoted value.
+            assert_eq!(remove_shell_quotes("'it'\\''s here'").0, "it's here");
+            // Backslash escapes a space outside quotes.
+            assert_eq!(remove_shell_quotes("a\\ b").0, "a b");
+        }
+    }
+
+    // On Windows an unquoted backslash must be preserved so that virtual
+    // commands like `cd C:\Users\foo` still receive a valid path.
+    #[cfg(windows)]
+    #[test]
+    fn test_remove_shell_quotes_windows_path() {
+        assert_eq!(
+            remove_shell_quotes("C:\\Users\\foo").0,
+            "C:\\Users\\foo".to_string()
+        );
+        // A quoted Windows path is likewise preserved.
+        assert_eq!(
+            remove_shell_quotes("\"C:\\Users\\foo\"").0,
+            "C:\\Users\\foo".to_string()
+        );
     }
 
     #[test]

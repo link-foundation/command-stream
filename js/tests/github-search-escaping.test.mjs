@@ -56,15 +56,34 @@ describe('removeShellQuotes (POSIX quote removal)', () => {
     expect(removeShellQuotes("a'b c'd").value).toBe('ab cd');
   });
 
-  test('handles the POSIX single-quote escape idiom', () => {
+  // Unquoted backslash escaping is POSIX-only. On Windows the backslash is the
+  // path separator, so it is kept literal there (see the Windows path test).
+  test.skipIf(isWindows)('handles the POSIX single-quote escape idiom', () => {
     expect(removeShellQuotes("'it'\\''s here'").value).toBe("it's here");
   });
 
-  test('handles backslash escapes', () => {
+  test.skipIf(isWindows)('handles unquoted backslash escapes', () => {
     expect(removeShellQuotes('a\\ b').value).toBe('a b');
+  });
+
+  test('handles double-quoted backslash escapes', () => {
+    // Inside double quotes a backslash only escapes a small set; this is the
+    // same on every platform.
     expect(removeShellQuotes('"a\\"b"').value).toBe('a"b');
     expect(removeShellQuotes('"a\\nb"').value).toBe('a\\nb');
   });
+
+  test.skipIf(!isWindows)(
+    'keeps unquoted backslashes literal on Windows',
+    () => {
+      // A Windows path handed to a virtual command (e.g. `cd C:\Users\foo`) must
+      // survive intact rather than losing its separators.
+      expect(removeShellQuotes('C:\\Users\\foo').value).toBe('C:\\Users\\foo');
+      expect(removeShellQuotes('"C:\\Users\\foo"').value).toBe(
+        'C:\\Users\\foo'
+      );
+    }
+  );
 
   test('reports quoting flags', () => {
     const q = removeShellQuotes("'x'");
