@@ -391,6 +391,28 @@ Only the assertion that the list is non-empty made this visible, which is the
 argument for writing that assertion into every check that discovers its own
 inputs.
 
+### 4.24 FALSE NEGATIVE — the workflow audit could not see credential persistence
+
+Found while writing the upstream report for the JavaScript template (§7, #160)
+and then checked here, because the same setting had been copied over. zizmor's
+`artipacked` audit — a checkout that leaves the job token in `.git/config`,
+where any later step or uploaded artifact can read it — is a **Low**-confidence
+check, and the job ran with `min-confidence: medium`. Every finding of that
+class was therefore invisible:
+
+```
+zizmor --config .github/zizmor.yml --min-confidence medium .github/workflows -> No findings
+zizmor --config .github/zizmor.yml --min-confidence low    .github/workflows -> 6 findings, all artipacked
+```
+
+All six are the release jobs, which push to `main` and publish, so they do need
+the credential. The fix is not to silence them again by raising the threshold:
+the job now runs at `--min-confidence low`, the six carry an inline
+`ignore[artipacked]` next to the reason, and two hygiene tests hold the line —
+every `actions/checkout` in every workflow either sets
+`persist-credentials: false` or carries that suppression, and the number of
+suppressions is asserted, so a seventh cannot arrive by copy-paste.
+
 ## 5. File-by-file comparison against both templates
 
 Scripts (`analysis/js-scripts-diff.log`, `analysis/rust-scripts-diff.log`):

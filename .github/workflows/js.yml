@@ -292,7 +292,12 @@ jobs:
       group: main-writer-${{ github.repository }}-main
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v6
+      # This job pushes to main and creates the release, so it needs the
+      # credential actions/checkout persists in .git/config. Everything else in
+      # this repository sets persist-credentials: false; zizmor runs at
+      # --min-confidence low so a checkout that forgets it fails the audit, and
+      # the six writer jobs that legitimately need it say so here.
+      - uses: actions/checkout@v6 # zizmor: ignore[artipacked]
         with:
           fetch-depth: 0
 
@@ -399,7 +404,12 @@ jobs:
       group: main-writer-${{ github.repository }}-main
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v6
+      # This job pushes to main and creates the release, so it needs the
+      # credential actions/checkout persists in .git/config. Everything else in
+      # this repository sets persist-credentials: false; zizmor runs at
+      # --min-confidence low so a checkout that forgets it fails the audit, and
+      # the six writer jobs that legitimately need it say so here.
+      - uses: actions/checkout@v6 # zizmor: ignore[artipacked]
         with:
           fetch-depth: 0
 
@@ -476,7 +486,12 @@ jobs:
       group: main-writer-${{ github.repository }}-main
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v6
+      # This job pushes to main and creates the release, so it needs the
+      # credential actions/checkout persists in .git/config. Everything else in
+      # this repository sets persist-credentials: false; zizmor runs at
+      # --min-confidence low so a checkout that forgets it fails the audit, and
+      # the six writer jobs that legitimately need it say so here.
+      - uses: actions/checkout@v6 # zizmor: ignore[artipacked]
         with:
           fetch-depth: 0
 

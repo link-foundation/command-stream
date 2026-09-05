@@ -248,17 +248,69 @@ describe('workflow linting is itself wired into CI', () => {
     );
   });
 
-  test('zizmor runs with the repository policy and medium confidence', () => {
+  test('zizmor runs with the repository policy at low confidence', () => {
     const step = Object.values(lintWorkflow.doc.jobs)
       .flatMap((job) => job.steps ?? [])
       .find((s) => (s.uses ?? '').startsWith('zizmorcore/zizmor-action@'));
     expect(step.with.config).toBe('.github/zizmor.yml');
-    expect(String(step.with['min-confidence'])).toBe('medium');
+    // `artipacked` -- a checkout that leaves the job token in .git/config -- is
+    // a Low-confidence audit, so `medium` hides every one of them. That blind
+    // spot is what made the JavaScript template ship 25 credential-persisting
+    // checkouts while its audit reported three findings
+    // (js-ai-driven-development-pipeline-template#160).
+    expect(String(step.with['min-confidence'])).toBe('low');
     // The action's default input is `.`, which walks the whole tree and picks up
     // docs/case-studies/**/templates/**: verbatim archived copies of other
     // repositories' workflows, kept as evidence. Auditing those reported 30
     // findings in files that never run here and that a fix would falsify.
     expect(step.with.inputs).toBe('.github/workflows');
+  });
+
+  test.each(workflows.map((w) => [w.name, w]))(
+    'every checkout in %s drops the token or says why it keeps it',
+    (_name, workflow) => {
+      // The counterpart of running zizmor at low confidence: a checkout either
+      // sets persist-credentials: false, or is one of the writer jobs that
+      // pushes with that credential and carries the suppression inline. A new
+      // checkout that does neither fails here and in the audit.
+      const lines = workflow.text.split('\n');
+      lines.forEach((line, index) => {
+        if (!/^\s*-\s+uses:\s*actions\/checkout@/.test(line)) {
+          return;
+        }
+        if (line.includes('zizmor: ignore[artipacked]')) {
+          return;
+        }
+        // The `with:` block of this step: everything indented deeper, up to the
+        // next step or the end of the file.
+        const indent = line.search(/\S/);
+        const block = [];
+        for (let i = index + 1; i < lines.length; i += 1) {
+          const next = lines[i];
+          if (next.trim() !== '' && next.search(/\S/) <= indent) {
+            break;
+          }
+          block.push(next);
+        }
+        expect(`${workflow.name}:${index + 1} ${block.join('\n')}`).toContain(
+          'persist-credentials: false'
+        );
+      });
+    }
+  );
+
+  test('only the release jobs suppress artipacked', () => {
+    // Six suppressions today, all in jobs that push to main or publish. The
+    // count is asserted so adding one is a deliberate edit here rather than a
+    // quiet copy-paste.
+    const suppressions = workflows.flatMap((workflow) =>
+      workflow.text
+        .split('\n')
+        .filter((line) => line.includes('zizmor: ignore[artipacked]'))
+        .map(() => workflow.name)
+    );
+    expect(suppressions.length).toBe(6);
+    expect(new Set(suppressions)).toEqual(new Set(['js.yml', 'rust.yml']));
   });
 
   test('the zizmor policy requires hash pins by default', () => {

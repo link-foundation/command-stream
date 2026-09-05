@@ -31,6 +31,12 @@ still runs the three checks that read the whole tree.
 - **actionlint runs from `docker://rhysd/actionlint`,** not from a bare binary.
   The Docker image bundles shellcheck and pyflakes; a binary without shellcheck
   on `PATH` silently skips every `run:` block and still exits 0.
+- **zizmor runs at `--min-confidence low`, not `medium`.** `artipacked` — a
+  checkout that leaves the job token in `.git/config` — is a Low-confidence
+  audit, so `medium` hides every one of them. At `low` a checkout either sets
+  `persist-credentials: false` or is one of the six release jobs that pushes
+  with that credential and says so inline; the hygiene test asserts both, and
+  the suppression count, so a seventh cannot appear by copy-paste.
 - **zizmor audits `.github/workflows` only.** Its default input is `.`, which
   also collects the archived copies of other repositories' workflows under
   `docs/case-studies/**/templates/**`. Those never run here.

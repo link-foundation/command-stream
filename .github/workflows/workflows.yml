@@ -90,7 +90,13 @@ jobs:
           advanced-security: false
           annotations: true
           config: .github/zizmor.yml
-          min-confidence: medium
+          # Low, not medium: `artipacked` is a Low-confidence audit, so
+          # `medium` hides every checkout that persists credentials -- the exact
+          # blind spot reported upstream as js-template#160. At `low` the six
+          # writer jobs that need the credential carry an
+          # inline artipacked suppression, and everything else has to set
+          # persist-credentials: false.
+          min-confidence: low
           # Audit the workflows this repository runs, not every workflow file
           # in the tree. The action's default input is `.`, which also collects
           # docs/case-studies/**/templates/** -- verbatim archived copies of
