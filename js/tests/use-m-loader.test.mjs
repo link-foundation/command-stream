@@ -207,8 +207,38 @@ test('the defaults keep a stalled CDN inside a job timeout', () => {
 });
 
 // The point of the shared loader is that the hardening applies everywhere. A
-// script that fetches use.js inline gets none of it back.
+// file that fetches use.js inline gets none of it back, so the whole tree is
+// checked, not only js/scripts/.
 test('no script fetches use-m inline any more', () => {
+  // Excluded on purpose: the loader itself, the tests and the experiment, which
+  // quote the old statement as the thing they are about, and the archived
+  // copies of other repositories' code under dev/log and docs/case-studies.
+  const isExcluded = (file) =>
+    file === 'js/scripts/use-m-loader.mjs' ||
+    file.startsWith('js/tests/') ||
+    file.startsWith('experiments/') ||
+    file.startsWith('dev/log/') ||
+    file.startsWith('docs/case-studies/');
+
+  const files = execFileSync('git', ['ls-files', '*.mjs', '*.js', '*.cjs'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  })
+    .trim()
+    .split('\n')
+    .filter(Boolean)
+    .filter((file) => !isExcluded(file));
+
+  const offenders = files.filter((file) =>
+    readFileSync(join(repoRoot, file), 'utf8').includes('unpkg.com/use-m')
+  );
+
+  expect(offenders).toEqual([]);
+});
+
+// Every script that needs use-m goes through the loader: eleven release
+// scripts plus the profile CLI at the repository root.
+test('the release scripts load use-m through the loader', () => {
   const files = execFileSync('git', ['ls-files', 'js/scripts/*.mjs'], {
     cwd: repoRoot,
     encoding: 'utf8',
@@ -218,14 +248,12 @@ test('no script fetches use-m inline any more', () => {
     .filter(Boolean)
     .filter((file) => !file.endsWith('use-m-loader.mjs'));
 
-  const offenders = files.filter((file) =>
-    readFileSync(join(repoRoot, file), 'utf8').includes('unpkg.com/use-m')
-  );
-
-  expect(offenders).toEqual([]);
-  // And the scripts that need use-m go through the loader.
   const viaLoader = files.filter((file) =>
     readFileSync(join(repoRoot, file), 'utf8').includes('loadUseM(')
   );
+
   expect(viaLoader.length).toBeGreaterThanOrEqual(11);
+  expect(readFileSync(join(repoRoot, 'claude-profiles.mjs'), 'utf8')).toContain(
+    'loadUseM('
+  );
 });

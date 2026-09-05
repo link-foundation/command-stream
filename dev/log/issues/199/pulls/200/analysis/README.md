@@ -454,9 +454,9 @@ Three defects compound:
   status, stderr and `GITHUB_OUTPUT` contents, so the next occurrence is
   diagnosable from the CI log alone.
 * **The load itself had no deadline, no retry and no diagnostics.** Eleven
-  scripts in `js/scripts/` opened with the same inline statement, so the
-  hardening had to be applied in all of them, not only in the one the tests
-  spawn. Three failure modes follow from that shape: a network failure rejects
+  scripts in `js/scripts/` and the root-level `claude-profiles.mjs` opened with
+  the same inline statement, so the hardening had to be applied in all twelve,
+  not only in the one the tests spawn. Three failure modes follow from that shape: a network failure rejects
   with a bare `TypeError: fetch failed` thrown during module initialisation; a
   CDN *error page* is HTML, and eval-ing HTML raises `SyntaxError: Unexpected
   token '<'`, which points at this repository's code for a response it never
@@ -469,8 +469,11 @@ Three defects compound:
   backoff (a CDN blip is transient by nature), `response.ok` checked before the
   eval, one `::debug::` line per attempt (off by default, per the verbose-mode
   requirement), and a final error naming the URL, the attempt count and the
-  cause. All eleven scripts call it; `js/tests/use-m-loader.test.mjs` pins the
-  behaviour and asserts that no script fetches use.js inline again.
+  cause. All twelve callers use it; `js/tests/use-m-loader.test.mjs` pins the
+  behaviour and scans every tracked `.mjs`/`.js`/`.cjs` file — excluding the
+  loader, the tests, the experiment and the archived copies, which quote the old
+  statement as the thing they are about — to assert that nothing fetches use.js
+  inline again.
 
 `experiments/publish-cdn-unreachable.mjs` reproduces it on demand by pointing
 the fetch at an unroutable TEST-NET-3 address (RFC 5737), instead of waiting for

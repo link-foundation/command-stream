@@ -106,8 +106,9 @@ still runs the three checks that read the whole tree.
   attempt, three attempts with exponential backoff, the HTTP status checked
   before the eval (an error page is HTML, and eval-ing HTML blames this
   repository for `Unexpected token '<'`), and a final error naming the URL, the
-  attempts and the cause. `js/tests/use-m-loader.test.mjs` asserts that no script
-  fetches use.js inline again.
+  attempts and the cause. Every caller uses it — the eleven release scripts and
+  the `claude-profiles.mjs` CLI — and `js/tests/use-m-loader.test.mjs` scans the
+  whole tree to assert that nothing fetches use.js inline again.
 - **Lint and format configuration lives at the repository root.** eslint and
   prettier treat the directory holding their config as the project base path;
   while these files lived in `js/`, root-level JavaScript was outside that path
