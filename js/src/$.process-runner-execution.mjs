@@ -19,6 +19,7 @@ import {
   parseShellCommand,
   needsRealShell,
   hasShellEscapes,
+  removeShellQuotes,
 } from './shell-parser.mjs';
 import {
   createExitPromise,
@@ -1361,13 +1362,10 @@ export function attachExecutionMethods(ProcessRunner, deps) {
 
     const cmd = parts[0];
     const args = parts.slice(1).map((arg) => {
-      if (
-        (arg.startsWith('"') && arg.endsWith('"')) ||
-        (arg.startsWith("'") && arg.endsWith("'"))
-      ) {
-        return { value: arg.slice(1, -1), quoted: true, quoteChar: arg[0] };
-      }
-      return { value: arg, quoted: false };
+      // POSIX quote removal so `label:'help wanted'` reaches a built-in as the
+      // single argument `label:help wanted`, not with literal quotes (#48).
+      const { value, quoted, quoteChar } = removeShellQuotes(arg);
+      return { value, quoted, quoteChar: quoteChar ?? undefined, raw: arg };
     });
 
     return { cmd, args, type: 'simple' };
@@ -1411,13 +1409,9 @@ export function attachExecutionMethods(ProcessRunner, deps) {
 
         const cmd = parts[0];
         const args = parts.slice(1).map((arg) => {
-          if (
-            (arg.startsWith('"') && arg.endsWith('"')) ||
-            (arg.startsWith("'") && arg.endsWith("'"))
-          ) {
-            return { value: arg.slice(1, -1), quoted: true, quoteChar: arg[0] };
-          }
-          return { value: arg, quoted: false };
+          // POSIX quote removal (see _parseCommand) applied per pipeline stage.
+          const { value, quoted, quoteChar } = removeShellQuotes(arg);
+          return { value, quoted, quoteChar: quoteChar ?? undefined, raw: arg };
         });
 
         return { cmd, args };

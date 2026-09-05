@@ -102,7 +102,12 @@ async function handleRedirects(result, redirects, cwd) {
 function buildCommandString(cmd, args, redirects) {
   let commandStr = cmd;
   for (const arg of args) {
-    if (arg.quoted && arg.quoteChar) {
+    // `raw` preserves the original word (with its quotes) so re-serializing to a
+    // real shell round-trips exactly; fall back to the older re-quoting only for
+    // args produced without it.
+    if (arg.raw !== undefined) {
+      commandStr += ` ${arg.raw}`;
+    } else if (arg.quoted && arg.quoteChar) {
       commandStr += ` ${arg.quoteChar}${arg.value}${arg.quoteChar}`;
     } else if (arg.value !== undefined) {
       commandStr += ` ${arg.value}`;

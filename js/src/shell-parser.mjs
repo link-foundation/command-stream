@@ -23,6 +23,105 @@ const TokenType = {
 };
 
 /**
+ * Perform POSIX quote removal on a single already-tokenized word.
+ *
+ * A shell word may carry quotes anywhere inside it, not just wrapped around
+ * the whole thing: `label:'help wanted'`, `--flag="a b"` and `a'b c'd` are all
+ * one word each. The shell strips the quote characters and concatenates the
+ * quoted and unquoted pieces into a single argument. Our tokenizer keeps the
+ * quotes in the word (so it can split correctly and hand a valid command back
+ * to a real shell when needed); this function turns that raw word into the
+ * literal value a built-in command should receive, exactly as `/bin/sh` would.
+ *
+ * Rules mirrored from POSIX:
+ *   - Outside quotes, a backslash escapes the next character (it becomes
+ *     literal and loses any quoting role). On Windows the backslash is the
+ *     path separator, so an unquoted backslash is kept literal there - eating
+ *     it would corrupt paths such as `cd C:\Users\foo`.
+ *   - Inside '...', every character is literal, including backslash.
+ *   - Inside "...", a backslash only escapes $, `, ", \ and newline; before
+ *     anything else it stays a literal backslash.
+ *
+ * @param {string} word - Raw word including any quote characters
+ * @returns {{value: string, quoted: boolean, quoteChar: (string|null)}}
+ *   `value` is the quote-removed text, `quoted` is true when any quoting or
+ *   escaping was applied, and `quoteChar` is the first quote character seen
+ *   (kept for callers that re-serialize simple wholly-quoted words).
+ */
+/**
+ * Read the body of a double-quoted segment starting just after the opening
+ * quote. Backslash only escapes the small POSIX set inside double quotes; any
+ * other backslash stays literal.
+ *
+ * @param {string} word - The full word being scanned
+ * @param {number} start - Index of the first character inside the quotes
+ * @returns {{value: string, next: number}} The unescaped body and the index
+ *   just past the closing quote (or the end of the word if unterminated).
+ */
+function readDoubleQuotedSegment(word, start) {
+  let value = '';
+  let i = start;
+  while (i < word.length && word[i] !== '"') {
+    if (word[i] === '\\' && isDoubleQuoteEscape(word[i + 1])) {
+      value += word[i + 1];
+      i += 2;
+      continue;
+    }
+    value += word[i];
+    i++;
+  }
+  return { value, next: i + 1 };
+}
+
+export function removeShellQuotes(word) {
+  let value = '';
+  let quoted = false;
+  let quoteChar = null;
+  let i = 0;
+
+  while (i < word.length) {
+    const char = word[i];
+
+    if (char === "'") {
+      quoted = true;
+      if (quoteChar === null) {
+        quoteChar = "'";
+      }
+      i++;
+      while (i < word.length && word[i] !== "'") {
+        value += word[i];
+        i++;
+      }
+      i++; // skip the closing quote (if any)
+      continue;
+    }
+
+    if (char === '"') {
+      quoted = true;
+      if (quoteChar === null) {
+        quoteChar = '"';
+      }
+      const segment = readDoubleQuotedSegment(word, i + 1);
+      value += segment.value;
+      i = segment.next; // position past the closing quote (if any)
+      continue;
+    }
+
+    if (char === '\\' && i + 1 < word.length && process.platform !== 'win32') {
+      quoted = true;
+      value += word[i + 1];
+      i += 2;
+      continue;
+    }
+
+    value += char;
+    i++;
+  }
+
+  return { value, quoted, quoteChar };
+}
+
+/**
  * Parse a word token from the command string, handling quotes and escapes
  * @param {string} command - The command string
  * @param {number} startIndex - Starting position
@@ -353,21 +452,12 @@ class ShellParser {
 
     const cmd = words[0];
     const args = words.slice(1).map((word) => {
-      // Remove quotes if present
-      if (
-        (word.startsWith('"') && word.endsWith('"')) ||
-        (word.startsWith("'") && word.endsWith("'"))
-      ) {
-        return {
-          value: word.slice(1, -1),
-          quoted: true,
-          quoteChar: word[0],
-        };
-      }
-      return {
-        value: word,
-        quoted: false,
-      };
+      // POSIX quote removal: strip quotes wherever they appear in the word and
+      // concatenate the pieces, so `label:'help wanted'` becomes one argument
+      // `label:help wanted` (issue #48). `raw` keeps the original text for the
+      // paths that re-serialize the command back to a real shell.
+      const { value, quoted, quoteChar } = removeShellQuotes(word);
+      return { value, quoted, quoteChar: quoteChar ?? undefined, raw: word };
     });
 
     const result = {

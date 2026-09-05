@@ -293,8 +293,10 @@ impl Pipeline {
         cwd: Option<&PathBuf>,
         env: Option<&HashMap<String, String>>,
     ) -> Option<VirtualCommandResult> {
-        let parts: Vec<&str> = full_cmd.split_whitespace().collect();
-        let args: Vec<String> = parts.iter().skip(1).map(|s| s.to_string()).collect();
+        // Respect quotes and perform POSIX quote removal (issue #48), matching
+        // the non-pipeline virtual-command path.
+        let words = crate::shell_parser::split_command_words(full_cmd);
+        let args: Vec<String> = words.into_iter().skip(1).collect();
 
         let ctx = crate::commands::CommandContext {
             args,
