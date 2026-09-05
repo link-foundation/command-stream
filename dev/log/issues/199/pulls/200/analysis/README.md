@@ -23,6 +23,13 @@
 | `analysis/js-scripts-diff.log` | `js/scripts/*` vs js template |
 | `analysis/rust-scripts-diff.log` | `rust/scripts/*` vs rust template |
 
+Every file under this evidence root is stored non-executable, including
+`workflows/check-language-parity.sh`. The snapshots are read as evidence, never
+run from here — the runnable copy is `.github/scripts/check-language-parity.sh`
+— and a tracked executable bit on an inert copy is a mode the environment can
+flip without touching a byte of content, which shows up as an unexplained dirty
+working tree.
+
 ## 2. Timeline of the failing release (run 33914574283)
 
 Reconstructed from `ci-logs/run-33914574283.log`.

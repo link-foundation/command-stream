@@ -93,6 +93,24 @@ describe('documentation validation', () => {
     }
   );
 
+  // The evidence root holds copies that are read, never run. A tracked
+  // executable bit on an inert copy is state the checkout environment can flip
+  // on its own -- it did, twice, and each time it surfaced as a working tree
+  // that was dirty without a single byte of content having changed.
+  test('evidence files under dev/log are stored non-executable', () => {
+    const executable = execFileSync('git', ['ls-files', '-s', 'dev/log'], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    })
+      .trim()
+      .split('\n')
+      .filter(Boolean)
+      .filter((line) => line.startsWith('100755'))
+      .map((line) => line.split('\t')[1]);
+
+    expect(executable).toEqual([]);
+  });
+
   // A reader following a cross-reference lands on a heading. These are the
   // headings other documents and the workflows point at.
   test.each([
