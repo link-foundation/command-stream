@@ -28,6 +28,7 @@ import { appendFileSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { loadUseM } from './use-m-loader.mjs';
 
 export const DEFAULT_MAX_ATTEMPTS = 30;
 export const DEFAULT_SLEEP_SECONDS = 10;
@@ -98,9 +99,7 @@ function isCliEntryPoint() {
 
 async function runCli() {
   // Load use-m dynamically (matches the other release scripts in this folder).
-  const { use } = eval(
-    await (await fetch('https://unpkg.com/use-m/use.js')).text()
-  );
+  const use = await loadUseM();
   const { $ } = await use('command-stream');
   const { makeConfig } = await use('lino-arguments');
 

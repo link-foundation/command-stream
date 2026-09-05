@@ -50,7 +50,6 @@ pub use yes::yes;
 
 use crate::utils::CommandResult;
 use std::collections::HashMap;
-use std::path::Path;
 use tokio::sync::mpsc;
 
 /// Context for virtual command execution

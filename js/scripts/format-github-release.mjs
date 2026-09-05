@@ -13,10 +13,10 @@
  * - lino-arguments: Unified configuration from CLI args, env vars, and .lenv files
  */
 
-// Load use-m dynamically
-const { use } = eval(
-  await (await fetch('https://unpkg.com/use-m/use.js')).text()
-);
+import { loadUseM } from './use-m-loader.mjs';
+
+// Load use-m dynamically, retrying a CDN blip instead of dying at module load.
+const use = await loadUseM();
 
 // Import link-foundation libraries
 const { $ } = await use('command-stream');

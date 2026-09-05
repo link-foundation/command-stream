@@ -43,7 +43,7 @@ pub(crate) struct CdContext {
 ///   - `cd`            -> change to $HOME (or $USERPROFILE on Windows)
 ///   - `cd ~`/`cd ~/x` -> tilde expands to $HOME
 ///   - `cd -`          -> change to $OLDPWD and print the new directory (like sh)
-///   - `cd <dir>`      -> change to <dir> (relative paths resolve against the
+///   - `cd <dir>`      -> change to `<dir>` (relative paths resolve against the
 ///     current working directory, or the `cwd` option)
 ///
 /// This low-level command API retains its original process-mutating behavior.

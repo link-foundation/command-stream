@@ -13,10 +13,10 @@
  * - command-stream: Modern shell command execution with streaming support
  */
 
-// Load use-m dynamically
-const { use } = eval(
-  await (await fetch('https://unpkg.com/use-m/use.js')).text()
-);
+import { loadUseM } from './use-m-loader.mjs';
+
+// Load use-m dynamically, retrying a CDN blip instead of dying at module load.
+const use = await loadUseM();
 
 // Import command-stream for shell command execution
 const { $ } = await use('command-stream');

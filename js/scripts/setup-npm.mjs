@@ -26,6 +26,7 @@
 import { resolve } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { loadUseM } from './use-m-loader.mjs';
 
 export const NPM_MIN_VERSION = '11.5.1';
 export const NODE_MIN_VERSION = '22.14.0';
@@ -300,9 +301,7 @@ if (isMainModule()) {
 
     // Load use-m dynamically only for CLI execution, so tests can import the
     // pure version helpers without fetching dependencies or mutating npm.
-    const { use } = eval(
-      await (await fetch('https://unpkg.com/use-m/use.js')).text()
-    );
+    const use = await loadUseM();
     const { $ } = await use('command-stream');
 
     await setupNpm($);

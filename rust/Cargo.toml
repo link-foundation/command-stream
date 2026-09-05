@@ -44,6 +44,18 @@ assert_cmd = "2.0"
 default = []
 json = []
 
+# Lint policy. `cargo clippy` and `cargo build` only *report* warnings, so the
+# `-D warnings` in .github/workflows/rust.yml is what turns these into a failing
+# build. Both halves are needed: this section makes the policy visible to local
+# builds and to `cargo clippy --fix`, the workflow makes it enforceable.
+[lints.rust]
+# The crate contains no `unsafe` block today (nix/libc are used through their
+# safe wrappers); `forbid` keeps it that way and cannot be locally overridden.
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+
 [profile.release]
 opt-level = 3
 lto = true

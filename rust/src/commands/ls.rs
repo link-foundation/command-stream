@@ -67,20 +67,20 @@ pub async fn ls(ctx: CommandContext) -> CommandResult {
                 Ok(entries) => {
                     let mut entry_strs = Vec::new();
 
-                    for entry in entries {
-                        if let Ok(entry) = entry {
-                            let name = entry.file_name().to_string_lossy().to_string();
+                    // `flatten()` drops unreadable entries, matching the
+                    // behaviour of `ls`, which lists what it can read.
+                    for entry in entries.flatten() {
+                        let name = entry.file_name().to_string_lossy().to_string();
 
-                            // Skip hidden files unless -a is specified
-                            if !show_all && name.starts_with('.') {
-                                continue;
-                            }
+                        // Skip hidden files unless -a is specified
+                        if !show_all && name.starts_with('.') {
+                            continue;
+                        }
 
-                            if long_format {
-                                entry_strs.push(format_entry(&entry.path(), true));
-                            } else {
-                                entry_strs.push(name);
-                            }
+                        if long_format {
+                            entry_strs.push(format_entry(&entry.path(), true));
+                        } else {
+                            entry_strs.push(name);
                         }
                     }
 
@@ -121,7 +121,6 @@ fn format_entry(path: &Path, long_format: bool) -> String {
         Err(_) => return name,
     };
 
-    let file_type = if metadata.is_dir() { "d" } else { "-" };
     let size = metadata.len();
 
     // Simplified permissions

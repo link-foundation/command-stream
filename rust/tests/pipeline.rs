@@ -1,6 +1,6 @@
 //! Tests for the Pipeline module
 
-use command_stream::{Pipeline, PipelineExt, ProcessRunner, RunOptions};
+use command_stream::Pipeline;
 
 #[tokio::test]
 async fn test_pipeline_simple() {

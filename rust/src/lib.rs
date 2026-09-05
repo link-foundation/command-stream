@@ -229,6 +229,11 @@ pub struct ProcessRunner {
     finished: bool,
     cancelled: bool,
     output_tx: Option<mpsc::Sender<StreamChunk>>,
+    // Held, never read: dropping the receiver would close the channel, and
+    // streaming virtual commands treat a closed channel as "stop now" (see
+    // `commands::yes`, which loops until `output_tx.send` fails). Keeping it
+    // alive is what gives those commands their run-until-cancelled behaviour.
+    #[allow(dead_code)]
     output_rx: Option<mpsc::Receiver<StreamChunk>>,
 }
 
@@ -345,12 +350,10 @@ impl ProcessRunner {
             return Ok(result.clone());
         }
 
-        let mut child = self.child.take().ok_or_else(|| {
-            Error::Io(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "Process not started",
-            ))
-        })?;
+        let mut child = self
+            .child
+            .take()
+            .ok_or_else(|| Error::Io(std::io::Error::other("Process not started")))?;
 
         // Handle stdin content if provided
         if let StdinOption::Content(ref content) = self.options.stdin {

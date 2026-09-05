@@ -3,10 +3,9 @@
 //! These tests mirror the JavaScript tests in js/tests/builtin-commands.test.mjs
 
 use command_stream::commands::{
-    basename, cat, cd, cp, dirname, echo, env, exit, ls, mkdir, mv, pwd, rm, seq, sleep, test,
-    touch, which, yes, CommandContext,
+    basename, cat, cp, dirname, echo, env, exit, ls, mkdir, mv, pwd, rm, seq, sleep, test, touch,
+    which, yes, CommandContext,
 };
-use command_stream::utils::CommandResult;
 use std::fs;
 use std::path::PathBuf;
 use tempfile::TempDir;
@@ -165,6 +164,37 @@ async fn test_ls_with_a_flag() {
     assert!(result.is_success());
     assert!(result.stdout.contains(".hidden"));
     assert!(result.stdout.contains("visible.txt"));
+}
+
+#[tokio::test]
+async fn test_pwd_honors_context_cwd() {
+    let dir = TempDir::new().unwrap();
+    let expected = fs::canonicalize(dir.path()).unwrap();
+
+    let result = pwd(ctx_with_cwd(vec![], expected.clone())).await;
+    assert!(result.is_success());
+    assert_eq!(result.stdout.trim(), expected.to_string_lossy());
+}
+
+#[tokio::test]
+async fn test_ls_resolves_relative_path_against_context_cwd() {
+    let dir = TempDir::new().unwrap();
+    fs::create_dir(dir.path().join("nested")).unwrap();
+    fs::write(dir.path().join("nested/inside.txt"), "content").unwrap();
+
+    let result = ls(ctx_with_cwd(vec!["nested"], dir.path().to_path_buf())).await;
+    assert!(result.is_success());
+    assert!(result.stdout.contains("inside.txt"));
+}
+
+#[tokio::test]
+async fn test_ls_without_path_lists_context_cwd() {
+    let dir = TempDir::new().unwrap();
+    fs::write(dir.path().join("listed.txt"), "content").unwrap();
+
+    let result = ls(ctx_with_cwd(vec![], dir.path().to_path_buf())).await;
+    assert!(result.is_success());
+    assert!(result.stdout.contains("listed.txt"));
 }
 
 #[tokio::test]

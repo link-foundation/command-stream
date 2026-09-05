@@ -1,1 +1,5 @@
-cd js && npx lint-staged
+# Run from the repository root so staged files outside js/ (experiments/,
+# claude-profiles.mjs) go through the same gates as CI. lint-staged only
+# considers files under its working directory, so the previous `cd js` made the
+# hook silently skip every root-level file.
+js/node_modules/.bin/lint-staged

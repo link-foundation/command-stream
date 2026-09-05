@@ -157,7 +157,7 @@ const isBlankCell = (cell) => (cell.chars || ' ').trim() === '';
 
 const coalesceRow = (cells, options) => {
   const runs = [];
-  for (let column = 0; column < cells.length; ) {
+  for (let column = 0; column < cells.length;) {
     const cell = cells[column];
     if (cell.width === 0) {
       column += 1;
@@ -257,7 +257,7 @@ const renderFrame = (frame, options) => {
   const backgrounds = [];
   const foregrounds = [];
   rows.forEach((cells, row) => {
-    for (let column = 0; column < cells.length; ) {
+    for (let column = 0; column < cells.length;) {
       const first = cells[column];
       const background = cellStyle(first, options).bg;
       let width = Math.max(first.width, 1);

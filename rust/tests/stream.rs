@@ -1,6 +1,6 @@
 //! Tests for the streaming module
 
-use command_stream::{AsyncIterator, OutputChunk, StreamingRunner};
+use command_stream::{OutputChunk, StreamingRunner};
 
 #[tokio::test]
 async fn test_streaming_runner_basic() {

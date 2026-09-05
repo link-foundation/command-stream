@@ -1,4 +1,4 @@
-import { $ } from "../../js/src/$.mjs";
+import { $ } from '../../js/src/$.mjs';
 const v = 'price is $5 and "q"';
 const strings = Object.assign(['printf "%s\\n" "', '"'], {
   raw: ['printf "%s\\n" "', '"'],

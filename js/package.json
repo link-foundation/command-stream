@@ -32,11 +32,11 @@
     "test:sync": "cd .. && bun test js/tests/sync.test.mjs --timeout 10000",
     "test:builtin": "cd .. && bun test js/tests/builtin-commands.test.mjs --timeout 10000",
     "test:pipe": "cd .. && bun test js/tests/pipe.test.mjs --timeout 10000",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "check:duplication": "jscpd .",
+    "lint": "cd .. && js/node_modules/.bin/eslint . --max-warnings 0",
+    "lint:fix": "cd .. && js/node_modules/.bin/eslint . --fix --max-warnings 0",
+    "format": "cd .. && js/node_modules/.bin/prettier --write .",
+    "format:check": "cd .. && js/node_modules/.bin/prettier --check .",
+    "check:duplication": "jscpd src scripts",
     "check": "bun run lint && bun run format:check && bun run check:duplication",
     "build:terminal-font": "node scripts/build-terminal-font.mjs",
     "prepare": "cd .. && js/node_modules/.bin/husky || true",
@@ -70,32 +70,21 @@
     "examples/"
   ],
   "devDependencies": {
-    "@changesets/cli": "^2.29.7",
+    "@changesets/cli": "^2.31.1",
     "dejavu-fonts-ttf": "^2.37.3",
-    "eslint": "^9.38.0",
+    "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-prettier": "^5.5.4",
+    "eslint-plugin-prettier": "^5.5.6",
     "husky": "^9.1.7",
-    "jscpd": "^4.0.5",
-    "lint-staged": "^16.2.6",
-    "prettier": "^3.6.2",
-    "subset-font": "^2.5.0"
-  },
-  "lint-staged": {
-    "*.{js,mjs,cjs}": [
-      "eslint --fix --max-warnings 0 --no-warn-ignored",
-      "prettier --write",
-      "prettier --check"
-    ],
-    "*.md": [
-      "prettier --write",
-      "prettier --check"
-    ]
+    "jscpd": "^4.3.0",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.9.6",
+    "subset-font": "^2.7.0"
   },
   "dependencies": {
     "@resvg/resvg-js": "^2.6.2",
     "@xterm/headless": "^6.0.0",
     "gifenc": "^1.0.3",
-    "node-pty": "^1.2.0-beta.14"
+    "node-pty": "^1.2.0-beta.15"
   }
 }

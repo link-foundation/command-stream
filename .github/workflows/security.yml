@@ -1,0 +1,273 @@
+name: Security
+
+# Nothing in this repository read its own dependency tree for known
+# vulnerabilities, and no static analysis ran over the sources at all, so a
+# fully green build said nothing about either (issue #199). The audits below are
+# the two pipeline templates' security workflows merged, because this repository
+# ships both a JavaScript package and a Rust crate from the same tree:
+# link-foundation/js-ai-driven-development-pipeline-template and
+# link-foundation/rust-ai-driven-development-pipeline-template.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Advisories are published against code that has not changed, so a
+  # change-triggered audit alone goes stale between releases.
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+# Least-privilege default; the jobs that need more raise it themselves.
+permissions:
+  contents: read
+
+# Concurrency is per job, matching js.yml and rust.yml. Every job here is
+# read-only, so all of them are cancellable `check-*` groups.
+
+jobs:
+  codeql:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-codeql-${{ matrix.language }}
+      cancel-in-progress: true
+    permissions:
+      # Reading the workflow run is what lets CodeQL attribute results to it.
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        # `actions` analyses the workflows in this directory, which is where the
+        # findings fixed for #199 lived.
+        language: [javascript-typescript, rust, actions]
+    steps:
+      # No fresh-merge simulation here, unlike the other tree-reading jobs (see
+      # .github/scripts/simulate-fresh-merge.sh). The upload step keys the
+      # results to the commit it finds in the checkout, and GitHub rejects
+      # results for a commit it has never seen; a merge commit created on the
+      # runner is exactly that. CodeQL therefore analyses the merge preview.
+      - uses: actions/checkout@v6
+        with:
+          # Analysis reads the tree; it never pushes.
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          # All three languages here are extracted without compiling, so there
+          # is no autobuild step: asking CodeQL to build the crate would spend
+          # several minutes reproducing what the rust workflow already does.
+          build-mode: none
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v4
+
+  dependency-review:
+    name: Dependency Review
+    # Reviews the diff of a pull request; there is no diff to review on push.
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-dependency-review
+      cancel-in-progress: true
+    permissions:
+      contents: read
+      # Only used to post the summary comment below, never to push.
+      pull-requests: write
+    steps:
+      # No fresh-merge simulation here either: this job never reads the working
+      # tree. It asks the API to compare two commit SHAs, so merging the base
+      # branch into the checkout would change nothing it looks at.
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      # actions/dependency-review-action fails with "Dependency review is not
+      # supported on this repository" when the dependency graph is off, which is
+      # the state this repository is in: the graph is disabled at the
+      # organisation level and cannot be turned on from a workflow. Shipping a
+      # check that can only ever be red trains reviewers to ignore red, so probe
+      # for the feature and skip with a warning when it is missing. Any other
+      # HTTP status is still a hard failure, and the job starts reviewing by
+      # itself the moment an admin enables the graph under
+      # Settings -> Code security -> Dependency graph.
+      - name: Check whether the dependency graph is enabled
+        id: graph
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -uo pipefail
+          code="$(curl -sS -o /dev/null -w '%{http_code}' \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            "$GITHUB_API_URL/repos/$REPOSITORY/dependency-graph/compare/$BASE_SHA...$HEAD_SHA")"
+          echo "Dependency graph compare endpoint answered HTTP $code"
+          if [ "$code" = '200' ]; then
+            echo 'enabled=true' >> "$GITHUB_OUTPUT"
+          elif [ "$code" = '403' ]; then
+            echo 'enabled=false' >> "$GITHUB_OUTPUT"
+            echo "::warning::Dependency graph is disabled for $REPOSITORY, so dependency review cannot run. The npm, bun and cargo audit jobs still check the committed lockfiles. Enable the graph under Settings -> Code security to restore per-pull-request review."
+          else
+            echo "::error::Unexpected HTTP $code from the dependency-graph compare endpoint"
+            exit 1
+          fi
+
+      - name: Review dependency changes
+        if: ${{ steps.graph.outputs.enabled == 'true' }}
+        uses: actions/dependency-review-action@v5
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure
+
+  npm-audit:
+    name: Audit npm lockfile
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-npm-audit
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # The merge simulation below needs the base branch's history.
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Run the checks below against the real merge result rather than a
+      # possibly stale merge preview, and fail on a conflict here rather than at
+      # merge time. Rationale in .github/scripts/simulate-fresh-merge.sh.
+      - name: Simulate a fresh merge with the base branch
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash .github/scripts/simulate-fresh-merge.sh
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      # --package-lock-only audits what is committed, without installing it, so
+      # the result describes the lockfile a consumer would resolve rather than
+      # whatever the runner happened to fetch.
+      - name: Audit the committed package-lock.json
+        working-directory: js
+        run: npm audit --package-lock-only --audit-level=high
+
+  bun-audit:
+    name: Audit bun lockfile
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-bun-audit
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # The merge simulation below needs the base branch's history.
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Run the checks below against the real merge result rather than a
+      # possibly stale merge preview, and fail on a conflict here rather than at
+      # merge time. Rationale in .github/scripts/simulate-fresh-merge.sh.
+      - name: Simulate a fresh merge with the base branch
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash .github/scripts/simulate-fresh-merge.sh
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: latest
+
+      # bun.lock resolves versions independently of package-lock.json, so a
+      # clean npm audit does not imply a clean bun one: while fixing #199 the
+      # two lockfiles disagreed by 8 high-severity advisories.
+      - name: Audit the committed bun.lock
+        working-directory: js
+        run: bun audit --audit-level=high
+
+  cargo-audit:
+    name: Audit Cargo lockfile
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-cargo-audit
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # The merge simulation below needs the base branch's history.
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Run the checks below against the real merge result rather than a
+      # possibly stale merge preview, and fail on a conflict here rather than at
+      # merge time. Rationale in .github/scripts/simulate-fresh-merge.sh.
+      - name: Simulate a fresh merge with the base branch
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash .github/scripts/simulate-fresh-merge.sh
+
+      - uses: taiki-e/install-action@e67fa11c4b9316fa714ddf0abed07a0c3143b95b # v2.87.4
+        with:
+          tool: cargo-audit@0.22.2
+
+      - name: Audit the committed Cargo.lock
+        working-directory: rust
+        run: cargo audit --file Cargo.lock
+
+  secret-scan:
+    name: Scan for committed secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-secret-scan
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # The merge simulation below needs the base branch's history.
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Run the checks below against the real merge result rather than a
+      # possibly stale merge preview, and fail on a conflict here rather than at
+      # merge time. Rationale in .github/scripts/simulate-fresh-merge.sh.
+      - name: Simulate a fresh merge with the base branch
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash .github/scripts/simulate-fresh-merge.sh
+
+      # Nothing checked whether a credential had been committed. CodeQL does not
+      # look for them and the audit jobs only read lockfiles, so a token pasted
+      # into a script, a fixture or a case study would have reached main with a
+      # green run (issue #199, best practice #11).
+      #
+      # Reproduce locally with the same command, and see
+      # experiments/secretlint-scope.sh for the probe that shows the glob does
+      # reach dot-directories such as .github/. Files that are generated rather
+      # than authored here are listed in .secretlintignore; the rule set is in
+      # .secretlintrc.json. The versions are pinned so a new rule release cannot
+      # turn an unrelated pull request red -- bump them deliberately.
+      - name: Run secretlint over the working tree
+        run: |
+          npx --yes \
+            -p secretlint@13.0.5 \
+            -p @secretlint/secretlint-rule-preset-recommend@13.0.5 \
+            secretlint "**/*"

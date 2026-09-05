@@ -14,13 +14,12 @@
 
 import { writeFileSync } from 'fs';
 import { randomBytes } from 'crypto';
+import { loadUseM } from './use-m-loader.mjs';
 
 const PACKAGE_NAME = 'command-stream';
 
 // Load use-m dynamically
-const { use } = eval(
-  await (await fetch('https://unpkg.com/use-m/use.js')).text()
-);
+const use = await loadUseM();
 
 // Import link-foundation libraries
 const { $ } = await use('command-stream');

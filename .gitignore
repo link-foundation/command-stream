@@ -4,6 +4,11 @@ logs
 # Case-study CI evidence is committed intentionally (downloaded run logs).
 !docs/case-studies/**/ci-logs/
 !docs/case-studies/**/ci-logs/*.log
+# Per-issue investigation evidence under dev/log is committed intentionally.
+# Raw multi-megabyte run logs stay ignored; commit them gzipped (*.log.gz),
+# which git does not ignore. Small tool outputs are committed verbatim.
+!dev/log/**/analysis/
+!dev/log/**/analysis/*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

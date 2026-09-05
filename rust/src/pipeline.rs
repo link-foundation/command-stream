@@ -77,6 +77,10 @@ impl Pipeline {
     }
 
     /// Add a command to the pipeline
+    // `std::ops::Add` is not a fit for a consuming builder step, and renaming
+    // this method would break the published 0.x API and diverge from the
+    // JavaScript `.add()` it mirrors.
+    #[allow(clippy::should_implement_trait)]
     pub fn add(mut self, command: impl Into<String>) -> Self {
         self.commands.push(command.into());
         self

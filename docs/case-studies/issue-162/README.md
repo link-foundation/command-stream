@@ -114,8 +114,11 @@ passes with the fix.
 Patch release markers were added for both packages so the next merge to `main`
 has release input to consume:
 
-- [release-job-skipped-by-gate.md](../../../js/.changeset/release-job-skipped-by-gate.md)
-- [20260608_issue_162_release_job_skip.md](../../../rust/changelog.d/20260608_issue_162_release_job_skip.md)
+- `js/.changeset/release-job-skipped-by-gate.md`
+- `rust/changelog.d/20260608_issue_162_release_job_skip.md`
+
+Both files are gone from the tree: a release consumes its markers and folds them
+into the changelogs, so they are named here rather than linked.
 
 ## Template Comparison
 
