@@ -53,7 +53,7 @@ named in the issue title.**
 
 | # | Requirement (verbatim intent) | Where addressed |
 | --- | --- | --- |
-| R1 | Check for **all false positives** in CI/CD and fix them | §4.1, §4.9, §4.13, §4.17, §4.21, §4.22 |
+| R1 | Check for **all false positives** in CI/CD and fix them | §4.1, §4.9, §4.13, §4.17, §4.21, §4.22, §4.25 |
 | R2 | Check for **all false negatives** in CI/CD and fix them | §4.2, §4.3, §4.4, §4.6, §4.10, §4.11, §4.16, §4.17, §4.18, §4.19, §4.20, §4.23 |
 | R3 | Check for **all warnings** in CI/CD and fix them | §4.2, §4.3, §4.5, §4.16 |
 | R4 | Check for **all errors** in CI/CD and fix them | §4.1, §4.5, §4.12, §4.14, §4.15 |
@@ -412,6 +412,64 @@ the job now runs at `--min-confidence low`, the six carry an inline
 every `actions/checkout` in every workflow either sets
 `persist-credentials: false` or carries that suppression, and the number of
 suppressions is asserted, so a seventh cannot arrive by copy-paste.
+
+### 4.25 FALSE POSITIVE — the publish tests fail opaquely when a CDN blinks
+
+Found by running the suite twice, unchanged, during this iteration: the first
+run reported
+
+```
+(fail) reports published for a version already on npm (legit success path)
+(fail) issue #199: registry propagation lag after a clean publish is not a failure
+      Expected to contain: "published=true"
+      Received: ""
+```
+
+and the second run passed all six. The tests are subprocess integration tests:
+they spawn the real `publish-to-npm.mjs`, whose **first** statement is a
+module-scope `await fetch('https://unpkg.com/use-m/use.js')`. That await is
+outside `main()`'s `try/catch`, so an unreachable CDN kills the script during
+module initialisation — before it writes a single line to `GITHUB_OUTPUT` and
+before its first `console.log`.
+
+Two defects compound:
+
+* **The offline guard probed the wrong endpoint.** `beforeAll` ran
+  `npm view command-stream version` and treated success as "we are online".
+  npm's registry and unpkg are different services that fail independently, so a
+  reachable registry cleared the guard while the dependency the script needs at
+  startup was down. Both endpoints are probed now, and the suite skips when
+  either is unreachable — the behaviour the guard was written to provide.
+* **The failure named nothing.** With the script dead before any output,
+  every assertion degenerated to `Received: ""`, which points at the publish
+  logic rather than at the network. `assertScriptStarted()` now checks for the
+  script's first log line and, when it is absent, raises with the child's exit
+  status, stderr and `GITHUB_OUTPUT` contents, so the next occurrence is
+  diagnosable from the CI log alone.
+
+`experiments/publish-cdn-unreachable.mjs` reproduces it on demand by routing the
+fetch through a proxy on a closed port, instead of waiting for a real outage:
+
+```
+unpkg unreachable (what the opaque failure looked like):
+  exit status      null
+  reached main()   false
+  GITHUB_OUTPUT    ""
+unpkg reachable (normal run):
+  exit status      0
+  reached main()   true
+  GITHUB_OUTPUT    "published=true\npublished_version=0.9.5\nalready_published=true\n"
+```
+
+With the fix, the same unreachable-CDN run skips all six tests rather than
+failing them:
+
+```
+HTTPS_PROXY=http://127.0.0.1:1 bun test js/tests/publish-to-npm.test.mjs -> 6 pass, 0 fail
+```
+
+This is the same class as §4.14 and §4.22: a check that goes red for a reason
+the pull request did not cause teaches reviewers to ignore red.
 
 ## 5. File-by-file comparison against both templates
 

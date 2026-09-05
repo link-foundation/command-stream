@@ -37,15 +37,24 @@ const isWindows = process.platform === 'win32';
 
 let networkAvailable = !isWindows;
 
-beforeAll(() => {
+// The very first thing publish-to-npm.mjs does is
+// `await fetch('https://unpkg.com/use-m/use.js')` at module scope. That await is
+// not inside main()'s try/catch, so when the CDN is unreachable the script dies
+// during module initialisation: it never writes a line to GITHUB_OUTPUT and
+// never prints its first log. Probing only `npm view` misses this — the npm
+// registry and unpkg fail independently — and the suite then reports
+// `Expected to contain: "published=true" / Received: ""`, which names neither
+// the CDN nor the network as the cause. Both endpoints are probed.
+const USE_M_URL = 'https://unpkg.com/use-m/use.js';
+
+beforeAll(async () => {
   // Skip the probe entirely on Windows so this hook can never exceed the suite's
   // global test timeout (the per-test timeout does not apply to hooks).
   if (isWindows) {
     return;
   }
-  // The script loads use-m + command-stream from unpkg/npm at runtime and the
-  // npm-view checks hit the registry. Skip gracefully when offline. Keep the
-  // probe timeout below the suite's global --timeout so the hook never trips it.
+  // Skip gracefully when offline. Keep both probe timeouts below the suite's
+  // global --timeout so the hook never trips it.
   try {
     const probe = spawnSync('npm', ['view', 'command-stream', 'version'], {
       encoding: 'utf8',
@@ -55,7 +64,45 @@ beforeAll(() => {
   } catch {
     networkAvailable = false;
   }
+  if (!networkAvailable) {
+    return;
+  }
+  try {
+    const response = await fetch(USE_M_URL, {
+      signal: AbortSignal.timeout(8000),
+    });
+    networkAvailable = response.ok;
+  } catch {
+    networkAvailable = false;
+  }
 });
+
+/**
+ * Fail with the child's own diagnostics when the script never started.
+ *
+ * `publish-to-npm.mjs` prints "Current version to publish: ..." before it does
+ * anything else, so stdout without that line means module initialisation threw
+ * (almost always the unpkg fetch above) and every later assertion would compare
+ * against an empty string. Raising here puts the child's exit status and stderr
+ * in the failure message instead.
+ *
+ * @param {{status:number|null, stdout:string, stderr:string, output:string}} result
+ * @returns {{status:number|null, stdout:string, stderr:string, output:string}} the same result
+ */
+function assertScriptStarted(result) {
+  if (result.stdout.includes('Current version to publish:')) {
+    return result;
+  }
+  throw new Error(
+    [
+      'publish-to-npm.mjs exited before it produced any output, so it never ran.',
+      `exit status: ${result.status}`,
+      `GITHUB_OUTPUT: ${JSON.stringify(result.output)}`,
+      `stdout: ${JSON.stringify(result.stdout)}`,
+      `stderr: ${JSON.stringify(result.stderr)}`,
+    ].join('\n')
+  );
+}
 
 /**
  * Run publish-to-npm.mjs in an isolated temp package.
@@ -94,12 +141,12 @@ function runPublish({ version, publishScript }) {
   });
 
   const output = existsSync(outputFile) ? readFileSync(outputFile, 'utf8') : '';
-  return {
+  return assertScriptStarted({
     status: res.status,
     stdout: res.stdout || '',
     stderr: res.stderr || '',
     output,
-  };
+  });
 }
 
 test('does NOT report published when changeset:publish fails (exit 1)', () => {
@@ -254,12 +301,12 @@ async function runPublishAgainstRegistry({
     child.exited,
   ]);
 
-  return {
+  return assertScriptStarted({
     status,
     stdout,
     stderr,
     output: existsSync(outputFile) ? readFileSync(outputFile, 'utf8') : '',
-  };
+  });
 }
 
 // The verbatim npm output from the failed run, escaped for `node -e`.
