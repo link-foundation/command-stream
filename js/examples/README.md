@@ -158,6 +158,11 @@ The simplest examples to get started:
 - `ctrl-c-virtual-command.mjs` - Virtual command CTRL+C
 - `ctrl-c-concurrent-processes.mjs` - Multiple concurrent processes
 
+### 🔤 Quoting and Paths
+
+- `paths-with-spaces.mjs` - File paths with spaces need no manual quoting (GitHub issue #41)
+- `quote-context-bash-c.mjs` - Interpolating inside your own quotes (GitHub issue #49)
+
 ### 🔧 Syntax Comparisons
 
 **Feature Comparisons:**
