@@ -12,11 +12,13 @@ import {
 } from './$.state.mjs';
 import {
   buildShellCommand,
+  isPreQuotedPassthroughEnabled,
   isQuoteContextEnabled,
   quote,
   quoteForContext,
   quoteLiteral,
   raw,
+  setPreQuotedPassthroughEnabled,
   setQuoteContextEnabled,
 } from './$.quote.mjs';
 import {
@@ -323,6 +325,13 @@ const shell = {
   // the historical behaviour of always single-quoting interpolated values,
   // or null to follow COMMAND_STREAM_QUOTE_CONTEXT again.
   quoteContext: (enable = true) => setQuoteContextEnabled(enable),
+
+  // Legacy pre-quoted passthrough (off by default): when enabled, a value that
+  // is already wrapped in matching quotes is spliced in as shell syntax instead
+  // of being treated as literal text. Pass null to follow
+  // COMMAND_STREAM_PREQUOTED_PASSTHROUGH again.
+  preQuotedPassthrough: (enable = true) =>
+    setPreQuotedPassthroughEnabled(enable),
 };
 
 // Virtual command registration API
@@ -436,6 +445,8 @@ export {
   quoteLiteral,
   isQuoteContextEnabled,
   setQuoteContextEnabled,
+  isPreQuotedPassthroughEnabled,
+  setPreQuotedPassthroughEnabled,
   create,
   raw,
   literal,

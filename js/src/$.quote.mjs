@@ -3,8 +3,74 @@
 
 import { trace } from './$.trace.mjs';
 
+// ---------------------------------------------------------------------------
+// Pre-quoted passthrough (legacy, off by default)
+//
+// Older versions treated a value that happened to start and end with a quote
+// character as "already quoted" and spliced it into the command as shell
+// syntax, so the value `'/My Documents/x'` reached the command as
+// `/My Documents/x` - the quotes vanished. sh does the opposite: `"$var"`
+// always yields the value verbatim, quote characters included, which is also
+// what Bun's $, zx and execa do. Worse, the heuristic could hand the shell
+// unbalanced quotes: `"' ; touch pwned ; '"` was spliced in as-is and the
+// injected command ran (issue #41).
+//
+// The heuristic is therefore off by default. Set
+// COMMAND_STREAM_PREQUOTED_PASSTHROUGH=1 (or call
+// setPreQuotedPassthroughEnabled(true)) to restore it for code that relied on
+// hand-quoted values; even then only values that stay balanced are passed
+// through, so the injection above can no longer happen.
+// ---------------------------------------------------------------------------
+
+let preQuotedPassthroughEnabled = null;
+
 /**
- * Quote a value for safe shell interpolation
+ * Enable or disable the legacy pre-quoted passthrough heuristic.
+ * @param {boolean|null} enabled - true/false to force, null to follow the env
+ * @returns {boolean} The effective setting after the change
+ */
+export function setPreQuotedPassthroughEnabled(enabled) {
+  preQuotedPassthroughEnabled = enabled === null ? null : Boolean(enabled);
+  return isPreQuotedPassthroughEnabled();
+}
+
+/**
+ * Whether the legacy pre-quoted passthrough heuristic is active.
+ * @returns {boolean} true when enabled
+ */
+export function isPreQuotedPassthroughEnabled() {
+  if (preQuotedPassthroughEnabled !== null) {
+    return preQuotedPassthroughEnabled;
+  }
+  return process.env.COMMAND_STREAM_PREQUOTED_PASSTHROUGH === '1';
+}
+
+// Alphanumerics plus the punctuation a POSIX shell leaves alone; anything else
+// (spaces above all) has to be quoted.
+const SAFE_UNQUOTED_PATTERN = /^[a-zA-Z0-9_\-./=,+@:]+$/;
+
+/**
+ * Whether a value can be spliced into the command as-is under the legacy
+ * pre-quoted passthrough heuristic, i.e. it is wrapped in matching quotes and
+ * contains none of that quote character inside.
+ * @param {string} value - Raw value
+ * @returns {boolean} true when the value is balanced, quoted shell syntax
+ */
+function isBalancedQuotedValue(value) {
+  const quoteChar = value[0];
+  if ((quoteChar !== "'" && quoteChar !== '"') || value.length < 2) {
+    return false;
+  }
+  const inner = value.slice(1, -1);
+  return value.endsWith(quoteChar) && !inner.includes(quoteChar);
+}
+
+/**
+ * Quote a value for safe shell interpolation.
+ *
+ * The value is always treated as literal text - exactly one argument, spaces
+ * and quote characters included - which is what `"$var"` does in sh.
+ *
  * @param {*} value - Value to quote
  * @returns {string} Safely quoted string
  */
@@ -22,35 +88,18 @@ export function quote(value) {
     return "''";
   }
 
-  // If the value is already properly quoted and doesn't need further escaping,
-  // check if we can use it as-is or with simpler quoting
-  if (value.startsWith("'") && value.endsWith("'") && value.length >= 2) {
-    // If it's already single-quoted and doesn't contain unescaped single quotes in the middle,
-    // we can potentially use it as-is
-    const inner = value.slice(1, -1);
-    if (!inner.includes("'")) {
-      // The inner content has no single quotes, so the original quoting is fine
-      return value;
-    }
+  if (isPreQuotedPassthroughEnabled() && isBalancedQuotedValue(value)) {
+    // Legacy: the caller quoted the value themselves, so use it as shell syntax.
+    return value;
   }
 
-  if (value.startsWith('"') && value.endsWith('"') && value.length > 2) {
-    // If it's already double-quoted, wrap it in single quotes to preserve it
-    return `'${value}'`;
-  }
-
-  // Check if the string needs quoting at all
-  // Safe characters: alphanumeric, dash, underscore, dot, slash, colon, equals, comma, plus
-  // This regex matches strings that DON'T need quoting
-  const safePattern = /^[a-zA-Z0-9_\-./=,+@:]+$/;
-
-  if (safePattern.test(value)) {
+  if (SAFE_UNQUOTED_PATTERN.test(value)) {
     // The string is safe and doesn't need quoting
     return value;
   }
 
-  // Default behavior: wrap in single quotes and escape any internal single quotes
-  // This handles spaces, special shell characters, etc.
+  // Wrap in single quotes and escape any internal single quotes. This handles
+  // spaces, quote characters, and every other shell metacharacter.
   return `'${value.replace(/'/g, "'\\''")}'`;
 }
 
@@ -475,10 +524,7 @@ export function quoteLiteral(value) {
   }
 
   // Check if the string needs quoting at all
-  // Safe characters: alphanumeric, dash, underscore, dot, slash, colon, equals, comma, plus
-  const safePattern = /^[a-zA-Z0-9_\-./=,+@:]+$/;
-
-  if (safePattern.test(value)) {
+  if (SAFE_UNQUOTED_PATTERN.test(value)) {
     return value;
   }
 

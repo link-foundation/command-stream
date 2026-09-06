@@ -260,7 +260,8 @@ fn test_quote_with_single_quote() {
 
 #[test]
 fn test_quote_already_single_quoted() {
-    assert_eq!(quote("'hello'"), "'hello'");
+    // Quote characters are data, like "$var" in sh (issue #41).
+    assert_eq!(quote("'hello'"), "''\\''hello'\\'''");
 }
 
 #[test]
