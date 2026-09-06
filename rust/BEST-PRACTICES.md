@@ -137,6 +137,26 @@ assert_eq!(quote_for_context("it's", QuoteContext::Single), "it'\\''s");
 Set `COMMAND_STREAM_QUOTE_CONTEXT=0` to restore the previous behavior of always
 quoting every interpolated value.
 
+### Paths With Spaces
+
+Interpolate the path as-is. An interpolated value always becomes exactly one
+argument, so spaces and other special characters need no help from you - the
+same guarantee as `"$path"` in a shell script:
+
+```rust
+use command_stream::quote::quote;
+
+assert_eq!(
+    quote("/Users/john/My Documents/report.txt"),
+    "'/Users/john/My Documents/report.txt'"
+);
+```
+
+Never pre-quote the value: quote characters you add become part of the file
+name, exactly as `sh` would treat them. Before v0.18 a value that started and
+ended with a matching quote was spliced in as shell syntax; set
+`COMMAND_STREAM_PREQUOTED_PASSTHROUGH=1` if you still depend on that.
+
 ### When Quoting is Applied
 
 ```rust

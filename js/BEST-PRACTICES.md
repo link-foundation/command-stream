@@ -115,6 +115,34 @@ await $`bash -c "${script}"`;
 To restore the old always-quote behavior, call `shell.quoteContext(false)` or set
 `COMMAND_STREAM_QUOTE_CONTEXT=0`.
 
+### Paths With Spaces
+
+Interpolate the path as-is. An interpolated value always becomes exactly one
+argument, so spaces, apostrophes, and other special characters need no help
+from you - the same guarantee as `"$path"` in a shell script:
+
+```javascript
+const file = '/Users/john/My Documents/report.txt';
+
+await $`cat ${file}`; // one argument, spaces included
+await $`cp ${file} ${'/tmp/My Backups/'}`;
+```
+
+Never pre-quote the value. Quote characters you add become part of the file
+name, exactly as `sh` would treat them:
+
+```javascript
+// WRONG: looks for a file whose name starts and ends with a quote
+await $`cat ${"'" + file + "'"}`;
+
+// RIGHT
+await $`cat ${file}`;
+```
+
+Before v0.21 a value that started and ended with a matching quote was spliced
+in as shell syntax. Set `COMMAND_STREAM_PREQUOTED_PASSTHROUGH=1` or call
+`shell.preQuotedPassthrough(true)` if you still depend on that.
+
 ### Using raw() for Trusted Commands
 
 Only use `raw()` with trusted, hardcoded command strings:

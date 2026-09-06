@@ -222,13 +222,56 @@ await $`echo ${pathWithSpaces}`; // pathWithSpaces = "/my path/file" → echo '/
 // Special characters that trigger auto-quoting:
 // Spaces, $, ;, |, &, >, <, `, *, ?, [, ], {, }, (, ), !, #, and others
 
-// User-provided quotes are preserved
+// Quote characters inside a value are data, never shell syntax
 const quotedPath = "'/path with spaces/file'";
-await $`cat ${quotedPath}`; // → cat '/path with spaces/file' (no double-quoting!)
+await $`cat ${quotedPath}`; // → cat with the argument: '/path with spaces/file'
 
 const doubleQuoted = '"/path with spaces/file"';
-await $`cat ${doubleQuoted}`; // → cat '"/path with spaces/file"' (preserves intent)
+await $`cat ${doubleQuoted}`; // → cat with the argument: "/path with spaces/file"
 ```
+
+### Paths With Spaces
+
+An interpolated value always becomes **exactly one argument**, spaces and all —
+the same guarantee you get from `"$path"` in a shell script, and the same
+behavior as Bun's `$`, zx, and execa:
+
+```javascript
+const file = '/Users/john/My Documents/report.txt';
+
+await $`cat ${file}`; // one argument: /Users/john/My Documents/report.txt
+await $`cp ${file} ${'/tmp/My Backups/'}`; // both paths stay intact
+await $`ls -la ${'/Applications/Visual Studio Code.app'}`;
+```
+
+Do **not** pre-quote the path yourself. Quote characters you put in the value
+are literal characters of the file name, exactly as `sh` treats them:
+
+```javascript
+// ❌ looks for a file whose name literally starts and ends with a quote
+await $`cat ${`'${file}'`}`;
+
+// ✅ just interpolate the path
+await $`cat ${file}`;
+```
+
+**Opting out.** Before v0.21 a value that started and ended with a matching
+quote was spliced into the command as shell syntax instead of being quoted.
+That diverged from `sh` and could produce unrunnable commands: the value
+`"it's"` was emitted as `'"it's"'`, an unterminated string. If you depend on
+the old behavior:
+
+```javascript
+import { shell, setPreQuotedPassthroughEnabled } from 'command-stream';
+
+shell.preQuotedPassthrough(true); // or: setPreQuotedPassthroughEnabled(true)
+shell.preQuotedPassthrough(false); // back to sh-like quoting
+setPreQuotedPassthroughEnabled(null); // follow the environment again
+```
+
+Or set `COMMAND_STREAM_PREQUOTED_PASSTHROUGH=1` for a whole process. Even then
+only _balanced_ values are passed through, so a value like `"a" ; rm -rf / ; "b"`
+is still quoted rather than executed.
 
 ### Interpolating Inside Your Own Quotes
 

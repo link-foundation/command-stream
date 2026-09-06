@@ -382,12 +382,14 @@ describe('README Examples and Use Cases', () => {
       expect(testCmd2.spec.command).toBe("echo '/my path/file'");
     });
 
-    test('user-provided quotes are preserved', () => {
+    test('user-provided quotes are kept as data', () => {
       const quotedPath = "'/path with spaces/file'";
       const doubleQuoted = '"/path with spaces/file"';
 
       const testCmd1 = $({ mirror: false })`cat ${quotedPath}`;
-      expect(testCmd1.spec.command).toBe("cat '/path with spaces/file'");
+      expect(testCmd1.spec.command).toBe(
+        "cat ''\\''/path with spaces/file'\\'''"
+      );
 
       const testCmd2 = $({ mirror: false })`cat ${doubleQuoted}`;
       expect(testCmd2.spec.command).toBe('cat \'"/path with spaces/file"\'');

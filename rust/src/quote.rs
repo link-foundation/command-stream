@@ -6,10 +6,45 @@
 use std::collections::HashSet;
 use std::sync::{Mutex, OnceLock};
 
+/// Whether the legacy pre-quoted passthrough heuristic is active.
+///
+/// Older versions treated a value that happened to start and end with a quote
+/// character as "already quoted" and spliced it into the command as shell
+/// syntax, so the value `'/My Documents/x'` reached the command as
+/// `/My Documents/x` - the quotes vanished. sh does the opposite: `"$var"`
+/// always yields the value verbatim, quote characters included, which is also
+/// what Bun's $, zx and execa do. Worse, the heuristic could hand the shell
+/// unbalanced quotes, and an injected command ran (issue #41).
+///
+/// The heuristic is therefore off by default; set
+/// `COMMAND_STREAM_PREQUOTED_PASSTHROUGH=1` to restore it for code that relies
+/// on hand-quoted values. Even then only values that stay balanced are passed
+/// through, so the injection above can no longer happen.
+pub fn is_pre_quoted_passthrough_enabled() -> bool {
+    matches!(
+        std::env::var("COMMAND_STREAM_PREQUOTED_PASSTHROUGH"),
+        Ok(ref value) if value == "1"
+    )
+}
+
+/// Whether a value is wrapped in matching quotes that contain none of that
+/// quote character inside, i.e. it is balanced shell syntax on its own.
+fn is_balanced_quoted_value(value: &str) -> bool {
+    let quote_char = match value.chars().next() {
+        Some(c @ ('\'' | '"')) => c,
+        _ => return false,
+    };
+    if value.chars().count() < 2 || !value.ends_with(quote_char) {
+        return false;
+    }
+    let inner = &value[quote_char.len_utf8()..value.len() - quote_char.len_utf8()];
+    !inner.contains(quote_char)
+}
+
 /// Quote a value for safe shell usage
 ///
-/// This function quotes strings appropriately for use in shell commands,
-/// handling special characters and edge cases.
+/// The value is always treated as literal text - exactly one argument, spaces
+/// and quote characters included - which is what `"$var"` does in sh.
 ///
 /// # Examples
 ///
@@ -23,6 +58,9 @@ use std::sync::{Mutex, OnceLock};
 /// // Special characters are quoted
 /// assert_eq!(quote("hello world"), "'hello world'");
 ///
+/// // Paths with spaces stay a single argument
+/// assert_eq!(quote("/My Documents/report.txt"), "'/My Documents/report.txt'");
+///
 /// // Single quotes in strings are escaped
 /// assert_eq!(quote("it's"), "'it'\\''s'");
 ///
@@ -34,17 +72,9 @@ pub fn quote(value: &str) -> String {
         return "''".to_string();
     }
 
-    // If already properly quoted with single quotes, check if we can use as-is
-    if value.starts_with('\'') && value.ends_with('\'') && value.len() >= 2 {
-        let inner = &value[1..value.len() - 1];
-        if !inner.contains('\'') {
-            return value.to_string();
-        }
-    }
-
-    // If already double-quoted, wrap in single quotes
-    if value.starts_with('"') && value.ends_with('"') && value.len() > 2 {
-        return format!("'{}'", value);
+    // Legacy: the caller quoted the value themselves, so use it as shell syntax.
+    if is_pre_quoted_passthrough_enabled() && is_balanced_quoted_value(value) {
+        return value.to_string();
     }
 
     // Check if the string needs quoting at all
@@ -55,7 +85,7 @@ pub fn quote(value: &str) -> String {
         return value.to_string();
     }
 
-    // Default behavior: wrap in single quotes and escape any internal single quotes
+    // Wrap in single quotes and escape any internal single quotes.
     // The shell escape sequence for a single quote inside single quotes is: '\''
     // This ends the single quote, adds an escaped single quote, and starts single quotes again
     format!("'{}'", value.replace('\'', "'\\''"))
@@ -482,9 +512,51 @@ mod tests {
     }
 
     #[test]
-    fn test_quote_already_quoted() {
-        assert_eq!(quote("'already quoted'"), "'already quoted'");
+    fn test_quote_treats_quote_characters_as_data() {
+        // Quote characters inside a value are data, exactly like "$var" in sh -
+        // they never quote the value itself (issue #41).
+        assert_eq!(quote("'already quoted'"), "''\\''already quoted'\\'''");
         assert_eq!(quote("\"double quoted\""), "'\"double quoted\"'");
+        // The old "already double-quoted" shortcut emitted '"it's"', which the
+        // shell rejects as an unterminated quoted string.
+        assert_eq!(quote("\"it's\""), "'\"it'\\''s\"'");
+    }
+
+    #[test]
+    fn test_quote_paths_with_spaces() {
+        assert_eq!(
+            quote("/Users/john/My Documents/report.txt"),
+            "'/Users/john/My Documents/report.txt'"
+        );
+        assert_eq!(
+            quote("C:\\Program Files\\App\\app.exe"),
+            "'C:\\Program Files\\App\\app.exe'"
+        );
+        assert_eq!(quote("  /tmp/spaced  "), "'  /tmp/spaced  '");
+        assert_eq!(
+            quote("/tmp/it's a dir/f.txt"),
+            "'/tmp/it'\\''s a dir/f.txt'"
+        );
+    }
+
+    #[test]
+    fn test_pre_quoted_passthrough_disabled_by_default() {
+        // The opt-in is read from the environment on every call, so with the
+        // variable unset the sh-like literal behaviour must be in effect.
+        if std::env::var("COMMAND_STREAM_PREQUOTED_PASSTHROUGH").is_err() {
+            assert!(!is_pre_quoted_passthrough_enabled());
+        }
+    }
+
+    #[test]
+    fn test_balanced_quoted_value_detection() {
+        assert!(is_balanced_quoted_value("'/My Documents/f.txt'"));
+        assert!(is_balanced_quoted_value("\"/My Documents/f.txt\""));
+        // Unbalanced quoting is what made the old heuristic injectable.
+        assert!(!is_balanced_quoted_value("\"a\" ; touch pwned ; \"b\""));
+        assert!(!is_balanced_quoted_value("'a' ; touch pwned ; 'b'"));
+        assert!(!is_balanced_quoted_value("/plain/path"));
+        assert!(!is_balanced_quoted_value("'"));
     }
 
     #[test]

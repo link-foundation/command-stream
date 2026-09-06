@@ -95,7 +95,8 @@ pub use events::{EventData, EventType, StreamEmitter};
 pub use pipeline::{Pipeline, PipelineBuilder, PipelineExt};
 pub use quote::{
     escape_for_double_quotes, escape_for_single_quotes, has_shell_escapes,
-    is_quote_context_enabled, quote, quote_for_context, scan_quote_context, QuoteContext,
+    is_pre_quoted_passthrough_enabled, is_quote_context_enabled, quote, quote_for_context,
+    scan_quote_context, QuoteContext,
 };
 pub use state::{
     get_shell_settings, global_state, reset_global_state, set_shell_option, unset_shell_option,
