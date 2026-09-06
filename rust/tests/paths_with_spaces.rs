@@ -2,6 +2,11 @@
 //! as exactly one literal argument, like `"$path"` in a POSIX shell.
 //!
 //! Mirrors `js/tests/paths-with-spaces.test.mjs` (issue #41).
+//!
+//! Unix only: the assertions compare against `/bin/sh`, whose quoting rules
+//! differ from `cmd.exe`. The platform-independent part of the behaviour is
+//! covered by the unit tests in `src/quote.rs`.
+#![cfg(unix)]
 
 use command_stream::cmd;
 use command_stream::quote::quote;
@@ -25,7 +30,6 @@ const VALUES: &[&str] = &[
     "/tmp/new\nline/file.txt",
 ];
 
-#[cfg(unix)]
 fn sh_stdout(script: &str, value: Option<&str>) -> String {
     let mut command = std::process::Command::new("/bin/sh");
     command.arg("-c").arg(script);
@@ -38,14 +42,12 @@ fn sh_stdout(script: &str, value: Option<&str>) -> String {
 
 /// `printf` instead of `echo`: /bin/sh may be dash, whose `echo` expands
 /// backslash escapes and would corrupt Windows-style paths.
-#[cfg(unix)]
 const SCRIPTS: &[(&str, &str)] = &[
     ("printf '%s\\n' {}", "printf '%s\\n' \"$V\""),
     ("printf '%s\\n' {} tail", "printf '%s\\n' \"$V\" tail"),
     ("printf '[%s]\\n' {}", "printf '[%s]\\n' \"$V\""),
 ];
 
-#[cfg(unix)]
 #[test]
 fn interpolated_values_match_a_quoted_sh_variable() {
     for value in VALUES {
@@ -113,7 +115,6 @@ async fn a_pre_quoted_path_is_not_reinterpreted_as_shell_syntax() {
     assert!(result.stdout.is_empty(), "stdout: {}", result.stdout);
 }
 
-#[cfg(unix)]
 #[tokio::test]
 async fn an_interpolated_value_cannot_start_a_second_command() {
     let dir = tempfile::Builder::new()
