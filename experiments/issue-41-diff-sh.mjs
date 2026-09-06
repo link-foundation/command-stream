@@ -24,7 +24,6 @@ const values = [
 
 function shArgs(value) {
   // What a POSIX shell gives argv when you write:  prog "$var"
-  const script = 'printf "[%s]\\n" "$1"';
   return execFileSync('/bin/sh', ['-c', 'printf "[%s]\\n" "$V"'], {
     env: { ...process.env, V: value },
     encoding: 'utf8',
