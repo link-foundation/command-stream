@@ -308,15 +308,16 @@ function createStringStream(data) {
  * Pipe stream to process stdin
  * @param {ReadableStream} stream - Input stream
  * @param {object} proc - Process
+ * @returns {Promise<void>|undefined} Resolves when the pump has finished
  */
-function pipeStreamToProcess(stream, proc) {
+export function pipeStreamToProcess(stream, proc) {
   if (!stream || !proc.stdin) {
-    return;
+    return undefined;
   }
   const reader = stream.getReader();
   const writer = proc.stdin.getWriter ? proc.stdin.getWriter() : proc.stdin;
 
-  (async () => {
+  const promise = (async () => {
     try {
       while (true) {
         const { done, value } = await reader.read();
@@ -347,13 +348,25 @@ function pipeStreamToProcess(stream, proc) {
       }
     } finally {
       reader.releaseLock();
-      if (writer.close) {
-        await writer.close();
-      } else if (writer.end) {
-        writer.end();
+      // The downstream process may already have exited and closed its stdin,
+      // in which case closing the writer raises EPIPE. That is a normal
+      // pipeline race, not an error worth propagating as an unhandled
+      // rejection.
+      try {
+        if (writer.close) {
+          await writer.close();
+        } else if (writer.end) {
+          writer.end();
+        }
+      } catch (error) {
+        StreamUtils.handleStreamError(error, 'stream writer close', false);
       }
     }
   })();
+
+  return promise.catch((error) => {
+    StreamUtils.handleStreamError(error, 'stream pipe', false);
+  });
 }
 
 /**
