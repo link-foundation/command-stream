@@ -62,6 +62,7 @@ use std::time::Duration;
 use tokio::io::BufReader;
 use tokio::process::Command;
 use tokio::sync::mpsc;
+use tokio::task::JoinHandle;
 
 use crate::trace::trace_lazy;
 use crate::{CommandResult, Result};
@@ -176,8 +177,7 @@ impl StreamingRunner {
         self
     }
 
-    /// Start the process and return a stream of output chunks
-    pub fn stream(mut self) -> OutputStream {
+    fn spawn(mut self) -> (OutputStream, JoinHandle<Result<()>>) {
         let (tx, rx) = mpsc::channel(1024);
         // Unbounded so a synchronous Drop can request a kill without awaiting.
         let (kill_tx, kill_rx) = mpsc::unbounded_channel::<String>();
@@ -190,21 +190,29 @@ impl StreamingRunner {
         let grace = self.exit_pump_grace_ms;
         let kill_signal = self.kill_signal.clone();
 
-        tokio::spawn(async move {
-            if let Err(e) =
-                run_streaming_process(command, cwd, env, stdin_content, grace, tx.clone(), kill_rx)
-                    .await
-            {
-                trace_lazy("StreamingRunner", || format!("Error: {}", e));
+        let task = tokio::spawn(async move {
+            let result =
+                run_streaming_process(command, cwd, env, stdin_content, grace, tx, kill_rx).await;
+            if let Err(error) = &result {
+                trace_lazy("StreamingRunner", || format!("Error: {error}"));
             }
+            result
         });
 
-        OutputStream {
-            rx,
-            kill_tx,
-            kill_signal,
-            killed: false,
-        }
+        (
+            OutputStream {
+                rx,
+                kill_tx,
+                kill_signal,
+                killed: false,
+            },
+            task,
+        )
+    }
+
+    /// Start the process and return a stream of output chunks
+    pub fn stream(self) -> OutputStream {
+        self.spawn().0
     }
 
     /// Run to completion and collect all output
@@ -213,7 +221,7 @@ impl StreamingRunner {
         let mut stderr = Vec::new();
         let mut exit_code = 0;
 
-        let mut stream = self.stream();
+        let (mut stream, task) = self.spawn();
         while let Some(chunk) = stream.rx.recv().await {
             match chunk {
                 OutputChunk::Stdout(data) => stdout.extend(data),
@@ -221,6 +229,10 @@ impl StreamingRunner {
                 OutputChunk::Exit(code) => exit_code = code,
             }
         }
+
+        task.await.map_err(|error| {
+            std::io::Error::other(format!("streaming process task failed: {error}"))
+        })??;
 
         Ok(CommandResult {
             stdout: String::from_utf8_lossy(&stdout).to_string(),

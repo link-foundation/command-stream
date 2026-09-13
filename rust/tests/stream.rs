@@ -43,6 +43,24 @@ async fn test_streaming_runner_preserves_exact_argv() {
     );
 }
 
+/// A direct executable that cannot be spawned must not be mistaken for a
+/// successful command merely because the output channel closes without data.
+#[tokio::test]
+async fn test_streaming_collect_propagates_spawn_error() {
+    let missing = format!(
+        "command-stream-definitely-missing-{}{}",
+        std::process::id(),
+        std::env::consts::EXE_SUFFIX
+    );
+
+    let error = StreamingRunner::from_argv(missing, Vec::<String>::new())
+        .collect()
+        .await
+        .expect_err("missing executable must return an error");
+
+    assert!(error.to_string().contains("IO error"));
+}
+
 #[tokio::test]
 async fn test_output_stream_chunks() {
     let runner = StreamingRunner::new("echo chunk1 && echo chunk2");
