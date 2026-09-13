@@ -208,6 +208,79 @@ printf 'logged-in:%s\n' "$code"
 }
 
 #[test]
+fn rejects_empty_live_interactions_without_writing_input() {
+    let script = r#"
+printf 'waiting for input\n'
+IFS= read -r answer
+printf 'seen:%s\n' "$answer"
+"#;
+    let mut session = open_terminal(shell_options(script)).expect("session opens");
+    session
+        .wait_for(
+            &TerminalPattern::text("waiting for input"),
+            Duration::ZERO,
+            Some(Duration::from_secs(5)),
+        )
+        .expect("prompt arrives");
+
+    let failure = session
+        .send(&TerminalInteraction::default())
+        .expect_err("empty interaction is rejected");
+    assert!(failure.to_string().contains("invalid terminal interaction"));
+    assert!(failure.to_string().contains("text"));
+    assert!(failure.to_string().contains("after"));
+
+    session
+        .send(&TerminalInteraction {
+            text: Some("ok".into()),
+            key: Some(TerminalKey::Enter),
+            ..TerminalInteraction::default()
+        })
+        .expect("valid input is sent");
+    session
+        .wait_for(
+            &TerminalPattern::text("seen:ok"),
+            Duration::ZERO,
+            Some(Duration::from_secs(5)),
+        )
+        .expect("valid input reaches the terminal");
+    let capture = session.close().expect("session closes");
+    assert!(capture.transcript.contains("seen:ok"));
+}
+
+#[test]
+fn validates_initial_interactions_before_opening_a_terminal() {
+    let mut options = shell_options("");
+    options.file = "/command-stream/missing-executable".into();
+    options.interactions = vec![TerminalInteraction::default()];
+
+    let failure = open_terminal(options)
+        .err()
+        .expect("empty initial interaction is rejected");
+    assert!(failure.to_string().contains("invalid terminal interaction"));
+}
+
+#[test]
+fn allows_an_interaction_whose_only_purpose_is_to_wait() {
+    let mut session =
+        open_terminal(shell_options("printf 'ready\n'; sleep 1")).expect("session opens");
+    session
+        .send(&TerminalInteraction {
+            after: Some("ready".into()),
+            ..TerminalInteraction::default()
+        })
+        .expect("wait-only interaction is accepted");
+
+    let capture = session.close().expect("session closes");
+    assert!(capture.transcript.contains("ready"));
+    assert!(!capture
+        .asciicast
+        .events
+        .iter()
+        .any(|event| event.code == "i"));
+}
+
+#[test]
 fn reports_wait_for_timeouts_and_sends_after_exit() {
     let mut session = open_terminal(shell_options("printf 'bye\\n'")).expect("session opens");
     let failure = session

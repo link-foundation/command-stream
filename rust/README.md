@@ -200,7 +200,9 @@ top of the same session, so the two paths cannot drift.
 Interactions can wait for literal output with `after`, regex output with
 `after_regex`, and output quiescence with `idle_duration`. Named
 `TerminalKey` variants cover arrows, Enter, Tab, Escape, Backspace, Ctrl-C, and
-Ctrl-D; use `TerminalKey::Raw` for any other escape sequence.
+Ctrl-D; use `TerminalKey::Raw` for any other escape sequence. An interaction
+must contain at least one action or wait; an empty `TerminalInteraction` is
+rejected before the terminal is opened or input is sent.
 
 ## Features
 
