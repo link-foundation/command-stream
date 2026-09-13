@@ -1211,7 +1211,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
       // Match the library's default shell-like error contract for failures to
       // launch a direct executable. `errexit` continues to opt into rejection,
       // and programming/internal errors are never swallowed.
-      if (isProcessLaunchError(error) && !globalShellSettings.errexit) {
+      if (isProcessLaunchError(error) && !shellSettings.errexit) {
         return this.result;
       }
 
