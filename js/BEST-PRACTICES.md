@@ -149,6 +149,7 @@ variable. Backticks, dollar signs, quotes, backslashes, and newlines in the
 value are data and are not evaluated as shell syntax:
 
 ```javascript
+const outputFile = 'generated.md';
 const content = `# Generated
 
 Literal: \`code\`, $HOME, \${name}, "quotes", and C:\\Tools`;

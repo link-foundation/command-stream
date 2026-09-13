@@ -383,6 +383,7 @@ dollar signs, quotes, backslashes, and newlines are data rather than shell
 syntax:
 
 ```javascript
+const outputFile = 'generated.md';
 const content = `# Generated
 
 Literal: \`code\`, $HOME, \${name}, "quotes", and C:\\Tools`;
