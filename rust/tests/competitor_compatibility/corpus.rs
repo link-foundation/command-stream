@@ -124,6 +124,44 @@ pub const COMPETITORS: &[Competitor] = &[
         scope: &["src/*_test.rs", "tests/*.rs"],
     },
     Competitor {
+        id: "bkt",
+        project: "bkt",
+        repository: "dimo414/bkt",
+        commit: "76c4d24306bd9679ebc6cbacfdb9934ec9ba3be5",
+        license: "MIT",
+        stars: 358,
+        source_files: 3,
+        registration_sites: 48,
+        scope: &["src/lib.rs", "tests/*.rs"],
+    },
+    Competitor {
+        id: "rust-shell",
+        project: "rust-shell",
+        repository: "google/rust-shell",
+        commit: "8b1e775b09c133c9bfbfbb9be2e3a2b2f4219682",
+        license: "Apache-2.0",
+        stars: 224,
+        source_files: 4,
+        registration_sites: 11,
+        scope: &[
+            "src/command.rs",
+            "src/result.rs",
+            "src/shell_command.rs",
+            "tests/shell_tests.rs",
+        ],
+    },
+    Competitor {
+        id: "shellfn",
+        project: "shellfn",
+        repository: "synek317/shellfn",
+        commit: "d8e2f39ab6633b388b0f9b47ea62c95dc7ee78ca",
+        license: "MIT",
+        stars: 220,
+        source_files: 1,
+        registration_sites: 72,
+        scope: &["tests/tests.rs"],
+    },
+    Competitor {
         id: "rexpect",
         project: "rexpect",
         repository: "rust-cli/rexpect",
@@ -149,6 +187,7 @@ pub const PORTED_CASES: &[CorpusEntry] = &[
             "subprocess",
             "rust-cmd-lib",
             "run-script",
+            "bkt",
         ],
         upstream: &[
             "library/std/src/process/tests.rs",
@@ -168,6 +207,7 @@ pub const PORTED_CASES: &[CorpusEntry] = &[
             "subprocess",
             "rust-cmd-lib",
             "run-script",
+            "bkt",
         ],
         upstream: &[
             "tests/ui/process/process-spawn-with-unicode-params.rs",
@@ -191,6 +231,7 @@ pub const PORTED_CASES: &[CorpusEntry] = &[
             "xshell",
             "subprocess",
             "run-script",
+            "bkt",
         ],
         upstream: &["tests/std.rs", "src/test.rs", "tests/it/main.rs"],
     },
@@ -206,6 +247,8 @@ pub const PORTED_CASES: &[CorpusEntry] = &[
             "subprocess",
             "rust-cmd-lib",
             "run-script",
+            "bkt",
+            "shellfn",
         ],
         upstream: &[
             "tests/ui/process/process-envs.rs",
@@ -225,9 +268,19 @@ pub const PORTED_CASES: &[CorpusEntry] = &[
             "subprocess",
             "rust-cmd-lib",
             "run-script",
+            "bkt",
+            "rust-shell",
+            "shellfn",
             "rexpect",
         ],
-        upstream: &["tests/std.rs", "src/test.rs", "src/tests/communicate.rs"],
+        upstream: &[
+            "tests/std.rs",
+            "src/test.rs",
+            "src/tests/communicate.rs",
+            "tests/cli.rs",
+            "tests/shell_tests.rs",
+            "tests/tests.rs",
+        ],
     },
     CorpusEntry {
         id: "newline-preservation",
@@ -237,6 +290,8 @@ pub const PORTED_CASES: &[CorpusEntry] = &[
             "duct",
             "xshell",
             "subprocess",
+            "bkt",
+            "shellfn",
         ],
         upstream: &["tests/std.rs", "src/test.rs", "tests/assert.rs"],
     },
@@ -247,6 +302,8 @@ pub const PORTED_CASES: &[CorpusEntry] = &[
             "async-process",
             "assert-cmd",
             "subprocess",
+            "bkt",
+            "shellfn",
         ],
         upstream: &[
             "tests/ui/process/process-spawn-with-unicode-params.rs",
@@ -261,6 +318,7 @@ pub const PORTED_CASES: &[CorpusEntry] = &[
             "duct",
             "xshell",
             "subprocess",
+            "bkt",
         ],
         upstream: &[
             "tokio/tests/process_smoke.rs",
@@ -280,6 +338,9 @@ pub const PORTED_CASES: &[CorpusEntry] = &[
             "subprocess",
             "rust-cmd-lib",
             "run-script",
+            "bkt",
+            "rust-shell",
+            "shellfn",
             "rexpect",
         ],
         upstream: &[
@@ -306,7 +367,13 @@ pub const PORTED_CASES: &[CorpusEntry] = &[
     },
     CorpusEntry {
         id: "lazy-execution",
-        competitors: &["tokio-process", "async-process", "duct", "subprocess"],
+        competitors: &[
+            "tokio-process",
+            "async-process",
+            "duct",
+            "subprocess",
+            "bkt",
+        ],
         upstream: &[
             "tokio/tests/process_smoke.rs",
             "tests/std.rs",
@@ -324,7 +391,13 @@ pub const PORTED_CASES: &[CorpusEntry] = &[
     },
     CorpusEntry {
         id: "streamed-before-exit",
-        competitors: &["tokio-process", "async-process", "subprocess", "rexpect"],
+        competitors: &[
+            "tokio-process",
+            "async-process",
+            "subprocess",
+            "bkt",
+            "rexpect",
+        ],
         upstream: &[
             "tokio/tests/process_smoke.rs",
             "tests/std.rs",
@@ -341,6 +414,9 @@ pub const PORTED_CASES: &[CorpusEntry] = &[
             "subprocess",
             "rust-cmd-lib",
             "run-script",
+            "bkt",
+            "rust-shell",
+            "shellfn",
             "rexpect",
         ],
         upstream: &[
@@ -366,6 +442,8 @@ pub const PORTED_CASES: &[CorpusEntry] = &[
             "subprocess",
             "rust-cmd-lib",
             "run-script",
+            "rust-shell",
+            "shellfn",
             "rexpect",
         ],
         upstream: &[
@@ -381,6 +459,8 @@ pub const PORTED_CASES: &[CorpusEntry] = &[
             "async-process",
             "duct",
             "subprocess",
+            "bkt",
+            "rust-shell",
             "rexpect",
         ],
         upstream: &[
@@ -489,8 +569,23 @@ pub const MISSING_FEATURES: &[CorpusEntry] = &[
     },
     CorpusEntry {
         id: "shell-expression-composition-and-redirection",
-        competitors: &["duct", "xshell", "rust-cmd-lib"],
-        upstream: &["src/test.rs", "tests/it/main.rs", "tests/run_test.rs"],
+        competitors: &["duct", "xshell", "rust-cmd-lib", "rust-shell"],
+        upstream: &[
+            "src/test.rs",
+            "tests/it/main.rs",
+            "tests/run_test.rs",
+            "src/command.rs",
+        ],
+    },
+    CorpusEntry {
+        id: "subprocess-result-caching",
+        competitors: &["bkt"],
+        upstream: &["src/lib.rs", "tests/cli.rs", "tests/cwd.rs"],
+    },
+    CorpusEntry {
+        id: "typed-script-return-adapters",
+        competitors: &["shellfn"],
+        upstream: &["tests/tests.rs"],
     },
 ];
 

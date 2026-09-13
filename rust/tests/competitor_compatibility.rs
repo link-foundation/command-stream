@@ -15,20 +15,20 @@ use std::collections::HashSet;
 #[test]
 fn inventory_is_unique_and_pinned_to_immutable_commits() {
     assert_eq!(SNAPSHOT_DATE.len(), 10);
-    assert_eq!(COMPETITORS.len(), 10);
+    assert_eq!(COMPETITORS.len(), 13);
     assert_eq!(
         COMPETITORS
             .iter()
             .map(|item| item.source_files)
             .sum::<u32>(),
-        81
+        89
     );
     assert_eq!(
         COMPETITORS
             .iter()
             .map(|item| item.registration_sites)
             .sum::<u32>(),
-        485
+        616
     );
 
     let mut ids = HashSet::new();
@@ -81,7 +81,7 @@ fn every_selected_project_and_case_is_accounted_for() {
             .collect::<HashSet<_>>(),
         BEHAVIOR_CASE_IDS.iter().copied().collect::<HashSet<_>>()
     );
-    assert_eq!(MISSING_FEATURES.len(), 10);
+    assert_eq!(MISSING_FEATURES.len(), 12);
     assert_eq!(EXCLUDED_TEST_CLASSES.len(), 5);
     for class in EXCLUDED_TEST_CLASSES {
         assert!(!class.id.is_empty());

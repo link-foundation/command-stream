@@ -10,17 +10,19 @@ The JavaScript implementation has an independent
 
 ## Selection rule
 
-The corpus includes open-source Rust crates whose main product, or a distinct
-part of it, executes arbitrary child processes. A project is included when it
-had at least 100 GitHub stars on 2026-09-13. Rust's native `std::process` is
-included regardless of popularity because every higher-level crate builds on
-its contract.
+The corpus includes open-source Rust library crates whose main public product
+executes arbitrary child processes. A project is included when it had at least
+100 GitHub stars on 2026-09-13; an archived repository remains relevant when
+its released library still defines a competing contract. Native process
+primitives from Rust's standard library and general-purpose async runtimes are
+also included because higher-level crates build on those contracts.
 
 Process-group wrappers without a general execution API, shell tokenizers,
-terminal emulators, task orchestrators, and crates that only generate command
-lines are outside this definition. The lower star threshold than the
-JavaScript corpus reflects the smaller Rust process-library ecosystem while
-keeping “top open-source projects” reproducible instead of open-ended.
+terminal emulators, standalone command-line tools, task orchestrators, and
+crates that only generate command lines are outside this definition. The lower
+star threshold than the JavaScript corpus reflects the smaller Rust
+process-library ecosystem while keeping “top open-source projects”
+reproducible instead of open-ended.
 
 ## Pinned upstream inventory
 
@@ -41,9 +43,12 @@ UI tests are counted by scoped source file because each file is a harness unit.
 | subprocess          | `e8cd8d0c930a790ce29373a8c3ee080dd746b9eb` | `src/tests/**/*.rs`, `tests/*.rs`                        |     9 |           206 |
 | rust_cmd_lib        | `5a87af574a694fbfd0d4ade0c9b3dadc7cd463f6` | `tests/*.rs`                                             |     1 |            27 |
 | run_script          | `a79fdf0e15afca84681e5cf104bc080ceec60954` | `src/*_test.rs`, `tests/*.rs`                            |     7 |            45 |
+| bkt                 | `76c4d24306bd9679ebc6cbacfdb9934ec9ba3be5` | `src/lib.rs`, `tests/*.rs`                               |     3 |            48 |
+| rust-shell          | `8b1e775b09c133c9bfbfbb9be2e3a2b2f4219682` | test modules in `src/*.rs`, `tests/shell_tests.rs`       |     4 |            11 |
+| shellfn             | `d8e2f39ab6633b388b0f9b47ea62c95dc7ee78ca` | `tests/tests.rs`                                         |     1 |            72 |
 | rexpect             | `4c6a13d3d2c79cd63c8b12821530ec015b34fc71` | test modules in `src/{process,reader,session}.rs`        |     3 |            23 |
 
-The snapshot covers 81 source files and 485 statically discoverable test
+The snapshot covers 89 source files and 616 statically discoverable test
 registrations.
 
 ## What 100% accounting means
@@ -66,7 +71,7 @@ Windows; the POSIX shell interpolation invariant is gated to POSIX targets.
 No missing feature was introduced merely to satisfy an upstream test.
 
 The corpus integrity tests pin all commits, enforce unique project and case
-identifiers, require provenance for every disposition, and ensure all ten
+identifiers, require provenance for every disposition, and ensure all thirteen
 selected projects are represented.
 
 ## Executable behavior ports
@@ -158,10 +163,22 @@ open-ended expect session API.
 
 ### shell-expression-composition-and-redirection
 
-duct, xshell, and rust_cmd_lib compose expressions, redirections, or checked
-pipelines through their own typed or macro APIs. command-stream supports shell
-strings and a pipeline builder but not those competitor-specific composition
-models.
+duct, xshell, rust_cmd_lib, and rust-shell compose expressions, redirections,
+or checked pipelines through their own typed or macro APIs. command-stream
+supports shell strings and a pipeline builder but not those competitor-specific
+composition models.
+
+### subprocess-result-caching
+
+bkt persists subprocess output and status, keys entries from command state,
+and supports expiry, stale refresh, and cache invalidation. command-stream
+executes every invocation and has no result-cache policy.
+
+### typed-script-return-adapters
+
+shellfn turns scripts into typed Rust functions, maps arguments through the
+environment, and parses output into declared return types. command-stream
+returns a process result and leaves domain-specific parsing to the caller.
 
 ## Inapplicable upstream test classes
 
