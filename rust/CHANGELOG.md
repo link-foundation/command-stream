@@ -157,6 +157,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [0.18.1] - 2026-09-13
+
+### Fixed
+
+- Reject terminal interactions that contain neither an action nor a wait
+  before opening a PTY or sending live input.
+
 ## [0.18.0] - 2026-09-06
 
 ### Fixed
