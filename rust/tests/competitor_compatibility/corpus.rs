@@ -549,6 +549,11 @@ pub const MISSING_FEATURES: &[CorpusEntry] = &[
         ],
     },
     CorpusEntry {
+        id: "max-buffer-policy",
+        competitors: &["subprocess"],
+        upstream: &["src/tests/communicate.rs"],
+    },
+    CorpusEntry {
         id: "timeout-option",
         competitors: &["assert-cmd", "xshell", "run-script", "rexpect", "expectrl"],
         upstream: &["tests/assert.rs", "tests/it/timeout.rs", "src/session.rs"],
@@ -613,7 +618,7 @@ pub const MISSING_FEATURES: &[CorpusEntry] = &[
 pub const EXCLUDED_TEST_CLASSES: &[ExcludedClass] = &[
     ExcludedClass {
         id: "competitor-api-shape",
-        reason: "Competitor constructors, traits, macros, types, and private return objects do not describe command-stream behavior.",
+        reason: "Pure constructor, trait, macro, and type-surface checks do not describe command-stream behavior; observable process results are classified by behavior instead.",
     },
     ExcludedClass {
         id: "competitor-internals",

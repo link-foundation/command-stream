@@ -71,6 +71,11 @@ Bun, or zx exists. Instead, every scoped test belongs to exactly one disposition
 3. A test is inapplicable because it verifies competitor API shape, private
    internals, unrelated utilities, runtime behavior, or harness mechanics.
 
+The API-shape exclusion applies only to names, types, and call surfaces. If a
+test observes child output, status, errors, environment, working directory, or
+lifecycle, that process behavior is ported or recorded as missing even when the
+competitor exposes it through a custom result object.
+
 The port uses a tiny cross-platform child fixture and command-stream's public
 API. Assertions are executable and fail on behavioral regressions; there are no
 conceptual always-passing assertions. Similar parameterized upstream cases are
@@ -108,6 +113,7 @@ summary-level assertion.
 | `concurrent-execution`        | Concurrent children keep their results isolated.                                                 |
 | `streamed-before-exit`        | Output events arrive before a delayed child exits.                                               |
 | `events-and-await`            | Events and the awaited result observe identical bytes.                                           |
+| `bound-options`               | Options bound to a tagged command apply when the command executes.                               |
 | `sync-execution`              | Synchronous direct execution preserves exact argv.                                               |
 | `programmatic-pipeline`       | Source stdout becomes destination stdin.                                                         |
 | `spawn-error-result`          | Sync and async unavailable executables produce results instead of uncaught errors.               |
@@ -230,6 +236,12 @@ Execa, Dax, and nano-spawn accept iterable, web-stream, or richer Node stream
 inputs as options. command-stream options accept string, Buffer, inherit,
 ignore, or an interactively accessed stdin pipe.
 
+### layered-bound-option-merging
+
+Execa can bind several option layers and merge selected nested fields while
+letting invocation-level values override defaults. command-stream supports one
+bound tagged-template option object but not layered or per-invocation merging.
+
 ### url-working-directory
 
 Execa and Dax accept a file URL as `cwd`. command-stream currently guarantees a
@@ -238,8 +250,8 @@ directory.
 
 ## Inapplicable upstream test classes
 
-- **Competitor API shape:** competitor constructors, exports, TypeScript types,
-  snapshots, and return-object names.
+- **Competitor API shape:** pure constructor, export, TypeScript, and return-type
+  surface checks that do not assert an observable child-process result.
 - **Competitor internals:** private parsers, mocks, logging internals, error
   subclasses, and implementation-specific call order.
 - **Runtime-only behavior:** Bun and Deno conformance unrelated to starting or

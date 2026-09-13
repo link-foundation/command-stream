@@ -204,6 +204,13 @@ describe('competitor corpus integrity', () => {
     expect(decisions.map(({ id }) => id).sort()).toEqual(
       [...manifestDecisions.keys()].sort()
     );
+    expect(
+      decisions.filter(
+        ({ disposition }) =>
+          disposition.kind === 'inapplicable' &&
+          disposition.id === 'competitor-api-shape'
+      )
+    ).toHaveLength(70);
     for (const { id, disposition } of decisions) {
       expect(disposition).toEqual(manifestDecisions.get(id));
     }
@@ -221,6 +228,16 @@ describe('competitor corpus integrity', () => {
       kind: 'missing',
       id: 'cross-platform-inline-environment-syntax',
     });
+    expect(
+      manifestDecisions.get(
+        'cross-spawn:test/index.test.js:377:13:registration'
+      )
+    ).toEqual({ kind: 'ported', id: 'spawn-error-result' });
+    expect(
+      manifestDecisions.get(
+        'cross-spawn:test/index.test.js:387:13:registration'
+      )
+    ).toEqual({ kind: 'ported', id: 'spawn-error-result' });
   });
 
   test('accounts for every selected project and every ported case', () => {
@@ -574,6 +591,23 @@ describe('ported public process behavior', () => {
         stdout: result.stdout,
         stderr: result.stderr,
       });
+    }
+  );
+
+  port(
+    'bound-options',
+    'applies options bound to a tagged command',
+    async () => {
+      const variable = 'COMMAND_STREAM_BOUND_OPTION';
+      const bound = $({
+        capture: true,
+        env: { ...process.env, [variable]: 'bound-value' },
+        mirror: false,
+      });
+      const result =
+        await bound`${process.execPath} ${fixturePath} env ${variable}`;
+
+      expect(JSON.parse(result.stdout)).toEqual({ [variable]: 'bound-value' });
     }
   );
 

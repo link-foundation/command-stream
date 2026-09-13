@@ -422,6 +422,11 @@ export const portedCases = [
     ],
   },
   {
+    id: 'bound-options',
+    competitors: ['execa'],
+    upstream: ['test/methods/bind.js'],
+  },
+  {
     id: 'sync-execution',
     competitors: [
       'node-child-process',
@@ -544,6 +549,7 @@ export const missingFeatures = [
     id: 'iterable-and-stream-input-options',
     competitors: ['execa', 'dax', 'nano-spawn'],
   },
+  { id: 'layered-bound-option-merging', competitors: ['execa'] },
   { id: 'url-working-directory', competitors: ['execa', 'dax'] },
 ];
 
@@ -551,7 +557,7 @@ export const excludedTestClasses = [
   {
     id: 'competitor-api-shape',
     reason:
-      'Constructor names, exports, TypeScript types, snapshots, and competitor-specific return objects do not describe command-stream behavior.',
+      'Pure constructor, export, TypeScript, and return-type surface checks do not describe command-stream behavior; observable process results are classified by behavior instead.',
   },
   {
     id: 'competitor-internals',

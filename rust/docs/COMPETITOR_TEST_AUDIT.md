@@ -76,6 +76,11 @@ Instead, every scoped test belongs to one disposition:
 3. A test verifies competitor API shape, private internals, unrelated helpers,
    upstream runtime behavior, or harness mechanics and is inapplicable.
 
+The API-shape exclusion applies only to names, types, and call surfaces. If a
+test observes child output, status, errors, environment, working directory, or
+lifecycle, that process behavior is ported or recorded as missing even when the
+competitor exposes it through a custom result object.
+
 Similar upstream cases are collapsed into one local table or invariant while
 retaining representative edge values. The local suite compiles a tiny
 standard-library child fixture, then invokes it only through public
@@ -152,6 +157,11 @@ The lower-level competitors accept null, inherited, piped, file-backed, and
 caller-supplied standard I/O handles. command-stream exposes fixed policies and
 does not accept arbitrary handles.
 
+### max-buffer-policy
+
+subprocess can cap captured output independently and report overflows.
+command-stream currently captures without a configurable maximum-buffer policy.
+
 ### timeout-option
 
 assert_cmd, xshell, run_script, rexpect, and expectrl expose deadlines in their
@@ -196,8 +206,8 @@ returns a process result and leaves domain-specific parsing to the caller.
 
 ## Inapplicable upstream test classes
 
-- **Competitor API shape:** constructors, traits, macros, types, snapshots, and
-  competitor-specific result objects.
+- **Competitor API shape:** pure constructor, trait, macro, type, and formatting
+  surface checks that do not assert an observable child-process result.
 - **Competitor internals:** private executors, parsers, async reactors, mocks,
   and implementation-only errors.
 - **Upstream runtime regressions:** compiler, standard-library, Tokio, and

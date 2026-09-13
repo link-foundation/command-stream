@@ -194,9 +194,51 @@ fn every_generated_disposition_has_an_explicit_reviewed_decision() {
     assert_eq!(decisions.len(), 770);
     assert_eq!(decisions, manifest);
     assert_eq!(
+        decisions
+            .values()
+            .filter(|disposition| {
+                **disposition
+                    == serde_json::json!({
+                        "kind": "inapplicable",
+                        "id": "competitor-api-shape"
+                    })
+            })
+            .count(),
+        15,
+        "portable behavior must not drift back into the API-shape bucket"
+    );
+    assert_eq!(
         decisions["rust-std-process:library/std/src/process/tests.rs:429:1:registration"],
         serde_json::json!({ "kind": "ported", "id": "environment" })
     );
+    for (id, expected) in [
+        (
+            "async-process:tests/std.rs:9:1:registration",
+            serde_json::json!({ "kind": "ported", "id": "direct-exact-argv" }),
+        ),
+        (
+            "async-process:tests/std.rs:42:1:registration",
+            serde_json::json!({ "kind": "ported", "id": "spawn-error-propagation" }),
+        ),
+        (
+            "duct:src/test.rs:70:1:registration",
+            serde_json::json!({ "kind": "ported", "id": "direct-exact-argv" }),
+        ),
+        (
+            "subprocess:src/tests/communicate.rs:26:1:registration",
+            serde_json::json!({ "kind": "ported", "id": "stdout-stderr-separation" }),
+        ),
+        (
+            "shellfn:tests/tests.rs:361:1:registration",
+            serde_json::json!({ "kind": "missing", "id": "typed-script-return-adapters" }),
+        ),
+        (
+            "rexpect:src/reader.rs:339:1:registration",
+            serde_json::json!({ "kind": "missing", "id": "expect-and-pty-session" }),
+        ),
+    ] {
+        assert_eq!(decisions[id], expected, "portable decision regressed: {id}");
+    }
 }
 
 #[test]
@@ -230,7 +272,7 @@ fn every_selected_project_and_case_is_accounted_for() {
             .collect::<HashSet<_>>(),
         BEHAVIOR_CASE_IDS.iter().copied().collect::<HashSet<_>>()
     );
-    assert_eq!(MISSING_FEATURES.len(), 12);
+    assert_eq!(MISSING_FEATURES.len(), 13);
     assert_eq!(EXCLUDED_TEST_CLASSES.len(), 5);
     for class in EXCLUDED_TEST_CLASSES {
         assert!(!class.id.is_empty());
