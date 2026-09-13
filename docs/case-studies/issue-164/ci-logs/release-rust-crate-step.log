@@ -1,0 +1,640 @@
+﻿2026-06-08T20:23:54.4405378Z Current runner version: '2.334.0'
+2026-06-08T20:23:54.4444536Z ##[group]Runner Image Provisioner
+2026-06-08T20:23:54.4446014Z Hosted Compute Agent
+2026-06-08T20:23:54.4447025Z Version: 20260520.533
+2026-06-08T20:23:54.4448290Z Commit: 189110e25284a9812c124fd27b339e2fb4f2f9db
+2026-06-08T20:23:54.4449706Z Build Date: 2026-05-20T17:44:04Z
+2026-06-08T20:23:54.4451083Z Worker ID: {7283fe08-cc80-4ca7-bc7b-382d71ea581e}
+2026-06-08T20:23:54.4452514Z Azure Region: northcentralus
+2026-06-08T20:23:54.4453566Z ##[endgroup]
+2026-06-08T20:23:54.4456373Z ##[group]Operating System
+2026-06-08T20:23:54.4457584Z Ubuntu
+2026-06-08T20:23:54.4458674Z 24.04.4
+2026-06-08T20:23:54.4459673Z LTS
+2026-06-08T20:23:54.4460608Z ##[endgroup]
+2026-06-08T20:23:54.4461701Z ##[group]Runner Image
+2026-06-08T20:23:54.4462866Z Image: ubuntu-24.04
+2026-06-08T20:23:54.4463970Z Version: 20260525.161.1
+2026-06-08T20:23:54.4466570Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260525.161/images/ubuntu/Ubuntu2404-Readme.md
+2026-06-08T20:23:54.4469586Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260525.161
+2026-06-08T20:23:54.4471423Z ##[endgroup]
+2026-06-08T20:23:54.4473489Z ##[group]GITHUB_TOKEN Permissions
+2026-06-08T20:23:54.4476852Z Contents: write
+2026-06-08T20:23:54.4478083Z Metadata: read
+2026-06-08T20:23:54.4479214Z ##[endgroup]
+2026-06-08T20:23:54.4482068Z Secret source: Actions
+2026-06-08T20:23:54.4483924Z Prepare workflow directory
+2026-06-08T20:23:54.5277375Z Prepare all required actions
+2026-06-08T20:23:54.5335035Z Getting action download info
+2026-06-08T20:23:54.9078990Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+2026-06-08T20:23:55.0301247Z Download action repository 'dtolnay/rust-toolchain@stable' (SHA:29eef336d9b2848a0b548edc03f92a220660cdb8)
+2026-06-08T20:23:55.3529121Z Complete job name: Release Rust crate
+2026-06-08T20:23:55.4306194Z ##[group]Run actions/checkout@v4
+2026-06-08T20:23:55.4307216Z with:
+2026-06-08T20:23:55.4307728Z   fetch-depth: 0
+2026-06-08T20:23:55.4308290Z   repository: link-foundation/command-stream
+2026-06-08T20:23:55.4313321Z   token: ***
+2026-06-08T20:23:55.4313815Z   ssh-strict: true
+2026-06-08T20:23:55.4314510Z   ssh-user: git
+2026-06-08T20:23:55.4315049Z   persist-credentials: true
+2026-06-08T20:23:55.4315608Z   clean: true
+2026-06-08T20:23:55.4316110Z   sparse-checkout-cone-mode: true
+2026-06-08T20:23:55.4316714Z   fetch-tags: false
+2026-06-08T20:23:55.4317226Z   show-progress: true
+2026-06-08T20:23:55.4317754Z   lfs: false
+2026-06-08T20:23:55.4318220Z   submodules: false
+2026-06-08T20:23:55.4318727Z   set-safe-directory: true
+2026-06-08T20:23:55.4319531Z env:
+2026-06-08T20:23:55.4320019Z   CARGO_TERM_COLOR: always
+2026-06-08T20:23:55.4320772Z   CARGO_REGISTRY_TOKEN: ***
+2026-06-08T20:23:55.4321419Z   CARGO_TOKEN: ***
+2026-06-08T20:23:55.4321906Z ##[endgroup]
+2026-06-08T20:23:55.5503685Z Syncing repository: link-foundation/command-stream
+2026-06-08T20:23:55.5506465Z ##[group]Getting Git version info
+2026-06-08T20:23:55.5507443Z Working directory is '/home/runner/work/command-stream/command-stream'
+2026-06-08T20:23:55.5508671Z [command]/usr/bin/git version
+2026-06-08T20:23:55.5581680Z git version 2.54.0
+2026-06-08T20:23:55.5609902Z ##[endgroup]
+2026-06-08T20:23:55.5633825Z Temporarily overriding HOME='/home/runner/work/_temp/cc60aa35-9b34-4c61-92a7-d312abf037c9' before making global git config changes
+2026-06-08T20:23:55.5635796Z Adding repository directory to the temporary git global config as a safe directory
+2026-06-08T20:23:55.5640524Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/command-stream/command-stream
+2026-06-08T20:23:55.5689419Z Deleting the contents of '/home/runner/work/command-stream/command-stream'
+2026-06-08T20:23:55.5693252Z ##[group]Initializing the repository
+2026-06-08T20:23:55.5698191Z [command]/usr/bin/git init /home/runner/work/command-stream/command-stream
+2026-06-08T20:23:55.5796539Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-06-08T20:23:55.5798659Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-06-08T20:23:55.5800589Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-06-08T20:23:55.5802085Z hint: call:
+2026-06-08T20:23:55.5802797Z hint:
+2026-06-08T20:23:55.5803414Z hint: 	git config --global init.defaultBranch <name>
+2026-06-08T20:23:55.5804097Z hint:
+2026-06-08T20:23:55.5805283Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-06-08T20:23:55.5806367Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-06-08T20:23:55.5807183Z hint:
+2026-06-08T20:23:55.5807836Z hint: 	git branch -m <name>
+2026-06-08T20:23:55.5808715Z hint:
+2026-06-08T20:23:55.5809465Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-06-08T20:23:55.5810755Z Initialized empty Git repository in /home/runner/work/command-stream/command-stream/.git/
+2026-06-08T20:23:55.5815378Z [command]/usr/bin/git remote add origin https://github.com/link-foundation/command-stream
+2026-06-08T20:23:55.5860360Z ##[endgroup]
+2026-06-08T20:23:55.5861283Z ##[group]Disabling automatic garbage collection
+2026-06-08T20:23:55.5864957Z [command]/usr/bin/git config --local gc.auto 0
+2026-06-08T20:23:55.5896210Z ##[endgroup]
+2026-06-08T20:23:55.5897052Z ##[group]Setting up auth
+2026-06-08T20:23:55.5903349Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-06-08T20:23:55.5939833Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-06-08T20:23:55.6309412Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-06-08T20:23:55.6343427Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-06-08T20:23:55.6575125Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-06-08T20:23:55.6612821Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-06-08T20:23:55.6850400Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-06-08T20:23:55.6887528Z ##[endgroup]
+2026-06-08T20:23:55.6889207Z ##[group]Fetching the repository
+2026-06-08T20:23:55.6898716Z [command]/usr/bin/git -c protocol.version=2 fetch --prune --no-recurse-submodules origin +refs/heads/*:refs/remotes/origin/* +refs/tags/*:refs/tags/*
+2026-06-08T20:23:57.5920811Z From https://github.com/link-foundation/command-stream
+2026-06-08T20:23:57.5922986Z  * [new branch]      issue-1-03052bff       -> origin/issue-1-03052bff
+2026-06-08T20:23:57.5923593Z  * [new branch]      issue-1-7de9505b       -> origin/issue-1-7de9505b
+2026-06-08T20:23:57.5924198Z  * [new branch]      issue-135-5b3a55f7db0e -> origin/issue-135-5b3a55f7db0e
+2026-06-08T20:23:57.5925562Z  * [new branch]      issue-136-c2c75f0016c4 -> origin/issue-136-c2c75f0016c4
+2026-06-08T20:23:57.5926592Z  * [new branch]      issue-139-34f447966ab4 -> origin/issue-139-34f447966ab4
+2026-06-08T20:23:57.5927419Z  * [new branch]      issue-14-427a6e27      -> origin/issue-14-427a6e27
+2026-06-08T20:23:57.5928010Z  * [new branch]      issue-14-47a807dc      -> origin/issue-14-47a807dc
+2026-06-08T20:23:57.5928569Z  * [new branch]      issue-141-392e7fb32761 -> origin/issue-141-392e7fb32761
+2026-06-08T20:23:57.5929150Z  * [new branch]      issue-142-d79c313dc0de -> origin/issue-142-d79c313dc0de
+2026-06-08T20:23:57.5929743Z  * [new branch]      issue-144-4375266b4889 -> origin/issue-144-4375266b4889
+2026-06-08T20:23:57.5930351Z  * [new branch]      issue-146-f111406088b3 -> origin/issue-146-f111406088b3
+2026-06-08T20:23:57.5930908Z  * [new branch]      issue-149-feab21d6ff91 -> origin/issue-149-feab21d6ff91
+2026-06-08T20:23:57.5931828Z  * [new branch]      issue-15-9fc0cb72      -> origin/issue-15-9fc0cb72
+2026-06-08T20:23:57.5932418Z  * [new branch]      issue-15-b280a47e      -> origin/issue-15-b280a47e
+2026-06-08T20:23:57.5933078Z  * [new branch]      issue-151-3da6bb3ea5e3 -> origin/issue-151-3da6bb3ea5e3
+2026-06-08T20:23:57.5933642Z  * [new branch]      issue-153-58c6ab4753ab -> origin/issue-153-58c6ab4753ab
+2026-06-08T20:23:57.5934195Z  * [new branch]      issue-156-eb63a328307e -> origin/issue-156-eb63a328307e
+2026-06-08T20:23:57.5935374Z  * [new branch]      issue-158-7e95ada294ce -> origin/issue-158-7e95ada294ce
+2026-06-08T20:23:57.5935972Z  * [new branch]      issue-160-a2a2313cf693 -> origin/issue-160-a2a2313cf693
+2026-06-08T20:23:57.5936527Z  * [new branch]      issue-162-0c186d5158ec -> origin/issue-162-0c186d5158ec
+2026-06-08T20:23:57.5937133Z  * [new branch]      issue-18-16ce2f52      -> origin/issue-18-16ce2f52
+2026-06-08T20:23:57.5937694Z  * [new branch]      issue-18-51ece309      -> origin/issue-18-51ece309
+2026-06-08T20:23:57.5938260Z  * [new branch]      issue-19-99f29373      -> origin/issue-19-99f29373
+2026-06-08T20:23:57.5938814Z  * [new branch]      issue-19-ee86110f      -> origin/issue-19-ee86110f
+2026-06-08T20:23:57.5939361Z  * [new branch]      issue-20-12ad6602      -> origin/issue-20-12ad6602
+2026-06-08T20:23:57.5939920Z  * [new branch]      issue-20-171029a1      -> origin/issue-20-171029a1
+2026-06-08T20:23:57.5940518Z  * [new branch]      issue-21-4d44bbc7      -> origin/issue-21-4d44bbc7
+2026-06-08T20:23:57.5941094Z  * [new branch]      issue-21-621d3004      -> origin/issue-21-621d3004
+2026-06-08T20:23:57.5941745Z  * [new branch]      issue-22-51ab60ad      -> origin/issue-22-51ab60ad
+2026-06-08T20:23:57.5942649Z  * [new branch]      issue-22-57b75318      -> origin/issue-22-57b75318
+2026-06-08T20:23:57.5943419Z  * [new branch]      issue-23-acb80d89      -> origin/issue-23-acb80d89
+2026-06-08T20:23:57.5944051Z  * [new branch]      issue-23-cfe40154      -> origin/issue-23-cfe40154
+2026-06-08T20:23:57.5945059Z  * [new branch]      issue-24-0a217d8d      -> origin/issue-24-0a217d8d
+2026-06-08T20:23:57.5945636Z  * [new branch]      issue-24-2ec0e8fa      -> origin/issue-24-2ec0e8fa
+2026-06-08T20:23:57.5946189Z  * [new branch]      issue-25-8431dd64      -> origin/issue-25-8431dd64
+2026-06-08T20:23:57.5946730Z  * [new branch]      issue-25-8ff13a2c      -> origin/issue-25-8ff13a2c
+2026-06-08T20:23:57.5947284Z  * [new branch]      issue-26-2cc88ea0      -> origin/issue-26-2cc88ea0
+2026-06-08T20:23:57.5947832Z  * [new branch]      issue-26-9bec6ea5      -> origin/issue-26-9bec6ea5
+2026-06-08T20:23:57.5948386Z  * [new branch]      issue-27-01ac7c56      -> origin/issue-27-01ac7c56
+2026-06-08T20:23:57.5948930Z  * [new branch]      issue-27-1d58c6b2      -> origin/issue-27-1d58c6b2
+2026-06-08T20:23:57.5949490Z  * [new branch]      issue-28-1c9c13c6      -> origin/issue-28-1c9c13c6
+2026-06-08T20:23:57.5950039Z  * [new branch]      issue-28-e256afcb      -> origin/issue-28-e256afcb
+2026-06-08T20:23:57.5950591Z  * [new branch]      issue-29-55357638      -> origin/issue-29-55357638
+2026-06-08T20:23:57.5951116Z  * [new branch]      issue-29-987b8dd4      -> origin/issue-29-987b8dd4
+2026-06-08T20:23:57.5951640Z  * [new branch]      issue-30-a0052265      -> origin/issue-30-a0052265
+2026-06-08T20:23:57.5952170Z  * [new branch]      issue-30-f1b7d27d      -> origin/issue-30-f1b7d27d
+2026-06-08T20:23:57.5952701Z  * [new branch]      issue-31-bfcb9a80      -> origin/issue-31-bfcb9a80
+2026-06-08T20:23:57.5953231Z  * [new branch]      issue-31-dc3e9249      -> origin/issue-31-dc3e9249
+2026-06-08T20:23:57.5953771Z  * [new branch]      issue-32-3dccbfab      -> origin/issue-32-3dccbfab
+2026-06-08T20:23:57.5954543Z  * [new branch]      issue-32-7a506d69      -> origin/issue-32-7a506d69
+2026-06-08T20:23:57.5955286Z  * [new branch]      issue-34-389ba67e      -> origin/issue-34-389ba67e
+2026-06-08T20:23:57.5955832Z  * [new branch]      issue-34-7cfa0880      -> origin/issue-34-7cfa0880
+2026-06-08T20:23:57.5956577Z  * [new branch]      issue-36-042fe722      -> origin/issue-36-042fe722
+2026-06-08T20:23:57.5957109Z  * [new branch]      issue-36-52b7c0a5      -> origin/issue-36-52b7c0a5
+2026-06-08T20:23:57.5957632Z  * [new branch]      issue-37-20720488      -> origin/issue-37-20720488
+2026-06-08T20:23:57.5958164Z  * [new branch]      issue-37-e875842b      -> origin/issue-37-e875842b
+2026-06-08T20:23:57.5958696Z  * [new branch]      issue-38-8ff5f784      -> origin/issue-38-8ff5f784
+2026-06-08T20:23:57.5959251Z  * [new branch]      issue-38-d399116a      -> origin/issue-38-d399116a
+2026-06-08T20:23:57.5959821Z  * [new branch]      issue-39-607bfb8e      -> origin/issue-39-607bfb8e
+2026-06-08T20:23:57.5960380Z  * [new branch]      issue-39-b4116e88      -> origin/issue-39-b4116e88
+2026-06-08T20:23:57.5960952Z  * [new branch]      issue-4-9c65943d       -> origin/issue-4-9c65943d
+2026-06-08T20:23:57.5961518Z  * [new branch]      issue-4-e24f5412       -> origin/issue-4-e24f5412
+2026-06-08T20:23:57.5962097Z  * [new branch]      issue-40-b1e760e6      -> origin/issue-40-b1e760e6
+2026-06-08T20:23:57.5962671Z  * [new branch]      issue-40-ef18d92c      -> origin/issue-40-ef18d92c
+2026-06-08T20:23:57.5963300Z  * [new branch]      issue-41-49cfed34      -> origin/issue-41-49cfed34
+2026-06-08T20:23:57.5963937Z  * [new branch]      issue-41-fed22157      -> origin/issue-41-fed22157
+2026-06-08T20:23:57.5964900Z  * [new branch]      issue-42-77ee242c      -> origin/issue-42-77ee242c
+2026-06-08T20:23:57.5965511Z  * [new branch]      issue-42-908eb7f7      -> origin/issue-42-908eb7f7
+2026-06-08T20:23:57.5966086Z  * [new branch]      issue-43-7298cd5c      -> origin/issue-43-7298cd5c
+2026-06-08T20:23:57.5966649Z  * [new branch]      issue-43-85b3ddfd      -> origin/issue-43-85b3ddfd
+2026-06-08T20:23:57.5967221Z  * [new branch]      issue-43-af132027      -> origin/issue-43-af132027
+2026-06-08T20:23:57.5968013Z  * [new branch]      issue-44-75df50dd      -> origin/issue-44-75df50dd
+2026-06-08T20:23:57.5968626Z  * [new branch]      issue-44-796ff0a8      -> origin/issue-44-796ff0a8
+2026-06-08T20:23:57.5969203Z  * [new branch]      issue-45-0325c0f5      -> origin/issue-45-0325c0f5
+2026-06-08T20:23:57.5969915Z  * [new branch]      issue-45-1ed9a563      -> origin/issue-45-1ed9a563
+2026-06-08T20:23:57.5970510Z  * [new branch]      issue-45-ce5f1e15      -> origin/issue-45-ce5f1e15
+2026-06-08T20:23:57.5971087Z  * [new branch]      issue-46-52edd2db      -> origin/issue-46-52edd2db
+2026-06-08T20:23:57.5971663Z  * [new branch]      issue-46-d4eec70e      -> origin/issue-46-d4eec70e
+2026-06-08T20:23:57.5972230Z  * [new branch]      issue-46-f237aa54      -> origin/issue-46-f237aa54
+2026-06-08T20:23:57.5972823Z  * [new branch]      issue-47-7a71c96e      -> origin/issue-47-7a71c96e
+2026-06-08T20:23:57.5973394Z  * [new branch]      issue-47-b31e0547      -> origin/issue-47-b31e0547
+2026-06-08T20:23:57.5973989Z  * [new branch]      issue-47-e7830e99      -> origin/issue-47-e7830e99
+2026-06-08T20:23:57.5975007Z  * [new branch]      issue-48-aaa5df6f      -> origin/issue-48-aaa5df6f
+2026-06-08T20:23:57.5975649Z  * [new branch]      issue-48-ad9abe01      -> origin/issue-48-ad9abe01
+2026-06-08T20:23:57.5976242Z  * [new branch]      issue-48-ead273fb      -> origin/issue-48-ead273fb
+2026-06-08T20:23:57.5976826Z  * [new branch]      issue-49-08e57741      -> origin/issue-49-08e57741
+2026-06-08T20:23:57.5977392Z  * [new branch]      issue-49-54f19e82      -> origin/issue-49-54f19e82
+2026-06-08T20:23:57.5977948Z  * [new branch]      issue-49-e74051ab      -> origin/issue-49-e74051ab
+2026-06-08T20:23:57.5978504Z  * [new branch]      issue-50-02f42ae4      -> origin/issue-50-02f42ae4
+2026-06-08T20:23:57.5979068Z  * [new branch]      issue-50-0b915412      -> origin/issue-50-0b915412
+2026-06-08T20:23:57.5979627Z  * [new branch]      issue-50-5de8b754      -> origin/issue-50-5de8b754
+2026-06-08T20:23:57.5980211Z  * [new branch]      issue-6-156225d2       -> origin/issue-6-156225d2
+2026-06-08T20:23:57.5980792Z  * [new branch]      issue-6-52fa1fa4       -> origin/issue-6-52fa1fa4
+2026-06-08T20:23:57.5981563Z  * [new branch]      issue-9-55d6d25e       -> origin/issue-9-55d6d25e
+2026-06-08T20:23:57.5982135Z  * [new branch]      issue-9-c5ab4ea2       -> origin/issue-9-c5ab4ea2
+2026-06-08T20:23:57.5982705Z  * [new branch]      issue-96-a24e1d66      -> origin/issue-96-a24e1d66
+2026-06-08T20:23:57.5983291Z  * [new branch]      issue-96-eb9bb8d1      -> origin/issue-96-eb9bb8d1
+2026-06-08T20:23:57.5983822Z  * [new branch]      main                   -> origin/main
+2026-06-08T20:23:57.5984782Z  * [new tag]         js-v0.9.6              -> js-v0.9.6
+2026-06-08T20:23:57.5985353Z  * [new tag]         v0.0.1                 -> v0.0.1
+2026-06-08T20:23:57.5985808Z  * [new tag]         v0.0.2                 -> v0.0.2
+2026-06-08T20:23:57.5986274Z  * [new tag]         v0.0.3                 -> v0.0.3
+2026-06-08T20:23:57.5986781Z  * [new tag]         v0.0.4                 -> v0.0.4
+2026-06-08T20:23:57.6057484Z  * [new tag]         v0.0.5                 -> v0.0.5
+2026-06-08T20:23:57.6058190Z  * [new tag]         v0.1.0                 -> v0.1.0
+2026-06-08T20:23:57.6058698Z  * [new tag]         v0.2.0                 -> v0.2.0
+2026-06-08T20:23:57.6059182Z  * [new tag]         v0.3.0                 -> v0.3.0
+2026-06-08T20:23:57.6059637Z  * [new tag]         v0.3.1                 -> v0.3.1
+2026-06-08T20:23:57.6060082Z  * [new tag]         v0.3.2                 -> v0.3.2
+2026-06-08T20:23:57.6060545Z  * [new tag]         v0.4.0                 -> v0.4.0
+2026-06-08T20:23:57.6060998Z  * [new tag]         v0.5.0                 -> v0.5.0
+2026-06-08T20:23:57.6061439Z  * [new tag]         v0.6.0                 -> v0.6.0
+2026-06-08T20:23:57.6061870Z  * [new tag]         v0.7.0                 -> v0.7.0
+2026-06-08T20:23:57.6062297Z  * [new tag]         v0.7.1                 -> v0.7.1
+2026-06-08T20:23:57.6063013Z  * [new tag]         v0.8.0                 -> v0.8.0
+2026-06-08T20:23:57.6063487Z  * [new tag]         v0.8.1                 -> v0.8.1
+2026-06-08T20:23:57.6063929Z  * [new tag]         v0.8.2                 -> v0.8.2
+2026-06-08T20:23:57.6064683Z  * [new tag]         v0.8.3                 -> v0.8.3
+2026-06-08T20:23:57.6065139Z  * [new tag]         v0.9.0                 -> v0.9.0
+2026-06-08T20:23:57.6065566Z  * [new tag]         v0.9.1                 -> v0.9.1
+2026-06-08T20:23:57.6065992Z  * [new tag]         v0.9.2                 -> v0.9.2
+2026-06-08T20:23:57.6066436Z  * [new tag]         v0.9.4                 -> v0.9.4
+2026-06-08T20:23:57.6066875Z  * [new tag]         v0.9.5                 -> v0.9.5
+2026-06-08T20:23:57.6131227Z [command]/usr/bin/git branch --list --remote origin/main
+2026-06-08T20:23:57.6161130Z   origin/main
+2026-06-08T20:23:57.6170334Z [command]/usr/bin/git rev-parse refs/remotes/origin/main
+2026-06-08T20:23:57.6193288Z 971eab54771ce20ecc02038a1c9ec6cd378eee0a
+2026-06-08T20:23:57.6203867Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules origin +89d47cf62671f8e1c4813af51128b0b9e47b6fa6:refs/remotes/origin/main
+2026-06-08T20:23:57.6260440Z From https://github.com/link-foundation/command-stream
+2026-06-08T20:23:57.6261736Z  + 971eab5...89d47cf 89d47cf62671f8e1c4813af51128b0b9e47b6fa6 -> origin/main  (forced update)
+2026-06-08T20:23:57.6286416Z ##[endgroup]
+2026-06-08T20:23:57.6287325Z ##[group]Determining the checkout info
+2026-06-08T20:23:57.6288038Z ##[endgroup]
+2026-06-08T20:23:57.6293231Z [command]/usr/bin/git sparse-checkout disable
+2026-06-08T20:23:57.6336449Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-06-08T20:23:57.6362591Z ##[group]Checking out the ref
+2026-06-08T20:23:57.6366532Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+2026-06-08T20:23:57.7133102Z Switched to a new branch 'main'
+2026-06-08T20:23:57.7136346Z branch 'main' set up to track 'origin/main'.
+2026-06-08T20:23:57.7147763Z ##[endgroup]
+2026-06-08T20:23:57.7195467Z [command]/usr/bin/git log -1 --format=%H
+2026-06-08T20:23:57.7220494Z 89d47cf62671f8e1c4813af51128b0b9e47b6fa6
+2026-06-08T20:23:57.7560833Z ##[group]Run dtolnay/rust-toolchain@stable
+2026-06-08T20:23:57.7561316Z with:
+2026-06-08T20:23:57.7561630Z   toolchain: stable
+2026-06-08T20:23:57.7561956Z env:
+2026-06-08T20:23:57.7562268Z   CARGO_TERM_COLOR: always
+2026-06-08T20:23:57.7563014Z   CARGO_REGISTRY_TOKEN: ***
+2026-06-08T20:23:57.7563461Z   CARGO_TOKEN: ***
+2026-06-08T20:23:57.7563786Z ##[endgroup]
+2026-06-08T20:23:57.7696177Z ##[group]Run : parse toolchain version
+2026-06-08T20:23:57.7696717Z ^[[36;1m: parse toolchain version^[[0m
+2026-06-08T20:23:57.7697144Z ^[[36;1mif [[ -z $toolchain ]]; then^[[0m
+2026-06-08T20:23:57.7697851Z ^[[36;1m  # GitHub does not enforce `required: true` inputs itself. https://github.com/actions/runner/issues/1070^[[0m
+2026-06-08T20:23:57.7698587Z ^[[36;1m  echo "'toolchain' is a required input" >&2^[[0m
+2026-06-08T20:23:57.7699025Z ^[[36;1m  exit 1^[[0m
+2026-06-08T20:23:57.7699505Z ^[[36;1melif [[ $toolchain =~ ^stable' '[0-9]+' '(year|month|week|day)s?' 'ago$ ]]; then^[[0m
+2026-06-08T20:23:57.7700144Z ^[[36;1m  if [[ Linux == macOS ]]; then^[[0m
+2026-06-08T20:23:57.7700827Z ^[[36;1m    echo "toolchain=1.$((($(date -v-$(sed 's/stable \([0-9]*\) \(.\).*/\1\2/' <<< $toolchain) +%s)/60/60/24-16569)/7/6))" >> $GITHUB_OUTPUT^[[0m
+2026-06-08T20:23:57.7701486Z ^[[36;1m  else^[[0m
+2026-06-08T20:23:57.7702033Z ^[[36;1m    echo "toolchain=1.$((($(date --date "${toolchain#stable }" +%s)/60/60/24-16569)/7/6))" >> $GITHUB_OUTPUT^[[0m
+2026-06-08T20:23:57.7702657Z ^[[36;1m  fi^[[0m
+2026-06-08T20:23:57.7703119Z ^[[36;1melif [[ $toolchain =~ ^stable' 'minus' '[0-9]+' 'releases?$ ]]; then^[[0m
+2026-06-08T20:23:57.7703827Z ^[[36;1m  echo "toolchain=1.$((($(date +%s)/60/60/24-16569)/7/6-${toolchain//[^0-9]/}))" >> $GITHUB_OUTPUT^[[0m
+2026-06-08T20:23:57.7704638Z ^[[36;1melif [[ $toolchain =~ ^1\.[0-9]+$ ]]; then^[[0m
+2026-06-08T20:23:57.7705335Z ^[[36;1m  echo "toolchain=1.$((i=${toolchain#1.}, c=($(date +%s)/60/60/24-16569)/7/6, i+9*i*(10*i<=c)+90*i*(100*i<=c)))" >> $GITHUB_OUTPUT^[[0m
+2026-06-08T20:23:57.7705981Z ^[[36;1melse^[[0m
+2026-06-08T20:23:57.7706374Z ^[[36;1m  echo "toolchain=$toolchain" >> $GITHUB_OUTPUT^[[0m
+2026-06-08T20:23:57.7706805Z ^[[36;1mfi^[[0m
+2026-06-08T20:23:57.7739409Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-06-08T20:23:57.7739912Z env:
+2026-06-08T20:23:57.7740232Z   CARGO_TERM_COLOR: always
+2026-06-08T20:23:57.7740856Z   CARGO_REGISTRY_TOKEN: ***
+2026-06-08T20:23:57.7741330Z   CARGO_TOKEN: ***
+2026-06-08T20:23:57.7741673Z   toolchain: stable
+2026-06-08T20:23:57.7741998Z ##[endgroup]
+2026-06-08T20:23:57.7896031Z ##[group]Run : construct rustup command line
+2026-06-08T20:23:57.7896551Z ^[[36;1m: construct rustup command line^[[0m
+2026-06-08T20:23:57.7897182Z ^[[36;1mecho "targets=$(for t in ${targets//,/ }; do echo -n ' --target' $t; done)" >> $GITHUB_OUTPUT^[[0m
+2026-06-08T20:23:57.7898011Z ^[[36;1mecho "components=$(for c in ${components//,/ }; do echo -n ' --component' $c; done)" >> $GITHUB_OUTPUT^[[0m
+2026-06-08T20:23:57.7898681Z ^[[36;1mecho "downgrade=" >> $GITHUB_OUTPUT^[[0m
+2026-06-08T20:23:57.7927583Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-06-08T20:23:57.7928085Z env:
+2026-06-08T20:23:57.7928408Z   CARGO_TERM_COLOR: always
+2026-06-08T20:23:57.7929022Z   CARGO_REGISTRY_TOKEN: ***
+2026-06-08T20:23:57.7929516Z   CARGO_TOKEN: ***
+2026-06-08T20:23:57.7929849Z   targets: 
+2026-06-08T20:23:57.7930147Z   components: 
+2026-06-08T20:23:57.7930458Z ##[endgroup]
+2026-06-08T20:23:57.8026329Z ##[group]Run : set $CARGO_HOME
+2026-06-08T20:23:57.8026749Z ^[[36;1m: set $CARGO_HOME^[[0m
+2026-06-08T20:23:57.8027213Z ^[[36;1mecho CARGO_HOME=${CARGO_HOME:-"$HOME/.cargo"} >> $GITHUB_ENV^[[0m
+2026-06-08T20:23:57.8055250Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-06-08T20:23:57.8055726Z env:
+2026-06-08T20:23:57.8056033Z   CARGO_TERM_COLOR: always
+2026-06-08T20:23:57.8056593Z   CARGO_REGISTRY_TOKEN: ***
+2026-06-08T20:23:57.8057024Z   CARGO_TOKEN: ***
+2026-06-08T20:23:57.8057340Z ##[endgroup]
+2026-06-08T20:23:57.8148148Z ##[group]Run : install rustup if needed
+2026-06-08T20:23:57.8148945Z ^[[36;1m: install rustup if needed^[[0m
+2026-06-08T20:23:57.8149400Z ^[[36;1mif ! command -v rustup &>/dev/null; then^[[0m
+2026-06-08T20:23:57.8150346Z ^[[36;1m  curl --proto '=https' --tlsv1.2 --retry 10 --retry-connrefused --location --silent --show-error --fail https://sh.rustup.rs | sh -s -- --default-toolchain none -y^[[0m
+2026-06-08T20:23:57.8151273Z ^[[36;1m  echo "$CARGO_HOME/bin" >> $GITHUB_PATH^[[0m
+2026-06-08T20:23:57.8151676Z ^[[36;1mfi^[[0m
+2026-06-08T20:23:57.8178002Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-06-08T20:23:57.8178470Z env:
+2026-06-08T20:23:57.8178786Z   CARGO_TERM_COLOR: always
+2026-06-08T20:23:57.8179343Z   CARGO_REGISTRY_TOKEN: ***
+2026-06-08T20:23:57.8179786Z   CARGO_TOKEN: ***
+2026-06-08T20:23:57.8180127Z   CARGO_HOME: /home/runner/.cargo
+2026-06-08T20:23:57.8180494Z ##[endgroup]
+2026-06-08T20:23:57.8272036Z ##[group]Run rustup toolchain install stable --profile minimal --no-self-update
+2026-06-08T20:23:57.8272805Z ^[[36;1mrustup toolchain install stable --profile minimal --no-self-update^[[0m
+2026-06-08T20:23:57.8301187Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-06-08T20:23:57.8301663Z env:
+2026-06-08T20:23:57.8301978Z   CARGO_TERM_COLOR: always
+2026-06-08T20:23:57.8302548Z   CARGO_REGISTRY_TOKEN: ***
+2026-06-08T20:23:57.8302977Z   CARGO_TOKEN: ***
+2026-06-08T20:23:57.8303318Z   CARGO_HOME: /home/runner/.cargo
+2026-06-08T20:23:57.8303710Z   RUSTUP_PERMIT_COPY_RENAME: 1
+2026-06-08T20:23:57.8304073Z ##[endgroup]
+2026-06-08T20:23:57.9947657Z info: syncing channel updates for stable-x86_64-unknown-linux-gnu
+2026-06-08T20:23:58.1505991Z info: latest update on 2026-05-28 for version 1.96.0 (ac68faa20 2026-05-25)
+2026-06-08T20:23:58.1650327Z info: removing previous version of component clippy
+2026-06-08T20:23:58.1667794Z info: removing previous version of component rustfmt
+2026-06-08T20:23:58.1679150Z info: removing previous version of component cargo
+2026-06-08T20:23:58.1726692Z info: removing previous version of component rust-std
+2026-06-08T20:23:58.1775184Z info: removing previous version of component rustc
+2026-06-08T20:23:58.1827801Z info: downloading 5 components
+2026-06-08T20:24:06.5670205Z 
+2026-06-08T20:24:06.5743878Z   stable-x86_64-unknown-linux-gnu updated - rustc 1.96.0 (ac68faa20 2026-05-25) (from rustc 1.95.0 (59807616e 2026-04-14))
+2026-06-08T20:24:06.5744889Z 
+2026-06-08T20:24:06.5831403Z ##[group]Run rustup default stable
+2026-06-08T20:24:06.5831718Z ^[[36;1mrustup default stable^[[0m
+2026-06-08T20:24:06.5858575Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-06-08T20:24:06.5858935Z env:
+2026-06-08T20:24:06.5859192Z   CARGO_TERM_COLOR: always
+2026-06-08T20:24:06.5859806Z   CARGO_REGISTRY_TOKEN: ***
+2026-06-08T20:24:06.5860133Z   CARGO_TOKEN: ***
+2026-06-08T20:24:06.5860358Z   CARGO_HOME: /home/runner/.cargo
+2026-06-08T20:24:06.5860615Z ##[endgroup]
+2026-06-08T20:24:06.5962165Z info: using existing install for stable-x86_64-unknown-linux-gnu
+2026-06-08T20:24:06.5969908Z info: default toolchain set to stable-x86_64-unknown-linux-gnu
+2026-06-08T20:24:06.5970254Z 
+2026-06-08T20:24:06.6038960Z   stable-x86_64-unknown-linux-gnu unchanged - rustc 1.96.0 (ac68faa20 2026-05-25)
+2026-06-08T20:24:06.6039343Z 
+2026-06-08T20:24:06.6096849Z ##[group]Run : create cachekey
+2026-06-08T20:24:06.6097147Z ^[[36;1m: create cachekey^[[0m
+2026-06-08T20:24:06.6097662Z ^[[36;1mDATE=$(rustc +stable --version --verbose | sed -ne 's/^commit-date: \(20[0-9][0-9]\)-\([01][0-9]\)-\([0-3][0-9]\)$/\1\2\3/p')^[[0m
+2026-06-08T20:24:06.6098324Z ^[[36;1mHASH=$(rustc +stable --version --verbose | sed -ne 's/^commit-hash: //p')^[[0m
+2026-06-08T20:24:06.6098839Z ^[[36;1mecho "cachekey=$(echo $DATE$HASH | head -c12)" >> $GITHUB_OUTPUT^[[0m
+2026-06-08T20:24:06.6124204Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-06-08T20:24:06.6124860Z env:
+2026-06-08T20:24:06.6125066Z   CARGO_TERM_COLOR: always
+2026-06-08T20:24:06.6125497Z   CARGO_REGISTRY_TOKEN: ***
+2026-06-08T20:24:06.6125810Z   CARGO_TOKEN: ***
+2026-06-08T20:24:06.6126031Z   CARGO_HOME: /home/runner/.cargo
+2026-06-08T20:24:06.6126613Z ##[endgroup]
+2026-06-08T20:24:06.6483625Z ##[group]Run : disable incremental compilation
+2026-06-08T20:24:06.6484007Z ^[[36;1m: disable incremental compilation^[[0m
+2026-06-08T20:24:06.6484688Z ^[[36;1mif [ -z "${CARGO_INCREMENTAL+set}" ]; then^[[0m
+2026-06-08T20:24:06.6485058Z ^[[36;1m  echo CARGO_INCREMENTAL=0 >> $GITHUB_ENV^[[0m
+2026-06-08T20:24:06.6485351Z ^[[36;1mfi^[[0m
+2026-06-08T20:24:06.6511192Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-06-08T20:24:06.6511536Z env:
+2026-06-08T20:24:06.6511734Z   CARGO_TERM_COLOR: always
+2026-06-08T20:24:06.6512143Z   CARGO_REGISTRY_TOKEN: ***
+2026-06-08T20:24:06.6512461Z   CARGO_TOKEN: ***
+2026-06-08T20:24:06.6512688Z   CARGO_HOME: /home/runner/.cargo
+2026-06-08T20:24:06.6512940Z ##[endgroup]
+2026-06-08T20:24:06.6581171Z ##[group]Run : enable colors in Cargo output
+2026-06-08T20:24:06.6581520Z ^[[36;1m: enable colors in Cargo output^[[0m
+2026-06-08T20:24:06.6581851Z ^[[36;1mif [ -z "${CARGO_TERM_COLOR+set}" ]; then^[[0m
+2026-06-08T20:24:06.6582225Z ^[[36;1m  echo CARGO_TERM_COLOR=always >> $GITHUB_ENV^[[0m
+2026-06-08T20:24:06.6582526Z ^[[36;1mfi^[[0m
+2026-06-08T20:24:06.6606990Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-06-08T20:24:06.6607342Z env:
+2026-06-08T20:24:06.6607546Z   CARGO_TERM_COLOR: always
+2026-06-08T20:24:06.6607935Z   CARGO_REGISTRY_TOKEN: ***
+2026-06-08T20:24:06.6608231Z   CARGO_TOKEN: ***
+2026-06-08T20:24:06.6608446Z   CARGO_HOME: /home/runner/.cargo
+2026-06-08T20:24:06.6608699Z   CARGO_INCREMENTAL: 0
+2026-06-08T20:24:06.6608915Z ##[endgroup]
+2026-06-08T20:24:06.6677936Z ##[group]Run : enable Cargo sparse registry
+2026-06-08T20:24:06.6678295Z ^[[36;1m: enable Cargo sparse registry^[[0m
+2026-06-08T20:24:06.6678670Z ^[[36;1m# implemented in 1.66, stabilized in 1.68, made default in 1.70^[[0m
+2026-06-08T20:24:06.6679389Z ^[[36;1mif [ -z "${CARGO_REGISTRIES_CRATES_IO_PROTOCOL+set}" -o -f "/home/runner/work/_temp"/.implicit_cargo_registries_crates_io_protocol ]; then^[[0m
+2026-06-08T20:24:06.6680190Z ^[[36;1m  if rustc +stable --version --verbose | grep -q '^release: 1\.6[89]\.'; then^[[0m
+2026-06-08T20:24:06.6680773Z ^[[36;1m    touch "/home/runner/work/_temp"/.implicit_cargo_registries_crates_io_protocol || true^[[0m
+2026-06-08T20:24:06.6681316Z ^[[36;1m    echo CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse >> $GITHUB_ENV^[[0m
+2026-06-08T20:24:06.6681826Z ^[[36;1m  elif rustc +stable --version --verbose | grep -q '^release: 1\.6[67]\.'; then^[[0m
+2026-06-08T20:24:06.6682400Z ^[[36;1m    touch "/home/runner/work/_temp"/.implicit_cargo_registries_crates_io_protocol || true^[[0m
+2026-06-08T20:24:06.6682920Z ^[[36;1m    echo CARGO_REGISTRIES_CRATES_IO_PROTOCOL=git >> $GITHUB_ENV^[[0m
+2026-06-08T20:24:06.6683277Z ^[[36;1m  fi^[[0m
+2026-06-08T20:24:06.6683477Z ^[[36;1mfi^[[0m
+2026-06-08T20:24:06.6708201Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-06-08T20:24:06.6708538Z env:
+2026-06-08T20:24:06.6708739Z   CARGO_TERM_COLOR: always
+2026-06-08T20:24:06.6709142Z   CARGO_REGISTRY_TOKEN: ***
+2026-06-08T20:24:06.6709467Z   CARGO_TOKEN: ***
+2026-06-08T20:24:06.6709684Z   CARGO_HOME: /home/runner/.cargo
+2026-06-08T20:24:06.6709939Z   CARGO_INCREMENTAL: 0
+2026-06-08T20:24:06.6710157Z ##[endgroup]
+2026-06-08T20:24:06.7040756Z ##[group]Run : work around spurious network errors in curl 8.0
+2026-06-08T20:24:06.7041219Z ^[[36;1m: work around spurious network errors in curl 8.0^[[0m
+2026-06-08T20:24:06.7041827Z ^[[36;1m# https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo/topic/timeout.20investigation^[[0m
+2026-06-08T20:24:06.7042446Z ^[[36;1mif rustc +stable --version --verbose | grep -q '^release: 1\.7[01]\.'; then^[[0m
+2026-06-08T20:24:06.7042919Z ^[[36;1m  echo CARGO_HTTP_MULTIPLEXING=false >> $GITHUB_ENV^[[0m
+2026-06-08T20:24:06.7043236Z ^[[36;1mfi^[[0m
+2026-06-08T20:24:06.7068899Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-06-08T20:24:06.7069244Z env:
+2026-06-08T20:24:06.7069448Z   CARGO_TERM_COLOR: always
+2026-06-08T20:24:06.7069860Z   CARGO_REGISTRY_TOKEN: ***
+2026-06-08T20:24:06.7070506Z   CARGO_TOKEN: ***
+2026-06-08T20:24:06.7070737Z   CARGO_HOME: /home/runner/.cargo
+2026-06-08T20:24:06.7071057Z   CARGO_INCREMENTAL: 0
+2026-06-08T20:24:06.7071277Z ##[endgroup]
+2026-06-08T20:24:06.7271145Z ##[group]Run rustc +stable --version --verbose
+2026-06-08T20:24:06.7271543Z ^[[36;1mrustc +stable --version --verbose^[[0m
+2026-06-08T20:24:06.7297404Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-06-08T20:24:06.7297764Z env:
+2026-06-08T20:24:06.7297973Z   CARGO_TERM_COLOR: always
+2026-06-08T20:24:06.7298393Z   CARGO_REGISTRY_TOKEN: ***
+2026-06-08T20:24:06.7298695Z   CARGO_TOKEN: ***
+2026-06-08T20:24:06.7298923Z   CARGO_HOME: /home/runner/.cargo
+2026-06-08T20:24:06.7299182Z   CARGO_INCREMENTAL: 0
+2026-06-08T20:24:06.7299399Z ##[endgroup]
+2026-06-08T20:24:06.7467155Z rustc 1.96.0 (ac68faa20 2026-05-25)
+2026-06-08T20:24:06.7467871Z binary: rustc
+2026-06-08T20:24:06.7468238Z commit-hash: ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96
+2026-06-08T20:24:06.7468676Z commit-date: 2026-05-25
+2026-06-08T20:24:06.7469284Z host: x86_64-unknown-linux-gnu
+2026-06-08T20:24:06.7469884Z release: 1.96.0
+2026-06-08T20:24:06.7470329Z LLVM version: 22.1.2
+2026-06-08T20:24:06.7538702Z ##[group]Run cargo install rust-script
+2026-06-08T20:24:06.7539071Z ^[[36;1mcargo install rust-script^[[0m
+2026-06-08T20:24:06.7565399Z shell: /usr/bin/bash -e {0}
+2026-06-08T20:24:06.7565662Z env:
+2026-06-08T20:24:06.7565865Z   CARGO_TERM_COLOR: always
+2026-06-08T20:24:06.7566283Z   CARGO_REGISTRY_TOKEN: ***
+2026-06-08T20:24:06.7566590Z   CARGO_TOKEN: ***
+2026-06-08T20:24:06.7566821Z   CARGO_HOME: /home/runner/.cargo
+2026-06-08T20:24:06.7567078Z   CARGO_INCREMENTAL: 0
+2026-06-08T20:24:06.7567297Z ##[endgroup]
+2026-06-08T20:24:06.7863996Z ^[[1m^[[92m    Updating^[[0m crates.io index
+2026-06-08T20:24:07.0103308Z ^[[1m^[[92m Downloading^[[0m crates ...
+2026-06-08T20:24:07.0422652Z ^[[1m^[[92m  Downloaded^[[0m rust-script v0.36.0
+2026-06-08T20:24:07.0610264Z ^[[1m^[[92m  Installing^[[0m rust-script v0.36.0
+2026-06-08T20:24:07.0766341Z ^[[1m^[[92m    Updating^[[0m crates.io index
+2026-06-08T20:24:07.2845353Z ^[[1m^[[92m     Locking^[[0m 113 packages to latest compatible versions
+2026-06-08T20:24:07.2901177Z ^[[1m^[[92m      Adding^[[0m generic-array v0.14.7 ^[[1m^[[33m(available: v0.14.9)^[[0m
+2026-06-08T20:24:07.3033097Z ^[[1m^[[92m      Adding^[[0m sha1 v0.10.6 ^[[1m^[[33m(available: v0.11.0)^[[0m
+2026-06-08T20:24:07.3052950Z ^[[1m^[[92m      Adding^[[0m toml v0.9.12+spec-1.1.0 ^[[1m^[[33m(available: v1.1.2+spec-1.1.0)^[[0m
+2026-06-08T20:24:07.3083436Z ^[[1m^[[92m      Adding^[[0m winreg v0.55.0 ^[[1m^[[33m(available: v0.56.0)^[[0m
+2026-06-08T20:24:07.3106368Z ^[[1m^[[92m Downloading^[[0m crates ...
+2026-06-08T20:24:07.3377306Z ^[[1m^[[92m  Downloaded^[[0m anstyle-query v1.1.5
+2026-06-08T20:24:07.3393439Z ^[[1m^[[92m  Downloaded^[[0m env_filter v1.0.1
+2026-06-08T20:24:07.3409297Z ^[[1m^[[92m  Downloaded^[[0m anstyle v1.0.14
+2026-06-08T20:24:07.3427742Z ^[[1m^[[92m  Downloaded^[[0m digest v0.10.7
+2026-06-08T20:24:07.3449776Z ^[[1m^[[92m  Downloaded^[[0m anstyle-parse v1.0.0
+2026-06-08T20:24:07.3471035Z ^[[1m^[[92m  Downloaded^[[0m generic-array v0.14.7
+2026-06-08T20:24:07.3488214Z ^[[1m^[[92m  Downloaded^[[0m block-buffer v0.10.4
+2026-06-08T20:24:07.3502913Z ^[[1m^[[92m  Downloaded^[[0m fastrand v2.4.1
+2026-06-08T20:24:07.3519703Z ^[[1m^[[92m  Downloaded^[[0m errno v0.3.14
+2026-06-08T20:24:07.3538865Z ^[[1m^[[92m  Downloaded^[[0m dirs-sys v0.5.0
+2026-06-08T20:24:07.3552189Z ^[[1m^[[92m  Downloaded^[[0m clap_lex v1.1.0
+2026-06-08T20:24:07.3564852Z ^[[1m^[[92m  Downloaded^[[0m clap_builder v4.6.0
+2026-06-08T20:24:07.3636670Z ^[[1m^[[92m  Downloaded^[[0m shell-words v1.1.1
+2026-06-08T20:24:07.3653375Z ^[[1m^[[92m  Downloaded^[[0m utf8parse v0.2.2
+2026-06-08T20:24:07.3665796Z ^[[1m^[[92m  Downloaded^[[0m cpufeatures v0.2.17
+2026-06-08T20:24:07.3682784Z ^[[1m^[[92m  Downloaded^[[0m sha1 v0.10.6
+2026-06-08T20:24:07.3703685Z ^[[1m^[[92m  Downloaded^[[0m version_check v0.9.5
+2026-06-08T20:24:07.3720401Z ^[[1m^[[92m  Downloaded^[[0m getopts v0.2.24
+2026-06-08T20:24:07.3742206Z ^[[1m^[[92m  Downloaded^[[0m unicase v2.9.0
+2026-06-08T20:24:07.3763275Z ^[[1m^[[92m  Downloaded^[[0m toml_parser v1.1.2+spec-1.1.0
+2026-06-08T20:24:07.3793732Z ^[[1m^[[92m  Downloaded^[[0m log v0.4.32
+2026-06-08T20:24:07.3824492Z ^[[1m^[[92m  Downloaded^[[0m typenum v1.20.1
+2026-06-08T20:24:07.3867433Z ^[[1m^[[92m  Downloaded^[[0m memchr v2.8.1
+2026-06-08T20:24:07.3928412Z ^[[1m^[[92m  Downloaded^[[0m indexmap v2.14.0
+2026-06-08T20:24:07.3975391Z ^[[1m^[[92m  Downloaded^[[0m bitflags v2.13.0
+2026-06-08T20:24:07.4025369Z ^[[1m^[[92m  Downloaded^[[0m regex v1.12.3
+2026-06-08T20:24:07.4085651Z ^[[1m^[[92m  Downloaded^[[0m winnow v1.0.3
+2026-06-08T20:24:07.4186759Z ^[[1m^[[92m  Downloaded^[[0m winnow v0.7.15
+2026-06-08T20:24:07.4286913Z ^[[1m^[[92m  Downloaded^[[0m pulldown-cmark v0.13.4
+2026-06-08T20:24:07.4341837Z ^[[1m^[[92m  Downloaded^[[0m toml v0.9.12+spec-1.1.0
+2026-06-08T20:24:07.4387584Z ^[[1m^[[92m  Downloaded^[[0m unicode-width v0.2.2
+2026-06-08T20:24:07.4447707Z ^[[1m^[[92m  Downloaded^[[0m tempfile v3.27.0
+2026-06-08T20:24:07.4476161Z ^[[1m^[[92m  Downloaded^[[0m serde_core v1.0.228
+2026-06-08T20:24:07.4506934Z ^[[1m^[[92m  Downloaded^[[0m hashbrown v0.17.1
+2026-06-08T20:24:07.4567209Z ^[[1m^[[92m  Downloaded^[[0m clap v4.6.1
+2026-06-08T20:24:07.4667401Z ^[[1m^[[92m  Downloaded^[[0m regex-syntax v0.8.10
+2026-06-08T20:24:07.4737937Z ^[[1m^[[92m  Downloaded^[[0m once_cell v1.21.4
+2026-06-08T20:24:07.4765952Z ^[[1m^[[92m  Downloaded^[[0m dirs v6.0.0
+2026-06-08T20:24:07.4780286Z ^[[1m^[[92m  Downloaded^[[0m toml_writer v1.1.1+spec-1.1.0
+2026-06-08T20:24:07.4796666Z ^[[1m^[[92m  Downloaded^[[0m rustix v1.1.4
+2026-06-08T20:24:07.5072777Z ^[[1m^[[92m  Downloaded^[[0m toml_datetime v0.7.5+spec-1.1.0
+2026-06-08T20:24:07.5086629Z ^[[1m^[[92m  Downloaded^[[0m strsim v0.11.1
+2026-06-08T20:24:07.5101535Z ^[[1m^[[92m  Downloaded^[[0m equivalent v1.0.2
+2026-06-08T20:24:07.5113283Z ^[[1m^[[92m  Downloaded^[[0m env_logger v0.11.10
+2026-06-08T20:24:07.5137647Z ^[[1m^[[92m  Downloaded^[[0m cfg-if v1.0.4
+2026-06-08T20:24:07.5155115Z ^[[1m^[[92m  Downloaded^[[0m serde_spanned v1.1.1
+2026-06-08T20:24:07.5167943Z ^[[1m^[[92m  Downloaded^[[0m pulldown-cmark-escape v0.11.0
+2026-06-08T20:24:07.5177595Z ^[[1m^[[92m  Downloaded^[[0m crypto-common v0.1.7
+2026-06-08T20:24:07.5189074Z ^[[1m^[[92m  Downloaded^[[0m colorchoice v1.0.5
+2026-06-08T20:24:07.5200812Z ^[[1m^[[92m  Downloaded^[[0m option-ext v0.2.0
+2026-06-08T20:24:07.5211212Z ^[[1m^[[92m  Downloaded^[[0m is_terminal_polyfill v1.70.2
+2026-06-08T20:24:07.5223005Z ^[[1m^[[92m  Downloaded^[[0m regex-automata v0.4.14
+2026-06-08T20:24:07.5365617Z ^[[1m^[[92m  Downloaded^[[0m getrandom v0.4.2
+2026-06-08T20:24:07.5404865Z ^[[1m^[[92m  Downloaded^[[0m aho-corasick v1.1.4
+2026-06-08T20:24:07.5459818Z ^[[1m^[[92m  Downloaded^[[0m anstream v1.0.0
+2026-06-08T20:24:07.5482961Z ^[[1m^[[92m  Downloaded^[[0m libc v0.2.186
+2026-06-08T20:24:07.5877308Z ^[[1m^[[92m  Downloaded^[[0m jiff v0.2.28
+2026-06-08T20:24:07.6123932Z ^[[1m^[[92m  Downloaded^[[0m linux-raw-sys v0.12.1
+2026-06-08T20:24:07.6895711Z ^[[1m^[[92m   Compiling^[[0m version_check v0.9.5
+2026-06-08T20:24:07.6896626Z ^[[1m^[[92m   Compiling^[[0m memchr v2.8.1
+2026-06-08T20:24:07.6897346Z ^[[1m^[[92m   Compiling^[[0m libc v0.2.186
+2026-06-08T20:24:07.6897901Z ^[[1m^[[92m   Compiling^[[0m utf8parse v0.2.2
+2026-06-08T20:24:07.7371401Z ^[[1m^[[92m   Compiling^[[0m typenum v1.20.1
+2026-06-08T20:24:07.8995963Z ^[[1m^[[92m   Compiling^[[0m generic-array v0.14.7
+2026-06-08T20:24:07.9426315Z ^[[1m^[[92m   Compiling^[[0m serde_core v1.0.228
+2026-06-08T20:24:08.1193799Z ^[[1m^[[92m   Compiling^[[0m anstyle-parse v1.0.0
+2026-06-08T20:24:08.2512852Z ^[[1m^[[92m   Compiling^[[0m aho-corasick v1.1.4
+2026-06-08T20:24:08.5809389Z ^[[1m^[[92m   Compiling^[[0m anstyle v1.0.14
+2026-06-08T20:24:08.7716892Z ^[[1m^[[92m   Compiling^[[0m is_terminal_polyfill v1.70.2
+2026-06-08T20:24:08.8085754Z ^[[1m^[[92m   Compiling^[[0m regex-syntax v0.8.10
+2026-06-08T20:24:09.0127472Z ^[[1m^[[92m   Compiling^[[0m colorchoice v1.0.5
+2026-06-08T20:24:09.0575883Z ^[[1m^[[92m   Compiling^[[0m anstyle-query v1.1.5
+2026-06-08T20:24:09.0941399Z ^[[1m^[[92m   Compiling^[[0m anstream v1.0.0
+2026-06-08T20:24:09.4225757Z ^[[1m^[[92m   Compiling^[[0m getrandom v0.4.2
+2026-06-08T20:24:09.5205776Z ^[[1m^[[92m   Compiling^[[0m bitflags v2.13.0
+2026-06-08T20:24:09.7575838Z ^[[1m^[[92m   Compiling^[[0m cfg-if v1.0.4
+2026-06-08T20:24:09.7855709Z ^[[1m^[[92m   Compiling^[[0m rustix v1.1.4
+2026-06-08T20:24:10.0625861Z ^[[1m^[[92m   Compiling^[[0m block-buffer v0.10.4
+2026-06-08T20:24:10.1425991Z ^[[1m^[[92m   Compiling^[[0m crypto-common v0.1.7
+2026-06-08T20:24:10.1983135Z ^[[1m^[[92m   Compiling^[[0m option-ext v0.2.0
+2026-06-08T20:24:10.2376284Z ^[[1m^[[92m   Compiling^[[0m pulldown-cmark v0.13.4
+2026-06-08T20:24:10.3146699Z ^[[1m^[[92m   Compiling^[[0m clap_lex v1.1.0
+2026-06-08T20:24:10.5315761Z ^[[1m^[[92m   Compiling^[[0m linux-raw-sys v0.12.1
+2026-06-08T20:24:10.8773462Z ^[[1m^[[92m   Compiling^[[0m regex-automata v0.4.14
+2026-06-08T20:24:11.6277823Z ^[[1m^[[92m   Compiling^[[0m log v0.4.32
+2026-06-08T20:24:11.8146348Z ^[[1m^[[92m   Compiling^[[0m strsim v0.11.1
+2026-06-08T20:24:11.9166177Z ^[[1m^[[92m   Compiling^[[0m winnow v1.0.3
+2026-06-08T20:24:12.3185960Z ^[[1m^[[92m   Compiling^[[0m unicode-width v0.2.2
+2026-06-08T20:24:12.3482166Z ^[[1m^[[92m   Compiling^[[0m toml_parser v1.1.2+spec-1.1.0
+2026-06-08T20:24:12.5195946Z ^[[1m^[[92m   Compiling^[[0m getopts v0.2.24
+2026-06-08T20:24:13.1666698Z ^[[1m^[[92m   Compiling^[[0m clap_builder v4.6.0
+2026-06-08T20:24:13.2928998Z ^[[1m^[[92m   Compiling^[[0m toml_datetime v0.7.5+spec-1.1.0
+2026-06-08T20:24:13.3309125Z ^[[1m^[[92m   Compiling^[[0m serde_spanned v1.1.1
+2026-06-08T20:24:13.6256201Z ^[[1m^[[92m   Compiling^[[0m dirs-sys v0.5.0
+2026-06-08T20:24:13.9496153Z ^[[1m^[[92m   Compiling^[[0m regex v1.12.3
+2026-06-08T20:24:14.8436250Z ^[[1m^[[92m   Compiling^[[0m env_filter v1.0.1
+2026-06-08T20:24:15.3726261Z ^[[1m^[[92m   Compiling^[[0m digest v0.10.7
+2026-06-08T20:24:15.6446117Z ^[[1m^[[92m   Compiling^[[0m toml_writer v1.1.1+spec-1.1.0
+2026-06-08T20:24:15.8071611Z ^[[1m^[[92m   Compiling^[[0m once_cell v1.21.4
+2026-06-08T20:24:15.8220401Z ^[[1m^[[92m   Compiling^[[0m cpufeatures v0.2.17
+2026-06-08T20:24:15.8535890Z ^[[1m^[[92m   Compiling^[[0m fastrand v2.4.1
+2026-06-08T20:24:15.9755956Z ^[[1m^[[92m   Compiling^[[0m unicase v2.9.0
+2026-06-08T20:24:16.0515788Z ^[[1m^[[92m   Compiling^[[0m jiff v0.2.28
+2026-06-08T20:24:16.1305792Z ^[[1m^[[92m   Compiling^[[0m winnow v0.7.15
+2026-06-08T20:24:17.9316230Z ^[[1m^[[92m   Compiling^[[0m pulldown-cmark-escape v0.11.0
+2026-06-08T20:24:18.0686432Z ^[[1m^[[92m   Compiling^[[0m toml v0.9.12+spec-1.1.0
+2026-06-08T20:24:19.6283498Z ^[[1m^[[92m   Compiling^[[0m tempfile v3.27.0
+2026-06-08T20:24:20.1846320Z ^[[1m^[[92m   Compiling^[[0m env_logger v0.11.10
+2026-06-08T20:24:20.4691990Z ^[[1m^[[92m   Compiling^[[0m sha1 v0.10.6
+2026-06-08T20:24:20.6606422Z ^[[1m^[[92m   Compiling^[[0m clap v4.6.1
+2026-06-08T20:24:20.6906023Z ^[[1m^[[92m   Compiling^[[0m dirs v6.0.0
+2026-06-08T20:24:20.7686285Z ^[[1m^[[92m   Compiling^[[0m shell-words v1.1.1
+2026-06-08T20:24:21.3622967Z ^[[1m^[[92m   Compiling^[[0m rust-script v0.36.0
+2026-06-08T20:24:42.1369206Z ^[[1m^[[92m    Finished^[[0m `release` profile [optimized] target(s) in 35.36s
+2026-06-08T20:24:42.1632120Z ^[[1m^[[92m  Installing^[[0m /home/runner/.cargo/bin/rust-script
+2026-06-08T20:24:42.1688051Z ^[[1m^[[92m   Installed^[[0m package `rust-script v0.36.0` (executable `rust-script`)
+2026-06-08T20:24:42.1982491Z ##[group]Run rust-script rust/scripts/get-bump-type.rs
+2026-06-08T20:24:42.1982930Z ^[[36;1mrust-script rust/scripts/get-bump-type.rs^[[0m
+2026-06-08T20:24:42.2008424Z shell: /usr/bin/bash -e {0}
+2026-06-08T20:24:42.2008690Z env:
+2026-06-08T20:24:42.2008893Z   CARGO_TERM_COLOR: always
+2026-06-08T20:24:42.2009284Z   CARGO_REGISTRY_TOKEN: ***
+2026-06-08T20:24:42.2009615Z   CARGO_TOKEN: ***
+2026-06-08T20:24:42.2009843Z   CARGO_HOME: /home/runner/.cargo
+2026-06-08T20:24:42.2010101Z   CARGO_INCREMENTAL: 0
+2026-06-08T20:24:42.2010328Z ##[endgroup]
+2026-06-08T20:24:50.9760794Z Detected multi-language repository (Cargo.toml in rust/)
+2026-06-08T20:24:50.9766350Z Fragment 20260608_issue_160_separate_language_releases.md: bump=patch
+2026-06-08T20:24:50.9769169Z Fragment 20260608_issue_162_release_job_skip.md: bump=patch
+2026-06-08T20:24:50.9769582Z 
+2026-06-08T20:24:50.9769809Z Determined bump type: patch (from 2 fragment(s))
+2026-06-08T20:24:50.9771049Z Output: bump_type=patch
+2026-06-08T20:24:50.9771880Z Output: fragment_count=2
+2026-06-08T20:24:50.9772192Z Output: has_fragments=true
+2026-06-08T20:24:50.9805464Z ##[group]Run rust-script rust/scripts/check-release-needed.rs --tag-prefix rust-v
+2026-06-08T20:24:50.9806154Z ^[[36;1mrust-script rust/scripts/check-release-needed.rs --tag-prefix rust-v^[[0m
+2026-06-08T20:24:50.9831752Z shell: /usr/bin/bash -e {0}
+2026-06-08T20:24:50.9832012Z env:
+2026-06-08T20:24:50.9832215Z   CARGO_TERM_COLOR: always
+2026-06-08T20:24:50.9832611Z   CARGO_REGISTRY_TOKEN: ***
+2026-06-08T20:24:50.9832931Z   CARGO_TOKEN: ***
+2026-06-08T20:24:50.9833168Z   CARGO_HOME: /home/runner/.cargo
+2026-06-08T20:24:50.9833442Z   CARGO_INCREMENTAL: 0
+2026-06-08T20:24:50.9833670Z   HAS_FRAGMENTS: true
+2026-06-08T20:24:50.9837299Z   GITHUB_TOKEN: ***
+2026-06-08T20:24:50.9837595Z   GITHUB_REPOSITORY: link-foundation/command-stream
+2026-06-08T20:24:50.9837922Z ##[endgroup]
+2026-06-08T20:25:16.8145343Z Detected multi-language repository (Cargo.toml in rust/)
+2026-06-08T20:25:16.9128922Z Max published version on crates.io: 0.9.5
+2026-06-08T20:25:16.9130336Z Output: max_published_version=0.9.5
+2026-06-08T20:25:16.9131244Z Found changelog fragments, proceeding with release
+2026-06-08T20:25:16.9131748Z Output: should_release=true
+2026-06-08T20:25:16.9132108Z Output: skip_bump=false
+2026-06-08T20:25:16.9168983Z ##[group]Run rust-script rust/scripts/version-and-commit.rs --bump-type "patch" --tag-prefix rust-v --release-label Rust
+2026-06-08T20:25:16.9169881Z ^[[36;1mrust-script rust/scripts/version-and-commit.rs --bump-type "patch" --tag-prefix rust-v --release-label Rust^[[0m
+2026-06-08T20:25:16.9195758Z shell: /usr/bin/bash -e {0}
+2026-06-08T20:25:16.9196014Z env:
+2026-06-08T20:25:16.9196211Z   CARGO_TERM_COLOR: always
+2026-06-08T20:25:16.9196590Z   CARGO_REGISTRY_TOKEN: ***
+2026-06-08T20:25:16.9196900Z   CARGO_TOKEN: ***
+2026-06-08T20:25:16.9197124Z   CARGO_HOME: /home/runner/.cargo
+2026-06-08T20:25:16.9197385Z   CARGO_INCREMENTAL: 0
+2026-06-08T20:25:16.9197612Z ##[endgroup]
+2026-06-08T20:25:21.2906155Z Detected multi-language repository (Cargo.toml in rust/)
+2026-06-08T20:25:21.3522664Z Max published version on crates.io: 0.9.5
+2026-06-08T20:25:21.3523408Z Initial bump (patch) from 0.9.5: 0.9.6
+2026-06-08T20:25:21.4398758Z Final release version: 0.9.6
+2026-06-08T20:25:21.4401445Z Updated rust/Cargo.toml to version 0.9.6
+2026-06-08T20:25:21.4404470Z Updated rust/Cargo.lock to version 0.9.6
+2026-06-08T20:25:21.4408593Z Collected 2 changelog fragment(s)
+2026-06-08T20:25:21.7163126Z Local branch is behind remote, rebasing...
+2026-06-08T20:25:21.7217274Z Error rebasing onto origin/main: Command failed: error: cannot rebase: Your index contains uncommitted changes.
+2026-06-08T20:25:21.7218289Z error: Please commit or stash them.
+2026-06-08T20:25:21.7218639Z 
+2026-06-08T20:25:21.7245572Z ##[error]Process completed with exit code 1.
+2026-06-08T20:25:21.7363861Z Post job cleanup.
+2026-06-08T20:25:21.8350775Z [command]/usr/bin/git version
+2026-06-08T20:25:21.8387532Z git version 2.54.0
+2026-06-08T20:25:21.8431001Z Temporarily overriding HOME='/home/runner/work/_temp/93b579b8-f405-438b-afcd-13dc4a65e395' before making global git config changes
+2026-06-08T20:25:21.8431809Z Adding repository directory to the temporary git global config as a safe directory
+2026-06-08T20:25:21.8436841Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/command-stream/command-stream
+2026-06-08T20:25:21.8473817Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-06-08T20:25:21.8506694Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-06-08T20:25:21.8740333Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-06-08T20:25:21.8766238Z http.https://github.com/.extraheader
+2026-06-08T20:25:21.8778431Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-06-08T20:25:21.8808910Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-06-08T20:25:21.9033460Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-06-08T20:25:21.9064169Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-06-08T20:25:21.9407294Z Cleaning up orphan processes
+2026-06-08T20:25:21.9710847Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4. Actions will be forced to run with Node.js 24 by default starting June 16th, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
