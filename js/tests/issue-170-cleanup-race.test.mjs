@@ -25,6 +25,27 @@ import './test-helper.mjs'; // installs beforeEach/afterEach resetGlobalState
 import { $, shell, resetGlobalState } from '../src/$.mjs';
 
 describe('issue #170 - CI false positives', () => {
+  test('an in-flight external command retains its errexit setting', async () => {
+    shell.errexit(true);
+    const runner = $({
+      mirror: false,
+    })`sh -c "sleep 0.1; exit 5"`;
+    const settled = runner.then(
+      (result) => ({ status: 'fulfilled', result }),
+      (error) => ({ status: 'rejected', error })
+    );
+    const timer = setTimeout(() => shell.errexit(false), 20);
+
+    try {
+      const outcome = await settled;
+      expect(outcome.status).toBe('rejected');
+      expect(outcome.error?.code).toBe(5);
+    } finally {
+      clearTimeout(timer);
+      shell.errexit(false);
+    }
+  });
+
   test('resetGlobalState() during an awaited command preserves the real exit code', async () => {
     // Fire a global reset while the command below is still running. This mirrors
     // the Windows/Bun timing where a test-isolation reset raced an in-flight,
