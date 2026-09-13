@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.21.1
+
+### Patch Changes
+
+- b854143: Document and lock down shell-like interpolation for pre-quoted values and
+  author-written template quotes, including the legacy compatibility option.
+
 ## 0.21.0
 
 ### Minor Changes
