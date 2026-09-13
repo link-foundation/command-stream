@@ -4,6 +4,8 @@
 
 use command_stream::{create, exec, run, ProcessRunner, RunOptions, StdinOption};
 use std::collections::HashMap;
+#[cfg(unix)]
+use std::time::Duration;
 use tempfile::TempDir;
 
 // ============================================================================
@@ -46,6 +48,35 @@ async fn test_real_shell_preserves_missing_final_newlines() {
     assert!(result.is_success());
     assert_eq!(result.stdout, "stdout");
     assert_eq!(result.stderr, "stderr");
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn test_real_shell_drains_full_stderr_pipe_before_stdout() {
+    const CHUNK: &str = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+    const REPEATS: usize = 4096;
+    let command = format!(
+        "i=0; while [ \"$i\" -lt {REPEATS} ]; do printf '{CHUNK}'; i=$((i + 1)); done >&2; printf stdout"
+    );
+
+    let result = tokio::time::timeout(
+        Duration::from_secs(10),
+        exec(
+            command,
+            RunOptions {
+                mirror: false,
+                ..Default::default()
+            },
+        ),
+    )
+    .await
+    .expect("process deadlocked while stderr exceeded pipe capacity")
+    .unwrap();
+
+    assert!(result.is_success());
+    assert_eq!(result.stdout, "stdout");
+    assert_eq!(result.stderr.len(), CHUNK.len() * REPEATS);
+    assert!(result.stderr.bytes().all(|byte| byte == b'e'));
 }
 
 #[tokio::test]

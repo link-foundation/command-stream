@@ -111,7 +111,7 @@ enum ChildOutput {
     Stderr,
 }
 
-/// Read child output as bytes so capture does not invent a trailing newline.
+/// Read child output as byte chunks so capture does not invent a trailing newline.
 ///
 /// stdout and stderr use separate futures in `ProcessRunner::run`, preventing
 /// either pipe from filling while the other is being drained. Mirroring keeps
@@ -424,15 +424,25 @@ impl ProcessRunner {
             }
         }
 
-        // Drain both pipes concurrently and preserve their exact bytes. The
+        // Drain both pipes concurrently and preserve their newline framing. The
         // previous line reader appended `\n` to every final line, changing
         // output from commands such as `printf` and `echo -n` (issue #37).
         let stdout = child.stdout.take();
         let stderr = child.stderr.take();
-        let (stdout, stderr) = tokio::try_join!(
+        let collected = tokio::try_join!(
             collect_child_output(stdout, self.options.mirror, ChildOutput::Stdout),
             collect_child_output(stderr, self.options.mirror, ChildOutput::Stderr),
-        )?;
+        );
+        let (stdout, stderr) = match collected {
+            Ok(output) => output,
+            Err(error) => {
+                // `try_join!` drops the other pipe reader after an error. Stop
+                // and reap the child so it cannot remain blocked on that pipe.
+                let _ = child.start_kill();
+                let _ = child.wait().await;
+                return Err(error.into());
+            }
+        };
 
         let status = child.wait().await?;
         let code = status.code().unwrap_or(-1);
