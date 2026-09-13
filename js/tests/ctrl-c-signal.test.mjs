@@ -6,6 +6,18 @@ import { trace } from '../src/$.utils.mjs';
 // Platform detection - Windows handles signals differently than Unix
 const isWindows = process.platform === 'win32';
 
+const waitForOutput = async (readOutput, expected, timeoutMs = 5000) => {
+  const deadline = Date.now() + timeoutMs;
+
+  while (!readOutput().includes(expected)) {
+    if (Date.now() >= deadline) {
+      throw new Error(`Timed out waiting for child output: ${expected}`);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+};
+
 // Skip entire describe block on Windows - SIGINT/signal handling is fundamentally different
 describe.skipIf(isWindows)('CTRL+C Signal Handling', () => {
   let childProcesses = [];
@@ -726,11 +738,12 @@ describe.skipIf(isWindows)('CTRL+C with Different stdin Modes', () => {
           `
       import { $ } from './js/src/$.mjs';
       
+      const runner = \$({ stdin: 'custom input' })\`sleep 2\`;
       console.log('STARTING_SLEEP_WITH_CUSTOM_STDIN');
-      
+
       try {
         // This should bypass virtual sleep and use real /usr/bin/sleep
-        const result = await \$({ stdin: 'custom input' })\`sleep 2\`;
+        const result = await runner;
         console.log('SLEEP_COMPLETED: ' + result.code);
       } catch (error) {
         console.log('SLEEP_ERROR: ' + error.message);
@@ -750,8 +763,9 @@ describe.skipIf(isWindows)('CTRL+C with Different stdin Modes', () => {
         stdout += data.toString();
       });
 
-      // Give it time to start then interrupt
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Wait until the imported library has installed its SIGINT handler.
+      // A fixed delay can signal Node before startup completes under load.
+      await waitForOutput(() => stdout, 'STARTING_SLEEP_WITH_CUSTOM_STDIN');
       child.kill('SIGINT');
 
       const exitCode = await new Promise((resolve) => {
@@ -840,8 +854,8 @@ describe.skipIf(isWindows)('CTRL+C with Different stdin Modes', () => {
         stdout1 += data.toString();
       });
 
-      // Wait for command to start, then interrupt
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Signal only after the child confirms that the command has started.
+      await waitForOutput(() => stdout1, 'STARTING_SLEEP');
       child1.kill('SIGINT');
 
       const exitCode1 = await new Promise((resolve) => {
@@ -891,8 +905,8 @@ describe.skipIf(isWindows)('CTRL+C with Different stdin Modes', () => {
         stdout2 += data.toString();
       });
 
-      // Wait for setup, then interrupt
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Signal only after the user handler has been installed.
+      await waitForOutput(() => stdout2, 'PROCESS_READY');
       child2.kill('SIGINT');
 
       const exitCode2 = await new Promise((resolve) => {

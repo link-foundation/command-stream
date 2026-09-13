@@ -301,6 +301,23 @@ await $`bash -c "${script}"`; // → bash -c "for f in *.js; do echo \"Processin
 await $`echo '${"it's here"}'`; // → echo 'it'\''s here'
 ```
 
+Template quotes and quote characters inside a value are intentionally
+different (issue #45):
+
+```javascript
+const value = 'hello world';
+await $`echo "${value}"`; // author-written quotes group one argument
+
+const preQuoted = '"hello world"';
+await $`echo ${preQuoted}`; // the quote characters are part of the argument
+```
+
+The second form follows `"$var"` in `sh`, Bun's `$`, zx, and execa: an
+interpolated value is data, so quote characters are preserved instead of being
+reinterpreted as shell syntax. Remove the quotes from the value when they are
+not part of the intended argument. Code that relied on the pre-v0.21 behavior
+can opt into `shell.preQuotedPassthrough(true)` as described above.
+
 This matches how the same line behaves in `sh`, and it is what fixes the classic
 `bash -c "${cmd}"` failure, where the extra quotes used to turn the whole script
 into a single unrunnable word (issue #49).
@@ -329,6 +346,65 @@ setQuoteContextEnabled(null); // follow the environment again
 
 Or set `COMMAND_STREAM_QUOTE_CONTEXT=0` in the environment to disable it for a
 whole process without touching code.
+
+### JSON and Other Structured Arguments
+
+Pass serialized data directly. Every interpolation is one literal argument, so
+JSON quotes, apostrophes, dollar signs, backticks, backslashes, whitespace, and
+Unicode remain data instead of becoming shell syntax:
+
+```javascript
+const json = JSON.stringify({
+  message: 'She said "hello"',
+  path: 'C:\\Program Files\\app',
+  template: '$HOME and `date`',
+});
+
+await $`some-cli --payload ${json}`;
+```
+
+Do not pre-quote the value or replace `"` with `\\"`. Those added quote or
+backslash characters are caller data and are intentionally preserved, matching
+the literal-argument behavior of `"$value"` in `sh`, Bun's `$`, zx, and
+Execa.
+
+For byte-exact redirection, use a constant `printf` format string and put the
+JSON in a separate argument:
+
+```javascript
+const outputFile = 'config.json';
+await $`printf '%s' ${json} > ${outputFile}`;
+```
+
+`echo` appends a newline and its backslash handling varies between shells, so
+it is not a byte-preserving serialization primitive. If no external command is
+needed, avoid a shell and use `fs.writeFile(outputFile, json)`.
+
+No JSON-specific mode is needed: automatic interpolation already provides the
+safe, unsurprising literal contract. The
+`COMMAND_STREAM_PREQUOTED_PASSTHROUGH` and
+`COMMAND_STREAM_QUOTE_CONTEXT` switches remain available only for legacy
+general quoting compatibility.
+
+### Multiline Text and Exact File Writes
+
+Interpolated multiline strings stay one literal argument. Their backticks,
+dollar signs, quotes, backslashes, and newlines are data rather than shell
+syntax:
+
+```javascript
+const outputFile = 'generated.md';
+const content = `# Generated
+
+Literal: \`code\`, $HOME, \${name}, "quotes", and C:\\Tools`;
+await $`printf '%s' ${content} > ${outputFile}`;
+```
+
+`echo` still adds its normal trailing newline. Prefer `printf '%s'` when the
+file must match the string exactly, or pass large text through the `stdin`
+option. Use `fs.writeFile` for binary data. See
+[`examples/multiline-content.mjs`](examples/multiline-content.mjs) for both
+text-writing patterns.
 
 ### Go templates & `{{ }}` arguments
 

@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.21.3
+
+### Patch Changes
+
+- bc77d9a: Preserve exact multiline output, including missing final newlines, document safe
+  multiline file writes, and keep shell settings stable for in-flight external
+  commands.
+
+## 0.21.2
+
+### Patch Changes
+
+- Document and lock in literal JSON interpolation across command arguments,
+  author-written quote contexts, pipelines, and shell redirection.
+
+## 0.21.1
+
+### Patch Changes
+
+- b854143: Document and lock down shell-like interpolation for pre-quoted values and
+  author-written template quotes, including the legacy compatibility option.
+
 ## 0.21.0
 
 ### Minor Changes

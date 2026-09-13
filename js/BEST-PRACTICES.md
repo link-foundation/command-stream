@@ -6,6 +6,7 @@ This document covers best practices, common patterns, and pitfalls to avoid when
 
 - [Array Argument Handling](#array-argument-handling)
 - [String Interpolation](#string-interpolation)
+  - [JSON and Structured Data](#json-and-structured-data)
 - [Security Best Practices](#security-best-practices)
 - [Error Handling](#error-handling)
 - [Real-time Streaming](#real-time-streaming)
@@ -114,6 +115,51 @@ await $`bash -c "${script}"`;
 
 To restore the old always-quote behavior, call `shell.quoteContext(false)` or set
 `COMMAND_STREAM_QUOTE_CONTEXT=0`.
+
+### JSON and Structured Data
+
+Interpolate `JSON.stringify()` output directly. Do not add shell quotes to the
+value or manually escape its double quotes:
+
+```javascript
+const json = JSON.stringify(credentials);
+
+// RIGHT: one literal argument
+await $`some-cli --credentials ${json}`;
+
+// WRONG: the added backslashes become part of the argument
+await $`some-cli --credentials ${json.replaceAll('"', '\\"')}`;
+```
+
+When redirecting exact bytes, use `printf '%s'`; the fixed format string keeps
+`%` sequences in the JSON from being interpreted:
+
+```javascript
+await $`printf '%s' ${json} > ${outputFile}`;
+```
+
+`echo` adds a newline and different shells do not handle its backslash escapes
+identically. For a file-only operation, `fs.writeFile(outputFile, json)` is
+simpler and avoids a shell.
+
+### Multiline Text and Exact File Writes
+
+Multiline interpolations are one literal argument, just like a quoted shell
+variable. Backticks, dollar signs, quotes, backslashes, and newlines in the
+value are data and are not evaluated as shell syntax:
+
+```javascript
+const outputFile = 'generated.md';
+const content = `# Generated
+
+Literal: \`code\`, $HOME, \${name}, "quotes", and C:\\Tools`;
+await $`printf '%s' ${content} > ${outputFile}`;
+```
+
+`echo` adds its normal trailing newline and its option/escape handling varies
+between shells. Use `printf '%s'` when byte-for-byte text output matters. For
+large text, pipe the value through `stdin`; for binary data, skip the shell and
+use `fs.writeFile`. Never use `raw()` for untrusted content.
 
 ### Paths With Spaces
 

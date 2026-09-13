@@ -160,8 +160,10 @@ The simplest examples to get started:
 
 ### 🔤 Quoting and Paths
 
+- `multiline-content.mjs` - Exact multiline file writes with `printf` or stdin (GitHub issue #37)
 - `paths-with-spaces.mjs` - File paths with spaces need no manual quoting (GitHub issue #41)
 - `quote-context-bash-c.mjs` - Interpolating inside your own quotes (GitHub issue #49)
+- `json-interpolation.mjs` - Pass JSON literally and redirect it without manual escaping (GitHub issue #39)
 
 ### 🔧 Syntax Comparisons
 

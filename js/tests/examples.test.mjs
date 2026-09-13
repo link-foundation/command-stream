@@ -5,6 +5,43 @@ import { trace } from '../src/$.utils.mjs';
 import { readdirSync, statSync, readFileSync } from 'fs';
 import { join } from 'path';
 
+const waitForOutput = (child, readOutput, expected, timeoutMs = 3000) =>
+  new Promise((resolve, reject) => {
+    const finish = (callback, value) => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+      child.off('error', onError);
+      child.off('exit', onExit);
+      callback(value);
+    };
+    const check = () => {
+      if (readOutput().includes(expected)) {
+        finish(resolve);
+      }
+    };
+    const onError = (error) => finish(reject, error);
+    const onExit = (code, signal) =>
+      finish(
+        reject,
+        new Error(
+          `Child exited before readiness output (code=${code}, signal=${signal})`
+        )
+      );
+    const interval = setInterval(check, 25);
+    const timeout = setTimeout(
+      () =>
+        finish(
+          reject,
+          new Error(`Timed out waiting for child output: ${expected}`)
+        ),
+      timeoutMs
+    );
+
+    child.once('error', onError);
+    child.once('exit', onExit);
+    check();
+  });
+
 // Get all .mjs examples
 const examplesDir = join(process.cwd(), 'js/examples');
 const allExamples = readdirSync(examplesDir)
@@ -184,23 +221,36 @@ describe('Examples Execution Tests', () => {
         stderr += data.toString();
       });
 
-      // Give the process time to set up its signal handler
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Send SIGINT to the process
-      child.kill('SIGINT');
-
-      // Wait for the process to exit
-      const exitCode = await new Promise((resolve) => {
-        child.on('close', (code) => {
+      let closed = false;
+      const closePromise = new Promise((resolve) => {
+        child.once('close', (code) => {
+          closed = true;
           resolve(code);
         });
       });
 
-      // The user's SIGINT handler should have been called with exit code 42
-      expect(exitCode).toBe(42);
-      expect(stdout).toContain('USER_SIGINT_HANDLER_CALLED');
-      expect(stdout).not.toContain('TIMEOUT_REACHED');
+      try {
+        // Signal only after the child confirms its handler is installed. A
+        // fixed delay is flaky when the full suite puts the host under load.
+        await waitForOutput(
+          child,
+          () => stdout,
+          'Process started, waiting for SIGINT...'
+        );
+
+        child.kill('SIGINT');
+        const exitCode = await closePromise;
+
+        // The user's SIGINT handler should have been called with exit code 42
+        expect(exitCode).toBe(42);
+        expect(stdout).toContain('USER_SIGINT_HANDLER_CALLED');
+        expect(stdout).not.toContain('TIMEOUT_REACHED');
+      } finally {
+        if (!closed) {
+          child.kill('SIGKILL');
+          await closePromise;
+        }
+      }
     },
     { timeout: 5000 }
   );
