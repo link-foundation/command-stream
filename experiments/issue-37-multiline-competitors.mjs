@@ -2,6 +2,7 @@
 // Optional competitors can be installed outside the repository and supplied as:
 // COMPETITOR_NODE_MODULES=/tmp/deps/node_modules bun experiments/issue-37-multiline-competitors.mjs
 import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { $ } from '../js/src/$.mjs';
@@ -14,19 +15,22 @@ C:\\Program Files\\Example, and $(printf never-executed).`;
 async function importOptional(name) {
   const modules = process.env.COMPETITOR_NODE_MODULES;
   if (modules) {
-    try {
-      return await import(
-        pathToFileURL(path.join(path.resolve(modules), name)).href
-      );
-    } catch {
-      // Fall through to normal package resolution.
+    const candidate = path.join(path.resolve(modules), name);
+    if (fs.existsSync(candidate)) {
+      return await import(pathToFileURL(candidate).href);
     }
   }
 
   try {
     return await import(name);
-  } catch {
-    return null;
+  } catch (error) {
+    if (
+      error?.code === 'ERR_MODULE_NOT_FOUND' ||
+      error?.code === 'MODULE_NOT_FOUND'
+    ) {
+      return null;
+    }
+    throw error;
   }
 }
 
