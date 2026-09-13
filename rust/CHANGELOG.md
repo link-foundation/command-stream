@@ -158,6 +158,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [0.18.2] - 2026-09-13
+
+### Fixed
+
+- Preserve stdout and stderr text without inventing a trailing newline.
+- Keep multiline interpolations literal across echo, printf, redirection, and nested shell programs.
+
 ## [0.18.1] - 2026-09-13
 
 ### Fixed
