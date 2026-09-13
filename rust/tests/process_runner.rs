@@ -35,8 +35,16 @@ async fn test_command_with_arguments() {
 
 #[tokio::test]
 async fn test_real_shell_preserves_missing_final_newlines() {
+    #[cfg(unix)]
+    let command = "printf stdout; printf stderr >&2";
+    #[cfg(windows)]
+    let command = concat!(
+        "powershell.exe -NoLogo -NoProfile -NonInteractive -Command ",
+        "\"[Console]::Out.Write('stdout'); [Console]::Error.Write('stderr')\""
+    );
+
     let result = exec(
-        "printf stdout; printf stderr >&2",
+        command,
         RunOptions {
             mirror: false,
             ..Default::default()
