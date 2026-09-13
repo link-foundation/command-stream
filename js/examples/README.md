@@ -162,6 +162,7 @@ The simplest examples to get started:
 
 - `paths-with-spaces.mjs` - File paths with spaces need no manual quoting (GitHub issue #41)
 - `quote-context-bash-c.mjs` - Interpolating inside your own quotes (GitHub issue #49)
+- `json-interpolation.mjs` - Pass JSON literally and redirect it without manual escaping (GitHub issue #39)
 
 ### 🔧 Syntax Comparisons
 

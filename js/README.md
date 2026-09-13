@@ -337,6 +337,45 @@ setQuoteContextEnabled(null); // follow the environment again
 Or set `COMMAND_STREAM_QUOTE_CONTEXT=0` in the environment to disable it for a
 whole process without touching code.
 
+### JSON and Other Structured Arguments
+
+Pass serialized data directly. Every interpolation is one literal argument, so
+JSON quotes, apostrophes, dollar signs, backticks, backslashes, whitespace, and
+Unicode remain data instead of becoming shell syntax:
+
+```javascript
+const json = JSON.stringify({
+  message: 'She said "hello"',
+  path: 'C:\\Program Files\\app',
+  template: '$HOME and `date`',
+});
+
+await $`some-cli --payload ${json}`;
+```
+
+Do not pre-quote the value or replace `"` with `\\"`. Those added quote or
+backslash characters are caller data and are intentionally preserved, matching
+the literal-argument behavior of `"$value"` in `sh`, Bun's `$`, zx, and
+Execa.
+
+For byte-exact redirection, use a constant `printf` format string and put the
+JSON in a separate argument:
+
+```javascript
+const outputFile = 'config.json';
+await $`printf '%s' ${json} > ${outputFile}`;
+```
+
+`echo` appends a newline and its backslash handling varies between shells, so
+it is not a byte-preserving serialization primitive. If no external command is
+needed, avoid a shell and use `fs.writeFile(outputFile, json)`.
+
+No JSON-specific mode is needed: automatic interpolation already provides the
+safe, unsurprising literal contract. The
+`COMMAND_STREAM_PREQUOTED_PASSTHROUGH` and
+`COMMAND_STREAM_QUOTE_CONTEXT` switches remain available only for legacy
+general quoting compatibility.
+
 ### Go templates & `{{ }}` arguments
 
 `command-stream` gives you a real shell's word-splitting, including for tokens
