@@ -1,7 +1,9 @@
-use super::support::{
-    decode_hex_lines, fixture_path, fixture_runner, hex, run_fixture, shell_fixture_command,
-};
-use command_stream::{cmd, run_sync, OutputChunk, Pipeline, StreamingRunner};
+#[cfg(not(windows))]
+use super::support::fixture_path;
+use super::support::{decode_hex_lines, fixture_runner, hex, run_fixture, shell_fixture_command};
+#[cfg(not(windows))]
+use command_stream::cmd;
+use command_stream::{run_sync, OutputChunk, Pipeline, StreamingRunner};
 use std::collections::HashMap;
 use std::ffi::OsString;
 use std::time::Duration;

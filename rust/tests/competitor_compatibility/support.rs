@@ -1,4 +1,6 @@
-use command_stream::{quote, CommandResult, StreamingRunner};
+#[cfg(not(windows))]
+use command_stream::quote;
+use command_stream::{CommandResult, StreamingRunner};
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::Command;
