@@ -142,6 +142,25 @@ await $`printf '%s' ${json} > ${outputFile}`;
 identically. For a file-only operation, `fs.writeFile(outputFile, json)` is
 simpler and avoids a shell.
 
+### Multiline Text and Exact File Writes
+
+Multiline interpolations are one literal argument, just like a quoted shell
+variable. Backticks, dollar signs, quotes, backslashes, and newlines in the
+value are data and are not evaluated as shell syntax:
+
+```javascript
+const outputFile = 'generated.md';
+const content = `# Generated
+
+Literal: \`code\`, $HOME, \${name}, "quotes", and C:\\Tools`;
+await $`printf '%s' ${content} > ${outputFile}`;
+```
+
+`echo` adds its normal trailing newline and its option/escape handling varies
+between shells. Use `printf '%s'` when byte-for-byte text output matters. For
+large text, pipe the value through `stdin`; for binary data, skip the shell and
+use `fs.writeFile`. Never use `raw()` for untrusted content.
+
 ### Paths With Spaces
 
 Interpolate the path as-is. An interpolated value always becomes exactly one

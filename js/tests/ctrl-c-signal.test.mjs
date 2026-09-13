@@ -738,11 +738,12 @@ describe.skipIf(isWindows)('CTRL+C with Different stdin Modes', () => {
           `
       import { $ } from './js/src/$.mjs';
       
+      const runner = \$({ stdin: 'custom input' })\`sleep 2\`;
       console.log('STARTING_SLEEP_WITH_CUSTOM_STDIN');
-      
+
       try {
         // This should bypass virtual sleep and use real /usr/bin/sleep
-        const result = await \$({ stdin: 'custom input' })\`sleep 2\`;
+        const result = await runner;
         console.log('SLEEP_COMPLETED: ' + result.code);
       } catch (error) {
         console.log('SLEEP_ERROR: ' + error.message);
@@ -762,8 +763,9 @@ describe.skipIf(isWindows)('CTRL+C with Different stdin Modes', () => {
         stdout += data.toString();
       });
 
-      // Give it time to start then interrupt
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Wait until the imported library has installed its SIGINT handler.
+      // A fixed delay can signal Node before startup completes under load.
+      await waitForOutput(() => stdout, 'STARTING_SLEEP_WITH_CUSTOM_STDIN');
       child.kill('SIGINT');
 
       const exitCode = await new Promise((resolve) => {

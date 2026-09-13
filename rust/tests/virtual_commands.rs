@@ -219,9 +219,7 @@ async fn test_execute_echo_with_n_flag() {
     enable_virtual_commands();
     let result = run("echo -n Hello").await.unwrap();
     assert!(result.is_success());
-    assert_eq!(result.stdout.trim(), "Hello");
-    // -n flag should not add newline
-    assert!(!result.stdout.ends_with("\n\n"));
+    assert_eq!(result.stdout, "Hello");
 }
 
 // ============================================================================

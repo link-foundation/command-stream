@@ -1093,6 +1093,10 @@ export function attachExecutionMethods(ProcessRunner, deps) {
   };
 
   ProcessRunner.prototype._doStartAsync = async function () {
+    // Keep external-process options stable when another task changes or resets
+    // the process-wide defaults while this command is running (issue #170).
+    const shellSettings = { ...globalShellSettings };
+
     // The await/then path can reach here without start()'s option merge.
     setupExternalAbortSignal(this);
     // Preserve the public lifecycle contract: accessing a stream starts the
@@ -1166,7 +1170,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
         this.spec.mode === 'shell' && !shellArgv
           ? this.spec.command
           : argv.join(' ');
-      logShellTrace(globalShellSettings, traceCmd);
+      logShellTrace(shellSettings, traceCmd);
 
       // Detect interactive mode
       const isInteractive = isInteractiveMode(stdin, this.options);
@@ -1204,7 +1208,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
           })}`
       );
 
-      throwErrexitIfNeeded(this, globalShellSettings);
+      throwErrexitIfNeeded(this, shellSettings);
 
       return this.result;
     } catch (error) {
@@ -1433,6 +1437,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
 
     this.started = true;
     this._mode = 'sync';
+    const shellSettings = { ...globalShellSettings };
 
     const { cwd, env, stdin } = this.options;
     const shellArgv = isShellArgvSpec(this.spec);
@@ -1442,7 +1447,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
       this.spec.mode === 'shell' && !shellArgv
         ? this.spec.command
         : argv.join(' ');
-    logShellTrace(globalShellSettings, traceCmd);
+    logShellTrace(shellSettings, traceCmd);
 
     const result = executeSyncProcess(argv, {
       cwd,
@@ -1450,7 +1455,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
       stdin,
       shell: shellArgv,
     });
-    return processSyncResult(this, result, globalShellSettings);
+    return processSyncResult(this, result, shellSettings);
   };
 
   // Promise interface

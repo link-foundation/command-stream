@@ -137,6 +137,27 @@ assert_eq!(quote_for_context("it's", QuoteContext::Single), "it'\\''s");
 Set `COMMAND_STREAM_QUOTE_CONTEXT=0` to restore the previous behavior of always
 quoting every interpolated value.
 
+### Multiline Text and Exact File Writes
+
+Multiline interpolations are one literal argument, like a quoted shell
+variable. Backticks, dollar signs, quotes, backslashes, and newlines in the
+value are data rather than shell syntax:
+
+```rust,no_run
+use command_stream::s;
+
+# async fn example() -> Result<(), command_stream::Error> {
+let content = "# Generated\n\nLiteral: `code`, $HOME, ${name}, and C:\\Tools";
+let result = s!("printf '%s' {}", content).await?;
+assert_eq!(result.stdout, content);
+# Ok(())
+# }
+```
+
+`echo` adds its normal trailing newline and its option/escape handling varies
+between shells. Use `printf '%s'` when exact captured text matters, and use
+`std::fs::write` when no shell command is needed.
+
 ### Paths With Spaces
 
 Interpolate the path as-is. An interpolated value always becomes exactly one

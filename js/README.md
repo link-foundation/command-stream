@@ -376,6 +376,26 @@ safe, unsurprising literal contract. The
 `COMMAND_STREAM_QUOTE_CONTEXT` switches remain available only for legacy
 general quoting compatibility.
 
+### Multiline Text and Exact File Writes
+
+Interpolated multiline strings stay one literal argument. Their backticks,
+dollar signs, quotes, backslashes, and newlines are data rather than shell
+syntax:
+
+```javascript
+const outputFile = 'generated.md';
+const content = `# Generated
+
+Literal: \`code\`, $HOME, \${name}, "quotes", and C:\\Tools`;
+await $`printf '%s' ${content} > ${outputFile}`;
+```
+
+`echo` still adds its normal trailing newline. Prefer `printf '%s'` when the
+file must match the string exactly, or pass large text through the `stdin`
+option. Use `fs.writeFile` for binary data. See
+[`examples/multiline-content.mjs`](examples/multiline-content.mjs) for both
+text-writing patterns.
+
 ### Go templates & `{{ }}` arguments
 
 `command-stream` gives you a real shell's word-splitting, including for tokens

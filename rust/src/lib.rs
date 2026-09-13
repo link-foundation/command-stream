@@ -81,7 +81,7 @@ pub mod utils;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::Stdio;
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};
 use tokio::process::{Child, Command};
 use tokio::sync::mpsc;
 
@@ -104,6 +104,58 @@ pub use state::{
 };
 pub use stream::{AsyncIterator, IntoStream, OutputChunk, OutputStream, StreamingRunner};
 pub use trace::trace;
+
+#[derive(Clone, Copy)]
+enum ChildOutput {
+    Stdout,
+    Stderr,
+}
+
+/// Read child output as byte chunks so capture does not invent a trailing newline.
+///
+/// stdout and stderr use separate futures in `ProcessRunner::run`, preventing
+/// either pipe from filling while the other is being drained. Mirroring keeps
+/// the original bytes too, including output that does not end in a newline.
+async fn collect_child_output<R>(
+    reader: Option<R>,
+    mirror: bool,
+    target: ChildOutput,
+) -> std::io::Result<Vec<u8>>
+where
+    R: AsyncRead + Unpin,
+{
+    let Some(mut reader) = reader else {
+        return Ok(Vec::new());
+    };
+    let mut collected = Vec::new();
+    let mut buffer = [0_u8; 8192];
+
+    loop {
+        let count = reader.read(&mut buffer).await?;
+        if count == 0 {
+            break;
+        }
+
+        let chunk = &buffer[..count];
+        collected.extend_from_slice(chunk);
+        if mirror {
+            match target {
+                ChildOutput::Stdout => {
+                    let mut output = std::io::stdout().lock();
+                    let _ = std::io::Write::write_all(&mut output, chunk);
+                    let _ = std::io::Write::flush(&mut output);
+                }
+                ChildOutput::Stderr => {
+                    let mut output = std::io::stderr().lock();
+                    let _ = std::io::Write::write_all(&mut output, chunk);
+                    let _ = std::io::Write::flush(&mut output);
+                }
+            }
+        }
+    }
+
+    Ok(collected)
+}
 
 fn fallback_cwd() -> PathBuf {
     std::env::var_os("HOME")
@@ -372,38 +424,32 @@ impl ProcessRunner {
             }
         }
 
-        // Collect output
-        let mut stdout_content = String::new();
-        let mut stderr_content = String::new();
-
-        if let Some(stdout) = child.stdout.take() {
-            let mut reader = BufReader::new(stdout).lines();
-            while let Ok(Some(line)) = reader.next_line().await {
-                if self.options.mirror {
-                    println!("{}", line);
-                }
-                stdout_content.push_str(&line);
-                stdout_content.push('\n');
+        // Drain both pipes concurrently and preserve their newline framing. The
+        // previous line reader appended `\n` to every final line, changing
+        // output from commands such as `printf` that omit a newline (issue #37).
+        let stdout = child.stdout.take();
+        let stderr = child.stderr.take();
+        let collected = tokio::try_join!(
+            collect_child_output(stdout, self.options.mirror, ChildOutput::Stdout),
+            collect_child_output(stderr, self.options.mirror, ChildOutput::Stderr),
+        );
+        let (stdout, stderr) = match collected {
+            Ok(output) => output,
+            Err(error) => {
+                // `try_join!` drops the other pipe reader after an error. Stop
+                // and reap the child so it cannot remain blocked on that pipe.
+                let _ = child.start_kill();
+                let _ = child.wait().await;
+                return Err(error.into());
             }
-        }
-
-        if let Some(stderr) = child.stderr.take() {
-            let mut reader = BufReader::new(stderr).lines();
-            while let Ok(Some(line)) = reader.next_line().await {
-                if self.options.mirror {
-                    eprintln!("{}", line);
-                }
-                stderr_content.push_str(&line);
-                stderr_content.push('\n');
-            }
-        }
+        };
 
         let status = child.wait().await?;
         let code = status.code().unwrap_or(-1);
 
         let result = CommandResult {
-            stdout: stdout_content,
-            stderr: stderr_content,
+            stdout: String::from_utf8_lossy(&stdout).into_owned(),
+            stderr: String::from_utf8_lossy(&stderr).into_owned(),
             code,
         };
 

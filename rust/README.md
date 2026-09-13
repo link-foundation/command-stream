@@ -104,6 +104,26 @@ The exact-argv form bypasses `/bin/sh -c` and `cmd.exe /c`, so it does not
 require shell-specific quoting. It also accepts OS-native executable and
 argument values such as `PathBuf` and `OsString`.
 
+## Multiline Text and Exact Output
+
+The command macros treat an interpolated multiline string as one literal
+argument. Shell metacharacters remain data, and captured stdout/stderr preserve
+whether the child emitted a final newline:
+
+```rust,no_run
+use command_stream::s;
+
+# async fn example() -> Result<(), command_stream::Error> {
+let content = "# Generated\n\nLiteral: `code`, $HOME, ${name}, and C:\\Tools";
+let result = s!("printf '%s' {}", content).await?;
+assert_eq!(result.stdout, content);
+# Ok(())
+# }
+```
+
+Use `printf '%s'` instead of `echo` when exact text matters; `echo` normally
+adds a trailing newline. If no command is involved, prefer `std::fs::write`.
+
 ## Command Line
 
 The crate also builds a `command-stream` binary:
