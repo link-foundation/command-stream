@@ -265,7 +265,38 @@ const matchesOutput = (pattern, output) => {
 const interactionAfter = (interaction, output) =>
   matchesOutput(interaction.after, output);
 
+const formatInteraction = (interaction) => {
+  try {
+    return JSON.stringify(interaction) ?? String(interaction);
+  } catch {
+    return String(interaction);
+  }
+};
+
+const validateInteraction = (interaction) => {
+  const hasAction =
+    interaction !== null &&
+    typeof interaction === 'object' &&
+    (interaction.text !== undefined ||
+      interaction.key !== undefined ||
+      interaction.resize !== undefined);
+  const hasWait =
+    interaction !== null &&
+    typeof interaction === 'object' &&
+    (interaction.after !== undefined || interaction.idleMilliseconds > 0);
+  if (hasAction || hasWait) {
+    return;
+  }
+
+  throw new TypeError(
+    `Invalid terminal interaction ${formatInteraction(interaction)}; expected ` +
+      'an action with "text", "key", or "resize", or a wait with "after" ' +
+      'or "idleMilliseconds"'
+  );
+};
+
 const applyInteraction = ({ interaction, process, terminal, record }) => {
+  validateInteraction(interaction);
   if (interaction.text !== undefined) {
     const text = String(interaction.text);
     process.write(text);
@@ -622,6 +653,7 @@ const createTerminalSessionApi = ({
 
   const send = async (input) => {
     for (const interaction of Array.isArray(input) ? input : [input]) {
+      validateInteraction(interaction);
       if (interaction.after !== undefined || interaction.idleMilliseconds) {
         await waitFor(interaction.after, {
           idleMilliseconds: interaction.idleMilliseconds,
@@ -718,6 +750,9 @@ export const openTerminal = async ({
 } = {}) => {
   if (!file) {
     throw new TypeError(`${label} requires a file`);
+  }
+  for (const interaction of interactions) {
+    validateInteraction(interaction);
   }
   const terminalRows = resolveTerminalRows({ cols, rows, aspectRatio, label });
 

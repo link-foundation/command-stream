@@ -98,6 +98,25 @@ fn record(asciicast: &mut Asciicast, started: Instant, code: &str, data: impl In
     });
 }
 
+fn validate_interaction(interaction: &TerminalInteraction) -> Result<(), TerminalCaptureError> {
+    let has_action =
+        interaction.text.is_some() || interaction.key.is_some() || interaction.resize.is_some();
+    let has_wait = interaction.after.is_some()
+        || interaction.after_regex.is_some()
+        || interaction.idle_duration > Duration::ZERO;
+    if has_action || has_wait {
+        return Ok(());
+    }
+
+    Err(TerminalCaptureError::new(
+        format!(
+            "invalid terminal interaction {interaction:?}; expected an action with text, key, or \
+             resize, or a wait with after, after_regex, or idle_duration"
+        ),
+        None,
+    ))
+}
+
 fn apply_interaction(
     interaction: &TerminalInteraction,
     writer: &mut dyn Write,
@@ -106,6 +125,7 @@ fn apply_interaction(
     asciicast: &mut Asciicast,
     started: Instant,
 ) -> Result<(), TerminalCaptureError> {
+    validate_interaction(interaction)?;
     if let Some(text) = &interaction.text {
         writer
             .write_all(text.as_bytes())
@@ -271,6 +291,9 @@ impl TerminalSession {
                 "open_terminal requires a file",
                 None,
             ));
+        }
+        for interaction in &options.interactions {
+            validate_interaction(interaction)?;
         }
         let interaction_regexes = options
             .interactions
@@ -544,6 +567,7 @@ impl TerminalSession {
     /// Send text, a named key, or a resize to the live terminal, using the same
     /// vocabulary as [`TerminalInteraction`].
     pub fn send(&mut self, interaction: &TerminalInteraction) -> Result<(), TerminalCaptureError> {
+        validate_interaction(interaction)?;
         if let Some(marker) = &interaction.after {
             let pattern = TerminalPattern::text(marker.clone());
             self.wait_for(&pattern, interaction.idle_duration, None)?;

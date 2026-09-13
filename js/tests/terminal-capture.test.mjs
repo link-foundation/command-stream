@@ -352,6 +352,80 @@ describe('PTY terminal sessions', () => {
     expect(session.running).toBe(false);
   });
 
+  test('rejects empty and unrecognised interactions without writing input', async () => {
+    const session = await openTerminal({
+      file: process.execPath,
+      args: [join(directory, 'fixtures/tui-session-fixture.mjs')],
+      cols: 60,
+      rows: 6,
+      settleMilliseconds: 10,
+    });
+
+    try {
+      await session.waitFor('waiting for code');
+
+      for (const interaction of [{}, { input: 'hello' }]) {
+        let failure;
+        try {
+          await session.send(interaction);
+        } catch (error) {
+          failure = error;
+        }
+
+        expect(failure).toBeInstanceOf(TypeError);
+        expect(failure.message).toContain(JSON.stringify(interaction));
+        for (const field of [
+          'text',
+          'key',
+          'resize',
+          'after',
+          'idleMilliseconds',
+        ]) {
+          expect(failure.message).toContain(`"${field}"`);
+        }
+      }
+
+      expect(
+        session.asciicast.events.filter(({ code }) => code === 'i')
+      ).toHaveLength(0);
+    } finally {
+      await session.dispose();
+    }
+  });
+
+  test('validates initial interactions before opening a terminal', async () => {
+    for (const capture of [openTerminal, captureTerminal]) {
+      for (const interaction of [{}, { input: 'hello' }]) {
+        await expect(
+          capture({
+            file: '__command_stream_missing_executable__',
+            interactions: [interaction],
+          })
+        ).rejects.toThrow(TypeError);
+      }
+    }
+  });
+
+  test('allows an interaction whose only purpose is to wait', async () => {
+    const session = await openTerminal({
+      file: process.execPath,
+      args: [join(directory, 'fixtures/tui-session-fixture.mjs')],
+      cols: 60,
+      rows: 6,
+      settleMilliseconds: 10,
+    });
+
+    try {
+      await session.send({ after: 'waiting for code' });
+      expect(session.output).toContain('waiting for code');
+      expect(
+        session.asciicast.events.filter(({ code }) => code === 'i')
+      ).toHaveLength(0);
+    } finally {
+      await session.dispose();
+    }
+  });
+
   test('waitFor requires output quiescence and honours its own timeout', async () => {
     const session = await openTerminal({
       file: process.execPath,

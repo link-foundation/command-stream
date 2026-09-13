@@ -601,7 +601,10 @@ deliver the platform's resize notification to the child.
 Each interaction can use `after: 'literal text'` or `after: /pattern/` as its
 readiness condition. Add `idleMilliseconds` to require that no PTY output
 arrive for that duration before applying the interaction; new output restarts
-the idle wait. The complete, runnable
+the idle wait. An interaction must contain an action (`text`, `key`, or
+`resize`) or a wait (`after` or a positive `idleMilliseconds`); otherwise the
+call rejects with a `TypeError` before the terminal is opened or input is sent.
+The complete, runnable
 [`tui-e2e.mjs`](examples/tui-e2e.mjs) example navigates a raw-mode menu and
 asserts on its captured output.
 
