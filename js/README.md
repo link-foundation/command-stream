@@ -291,6 +291,23 @@ await $`bash -c "${script}"`; // → bash -c "for f in *.js; do echo \"Processin
 await $`echo '${"it's here"}'`; // → echo 'it'\''s here'
 ```
 
+Template quotes and quote characters inside a value are intentionally
+different (issue #45):
+
+```javascript
+const value = 'hello world';
+await $`echo "${value}"`; // author-written quotes group one argument
+
+const preQuoted = '"hello world"';
+await $`echo ${preQuoted}`; // the quote characters are part of the argument
+```
+
+The second form follows `"$var"` in `sh`, Bun's `$`, zx, and execa: an
+interpolated value is data, so quote characters are preserved instead of being
+reinterpreted as shell syntax. Remove the quotes from the value when they are
+not part of the intended argument. Code that relied on the pre-v0.21 behavior
+can opt into `shell.preQuotedPassthrough(true)` as described above.
+
 This matches how the same line behaves in `sh`, and it is what fixes the classic
 `bash -c "${cmd}"` failure, where the extra quotes used to turn the whole script
 into a single unrunnable word (issue #49).
