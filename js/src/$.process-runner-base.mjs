@@ -221,14 +221,10 @@ class ProcessRunner extends StreamEmitter {
 
     this.outChunks = this.options.capture ? [] : null;
     this.errChunks = this.options.capture ? [] : null;
-    this.inChunks =
-      this.options.capture && this.options.stdin === 'inherit'
-        ? []
-        : this.options.capture &&
-            (typeof this.options.stdin === 'string' ||
-              Buffer.isBuffer(this.options.stdin))
-          ? [Buffer.from(this.options.stdin)]
-          : [];
+    // Capture stdin when it is actually written. Pre-populating this array
+    // duplicates explicit string/Buffer input when handleStdin() records the
+    // same bytes during execution.
+    this.inChunks = [];
 
     this.result = null;
     this.child = null;

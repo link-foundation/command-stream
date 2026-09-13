@@ -12,8 +12,13 @@ import { StreamUtils, safeWrite, asBuffer } from './$.stream-utils.mjs';
 import { pumpReadable } from './$.quote.mjs';
 import {
   createCancelledResult,
+  createExecutionErrorResult,
   createResult,
   finishExecutionError,
+  getStdinString,
+  getSyncStdinInput,
+  isProcessLaunchError,
+  prepareSpawnErrorResult,
 } from './$.result.mjs';
 import {
   parseShellCommand,
@@ -227,6 +232,7 @@ function setupChildEventListeners(runner) {
   });
 
   runner.child.on('error', (error) => {
+    runner._spawnError = error;
     trace(
       'ProcessRunner',
       () =>
@@ -511,36 +517,6 @@ function throwErrexitIfNeeded(runner, globalShellSettings) {
 }
 
 /**
- * Get stdin input for sync spawn
- * @param {string|Buffer} stdin - Stdin option
- * @returns {Buffer|undefined}
- */
-function getSyncStdinInput(stdin) {
-  if (typeof stdin === 'string') {
-    return Buffer.from(stdin);
-  }
-  if (Buffer.isBuffer(stdin)) {
-    return stdin;
-  }
-  return undefined;
-}
-
-/**
- * Get stdin string for result
- * @param {string|Buffer} stdin - Stdin option
- * @returns {string}
- */
-function getStdinString(stdin) {
-  if (typeof stdin === 'string') {
-    return stdin;
-  }
-  if (Buffer.isBuffer(stdin)) {
-    return stdin.toString('utf8');
-  }
-  return '';
-}
-
-/**
  * Execute sync process using Bun
  * @param {Array} argv - Command arguments
  * @param {object} options - Spawn options
@@ -548,13 +524,18 @@ function getStdinString(stdin) {
  */
 function executeSyncBun(argv, options) {
   const { cwd, env, stdin } = options;
-  const proc = Bun.spawnSync(argv, {
-    cwd,
-    env,
-    stdin: getSyncStdinInput(stdin),
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
+  let proc;
+  try {
+    proc = Bun.spawnSync(argv, {
+      cwd,
+      env,
+      stdin: getSyncStdinInput(stdin),
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+  } catch (error) {
+    return createExecutionErrorResult(error);
+  }
 
   const result = createResult({
     code: proc.exitCode || 0,
@@ -582,6 +563,12 @@ function executeSyncNode(argv, options) {
     encoding: 'utf8',
     stdio: ['pipe', 'pipe', 'pipe'],
   });
+
+  if (proc.error) {
+    const result = createExecutionErrorResult(proc.error);
+    result.child = proc;
+    return result;
+  }
 
   const result = createResult({
     code: proc.status || 0,
@@ -734,14 +721,7 @@ function reinitCaptureChunks(runner) {
 
   runner.outChunks = runner.options.capture ? [] : null;
   runner.errChunks = runner.options.capture ? [] : null;
-  runner.inChunks =
-    runner.options.capture && runner.options.stdin === 'inherit'
-      ? []
-      : runner.options.capture &&
-          (typeof runner.options.stdin === 'string' ||
-            Buffer.isBuffer(runner.options.stdin))
-        ? [Buffer.from(runner.options.stdin)]
-        : [];
+  runner.inChunks = [];
 }
 
 /**
@@ -974,7 +954,9 @@ async function executeChildProcess(runner, argv, config) {
     pumpAbort
   );
 
-  const finalExitCode = determineFinalExitCode(code, runner._cancelled);
+  const spawnErrorCode = prepareSpawnErrorResult(runner);
+  const finalExitCode =
+    spawnErrorCode ?? determineFinalExitCode(code, runner._cancelled);
   const resultData = buildResultData(runner, finalExitCode);
 
   trace(
@@ -1221,6 +1203,13 @@ export function attachExecutionMethods(ProcessRunner, deps) {
       );
 
       finishExecutionError(this, error);
+
+      // Match the library's default shell-like error contract for failures to
+      // launch a direct executable. `errexit` continues to opt into rejection,
+      // and programming/internal errors are never swallowed.
+      if (isProcessLaunchError(error) && !globalShellSettings.errexit) {
+        return this.result;
+      }
 
       throw error;
     }

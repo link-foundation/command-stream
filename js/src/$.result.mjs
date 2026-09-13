@@ -34,17 +34,79 @@ export function createCancelledResult(signal) {
   });
 }
 
+/**
+ * Convert supported synchronous stdin values into spawn input.
+ * @param {string|Buffer} stdin - Stdin option
+ * @returns {Buffer|undefined} Spawn input
+ */
+export function getSyncStdinInput(stdin) {
+  if (typeof stdin === 'string') {
+    return Buffer.from(stdin);
+  }
+  return Buffer.isBuffer(stdin) ? stdin : undefined;
+}
+
+/**
+ * Convert supported synchronous stdin values into result text.
+ * @param {string|Buffer} stdin - Stdin option
+ * @returns {string} Stdin text
+ */
+export function getStdinString(stdin) {
+  if (typeof stdin === 'string') {
+    return stdin;
+  }
+  return Buffer.isBuffer(stdin) ? stdin.toString('utf8') : '';
+}
+
+/**
+ * Convert a process-launch error into a shell-compatible numeric status.
+ * @param {Error & {code?: string|number}} error - Spawn/system error
+ * @returns {number} Numeric process status
+ */
+export function executionErrorExitCode(error) {
+  if (typeof error.code === 'number') {
+    return error.code;
+  }
+  if (error.code === 'ENOENT') {
+    return 127;
+  }
+  if (error.code === 'EACCES' || error.code === 'EPERM') {
+    return 126;
+  }
+  return 1;
+}
+
+export function isProcessLaunchError(error) {
+  return (
+    typeof error?.code === 'string' &&
+    (error?.syscall?.includes('spawn') ||
+      ['ENOENT', 'EACCES', 'EPERM', 'ENOEXEC'].includes(error.code))
+  );
+}
+
+export function prepareSpawnErrorResult(runner) {
+  if (!runner._spawnError) {
+    return undefined;
+  }
+  if (runner.options.capture && runner.errChunks.length === 0) {
+    runner.errChunks.push(Buffer.from(runner._spawnError.message));
+  }
+  return executionErrorExitCode(runner._spawnError);
+}
+
+export function createExecutionErrorResult(error) {
+  return createResult({
+    code: executionErrorExitCode(error),
+    stdout: error.stdout ?? '',
+    stderr: error.stderr ?? error.message ?? '',
+    stdin: '',
+  });
+}
+
 export function finishExecutionError(runner, error) {
   if (runner.finished) {
-    return;
+    return runner.result;
   }
 
-  runner.finish(
-    createResult({
-      code: error.code ?? 1,
-      stdout: error.stdout ?? '',
-      stderr: error.stderr ?? error.message ?? '',
-      stdin: '',
-    })
-  );
+  return runner.finish(createExecutionErrorResult(error));
 }
