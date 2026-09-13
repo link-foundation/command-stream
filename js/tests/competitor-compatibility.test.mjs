@@ -65,6 +65,8 @@ function readDispositionManifest() {
   const withoutRecordType = ({ record: _, ...value }) => value;
   return {
     ...withoutRecordType(metadata),
+    recordType: metadata.record,
+    recordCount: records.length,
     sources: records
       .filter(({ record }) => record === 'source')
       .map(withoutRecordType),
@@ -128,6 +130,8 @@ describe('competitor corpus integrity', () => {
     ]);
 
     expect(manifest.schemaVersion).toBe(1);
+    expect(manifest.recordType).toBe('manifest');
+    expect(manifest.recordCount).toBe(7464);
     expect(manifest.snapshotDate).toBe(snapshotDate);
     expect(manifest.language).toBe('js');
     expect(manifest.sources).toEqual(

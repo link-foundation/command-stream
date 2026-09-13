@@ -57,6 +57,7 @@ fn every_pinned_upstream_unit_has_exactly_one_disposition() {
         .map(|line| serde_json::from_str::<serde_json::Value>(line).expect("valid JSONL record"))
         .collect::<Vec<_>>();
     let metadata = records.first().expect("manifest metadata");
+    assert_eq!(records.len(), 785);
     assert_eq!(metadata["record"], "manifest");
     assert_eq!(metadata["schemaVersion"], 1);
     assert_eq!(metadata["snapshotDate"], SNAPSHOT_DATE);

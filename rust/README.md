@@ -230,10 +230,10 @@ rejected before the terminal is opened or input is sent.
 
 The Rust tests track the native process API plus Tokio, async-process,
 assert_cmd, duct, xshell, subprocess, rust_cmd_lib, run_script, bkt,
-rust-shell, shellfn, rexpect, and expectrl. All fourteen upstream suites are pinned to
-immutable commits. Portable public behavior runs against command-stream, while
-unsupported capabilities and inapplicable competitor-specific tests are
-accounted for in the
+rust-shell, shellfn, rexpect, and expectrl. All fourteen upstream suites are
+pinned to immutable commits. Portable public behavior runs against
+command-stream, while unsupported capabilities and inapplicable
+competitor-specific tests are accounted for in the
 [competitor test corpus audit](docs/COMPETITOR_TEST_AUDIT.md).
 
 Run the focused executable corpus with
