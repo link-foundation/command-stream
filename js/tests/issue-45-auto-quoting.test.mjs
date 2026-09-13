@@ -82,7 +82,9 @@ test('author-written quotes do not add a redundant quote layer', async () => {
   const arg = 'already quoted';
   const command = $({ mirror: false })`node ${PRINTER} "${arg}"`;
 
-  expect(command.spec.command).toBe(`node ${PRINTER} "already quoted"`);
+  expect(buildShellCommand(['echo "', '"'], [arg])).toBe(
+    'echo "already quoted"'
+  );
   expect(argsOf((await command).stdout)).toEqual([arg]);
 });
 
@@ -98,7 +100,7 @@ test('legacy passthrough is an explicit compatibility option', async () => {
   setPreQuotedPassthroughEnabled(true);
 
   const command = $({ mirror: false })`node ${PRINTER} ${arg}`;
-  expect(command.spec.command).toBe(`node ${PRINTER} "already quoted"`);
+  expect(buildShellCommand(['echo ', ''], [arg])).toBe('echo "already quoted"');
   expect(argsOf((await command).stdout)).toEqual(['already quoted']);
 });
 
