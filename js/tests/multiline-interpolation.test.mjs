@@ -72,6 +72,7 @@ test.skipIf(isWindows)(
   'redirection and append preserve content at a path containing spaces',
   async () => {
     const target = path.join(workDir, 'generated README.md');
+    const stdinTarget = path.join(workDir, 'generated from stdin.md');
 
     const write = await $({
       mirror: false,
@@ -79,12 +80,18 @@ test.skipIf(isWindows)(
     const append = await $({
       mirror: false,
     })`printf '%s' ${'\nAPPENDED `$HOME` \\tail'} >> ${target}`;
+    const stdinWrite = await $({
+      mirror: false,
+      stdin: COMPLEX_CONTENT,
+    })`cat > ${stdinTarget}`;
 
     expect(write.code).toBe(0);
     expect(append.code).toBe(0);
+    expect(stdinWrite.code).toBe(0);
     expect(fs.readFileSync(target, 'utf8')).toBe(
       `${COMPLEX_CONTENT}\nAPPENDED \`$HOME\` \\tail`
     );
+    expect(fs.readFileSync(stdinTarget, 'utf8')).toBe(COMPLEX_CONTENT);
   }
 );
 

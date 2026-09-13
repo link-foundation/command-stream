@@ -5,7 +5,7 @@
 //! that behavior with a quoted variable in `/bin/sh`.
 #![cfg(unix)]
 
-use command_stream::{cmd, quote_for_context, QuoteContext};
+use command_stream::{cmd, exec, quote_for_context, QuoteContext, RunOptions, StdinOption};
 use std::path::Path;
 use std::process::Command;
 
@@ -63,6 +63,8 @@ async fn redirection_and_append_preserve_content_at_a_path_with_spaces() {
         .unwrap();
     let target = dir.path().join("generated README.md");
     let target_string = target.to_str().unwrap();
+    let stdin_target = dir.path().join("generated from stdin.md");
+    let stdin_target_string = stdin_target.to_str().unwrap();
 
     let write = cmd!("printf '%s' {} > {}", COMPLEX_CONTENT, target_string)
         .await
@@ -74,13 +76,28 @@ async fn redirection_and_append_preserve_content_at_a_path_with_spaces() {
     )
     .await
     .unwrap();
+    let stdin_write = exec(
+        format!(
+            "cat > {}",
+            quote_for_context(stdin_target_string, QuoteContext::Unquoted)
+        ),
+        RunOptions {
+            mirror: false,
+            stdin: StdinOption::Content(COMPLEX_CONTENT.to_string()),
+            ..Default::default()
+        },
+    )
+    .await
+    .unwrap();
 
     assert!(write.is_success(), "stderr: {}", write.stderr);
     assert!(append.is_success(), "stderr: {}", append.stderr);
+    assert!(stdin_write.is_success(), "stderr: {}", stdin_write.stderr);
     assert_eq!(
         read(&target),
         format!("{COMPLEX_CONTENT}\nAPPENDED `$HOME` \\tail")
     );
+    assert_eq!(read(&stdin_target), COMPLEX_CONTENT);
 }
 
 #[tokio::test]
