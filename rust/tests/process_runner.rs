@@ -38,10 +38,7 @@ async fn test_real_shell_preserves_missing_final_newlines() {
     #[cfg(unix)]
     let command = "printf stdout; printf stderr >&2";
     #[cfg(windows)]
-    let command = concat!(
-        "powershell.exe -NoLogo -NoProfile -NonInteractive -Command ",
-        "\"[Console]::Out.Write('stdout'); [Console]::Error.Write('stderr')\""
-    );
+    let command = r#"<nul set /p "=stdout" & <nul set /p "=stderr" 1>&2 & exit /b 0"#;
 
     let result = exec(
         command,
