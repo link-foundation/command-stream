@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.21.3
+
+### Patch Changes
+
+- bc77d9a: Preserve exact multiline output, including missing final newlines, document safe
+  multiline file writes, and keep shell settings stable for in-flight external
+  commands.
+
 ## 0.21.2
 
 ### Patch Changes
