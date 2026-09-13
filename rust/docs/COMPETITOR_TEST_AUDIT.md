@@ -7,6 +7,9 @@ and machine-readable provenance lives in
 [`tests/competitor_compatibility/corpus.rs`](../tests/competitor_compatibility/corpus.rs).
 Every pinned upstream test unit and its sole disposition is recorded in
 [`tests/competitor_dispositions.jsonl`](../tests/competitor_dispositions.jsonl).
+The generator reads the separately reviewable, exact unit-ID decisions in
+[`tests/competitor_decisions.jsonl`](../tests/competitor_decisions.jsonl); it
+fails when an upstream unit is unclassified or a decision is stale.
 The shared exact discovery inputs, captured results, nominations, and rejection
 ledger are in
 [`../../docs/COMPETITOR_DISCOVERY.json`](../../docs/COMPETITOR_DISCOVERY.json).
@@ -55,9 +58,11 @@ UI tests are counted by scoped source file because each file is a harness unit.
 | expectrl            | `a2407de94df0b05dd794f79c57dea7b6f0a86f1f` | `tests/*.rs`, process and async-session test modules     |    10 |           118 |
 
 The snapshot covers 99 source files and 731 statically discoverable test
-registrations. The 38 Rust compiler UI files are additional file-level harness
-units, while test attributes embedded in UI fixture source are not counted as
-harness registrations.
+registrations. The manifest also has 39 file-level harness units: 38 Rust
+compiler UI files plus assert_cmd's registration-free `tests/testsuite/main.rs`.
+Test attributes embedded in UI fixture source are not counted as harness
+registrations. Those 731 registrations and 39 file units produce the exact 770
+unit total.
 
 ## What 100% accounting means
 
@@ -78,10 +83,10 @@ command-stream APIs. Shell-independent cases execute on Linux, macOS, and
 Windows; the POSIX shell interpolation invariant is gated to POSIX targets.
 No missing feature was introduced merely to satisfy an upstream test.
 
-The corpus integrity tests load the generated 770-unit disposition manifest,
-pin all commits, enforce unique upstream IDs and one valid disposition per
-unit, validate every source-specific URL and exact inventory total, and ensure
-all fourteen selected projects are represented.
+The corpus integrity tests load the generated 770-unit disposition manifest and
+the 770 exact reviewed decisions. They enforce identical unit-ID sets and
+dispositions, pin all commits, validate every source-specific URL and exact
+inventory total, and ensure all fourteen selected projects are represented.
 
 ## Executable behavior ports
 

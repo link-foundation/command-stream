@@ -7,6 +7,9 @@ and their machine-readable provenance is in
 [`tests/competitor-corpus.mjs`](../tests/competitor-corpus.mjs).
 Every pinned upstream test unit and its sole disposition is recorded in
 [`tests/competitor-dispositions.jsonl`](../tests/competitor-dispositions.jsonl).
+The generator reads the separately reviewable, exact unit-ID decisions in
+[`tests/competitor-decisions.jsonl`](../tests/competitor-decisions.jsonl); it
+fails when an upstream unit is unclassified or a decision is stale.
 The exact discovery queries, returned repositories, additional ecosystem
 nominations, popularity snapshot, and rejection reasons are checked in at
 [`../../docs/COMPETITOR_DISCOVERY.json`](../../docs/COMPETITOR_DISCOVERY.json).
@@ -20,6 +23,8 @@ native process primitive of a supported JavaScript runtime. `@david/shell` is
 included as a separately pinned source because it is the command engine to
 which the selected Dax project delegates; its own star count is not used as an
 independent threshold exception.
+Archived projects remain eligible when their published package still defines a
+widely used competing contract, as is the case for cross-env.
 
 Task orchestrators, terminal emulators, interactive CLI shells, and bridges
 limited to one guest language are outside this definition. For example,
@@ -44,13 +49,14 @@ inventory unit.
 | zx                                      | `65fc542d88baac578967e22bea28cb610976578c` | `test/**/*.test.{js,cjs,mjs,ts}`                                      |    23 |           287 |
 | ShellJS                                 | `f364da6625945414440bb15210f102ba5fc10ed9` | non-resource `test/**/*.js`                                           |    40 |           630 |
 | cross-spawn                             | `77cd97f3ca7b62c904a63a698fc4a79bf41977d0` | `test/index.test.js`                                                  |     1 |            25 |
+| cross-env                               | `9951937a7d3d4a1ea7bd2ce3133bcfb687125813` | `src/__tests__/*.test.ts`                                             |     5 |            63 |
 | Dax                                     | `d5e8c18ee28a8317b098c860ee98786a828c0e04` | `mod.test.ts`                                                         |     1 |            12 |
 | `@david/shell`                          | `eba92f9c9fcc58e02a8385097791056fd0d2b7ad` | `mod.test.ts`, `src/**/*.test.ts`                                     |    14 |           387 |
 | nano-spawn                              | `cc231e2c7b1e434a96f25f907ca2cb2f7c596e90` | non-fixture `test/**/*.js`                                            |     8 |           262 |
 | `@actions/exec`                         | `193fa46c20fde8b0ed54194bc08b841c78c0776d` | `packages/exec/__tests__/exec.test.ts`                                |     1 |            32 |
 
-The complete snapshot covers 411 source files (including the 117 Node.js
-harness files) and 7,319 statically discoverable registrations. Lifecycle
+The complete snapshot covers 416 source files (including the 117 Node.js
+harness files) and 7,382 statically discoverable registrations. Lifecycle
 hooks are not registrations; chained test modifiers such as `test.skipIf` are.
 
 ## What 100% accounting means
@@ -72,12 +78,13 @@ collapsed into one local table-driven invariant, while edge-case values are
 preserved. No missing feature was introduced merely to make an upstream test
 pass.
 
-The integrity tests load the generated 7,452-unit disposition manifest and
-enforce unique stable IDs, one valid disposition per unit, exact source and
-registration totals, source-specific pinned URLs, complete selected-project
-coverage, execution of every port registry entry, full commit SHAs, and a
-heading for every missing feature. This turns “100% accounting” into a checked
-property rather than a summary-level assertion.
+The integrity tests load the generated 7,515-unit disposition manifest and the
+7,515 exact reviewed decisions. They enforce identical unit-ID sets and
+dispositions, unique stable IDs, exact source and registration totals,
+source-specific pinned URLs, complete selected-project coverage, execution of
+every port registry entry, full commit SHAs, and a heading for every missing
+feature. This turns “100% accounting” into a checked property rather than a
+summary-level assertion.
 
 ## Executable behavior ports
 
@@ -161,6 +168,40 @@ cross-spawn and nano-spawn normalize Windows shebangs, `PATHEXT`, and `cmd.exe`
 escaping. command-stream relies on the runtime and platform shell for those
 rules and does not provide a dedicated resolver.
 
+### cross-platform-inline-environment-syntax
+
+cross-env rewrites portable inline environment assignments and Unix-style
+variable references for Windows command processors. command-stream accepts an
+explicit environment object, but it does not provide this command-line rewrite
+layer.
+
+### environment-clear-and-remove
+
+Deno can clear inherited environment values before spawning. command-stream
+can add or replace values but has no environment clear/remove policy.
+
+### process-credentials
+
+Node and Deno can select child user and group IDs on supported platforms.
+command-stream has no public process-credential options.
+
+### windows-process-window-options
+
+Node and Deno expose Windows-only process creation controls such as hidden
+windows and raw command-line arguments. command-stream delegates those choices
+to the JavaScript runtime.
+
+### child-process-handle-lifecycle
+
+Node and Deno expose raw child handles with `ref`, `unref`, explicit disposal,
+and PID lifecycle rules. command-stream exposes a higher-level runner and
+stream rather than the same shared handle contract.
+
+### url-executable
+
+Deno accepts a file URL as the executable. command-stream's exact-argv API
+accepts an executable path string.
+
 ### shell-builtin-breadth
 
 Bun Shell, ShellJS, and Dax implement more built-ins and shell grammar than
@@ -210,7 +251,7 @@ directory.
 
 ## Refresh procedure
 
-1. Repeat the six exact GitHub queries stored in
+1. Repeat the nine exact GitHub queries stored in
    `docs/COMPETITOR_DISCOVERY.json`, inspect every returned and nominated
    candidate, and record additions, rejections, or removals explicitly.
 2. Pin each repository to a full commit before inspecting tests.

@@ -26,12 +26,22 @@ const queries = [
   {
     language: 'javascript',
     query:
+      'process execution in:name,description,topics language:JavaScript stars:>=500',
+  },
+  {
+    language: 'javascript',
+    query:
       'shell command in:name,description,topics language:JavaScript stars:>=500',
   },
   {
     language: 'javascript',
     query:
       'shell command in:name,description,topics language:TypeScript stars:>=500',
+  },
+  {
+    language: 'javascript',
+    query:
+      'environment scripts in:name,description,topics language:TypeScript stars:>=500',
   },
   {
     language: 'rust',
@@ -41,6 +51,10 @@ const queries = [
   {
     language: 'rust',
     query: 'shell command in:name,description,topics language:Rust stars:>=100',
+  },
+  {
+    language: 'rust',
+    query: 'child process in:name,description,topics language:Rust stars:>=100',
   },
 ];
 
@@ -52,6 +66,7 @@ const selected = new Set([
   'google/zx',
   'shelljs/shelljs',
   'moxystudio/node-cross-spawn',
+  'kentcdodds/cross-env',
   'dsherret/dax',
   'dsherret/shell',
   'sindresorhus/nano-spawn',
@@ -155,6 +170,10 @@ const explicitRejections = new Map([
   [
     'denoland/deno_task_shell',
     'task-shell implementation, not a general library API',
+  ],
+  [
+    'passcod/catflap',
+    'socket-activation helper limited to passing listener file descriptors',
   ],
 ]);
 

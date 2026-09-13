@@ -18,6 +18,14 @@ function option(name) {
 const jsRoot = option('--js-root');
 const rustRoot = option('--rust-root');
 const rustExtraRoot = option('--rust-extra-root');
+const jsDecisionPath = join(
+  import.meta.dirname,
+  '../tests/competitor-decisions.jsonl'
+);
+const rustDecisionPath = join(
+  import.meta.dirname,
+  '../../rust/tests/competitor_decisions.jsonl'
+);
 
 function walk(directory) {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -103,6 +111,15 @@ const jsSources = [
     repository: 'moxystudio/node-cross-spawn',
     commit: '77cd97f3ca7b62c904a63a698fc4a79bf41977d0',
     select: (path) => path === 'test/index.test.js',
+    registration: /(?<![\w$.])(?:test|it)\s*\(/g,
+  },
+  {
+    id: 'cross-env',
+    directory: 'cross-env',
+    repository: 'kentcdodds/cross-env',
+    commit: '9951937a7d3d4a1ea7bd2ce3133bcfb687125813',
+    select: (path) =>
+      path.startsWith('src/__tests__/') && path.endsWith('.test.ts'),
     registration: /(?<![\w$.])(?:test|it)\s*\(/g,
   },
   {
@@ -283,8 +300,12 @@ const rustRegistration = /^\s*#\[(?:[A-Za-z0-9_]+::)*test(?:\([^\]]*\))?\]/gm;
 
 function labelAfter(source, index, language) {
   const sample = source.slice(index, index + 400);
-  const functionName = sample.match(/(?:fn|async\s+fn)\s+([A-Za-z0-9_]+)/);
-  if (language === 'rust' && functionName) {
+  const functionName = sample.match(
+    language === 'rust'
+      ? /(?:fn|async\s+fn)\s+([A-Za-z0-9_]+)/
+      : /(?:async\s+)?function\s+([A-Za-z0-9_]+)/
+  );
+  if (functionName) {
     return functionName[1];
   }
   const quoted = sample.match(/["'`]([^"'`\n]{1,160})["'`]/);
@@ -301,158 +322,42 @@ function position(source, index) {
   return { line, column: index - lastNewline };
 }
 
-const jsMissingRules = [
-  ['timeout-option', /timeout|deadline/i],
-  ['ipc-and-fork', /\bipc\b|\bfork\b|send.?message|disconnect|channel/i],
-  ['max-buffer-policy', /max.?buffer/i],
-  ['configurable-encoding', /encoding|decode|buffer output|binary output/i],
-  ['local-binary-resolution', /prefer.?local|local binary|node_modules.*bin/i],
-  [
-    'windows-shebang-and-pathext-resolution',
-    /shebang|pathext|cmd\.exe|windows.*escap/i,
-  ],
-  ['combined-all-output', /all output|interleav/i],
-  ['url-working-directory', /url.*cwd|cwd.*url/i],
-  [
-    'iterable-and-stream-input-options',
-    /iterable|web.?stream|readable.?stream.*input/i,
-  ],
-  [
-    'output-transforms-and-line-iteration',
-    /transform|generator|line.?iter|verbose/i,
-  ],
-  ['graceful-termination', /grace|force.?kill|kill.*delay/i],
-  [
-    'rich-error-and-timing-metadata',
-    /duration|timing|escaped.?command|signal.?description/i,
-  ],
-  [
-    'custom-stdio-descriptors',
-    /stdio|file descriptor|\bfd\b|inherit|ignore|null stream/i,
-  ],
-  [
-    'shell-builtin-breadth',
-    /brace|glob|builtin|\b(cat|cd|cp|dirs|grep|head|ln|ls|mkdir|mv|pwd|rm|sed|sort|tail|touch|uniq|which)\b/i,
-  ],
-];
-
-const jsPriorityPortedRules = [
-  [
-    'stdin-buffer',
-    /stdin.*(?:buffer|uint8array)|(?:buffer|uint8array).*stdin|redirect (?:buffer|uint8array)/i,
-  ],
-  [
-    'array-interpolation',
-    /interpolat.*array|template arrays|nested template arrays|\barrays\b/i,
-  ],
-  ['events-and-await', /\bevents?\b|\blisteners?\b/i],
-];
-
-const rustMissingRules = [
-  ['expect-and-pty-session', /expect|pty|repl|needle|captures?/i],
-  ['timeout-option', /timeout|deadline/i],
-  [
-    'non-utf8-arguments-and-environment',
-    /non.?utf|osstr|unicode.*arg|funky.*(?:key|value)/i,
-  ],
-  ['binary-input-and-lossless-output', /binary|bytes?|lossless/i],
-  ['environment-clear-and-remove', /env.*(clear|remove)|remove.*env/i],
-  [
-    'shell-expression-composition-and-redirection',
-    /redirect|expression|shell.?command|pipeline/i,
-  ],
-  ['custom-stdio-and-file-handles', /stdio|file handle|inherit|null|pipe/i],
-  ['try-wait-and-shared-child-handle', /try.?wait|child handle/i],
-  ['native-exit-status-and-signal-metadata', /exit.?status|signal/i],
-  ['array-and-splat-interpolation', /array|splat|collection.*arg|vec.*arg/i],
-  ['subprocess-result-caching', /cache|expiry|stale/i],
-  [
-    'typed-script-return-adapters',
-    /return.?type|parse.*(?:output|return)|typed/i,
-  ],
-];
-
-const portedRules = [
-  ['spawn-error-propagation', /spawn.*(error|fail|nonexistent)|not.?found/i],
-  ['spawn-error-result', /spawn.*(error|fail|nonexistent)|not.?found/i],
-  ['safe-template-interpolation', /interpolat|escape|quot/i],
-  ['stdout-stderr-separation', /stdout.*stderr|stderr.*stdout/i],
-  ['newline-preservation', /newline|line ending/i],
-  ['unicode-output', /unicode.*output|utf.?8.*output/i],
-  ['argument-edge-cases', /argument|\bargs?\b|unicode.*param/i],
-  ['cwd-string', /\bcwd\b|working director/i],
-  ['environment', /\benv(?:ironment)?\b/i],
-  ['large-output', /large|megabyte|1.?mb/i],
-  ['nonzero-exit', /non.?zero|exit.?code|failure status/i],
-  ['stdin-string', /stdin|input/i],
-  ['lazy-execution', /lazy|before.*start/i],
-  ['concurrent-execution', /concurr|parallel/i],
-  ['streamed-before-exit', /stream|partial output|before.*exit/i],
-  ['sync-execution', /\bsync\b|synchronous/i],
-  ['programmatic-pipeline', /pipeline|\bpipe\b/i],
-  ['abort-signal', /abort|cancel|kill/i],
-  ['stream-kill', /abort|cancel|kill/i],
-  ['result-text', /\btext\b/i],
-  ['direct-exact-argv', /spawn|command|exec|process/i],
-];
-
-function matchingRule(rules, haystack, include = () => true) {
-  return rules.find(
-    ([id, pattern]) => include(id) && pattern.test(haystack)
-  )?.[0];
-}
-
-function disposition(language, sourceId, path, label) {
-  const haystack = `${path} ${label}`;
-  const missingRules = language === 'js' ? jsMissingRules : rustMissingRules;
-  const priorityPorted =
-    language === 'js'
-      ? matchingRule(jsPriorityPortedRules, haystack)
-      : undefined;
-  if (priorityPorted) {
-    return { kind: 'ported', id: priorityPorted };
-  }
-  const missing = matchingRule(missingRules, haystack);
-  if (missing) {
-    return { kind: 'missing', id: missing };
-  }
-  const ported = matchingRule(portedRules, haystack, (id) =>
-    language === 'js'
-      ? !['spawn-error-propagation', 'stream-kill'].includes(id)
-      : !['spawn-error-result', 'abort-signal', 'result-text'].includes(id)
-  );
-  if (ported) {
-    return { kind: 'ported', id: ported };
-  }
-  if (/fixture|snapshot|permission|compile.?fail|setup/i.test(haystack)) {
-    return { kind: 'inapplicable', id: 'platform-fixture-mechanics' };
-  }
+function loadDecisionLedger(path, language) {
+  const records = readFileSync(path, 'utf8')
+    .trim()
+    .split('\n')
+    .map((line) => JSON.parse(line));
+  const metadata = records.shift();
   if (
-    /runtime|compiler|tokio.*reactor|bun.*conformance|deno.*compat/i.test(
-      haystack
-    )
+    metadata?.record !== 'decisions' ||
+    metadata.schemaVersion !== 1 ||
+    metadata.language !== language
   ) {
-    return {
-      kind: 'inapplicable',
-      id:
-        language === 'js'
-          ? 'runtime-only-behavior'
-          : 'upstream-runtime-regressions',
-    };
+    throw new Error(`Invalid ${language} decision ledger metadata in ${path}`);
   }
-  if (/internal|mock|parser|scanner|private/i.test(haystack)) {
-    return { kind: 'inapplicable', id: 'competitor-internals' };
+
+  const decisions = new Map();
+  for (const record of records) {
+    if (
+      Object.keys(record).sort().join(',') !== 'disposition,id' ||
+      Object.keys(record.disposition ?? {})
+        .sort()
+        .join(',') !== 'id,kind' ||
+      typeof record.id !== 'string' ||
+      typeof record.disposition.id !== 'string' ||
+      typeof record.disposition.kind !== 'string'
+    ) {
+      throw new Error(`Invalid explicit decision in ${path}: ${record.id}`);
+    }
+    if (decisions.has(record.id)) {
+      throw new Error(`Duplicate explicit decision in ${path}: ${record.id}`);
+    }
+    decisions.set(record.id, record.disposition);
   }
-  if (/\b(type|export|constructor|macro|trait|builder|api)\b/i.test(haystack)) {
-    return { kind: 'inapplicable', id: 'competitor-api-shape' };
-  }
-  if (/shelljs|zx|david-shell/.test(sourceId)) {
-    return { kind: 'inapplicable', id: 'unrelated-utilities' };
-  }
-  return { kind: 'inapplicable', id: 'competitor-api-shape' };
+  return decisions;
 }
 
-function recordsForSource(language, root, source, registration) {
+function recordsForSource(language, root, source, registration, decisions) {
   const checkout = join(root, source.directory);
   const checkoutCommit = execFileSync(
     'git',
@@ -509,41 +414,65 @@ function recordsForSource(language, root, source, registration) {
         readFileSync(join(checkout, record.path), 'utf8'),
         record.index
       );
+      const id = `${source.id}:${record.path}:${line}:${column}:${record.kind}`;
+      const explicitDecision = decisions.get(id);
+      if (!explicitDecision) {
+        throw new Error(
+          `Unclassified ${language} upstream unit: ${id}. Add a reviewed entry to the decision ledger.`
+        );
+      }
       return {
-        id: `${source.id}:${record.path}:${line}:${column}:${record.kind}`,
+        id,
         source: source.id,
         unit: record.kind,
         path: record.path,
         line,
         column,
         label: record.label,
-        disposition: disposition(
-          language,
-          source.id,
-          record.path,
-          record.label
-        ),
+        disposition: explicitDecision,
         url: `https://github.com/${source.repository}/blob/${source.commit}/${record.path}#L${line}`,
       };
     }),
   };
 }
 
-function manifest(language, sources, defaultRoot, registration) {
+function manifest(language, sources, defaultRoot, registration, decisions) {
   const generated = sources.map((source) =>
-    recordsForSource(language, source.root ?? defaultRoot, source, registration)
+    recordsForSource(
+      language,
+      source.root ?? defaultRoot,
+      source,
+      registration,
+      decisions
+    )
   );
+  const units = generated.flatMap(({ units: sourceUnits }) => sourceUnits);
+  const unitIds = new Set(units.map(({ id }) => id));
+  const staleDecisions = [...decisions.keys()].filter((id) => !unitIds.has(id));
+  if (staleDecisions.length > 0) {
+    throw new Error(
+      `Stale ${language} decisions are not present upstream:\n${staleDecisions.join('\n')}`
+    );
+  }
   return {
     schemaVersion: 1,
     snapshotDate: '2026-09-13',
     language,
     sources: generated.map(({ source }) => source),
-    units: generated.flatMap(({ units }) => units),
+    units,
   };
 }
 
-const jsManifest = manifest('js', jsSources, jsRoot);
-const rustManifest = manifest('rust', rustSources, rustRoot, rustRegistration);
+const jsDecisions = loadDecisionLedger(jsDecisionPath, 'js');
+const rustDecisions = loadDecisionLedger(rustDecisionPath, 'rust');
+const jsManifest = manifest('js', jsSources, jsRoot, undefined, jsDecisions);
+const rustManifest = manifest(
+  'rust',
+  rustSources,
+  rustRoot,
+  rustRegistration,
+  rustDecisions
+);
 
 function serializeManifest(output) {
   const metadata = {

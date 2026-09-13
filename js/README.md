@@ -75,7 +75,7 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 ### Tracked compatibility corpus
 
 The comparison tests also track Node.js `child_process`, `Deno.Command`, Dax,
-`@david/shell`, nano-spawn, and `@actions/exec`. All eleven upstream sources are pinned to immutable
+`@david/shell`, nano-spawn, `@actions/exec`, and cross-env. All twelve upstream sources are pinned to immutable
 commits. Portable public behavior runs against command-stream, while unsupported
 capabilities and inapplicable competitor-specific tests are accounted for in the
 [competitor test corpus audit](docs/COMPETITOR_TEST_AUDIT.md).

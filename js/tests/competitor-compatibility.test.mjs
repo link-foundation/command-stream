@@ -26,6 +26,7 @@ const packageDirectory = join(testDirectory, '..');
 const fixturePath = join(testDirectory, 'fixtures', 'competitor-process.mjs');
 const auditPath = join(packageDirectory, 'docs', 'COMPETITOR_TEST_AUDIT.md');
 const dispositionPath = join(testDirectory, 'competitor-dispositions.jsonl');
+const decisionPath = join(testDirectory, 'competitor-decisions.jsonl');
 const discoveryPath = join(
   packageDirectory,
   '..',
@@ -76,6 +77,14 @@ function readDispositionManifest() {
   };
 }
 
+function readDecisionLedger() {
+  const records = readFileSync(decisionPath, 'utf8')
+    .trim()
+    .split('\n')
+    .map((line) => JSON.parse(line));
+  return { metadata: records[0], decisions: records.slice(1) };
+}
+
 function port(id, title, implementation, timeout) {
   if (!portedCases.some((entry) => entry.id === id)) {
     throw new Error(`Unregistered competitor case: ${id}`);
@@ -96,13 +105,13 @@ afterAll(() => {
 describe('competitor corpus integrity', () => {
   test('pins a unique, immutable upstream inventory', () => {
     expect(snapshotDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    expect(competitors.length).toBe(11);
+    expect(competitors.length).toBe(12);
     expect(competitors.reduce((sum, item) => sum + item.sourceFiles, 0)).toBe(
-      411
+      416
     );
     expect(
       competitors.reduce((sum, item) => sum + (item.registrationSites ?? 0), 0)
-    ).toBe(7319);
+    ).toBe(7382);
     expect(new Set(competitors.map(({ id }) => id)).size).toBe(
       competitors.length
     );
@@ -131,7 +140,7 @@ describe('competitor corpus integrity', () => {
 
     expect(manifest.schemaVersion).toBe(1);
     expect(manifest.recordType).toBe('manifest');
-    expect(manifest.recordCount).toBe(7464);
+    expect(manifest.recordCount).toBe(7528);
     expect(manifest.snapshotDate).toBe(snapshotDate);
     expect(manifest.language).toBe('js');
     expect(manifest.sources).toEqual(
@@ -145,7 +154,7 @@ describe('competitor corpus integrity', () => {
         })
       )
     );
-    expect(manifest.units.length).toBe(7452);
+    expect(manifest.units.length).toBe(7515);
     expect(new Set(manifest.units.map(({ id }) => id)).size).toBe(
       manifest.units.length
     );
@@ -176,6 +185,42 @@ describe('competitor corpus integrity', () => {
         `${pinnedSourceUrl(competitor, unit.path)}#L${unit.line}`
       );
     }
+  });
+
+  test('keeps every generated disposition backed by an explicit reviewed decision', () => {
+    const manifest = readDispositionManifest();
+    const { metadata, decisions } = readDecisionLedger();
+    const manifestDecisions = new Map(
+      manifest.units.map(({ id, disposition }) => [id, disposition])
+    );
+
+    expect(metadata).toEqual({
+      record: 'decisions',
+      schemaVersion: 1,
+      language: 'js',
+    });
+    expect(decisions).toHaveLength(7515);
+    expect(new Set(decisions.map(({ id }) => id)).size).toBe(decisions.length);
+    expect(decisions.map(({ id }) => id).sort()).toEqual(
+      [...manifestDecisions.keys()].sort()
+    );
+    for (const { id, disposition } of decisions) {
+      expect(disposition).toEqual(manifestDecisions.get(id));
+    }
+
+    expect(
+      manifestDecisions.get(
+        'node-child-process:test/parallel/test-child-process-exec-maxbuf.js:1:1:file'
+      )
+    ).toEqual({ kind: 'missing', id: 'max-buffer-policy' });
+    expect(
+      manifestDecisions.get(
+        'cross-env:src/__tests__/command-default-values.test.ts:16:2:registration'
+      )
+    ).toEqual({
+      kind: 'missing',
+      id: 'cross-platform-inline-environment-syntax',
+    });
   });
 
   test('accounts for every selected project and every ported case', () => {
@@ -209,7 +254,7 @@ describe('competitor corpus integrity', () => {
       .sort();
 
     expect(discovery.snapshotDate).toBe(snapshotDate);
-    expect(discovery.queries).toHaveLength(6);
+    expect(discovery.queries).toHaveLength(9);
     expect(
       new Set(
         discovery.candidates.map(

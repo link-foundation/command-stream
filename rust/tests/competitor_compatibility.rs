@@ -162,6 +162,44 @@ fn every_pinned_upstream_unit_has_exactly_one_disposition() {
 }
 
 #[test]
+fn every_generated_disposition_has_an_explicit_reviewed_decision() {
+    let manifest = include_str!("competitor_dispositions.jsonl")
+        .lines()
+        .skip(1 + COMPETITORS.len())
+        .map(|line| serde_json::from_str::<serde_json::Value>(line).expect("valid manifest unit"))
+        .map(|record| {
+            (
+                record["id"].as_str().expect("unit id").to_owned(),
+                record["disposition"].clone(),
+            )
+        })
+        .collect::<std::collections::HashMap<_, _>>();
+    let mut records = include_str!("competitor_decisions.jsonl").lines();
+    let metadata =
+        serde_json::from_str::<serde_json::Value>(records.next().expect("decision metadata"))
+            .expect("valid decision metadata");
+    assert_eq!(metadata["record"], "decisions");
+    assert_eq!(metadata["schemaVersion"], 1);
+    assert_eq!(metadata["language"], "rust");
+
+    let decisions = records
+        .map(|line| serde_json::from_str::<serde_json::Value>(line).expect("valid decision"))
+        .map(|record| {
+            (
+                record["id"].as_str().expect("decision id").to_owned(),
+                record["disposition"].clone(),
+            )
+        })
+        .collect::<std::collections::HashMap<_, _>>();
+    assert_eq!(decisions.len(), 770);
+    assert_eq!(decisions, manifest);
+    assert_eq!(
+        decisions["rust-std-process:library/std/src/process/tests.rs:429:1:registration"],
+        serde_json::json!({ "kind": "ported", "id": "environment" })
+    );
+}
+
+#[test]
 fn every_selected_project_and_case_is_accounted_for() {
     let known = COMPETITORS
         .iter()
@@ -206,7 +244,7 @@ fn exact_discovery_inputs_and_every_candidate_disposition_are_committed() {
         serde_json::from_str(include_str!("../../docs/COMPETITOR_DISCOVERY.json"))
             .expect("valid discovery snapshot");
     assert_eq!(discovery["snapshotDate"], SNAPSHOT_DATE);
-    assert_eq!(discovery["queries"].as_array().expect("queries").len(), 6);
+    assert_eq!(discovery["queries"].as_array().expect("queries").len(), 9);
 
     let candidates = discovery["candidates"].as_array().expect("candidates");
     assert_eq!(

@@ -22,4 +22,6 @@ docs/case-studies
 # Generated newline-delimited ledgers; one compact record per upstream test
 # keeps exhaustive provenance reviewable without 100k lines of JSON layout.
 js/tests/competitor-dispositions.jsonl
+js/tests/competitor-decisions.jsonl
 rust/tests/competitor_dispositions.jsonl
+rust/tests/competitor_decisions.jsonl
