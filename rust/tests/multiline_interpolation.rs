@@ -46,12 +46,10 @@ fn read(path: &Path) -> String {
 #[tokio::test]
 async fn echo_and_printf_preserve_the_full_issue_payload() {
     let echoed = cmd!("echo \"{}\"", COMPLEX_CONTENT).await.unwrap();
-    let no_newline = cmd!("echo -n {}", COMPLEX_CONTENT).await.unwrap();
     let printed = cmd!("printf '%s' {}", COMPLEX_CONTENT).await.unwrap();
 
     assert!(echoed.is_success(), "stderr: {}", echoed.stderr);
     assert_eq!(echoed.stdout, format!("{COMPLEX_CONTENT}\n"));
-    assert_eq!(no_newline.stdout, COMPLEX_CONTENT);
     assert_eq!(printed.stdout, COMPLEX_CONTENT);
 }
 

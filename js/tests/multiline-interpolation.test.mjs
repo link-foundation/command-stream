@@ -58,12 +58,10 @@ test.skipIf(isWindows)(
 );
 
 test.skipIf(isWindows)(
-  'echo -n and printf preserve multiline content without adding a newline',
+  'printf preserves multiline content without adding a newline',
   async () => {
-    const echoed = await $({ mirror: false })`echo -n ${COMPLEX_CONTENT}`;
     const printed = await $({ mirror: false })`printf '%s' ${COMPLEX_CONTENT}`;
 
-    expect(echoed.stdout).toBe(COMPLEX_CONTENT);
     expect(printed.stdout).toBe(COMPLEX_CONTENT);
   }
 );

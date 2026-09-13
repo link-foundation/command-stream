@@ -426,7 +426,7 @@ impl ProcessRunner {
 
         // Drain both pipes concurrently and preserve their newline framing. The
         // previous line reader appended `\n` to every final line, changing
-        // output from commands such as `printf` and `echo -n` (issue #37).
+        // output from commands such as `printf` that omit a newline (issue #37).
         let stdout = child.stdout.take();
         let stderr = child.stderr.take();
         let collected = tokio::try_join!(
