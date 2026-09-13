@@ -1,0 +1,57 @@
+Smoking gun — false-positive release run 27213712924 (created js-v0.10.1)
+Source: https://github.com/link-foundation/command-stream/actions/runs/27213712924
+Job: Release JavaScript package — step 'Release JavaScript package' (changeset publish + create-github-release)
+Extracted: log lines 15015-15057 (ANSI stripped, step/timestamp prefix trimmed)
+
+KEY OBSERVATION:
+  * 'changeset publish' fails with E404 (PUT https://registry.npmjs.org/command-stream - Not found)
+  * the script 'changeset:publish' exits with code 1
+  * YET the wrapper prints '✅ Published command-stream@0.10.1 to npm' and proceeds
+  * a GitHub release 'JavaScript 0.10.1' (tag js-v0.10.1) is then created
+  => tag + GitHub release exist, but the package is NOT on npm. That is the
+     exact false positive reported in issue #166.
+
+----------------------------------------------------------------------
+2026-06-09T14:38:04.0712460Z npm error 404
+2026-06-09T14:38:04.0713967Z npm error 404 Note that you can also install from a
+2026-06-09T14:38:04.0714599Z npm error 404 tarball, folder, http url, or git url.
+2026-06-09T14:38:04.0728641Z npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2026-06-09T14_38_03_671Z-debug-0.log
+2026-06-09T14:38:04.0777395Z Version 0.10.1 not found on npm, proceeding with publish...
+2026-06-09T14:38:04.0777803Z Publish attempt 1 of 3...
+2026-06-09T14:38:04.0849482Z $ changeset publish
+2026-06-09T14:38:04.3690381Z 🦋  ^[[36minfo^[[39m npm info command-stream
+2026-06-09T14:38:04.7661996Z 🦋  ^[[36minfo^[[39m command-stream is being published because our local version (0.10.1) has not been published on npm
+2026-06-09T14:38:04.7663581Z 🦋  ^[[36minfo^[[39m Publishing ^[[36m"command-stream"^[[39m at ^[[32m"0.10.1"^[[39m
+2026-06-09T14:38:07.0225691Z 🦋  ^[[31merror^[[39m an error occurred while publishing command-stream: E404 Not Found - PUT https://registry.npmjs.org/command-stream - Not found 
+2026-06-09T14:38:07.0227653Z 🦋  ^[[31merror^[[39m The requested resource 'command-stream@0.10.1' could not be found or you do not have permission to access it.
+2026-06-09T14:38:07.0228602Z 🦋  ^[[31merror^[[39m 
+2026-06-09T14:38:07.0229208Z 🦋  ^[[31merror^[[39m Note that you can also install from a
+2026-06-09T14:38:07.0230010Z 🦋  ^[[31merror^[[39m tarball, folder, http url, or git url.
+2026-06-09T14:38:07.0230598Z 🦋  ^[[31merror^[[39m 
+2026-06-09T14:38:07.0231156Z 🦋  ^[[31merror^[[39m > command-stream@0.10.1 prepare
+2026-06-09T14:38:07.0231952Z 🦋  ^[[31merror^[[39m > cd .. && js/node_modules/.bin/husky || true
+2026-06-09T14:38:07.0232533Z 🦋  ^[[31merror^[[39m 
+2026-06-09T14:38:07.0233506Z 🦋  ^[[31merror^[[39m npm notice Publishing to https://registry.npmjs.org with tag latest and public access
+2026-06-09T14:38:07.0234479Z 🦋  ^[[31merror^[[39m npm error code E404
+2026-06-09T14:38:07.0235755Z 🦋  ^[[31merror^[[39m npm error 404 Not Found - PUT https://registry.npmjs.org/command-stream - Not found
+2026-06-09T14:38:07.0236756Z 🦋  ^[[31merror^[[39m npm error 404
+2026-06-09T14:38:07.0237776Z 🦋  ^[[31merror^[[39m npm error 404  The requested resource 'command-stream@0.10.1' could not be found or you do not have permission to access it.
+2026-06-09T14:38:07.0238664Z 🦋  ^[[31merror^[[39m npm error 404
+2026-06-09T14:38:07.0239199Z 🦋  ^[[31merror^[[39m npm error 404 Note that you can also install from a
+2026-06-09T14:38:07.0239860Z 🦋  ^[[31merror^[[39m npm error 404 tarball, folder, http url, or git url.
+2026-06-09T14:38:07.0240882Z 🦋  ^[[31merror^[[39m npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2026-06-09T14_38_04_826Z-debug-0.log
+2026-06-09T14:38:07.0241518Z 🦋  ^[[31merror^[[39m 
+2026-06-09T14:38:07.0242179Z 🦋  ^[[31merror^[[39m packages failed to publish:
+2026-06-09T14:38:07.0242826Z 🦋  command-stream@0.10.1
+2026-06-09T14:38:07.0293300Z error: script "changeset:publish" exited with code 1
+2026-06-09T14:38:07.0297074Z ✅ Published command-stream@0.10.1 to npm
+2026-06-09T14:38:07.0397802Z ##[group]Run bun scripts/create-github-release.mjs --release-version "0.10.1" --repository "link-foundation/command-stream" --tag-prefix js-v
+2026-06-09T14:38:07.0398754Z ^[[36;1mbun scripts/create-github-release.mjs --release-version "0.10.1" --repository "link-foundation/command-stream" --tag-prefix js-v^[[0m
+2026-06-09T14:38:07.0426569Z shell: /usr/bin/bash -e {0}
+2026-06-09T14:38:07.0426846Z env:
+2026-06-09T14:38:07.0427122Z   NPM_CONFIG_USERCONFIG: /home/runner/work/_temp/.npmrc
+2026-06-09T14:38:07.0427479Z   NODE_AUTH_TOKEN: XXXXX-XXXXX-XXXXX-XXXXX
+2026-06-09T14:38:07.0430936Z   GH_TOKEN: ***
+2026-06-09T14:38:07.0431172Z ##[endgroup]
+2026-06-09T14:38:07.2334240Z Creating JavaScript GitHub release for js-v0.10.1...
+2026-06-09T14:38:08.4561208Z {"url":"https://api.github.com/repos/link-foundation/command-stream/releases/336664597","assets_url":"https://api.github.com/repos/link-foundation/command-stream/releases/336664597/assets","upload_url":"https://uploads.github.com/repos/link-foundation/command-stream/releases/336664597/assets{?name,label}","html_url":"https://github.com/link-foundation/command-stream/releases/tag/js-v0.10.1","id":336664597,"author":{"login":"github-actions[bot]","id":41898282,"node_id":"MDM6Qm90NDE4OTgyODI=","avatar_url":"https://avatars.githubusercontent.com/in/15368?v=4","gravatar_id":"","url":"https://api.github.com/users/github-actions%5Bbot%5D","html_url":"https://github.com/apps/github-actions","followers_url":"https://api.github.com/users/github-actions%5Bbot%5D/followers","following_url":"https://api.github.com/users/github-actions%5Bbot%5D/following{/other_user}","gists_url":"https://api.github.com/users/github-actions%5Bbot%5D/gists{/gist_id}","starred_url":"https://api.github.com/users/github-actions%5Bbot%5D/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/github-actions%5Bbot%5D/subscriptions","organizations_url":"https://api.github.com/users/github-actions%5Bbot%5D/orgs","repos_url":"https://api.github.com/users/github-actions%5Bbot%5D/repos","events_url":"https://api.github.com/users/github-actions%5Bbot%5D/events{/privacy}","received_events_url":"https://api.github.com/users/github-actions%5Bbot%5D/received_events","type":"Bot","user_view_type":"public","site_admin":false},"node_id":"RE_kwDOPc80Bs4UERgV","tag_name":"js-v0.10.1","target_commitish":"main","name":"JavaScript 0.10.1","draft":false,"immutable":false,"prerelease":false,"created_at":"2026-06-09T14:38:01Z","updated_at":"2026-06-09T14:38:08Z","published_at":"2026-06-09T14:38:08Z","assets":[],"tarball_url":"https://api.github.com/repos/link-foundation/command-stream/tarball/js-v0.10.1","zipball_url":"https://api.github.com/repos/link-foundation/command-stream/zipball/js-v0.10.1","body":"### Patch Changes\n\n- b5f7309: Update the JavaScript release workflow to the action versions used by the\n  pipeline templates (`actions/checkout@v6`, `actions/setup-node@v6`,\n  `peter-evans/create-pull-request@v8`), clearing the Node.js 20 deprecation\n  warnings emitted by GitHub Actions."}Created JavaScript GitHub release: js-v0.10.1
