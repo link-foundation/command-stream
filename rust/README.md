@@ -226,6 +226,18 @@ rejected before the terminal is opened or input is sent.
 
 ## Features
 
+### Tracked compatibility corpus
+
+The Rust tests track the native process API plus Tokio, async-process,
+assert_cmd, duct, xshell, subprocess, rust_cmd_lib, run_script, and rexpect.
+All ten upstream suites are pinned to immutable commits. Portable public
+behavior runs against command-stream, while unsupported capabilities and
+inapplicable competitor-specific tests are accounted for in the
+[competitor test corpus audit](docs/COMPETITOR_TEST_AUDIT.md).
+
+Run the focused executable corpus with
+`cargo test --test competitor_compatibility`.
+
 - Shell parser for pipelines, command lists, logical operators, and redirection.
 - Built-in command implementations for file-system and shell utility commands.
 - Async execution with `tokio`.

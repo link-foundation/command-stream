@@ -1,0 +1,525 @@
+pub struct Competitor {
+    pub id: &'static str,
+    pub project: &'static str,
+    pub repository: &'static str,
+    pub commit: &'static str,
+    pub license: &'static str,
+    pub stars: u32,
+    pub source_files: u32,
+    pub registration_sites: u32,
+    pub scope: &'static [&'static str],
+}
+
+pub struct CorpusEntry {
+    pub id: &'static str,
+    pub competitors: &'static [&'static str],
+    pub upstream: &'static [&'static str],
+}
+
+pub struct ExcludedClass {
+    pub id: &'static str,
+    pub reason: &'static str,
+}
+
+pub const SNAPSHOT_DATE: &str = "2026-09-13";
+
+pub const COMPETITORS: &[Competitor] = &[
+    Competitor {
+        id: "rust-std-process",
+        project: "Rust std::process",
+        repository: "rust-lang/rust",
+        commit: "24d472027454741e74f8e913755fbc7e03f02af5",
+        license: "Apache-2.0 OR MIT",
+        stars: 118_804,
+        source_files: 39,
+        registration_sites: 33,
+        scope: &["library/std/src/process/tests.rs", "tests/ui/process/*.rs"],
+    },
+    Competitor {
+        id: "tokio-process",
+        project: "Tokio process",
+        repository: "tokio-rs/tokio",
+        commit: "6276684c288d8e513410219fa2129c69df41af18",
+        license: "MIT",
+        stars: 33_142,
+        source_files: 9,
+        registration_sites: 10,
+        scope: &["tokio/tests/process_*.rs"],
+    },
+    Competitor {
+        id: "async-process",
+        project: "async-process",
+        repository: "smol-rs/async-process",
+        commit: "f4485f156f9294b86a5be37f7236bcf0cf93c76b",
+        license: "Apache-2.0 OR MIT",
+        stars: 216,
+        source_files: 2,
+        registration_sites: 24,
+        scope: &["tests/*.rs"],
+    },
+    Competitor {
+        id: "assert-cmd",
+        project: "assert_cmd",
+        repository: "assert-rs/assert_cmd",
+        commit: "a57ef45a33986390be3057c192c6bdbe61b8912d",
+        license: "Apache-2.0 OR MIT",
+        stars: 562,
+        source_files: 4,
+        registration_sites: 18,
+        scope: &["tests/**/*.rs (excluding fixture data)"],
+    },
+    Competitor {
+        id: "duct",
+        project: "duct",
+        repository: "oconnor663/duct.rs",
+        commit: "0195544c9d963d94348e8bc94fc60b8519e5516b",
+        license: "MIT",
+        stars: 1_043,
+        source_files: 1,
+        registration_sites: 39,
+        scope: &["src/test.rs"],
+    },
+    Competitor {
+        id: "xshell",
+        project: "xshell",
+        repository: "matklad/xshell",
+        commit: "52f71bac326aaac291d07146ea790ad886dd8131",
+        license: "Apache-2.0 OR MIT",
+        stars: 834,
+        source_files: 6,
+        registration_sites: 60,
+        scope: &["tests/**/*.rs (excluding tests/data)"],
+    },
+    Competitor {
+        id: "subprocess",
+        project: "subprocess",
+        repository: "hniksic/rust-subprocess",
+        commit: "e8cd8d0c930a790ce29373a8c3ee080dd746b9eb",
+        license: "Apache-2.0 OR MIT",
+        stars: 452,
+        source_files: 9,
+        registration_sites: 206,
+        scope: &["src/tests/**/*.rs", "tests/*.rs"],
+    },
+    Competitor {
+        id: "rust-cmd-lib",
+        project: "rust_cmd_lib",
+        repository: "rust-shell-script/rust_cmd_lib",
+        commit: "5a87af574a694fbfd0d4ade0c9b3dadc7cd463f6",
+        license: "Apache-2.0 OR MIT",
+        stars: 1_155,
+        source_files: 1,
+        registration_sites: 27,
+        scope: &["tests/*.rs"],
+    },
+    Competitor {
+        id: "run-script",
+        project: "run_script",
+        repository: "sagiegurari/run_script",
+        commit: "a79fdf0e15afca84681e5cf104bc080ceec60954",
+        license: "Apache-2.0",
+        stars: 131,
+        source_files: 7,
+        registration_sites: 45,
+        scope: &["src/*_test.rs", "tests/*.rs"],
+    },
+    Competitor {
+        id: "rexpect",
+        project: "rexpect",
+        repository: "rust-cli/rexpect",
+        commit: "4c6a13d3d2c79cd63c8b12821530ec015b34fc71",
+        license: "Apache-2.0 OR MIT",
+        stars: 392,
+        source_files: 3,
+        registration_sites: 23,
+        scope: &["src/process.rs", "src/reader.rs", "src/session.rs"],
+    },
+];
+
+pub const PORTED_CASES: &[CorpusEntry] = &[
+    CorpusEntry {
+        id: "direct-exact-argv",
+        competitors: &[
+            "rust-std-process",
+            "tokio-process",
+            "async-process",
+            "assert-cmd",
+            "duct",
+            "xshell",
+            "subprocess",
+            "rust-cmd-lib",
+            "run-script",
+        ],
+        upstream: &[
+            "library/std/src/process/tests.rs",
+            "tokio/tests/process_smoke.rs",
+            "tests/weird-args.rs",
+        ],
+    },
+    CorpusEntry {
+        id: "argument-edge-cases",
+        competitors: &[
+            "rust-std-process",
+            "tokio-process",
+            "async-process",
+            "assert-cmd",
+            "duct",
+            "xshell",
+            "subprocess",
+            "rust-cmd-lib",
+            "run-script",
+        ],
+        upstream: &[
+            "tests/ui/process/process-spawn-with-unicode-params.rs",
+            "tests/weird-args.rs",
+            "tests/escape-args.rs",
+        ],
+    },
+    CorpusEntry {
+        id: "safe-template-interpolation",
+        competitors: &["duct", "xshell", "rust-cmd-lib"],
+        upstream: &["src/test.rs", "tests/it/main.rs", "tests/run_test.rs"],
+    },
+    CorpusEntry {
+        id: "cwd-string",
+        competitors: &[
+            "rust-std-process",
+            "tokio-process",
+            "async-process",
+            "assert-cmd",
+            "duct",
+            "xshell",
+            "subprocess",
+            "run-script",
+        ],
+        upstream: &["tests/std.rs", "src/test.rs", "tests/it/main.rs"],
+    },
+    CorpusEntry {
+        id: "environment",
+        competitors: &[
+            "rust-std-process",
+            "tokio-process",
+            "async-process",
+            "assert-cmd",
+            "duct",
+            "xshell",
+            "subprocess",
+            "rust-cmd-lib",
+            "run-script",
+        ],
+        upstream: &[
+            "tests/ui/process/process-envs.rs",
+            "tests/std.rs",
+            "tests/it/env.rs",
+        ],
+    },
+    CorpusEntry {
+        id: "stdout-stderr-separation",
+        competitors: &[
+            "rust-std-process",
+            "tokio-process",
+            "async-process",
+            "assert-cmd",
+            "duct",
+            "xshell",
+            "subprocess",
+            "rust-cmd-lib",
+            "run-script",
+            "rexpect",
+        ],
+        upstream: &["tests/std.rs", "src/test.rs", "src/tests/communicate.rs"],
+    },
+    CorpusEntry {
+        id: "newline-preservation",
+        competitors: &[
+            "async-process",
+            "assert-cmd",
+            "duct",
+            "xshell",
+            "subprocess",
+        ],
+        upstream: &["tests/std.rs", "src/test.rs", "tests/assert.rs"],
+    },
+    CorpusEntry {
+        id: "unicode-output",
+        competitors: &[
+            "rust-std-process",
+            "async-process",
+            "assert-cmd",
+            "subprocess",
+        ],
+        upstream: &[
+            "tests/ui/process/process-spawn-with-unicode-params.rs",
+            "tests/std.rs",
+        ],
+    },
+    CorpusEntry {
+        id: "large-output",
+        competitors: &[
+            "tokio-process",
+            "async-process",
+            "duct",
+            "xshell",
+            "subprocess",
+        ],
+        upstream: &[
+            "tokio/tests/process_smoke.rs",
+            "tests/std.rs",
+            "src/test.rs",
+        ],
+    },
+    CorpusEntry {
+        id: "nonzero-exit",
+        competitors: &[
+            "rust-std-process",
+            "tokio-process",
+            "async-process",
+            "assert-cmd",
+            "duct",
+            "xshell",
+            "subprocess",
+            "rust-cmd-lib",
+            "run-script",
+            "rexpect",
+        ],
+        upstream: &[
+            "tests/ui/process/process-exit.rs",
+            "tests/std.rs",
+            "src/test.rs",
+        ],
+    },
+    CorpusEntry {
+        id: "stdin-string",
+        competitors: &[
+            "rust-std-process",
+            "tokio-process",
+            "async-process",
+            "assert-cmd",
+            "duct",
+            "xshell",
+            "subprocess",
+            "rust-cmd-lib",
+            "run-script",
+            "rexpect",
+        ],
+        upstream: &["tests/std.rs", "src/test.rs", "src/tests/communicate.rs"],
+    },
+    CorpusEntry {
+        id: "lazy-execution",
+        competitors: &["tokio-process", "async-process", "duct", "subprocess"],
+        upstream: &[
+            "tokio/tests/process_smoke.rs",
+            "tests/std.rs",
+            "src/test.rs",
+        ],
+    },
+    CorpusEntry {
+        id: "concurrent-execution",
+        competitors: &["tokio-process", "async-process", "duct", "subprocess"],
+        upstream: &[
+            "tokio/tests/process_smoke.rs",
+            "tests/std.rs",
+            "src/test.rs",
+        ],
+    },
+    CorpusEntry {
+        id: "streamed-before-exit",
+        competitors: &["tokio-process", "async-process", "subprocess", "rexpect"],
+        upstream: &[
+            "tokio/tests/process_smoke.rs",
+            "tests/std.rs",
+            "src/reader.rs",
+        ],
+    },
+    CorpusEntry {
+        id: "sync-execution",
+        competitors: &[
+            "rust-std-process",
+            "assert-cmd",
+            "duct",
+            "xshell",
+            "subprocess",
+            "rust-cmd-lib",
+            "run-script",
+            "rexpect",
+        ],
+        upstream: &[
+            "library/std/src/process/tests.rs",
+            "src/test.rs",
+            "tests/run_test.rs",
+        ],
+    },
+    CorpusEntry {
+        id: "programmatic-pipeline",
+        competitors: &["duct", "subprocess", "rust-cmd-lib"],
+        upstream: &["src/test.rs", "src/tests/pipeline.rs", "tests/run_test.rs"],
+    },
+    CorpusEntry {
+        id: "spawn-error-propagation",
+        competitors: &[
+            "rust-std-process",
+            "tokio-process",
+            "async-process",
+            "assert-cmd",
+            "duct",
+            "xshell",
+            "subprocess",
+            "rust-cmd-lib",
+            "run-script",
+            "rexpect",
+        ],
+        upstream: &[
+            "tests/ui/process/process-spawn-nonexistent.rs",
+            "tokio/tests/process_smoke.rs",
+            "tests/std.rs",
+        ],
+    },
+    CorpusEntry {
+        id: "stream-kill",
+        competitors: &[
+            "tokio-process",
+            "async-process",
+            "duct",
+            "subprocess",
+            "rexpect",
+        ],
+        upstream: &[
+            "tokio/tests/process_kill_after_wait.rs",
+            "tests/std.rs",
+            "src/process.rs",
+        ],
+    },
+];
+
+pub const MISSING_FEATURES: &[CorpusEntry] = &[
+    CorpusEntry {
+        id: "array-and-splat-interpolation",
+        competitors: &["xshell", "rust-cmd-lib"],
+        upstream: &["tests/it/main.rs", "tests/run_test.rs"],
+    },
+    CorpusEntry {
+        id: "non-utf8-arguments-and-environment",
+        competitors: &[
+            "rust-std-process",
+            "tokio-process",
+            "async-process",
+            "assert-cmd",
+            "subprocess",
+        ],
+        upstream: &["tests/ui/process/env-funky-keys.rs", "tests/weird-args.rs"],
+    },
+    CorpusEntry {
+        id: "binary-input-and-lossless-output",
+        competitors: &[
+            "rust-std-process",
+            "tokio-process",
+            "async-process",
+            "assert-cmd",
+            "duct",
+            "subprocess",
+            "rexpect",
+        ],
+        upstream: &["tests/std.rs", "src/test.rs", "src/tests/communicate.rs"],
+    },
+    CorpusEntry {
+        id: "environment-clear-and-remove",
+        competitors: &[
+            "rust-std-process",
+            "tokio-process",
+            "async-process",
+            "assert-cmd",
+            "duct",
+            "xshell",
+            "subprocess",
+        ],
+        upstream: &[
+            "tests/ui/process/process-remove-from-env.rs",
+            "tests/std.rs",
+        ],
+    },
+    CorpusEntry {
+        id: "custom-stdio-and-file-handles",
+        competitors: &[
+            "rust-std-process",
+            "tokio-process",
+            "async-process",
+            "assert-cmd",
+            "duct",
+            "subprocess",
+        ],
+        upstream: &[
+            "library/std/src/process/tests.rs",
+            "tests/std.rs",
+            "src/test.rs",
+        ],
+    },
+    CorpusEntry {
+        id: "timeout-option",
+        competitors: &["assert-cmd", "xshell", "run-script", "rexpect"],
+        upstream: &["tests/assert.rs", "tests/it/timeout.rs", "src/session.rs"],
+    },
+    CorpusEntry {
+        id: "try-wait-and-shared-child-handle",
+        competitors: &[
+            "rust-std-process",
+            "tokio-process",
+            "async-process",
+            "subprocess",
+        ],
+        upstream: &[
+            "tests/ui/process/try-wait.rs",
+            "tokio/tests/process_smoke.rs",
+            "src/process.rs",
+        ],
+    },
+    CorpusEntry {
+        id: "native-exit-status-and-signal-metadata",
+        competitors: &[
+            "rust-std-process",
+            "tokio-process",
+            "async-process",
+            "subprocess",
+        ],
+        upstream: &["tests/ui/process/signal-exit-status.rs", "tests/std.rs"],
+    },
+    CorpusEntry {
+        id: "expect-and-pty-session",
+        competitors: &["rexpect"],
+        upstream: &["src/process.rs", "src/reader.rs", "src/session.rs"],
+    },
+    CorpusEntry {
+        id: "shell-expression-composition-and-redirection",
+        competitors: &["duct", "xshell", "rust-cmd-lib"],
+        upstream: &["src/test.rs", "tests/it/main.rs", "tests/run_test.rs"],
+    },
+];
+
+pub const EXCLUDED_TEST_CLASSES: &[ExcludedClass] = &[
+    ExcludedClass {
+        id: "competitor-api-shape",
+        reason: "Competitor constructors, traits, macros, types, and private return objects do not describe command-stream behavior.",
+    },
+    ExcludedClass {
+        id: "competitor-internals",
+        reason: "Mocks and assertions for private executors, parsers, async reactors, and implementation-only errors are not portable.",
+    },
+    ExcludedClass {
+        id: "upstream-runtime-regressions",
+        reason: "Rust compiler, Tokio runtime, and dependency regressions that do not exercise command-stream belong upstream.",
+    },
+    ExcludedClass {
+        id: "unrelated-utilities",
+        reason: "Filesystem helpers, assertion formatting, script discovery, and general shell utilities outside process execution are out of scope.",
+    },
+    ExcludedClass {
+        id: "platform-fixture-mechanics",
+        reason: "Upstream harness setup, compile-fail annotations, snapshots, permissions, and fixture self-tests are infrastructure rather than product behavior.",
+    },
+];
+
+pub fn pinned_source_url(competitor: &Competitor, path: &str) -> String {
+    format!(
+        "https://github.com/{}/blob/{}/{}",
+        competitor.repository, competitor.commit, path
+    )
+}

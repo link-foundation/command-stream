@@ -38,7 +38,16 @@ JavaScript and Rust releases are independent:
 
 ## Development
 
-Run language-specific checks from the language folders:
+Both maintained language implementations carry pinned, executable competitor
+compatibility corpora with explicit missing-feature ledgers:
+
+- [JavaScript competitor test audit](./js/docs/COMPETITOR_TEST_AUDIT.md)
+- [Rust competitor test audit](./rust/docs/COMPETITOR_TEST_AUDIT.md)
+
+Run the focused suites with `bun run test:competitors` in `js/` and
+`cargo test --test competitor_compatibility` in `rust/`.
+
+Run all language-specific checks from the language folders:
 
 ```bash
 cd js
