@@ -5,6 +5,18 @@ import { trace } from '../src/$.utils.mjs';
 import { readdirSync, statSync, readFileSync } from 'fs';
 import { join } from 'path';
 
+const waitForOutput = async (readOutput, expected, timeoutMs = 3000) => {
+  const deadline = Date.now() + timeoutMs;
+
+  while (!readOutput().includes(expected)) {
+    if (Date.now() >= deadline) {
+      throw new Error(`Timed out waiting for child output: ${expected}`);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+};
+
 // Get all .mjs examples
 const examplesDir = join(process.cwd(), 'js/examples');
 const allExamples = readdirSync(examplesDir)
@@ -184,8 +196,12 @@ describe('Examples Execution Tests', () => {
         stderr += data.toString();
       });
 
-      // Give the process time to set up its signal handler
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Signal only after the child confirms its handler is installed. A fixed
+      // delay is flaky when the full suite puts the host under load.
+      await waitForOutput(
+        () => stdout,
+        'Process started, waiting for SIGINT...'
+      );
 
       // Send SIGINT to the process
       child.kill('SIGINT');
