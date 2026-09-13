@@ -11,3 +11,5 @@ bump: patch
 ### Fixed
 
 - Propagated exact-executable spawn errors from `StreamingRunner::collect()` instead of returning a false success.
+- Preserved quoted command strings passed through `cmd.exe /c`, including
+  executable paths that require Windows shell quoting.

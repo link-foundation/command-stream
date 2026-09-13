@@ -342,11 +342,8 @@ async fn run_streaming_process(
         StreamingCommand::Shell(command) => {
             let shell = find_available_shell();
             let mut cmd = Command::new(&shell.cmd);
-            cmd.args(&shell.args)
-                .arg(crate::utils::with_exported_process_context(
-                    &command,
-                    env.as_ref(),
-                ));
+            cmd.args(&shell.args);
+            crate::utils::append_shell_command(&mut cmd, &command, env.as_ref());
             cmd
         }
         StreamingCommand::Argv { program, args } => {

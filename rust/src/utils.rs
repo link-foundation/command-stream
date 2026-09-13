@@ -60,6 +60,28 @@ pub(crate) fn with_exported_process_context(
     command.to_string()
 }
 
+/// Append a command string using the platform shell's argument convention.
+pub(crate) fn append_shell_command(
+    process: &mut tokio::process::Command,
+    command: &str,
+    env: Option<&HashMap<String, String>>,
+) {
+    let command = with_exported_process_context(command, env);
+
+    #[cfg(windows)]
+    {
+        // `cmd.exe /c` does not use the C runtime's argument decoder. Passing
+        // the command through `arg` would therefore expose Rust's backslash
+        // escapes as literal characters. The extra outer quotes are required
+        // to preserve a quoted executable path at the start of the command.
+        use std::os::windows::process::CommandExt;
+        process.as_std_mut().raw_arg(format!("\"{command}\""));
+    }
+
+    #[cfg(not(windows))]
+    process.arg(command);
+}
+
 /// Result type for virtual command operations
 #[derive(Debug, Clone)]
 pub struct CommandResult {
