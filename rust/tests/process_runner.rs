@@ -28,6 +28,24 @@ async fn test_echo_with_multiple_words() {
 async fn test_command_with_arguments() {
     let result = run("echo -n test").await.unwrap();
     assert!(result.is_success());
+    assert_eq!(result.stdout, "test");
+}
+
+#[tokio::test]
+async fn test_real_shell_preserves_missing_final_newlines() {
+    let result = exec(
+        "printf stdout; printf stderr >&2",
+        RunOptions {
+            mirror: false,
+            ..Default::default()
+        },
+    )
+    .await
+    .unwrap();
+
+    assert!(result.is_success());
+    assert_eq!(result.stdout, "stdout");
+    assert_eq!(result.stderr, "stderr");
 }
 
 #[tokio::test]
