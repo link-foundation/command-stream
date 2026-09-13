@@ -4,7 +4,9 @@ bump: patch
 
 ### Added
 
-- Added a pinned Rust competitor compatibility corpus and missing-feature audit.
+- Added a pinned 14-project Rust competitor compatibility corpus, complete
+  per-test disposition manifest, reproducible discovery snapshot, and
+  missing-feature audit.
 
 ### Fixed
 

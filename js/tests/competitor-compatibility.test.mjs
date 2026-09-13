@@ -25,6 +25,13 @@ const testDirectory = dirname(fileURLToPath(import.meta.url));
 const packageDirectory = join(testDirectory, '..');
 const fixturePath = join(testDirectory, 'fixtures', 'competitor-process.mjs');
 const auditPath = join(packageDirectory, 'docs', 'COMPETITOR_TEST_AUDIT.md');
+const dispositionPath = join(testDirectory, 'competitor-dispositions.jsonl');
+const discoveryPath = join(
+  packageDirectory,
+  '..',
+  'docs',
+  'COMPETITOR_DISCOVERY.json'
+);
 const temporaryDirectories = [];
 const executedCaseIds = new Set();
 
@@ -49,6 +56,24 @@ function temporaryDirectory() {
   return directory;
 }
 
+function readDispositionManifest() {
+  const records = readFileSync(dispositionPath, 'utf8')
+    .trim()
+    .split('\n')
+    .map((line) => JSON.parse(line));
+  const [metadata] = records;
+  const withoutRecordType = ({ record: _, ...value }) => value;
+  return {
+    ...withoutRecordType(metadata),
+    sources: records
+      .filter(({ record }) => record === 'source')
+      .map(withoutRecordType),
+    units: records
+      .filter(({ record }) => record === 'unit')
+      .map(withoutRecordType),
+  };
+}
+
 function port(id, title, implementation, timeout) {
   if (!portedCases.some((entry) => entry.id === id)) {
     throw new Error(`Unregistered competitor case: ${id}`);
@@ -69,7 +94,13 @@ afterAll(() => {
 describe('competitor corpus integrity', () => {
   test('pins a unique, immutable upstream inventory', () => {
     expect(snapshotDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    expect(competitors.length).toBe(10);
+    expect(competitors.length).toBe(11);
+    expect(competitors.reduce((sum, item) => sum + item.sourceFiles, 0)).toBe(
+      411
+    );
+    expect(
+      competitors.reduce((sum, item) => sum + (item.registrationSites ?? 0), 0)
+    ).toBe(7319);
     expect(new Set(competitors.map(({ id }) => id)).size).toBe(
       competitors.length
     );
@@ -81,6 +112,64 @@ describe('competitor corpus integrity', () => {
       expect(competitor.scope.length).toBeGreaterThan(0);
       expect(pinnedSourceUrl(competitor, competitor.scope[0])).toContain(
         competitor.commit
+      );
+    }
+  });
+
+  test('assigns every pinned upstream unit exactly one disposition', () => {
+    const manifest = readDispositionManifest();
+    const knownCompetitors = new Map(
+      competitors.map((competitor) => [competitor.id, competitor])
+    );
+    const knownDispositions = new Set([
+      ...portedCases.map(({ id }) => `ported:${id}`),
+      ...missingFeatures.map(({ id }) => `missing:${id}`),
+      ...excludedTestClasses.map(({ id }) => `inapplicable:${id}`),
+    ]);
+
+    expect(manifest.schemaVersion).toBe(1);
+    expect(manifest.snapshotDate).toBe(snapshotDate);
+    expect(manifest.language).toBe('js');
+    expect(manifest.sources).toEqual(
+      competitors.map(
+        ({ id, repository, commit, sourceFiles, registrationSites }) => ({
+          id,
+          repository,
+          commit,
+          sourceFiles,
+          registrationSites: registrationSites ?? 0,
+        })
+      )
+    );
+    expect(manifest.units.length).toBe(7452);
+    expect(new Set(manifest.units.map(({ id }) => id)).size).toBe(
+      manifest.units.length
+    );
+
+    for (const source of manifest.sources) {
+      const units = manifest.units.filter(({ source: id }) => id === source.id);
+      expect(new Set(units.map(({ path }) => path)).size).toBe(
+        source.sourceFiles
+      );
+      expect(units.filter(({ unit }) => unit === 'registration').length).toBe(
+        source.registrationSites
+      );
+    }
+
+    for (const unit of manifest.units) {
+      const competitor = knownCompetitors.get(unit.source);
+      expect(competitor).toBeDefined();
+      expect(unit.id).toBe(
+        `${unit.source}:${unit.path}:${unit.line}:${unit.column}:${unit.unit}`
+      );
+      expect(Object.keys(unit.disposition).sort()).toEqual(['id', 'kind']);
+      expect(unit).toHaveProperty('disposition.kind');
+      expect(unit).toHaveProperty('disposition.id');
+      expect(
+        knownDispositions.has(`${unit.disposition.kind}:${unit.disposition.id}`)
+      ).toBe(true);
+      expect(unit.url).toBe(
+        `${pinnedSourceUrl(competitor, unit.path)}#L${unit.line}`
       );
     }
   });
@@ -103,6 +192,58 @@ describe('competitor corpus integrity', () => {
       portedCases.length
     );
     expect(excludedTestClasses.length).toBeGreaterThan(0);
+  });
+
+  test('keeps exact discovery inputs and a complete candidate ledger', () => {
+    const discovery = JSON.parse(readFileSync(discoveryPath, 'utf8'));
+    const candidates = discovery.candidates.filter(
+      ({ language }) => language === 'javascript'
+    );
+    const included = candidates
+      .filter(({ status }) => status === 'included')
+      .map(({ repository }) => repository)
+      .sort();
+
+    expect(discovery.snapshotDate).toBe(snapshotDate);
+    expect(discovery.queries).toHaveLength(6);
+    expect(
+      new Set(
+        discovery.candidates.map(
+          ({ language, repository }) => `${language}:${repository}`
+        )
+      ).size
+    ).toBe(discovery.candidates.length);
+    for (const query of discovery.queries) {
+      expect(query.results).toHaveLength(query.totalCount);
+      for (const result of query.results) {
+        expect(
+          discovery.candidates.some(
+            ({ language, repository }) =>
+              language === query.language && repository === result.repository
+          )
+        ).toBe(true);
+      }
+    }
+    expect(
+      candidates.every(
+        ({ status }) => status === 'included' || status === 'excluded'
+      )
+    ).toBe(true);
+    expect(
+      candidates
+        .filter(({ status }) => status === 'excluded')
+        .every(({ reason }) => typeof reason === 'string' && reason.length > 0)
+    ).toBe(true);
+    expect(included).toEqual(
+      competitors.map(({ repository }) => repository).sort()
+    );
+    for (const competitor of competitors) {
+      const candidate = candidates.find(
+        ({ repository }) => repository === competitor.repository
+      );
+      expect(candidate).toBeDefined();
+      expect(candidate.stars).toBe(competitor.stars);
+    }
   });
 
   test('keeps every unsupported feature in the markdown ledger', () => {

@@ -32,7 +32,7 @@ pub const COMPETITORS: &[Competitor] = &[
         license: "Apache-2.0 OR MIT",
         stars: 118_804,
         source_files: 39,
-        registration_sites: 33,
+        registration_sites: 30,
         scope: &["library/std/src/process/tests.rs", "tests/ui/process/*.rs"],
     },
     Competitor {
@@ -41,7 +41,7 @@ pub const COMPETITORS: &[Competitor] = &[
         repository: "tokio-rs/tokio",
         commit: "6276684c288d8e513410219fa2129c69df41af18",
         license: "MIT",
-        stars: 33_142,
+        stars: 33_143,
         source_files: 9,
         registration_sites: 10,
         scope: &["tokio/tests/process_*.rs"],
@@ -171,6 +171,21 @@ pub const COMPETITORS: &[Competitor] = &[
         source_files: 3,
         registration_sites: 23,
         scope: &["src/process.rs", "src/reader.rs", "src/session.rs"],
+    },
+    Competitor {
+        id: "expectrl",
+        project: "expectrl",
+        repository: "zhiburt/expectrl",
+        commit: "a2407de94df0b05dd794f79c57dea7b6f0a86f1f",
+        license: "MIT",
+        stars: 215,
+        source_files: 10,
+        registration_sites: 118,
+        scope: &[
+            "tests/*.rs",
+            "src/process/unix.rs",
+            "src/session/async_session.rs",
+        ],
     },
 ];
 
@@ -535,7 +550,7 @@ pub const MISSING_FEATURES: &[CorpusEntry] = &[
     },
     CorpusEntry {
         id: "timeout-option",
-        competitors: &["assert-cmd", "xshell", "run-script", "rexpect"],
+        competitors: &["assert-cmd", "xshell", "run-script", "rexpect", "expectrl"],
         upstream: &["tests/assert.rs", "tests/it/timeout.rs", "src/session.rs"],
     },
     CorpusEntry {
@@ -564,8 +579,14 @@ pub const MISSING_FEATURES: &[CorpusEntry] = &[
     },
     CorpusEntry {
         id: "expect-and-pty-session",
-        competitors: &["rexpect"],
-        upstream: &["src/process.rs", "src/reader.rs", "src/session.rs"],
+        competitors: &["rexpect", "expectrl"],
+        upstream: &[
+            "src/process.rs",
+            "src/reader.rs",
+            "src/session.rs",
+            "tests/expect.rs",
+            "tests/interact.rs",
+        ],
     },
     CorpusEntry {
         id: "shell-expression-composition-and-redirection",

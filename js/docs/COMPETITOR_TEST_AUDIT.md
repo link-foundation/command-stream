@@ -5,14 +5,21 @@ command-stream. The executable ports live in
 [`tests/competitor-compatibility.test.mjs`](../tests/competitor-compatibility.test.mjs),
 and their machine-readable provenance is in
 [`tests/competitor-corpus.mjs`](../tests/competitor-corpus.mjs).
+Every pinned upstream test unit and its sole disposition is recorded in
+[`tests/competitor-dispositions.jsonl`](../tests/competitor-dispositions.jsonl).
+The exact discovery queries, returned repositories, additional ecosystem
+nominations, popularity snapshot, and rejection reasons are checked in at
+[`../../docs/COMPETITOR_DISCOVERY.json`](../../docs/COMPETITOR_DISCOVERY.json).
 
 ## Selection rule
 
 The corpus includes open-source JavaScript or TypeScript projects whose main
 product, or a distinct part of it, executes arbitrary commands. A project is
 included when it had at least 500 GitHub stars on 2026-09-13, or when it is the
-native process primitive of a supported JavaScript runtime. Dax is counted with
-`@david/shell`, the command engine to which Dax delegates.
+native process primitive of a supported JavaScript runtime. `@david/shell` is
+included as a separately pinned source because it is the command engine to
+which the selected Dax project delegates; its own star count is not used as an
+independent threshold exception.
 
 Task orchestrators, terminal emulators, interactive CLI shells, and bridges
 limited to one guest language are outside this definition. For example,
@@ -31,20 +38,20 @@ inventory unit.
 | Project                                 | Pinned commit                              | Scoped source                                                         | Files | Registrations |
 | --------------------------------------- | ------------------------------------------ | --------------------------------------------------------------------- | ----: | ------------: |
 | Node.js `child_process`                 | `6193e15483395080c6438399211aa7fab70f4e5e` | `test/{parallel,sequential,pummel}/test-child-process-*.js`           |   117 |           n/a |
-| Bun Shell and `child_process`           | `09bb5463058074ef143a9d9a5a405d669c787375` | `test/js/{bun/shell,node/child_process}/**/*.test.*`                  |    53 |           394 |
+| Bun Shell and `child_process`           | `09bb5463058074ef143a9d9a5a405d669c787375` | `test/js/{bun/shell,node/child_process}/**/*.test.*`                  |    53 |           414 |
 | `Deno.Command` and `node:child_process` | `336da420f4343cbb1dcbd5eed9d075ff555ed6ee` | `tests/unit/command_test.ts`, `tests/unit_node/child_process_test.ts` |     2 |           137 |
 | Execa                                   | `8017b279e19347efaf2587711c2d57dbd4330740` | non-fixture `test/**/*.js`                                            |   151 |         5,133 |
-| zx                                      | `65fc542d88baac578967e22bea28cb610976578c` | `src/**/*.test.ts`                                                    |    23 |           290 |
-| ShellJS                                 | `f364da6625945414440bb15210f102ba5fc10ed9` | non-resource `src/**/*.test.js`                                       |    38 |           694 |
+| zx                                      | `65fc542d88baac578967e22bea28cb610976578c` | `test/**/*.test.{js,cjs,mjs,ts}`                                      |    23 |           287 |
+| ShellJS                                 | `f364da6625945414440bb15210f102ba5fc10ed9` | non-resource `test/**/*.js`                                           |    40 |           630 |
 | cross-spawn                             | `77cd97f3ca7b62c904a63a698fc4a79bf41977d0` | `test/index.test.js`                                                  |     1 |            25 |
-| Dax                                     | `d5e8c18ee28a8317b098c860ee98786a828c0e04` | `mod.test.ts` plus `@david/shell` tests                               |    15 |           399 |
-| nano-spawn                              | `cc231e2c7b1e434a96f25f907ca2cb2f7c596e90` | non-fixture `test/**/*.js`                                            |     8 |           263 |
+| Dax                                     | `d5e8c18ee28a8317b098c860ee98786a828c0e04` | `mod.test.ts`                                                         |     1 |            12 |
+| `@david/shell`                          | `eba92f9c9fcc58e02a8385097791056fd0d2b7ad` | `mod.test.ts`, `src/**/*.test.ts`                                     |    14 |           387 |
+| nano-spawn                              | `cc231e2c7b1e434a96f25f907ca2cb2f7c596e90` | non-fixture `test/**/*.js`                                            |     8 |           262 |
 | `@actions/exec`                         | `193fa46c20fde8b0ed54194bc08b841c78c0776d` | `packages/exec/__tests__/exec.test.ts`                                |     1 |            32 |
 
-Dax's included command engine is pinned separately at
-`eba92f9c9fcc58e02a8385097791056fd0d2b7ad`. The complete snapshot covers 409
-source files and 7,367 statically discoverable registrations, plus the 117
-Node.js harness files.
+The complete snapshot covers 411 source files (including the 117 Node.js
+harness files) and 7,319 statically discoverable registrations. Lifecycle
+hooks are not registrations; chained test modifiers such as `test.skipIf` are.
 
 ## What 100% accounting means
 
@@ -65,10 +72,12 @@ collapsed into one local table-driven invariant, while edge-case values are
 preserved. No missing feature was introduced merely to make an upstream test
 pass.
 
-The integrity tests enforce that all selected projects have a disposition,
-every port registry entry executes, every commit is a full SHA, every missing
-feature has a heading below, and old `expect(true).toBe(true)` placeholders do
-not return.
+The integrity tests load the generated 7,452-unit disposition manifest and
+enforce unique stable IDs, one valid disposition per unit, exact source and
+registration totals, source-specific pinned URLs, complete selected-project
+coverage, execution of every port registry entry, full commit SHAs, and a
+heading for every missing feature. This turns “100% accounting” into a checked
+property rather than a summary-level assertion.
 
 ## Executable behavior ports
 
@@ -201,12 +210,18 @@ directory.
 
 ## Refresh procedure
 
-1. Reapply the selection rule and record additions or removals explicitly.
+1. Repeat the six exact GitHub queries stored in
+   `docs/COMPETITOR_DISCOVERY.json`, inspect every returned and nominated
+   candidate, and record additions, rejections, or removals explicitly.
 2. Pin each repository to a full commit before inspecting tests.
 3. Recount scoped files and static registrations at that commit.
-4. Adapt new portable public invariants into the fixture-based suite.
-5. Add unsupported behavior to the ledger; do not silently implement features.
-6. Run `bun run test:competitors`, the full JavaScript tests, lint, formatting,
+4. Run
+   `node js/scripts/generate-competitor-dispositions.mjs --js-root PATH --rust-root PATH --rust-extra-root PATH`
+   with directories containing checkouts named as specified by the generator,
+   then review every changed disposition.
+5. Adapt new portable public invariants into the fixture-based suite.
+6. Add unsupported behavior to the ledger; do not silently implement features.
+7. Run `bun run test:competitors`, the full JavaScript tests, lint, formatting,
    and duplication checks.
 
 The local tests contain original fixture code and API-neutral assertions; they
