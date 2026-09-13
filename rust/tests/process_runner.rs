@@ -38,7 +38,7 @@ async fn test_real_shell_preserves_missing_final_newlines() {
     #[cfg(unix)]
     let command = "printf stdout; printf stderr >&2";
     #[cfg(windows)]
-    let command = r#"<nul set /p "=stdout" & <nul set /p "=stderr" 1>&2 & exit /b 0"#;
+    let command = "<nul set /p x=stdout&<nul 1>&2 set /p x=stderr&exit /b 0";
 
     let result = exec(
         command,
