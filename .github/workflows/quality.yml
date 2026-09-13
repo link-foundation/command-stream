@@ -1,0 +1,134 @@
+name: Repository quality checks
+
+# The checks in here apply to the whole repository, so they deliberately carry
+# no `paths:` filter.
+#
+# js.yml only runs on `js/**`, rust.yml on `rust/**` and workflows.yml on
+# `.github/**`, which left whole classes of change with no check at all
+# (issue #199): a pull request that only touched `docs/**` ran nothing, and the
+# formatter -- which reads every tracked file, including the workflows and the
+# markdown -- only ever ran behind the `js/**` filter, so a formatting violation
+# introduced in a workflow file first turned red on somebody else's JavaScript
+# pull request.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+# Least-privilege default; nothing here writes.
+permissions:
+  contents: read
+
+# Concurrency is per job, matching the other workflows. Every job here is
+# read-only, so all of them are cancellable `check-*` groups.
+
+jobs:
+  format:
+    name: Check formatting of every tracked file
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-format
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # The merge simulation below needs the base branch's history.
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Run the checks below against the real merge result rather than a
+      # possibly stale merge preview, and fail on a conflict here rather than at
+      # merge time. Rationale in .github/scripts/simulate-fresh-merge.sh.
+      - name: Simulate a fresh merge with the base branch
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash .github/scripts/simulate-fresh-merge.sh
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: latest
+
+      # Prettier lives in js/package.json but formats the whole tree: the
+      # `format:check` script steps out of js/ to run it from the repository
+      # root, where .prettierrc and .prettierignore are.
+      - name: Install dependencies
+        working-directory: js
+        run: bun install
+
+      - name: Check formatting
+        working-directory: js
+        run: bun run format:check
+
+  docs:
+    name: Validate documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-docs
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # The merge simulation below needs the base branch's history, and the
+          # test itself lists the tracked markdown files with `git ls-files`.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Simulate a fresh merge with the base branch
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash .github/scripts/simulate-fresh-merge.sh
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: latest
+
+      # No `bun install`: the test reads the tree with the standard library and
+      # git only. Documentation validation is principle #12 of the hive-mind
+      # CI/CD best practices; the merge simulation matters here because a link
+      # breaks when *either* side of the merge moves the file.
+      - name: Check documentation links, size and required sections
+        run: bun test js/tests/docs-validation.test.mjs --timeout 10000
+
+  hygiene:
+    name: Check workflow invariants
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-hygiene
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Simulate a fresh merge with the base branch
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash .github/scripts/simulate-fresh-merge.sh
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: latest
+
+      # actionlint and zizmor cover syntax and workflow security; this test
+      # covers the repository-specific invariants they cannot know about
+      # (concurrency shape, writer jobs, matrix job names, which quality gates
+      # are wired up). It ran only behind js.yml's `js/**` filter before, which
+      # is the one filter guaranteed not to match a workflow-only change.
+      - name: Check CI/CD invariants
+        run: bun test js/tests/workflow-hygiene.test.mjs --timeout 10000
