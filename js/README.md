@@ -72,6 +72,16 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 
 **⭐ Help Us Grow!** If command-stream's **revolutionary virtual commands** and **advanced streaming capabilities** help your project, [**please star us on GitHub**](https://github.com/link-foundation/command-stream) to help the project grow!
 
+### Tracked compatibility corpus
+
+The comparison tests also track Node.js `child_process`, `Deno.Command`, Dax,
+`@david/shell`, nano-spawn, `@actions/exec`, and cross-env. All twelve upstream sources are pinned to immutable
+commits. Portable public behavior runs against command-stream, while unsupported
+capabilities and inapplicable competitor-specific tests are accounted for in the
+[competitor test corpus audit](docs/COMPETITOR_TEST_AUDIT.md).
+
+Run the focused executable corpus with `bun run test:competitors`.
+
 ### Why Choose command-stream?
 
 - **🆓 Truly Free**: **Unlicense (Public Domain)** - No restrictions, no attribution required, use however you want

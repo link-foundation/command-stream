@@ -267,6 +267,7 @@ jobs:
           "
           node --test js/tests/node-terminal-artifacts.mjs
           node --test js/tests/node-commonjs-entry.mjs
+          node --test js/tests/node-process-regressions.mjs
 
   release:
     name: Release JavaScript package

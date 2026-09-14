@@ -195,10 +195,7 @@ impl Pipeline {
             for arg in &shell.args {
                 cmd.arg(arg);
             }
-            cmd.arg(crate::utils::with_exported_process_context(
-                cmd_str,
-                effective_env.as_ref(),
-            ));
+            crate::utils::append_shell_command(&mut cmd, cmd_str, effective_env.as_ref());
 
             // Configure stdio
             cmd.stdin(Stdio::piped());
