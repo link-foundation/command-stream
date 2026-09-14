@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.21.5
+
+### Patch Changes
+
+- 434cf1f: Document and lock in exact GitHub CLI Markdown body interpolation, including
+  fenced code, quotes, shell-looking text, multiline whitespace, and Unicode.
+
 ## 0.21.4
 
 ### Patch Changes
