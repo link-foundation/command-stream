@@ -124,6 +124,37 @@ assert_eq!(result.stdout, content);
 Use `printf '%s'` instead of `echo` when exact text matters; `echo` normally
 adds a trailing newline. If no command is involved, prefer `std::fs::write`.
 
+## GitHub CLI Markdown Bodies
+
+The same literal-argument contract applies to complex issue bodies. No manual
+escaping is needed for fenced code, `${...}` text, quotes, shell-looking
+syntax, backslashes, newlines, or Unicode:
+
+````rust,no_run
+use command_stream::s;
+
+# async fn example() -> Result<(), command_stream::Error> {
+let repository = "owner/repository";
+let title = "Bug report";
+let body = "## Reproduction\n\n```rust\nlet message = \"literal ${value}\";\n```\n\n\
+            $HOME and $(whoami) are documentation, not shell syntax.";
+
+let result = s!(
+    "gh issue create --repo {} --title {} --body {}",
+    repository,
+    title,
+    body,
+)
+.await?;
+assert!(result.is_success());
+# Ok(())
+# }
+````
+
+If the text already lives in a file, use GitHub CLI's `--body-file` option.
+For platform-native argument handling without a shell, pass the same values to
+`StreamingRunner::from_argv`.
+
 ## Command Line
 
 The crate also builds a `command-stream` binary:
