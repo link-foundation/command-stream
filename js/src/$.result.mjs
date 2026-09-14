@@ -1,0 +1,112 @@
+// Result creation utilities for command-stream
+// Creates standardized result objects
+
+/**
+ * Create a standardized result object
+ * @param {object} params - Result parameters
+ * @param {number} params.code - Exit code
+ * @param {string} params.stdout - Standard output
+ * @param {string} params.stderr - Standard error
+ * @param {string} params.stdin - Standard input that was sent
+ * @returns {object} Result object with text() method
+ */
+export function createResult({ code, stdout = '', stderr = '', stdin = '' }) {
+  return {
+    code,
+    // `exitCode` is an alias for `code` for better compatibility (issue #36)
+    exitCode: code,
+    stdout,
+    stderr,
+    stdin,
+    text() {
+      return Promise.resolve(stdout);
+    },
+  };
+}
+
+export function createCancelledResult(signal) {
+  const signalCodes = { SIGINT: 130, SIGKILL: 137, SIGTERM: 143 };
+  return createResult({
+    code: signalCodes[signal] ?? 1,
+    stdout: '',
+    stderr: '',
+    stdin: '',
+  });
+}
+
+/**
+ * Convert supported synchronous stdin values into spawn input.
+ * @param {string|Buffer} stdin - Stdin option
+ * @returns {Buffer|undefined} Spawn input
+ */
+export function getSyncStdinInput(stdin) {
+  if (typeof stdin === 'string') {
+    return Buffer.from(stdin);
+  }
+  return Buffer.isBuffer(stdin) ? stdin : undefined;
+}
+
+/**
+ * Convert supported synchronous stdin values into result text.
+ * @param {string|Buffer} stdin - Stdin option
+ * @returns {string} Stdin text
+ */
+export function getStdinString(stdin) {
+  if (typeof stdin === 'string') {
+    return stdin;
+  }
+  return Buffer.isBuffer(stdin) ? stdin.toString('utf8') : '';
+}
+
+/**
+ * Convert a process-launch error into a shell-compatible numeric status.
+ * @param {Error & {code?: string|number}} error - Spawn/system error
+ * @returns {number} Numeric process status
+ */
+export function executionErrorExitCode(error) {
+  if (typeof error.code === 'number') {
+    return error.code;
+  }
+  if (error.code === 'ENOENT') {
+    return 127;
+  }
+  if (error.code === 'EACCES' || error.code === 'EPERM') {
+    return 126;
+  }
+  return 1;
+}
+
+export function isProcessLaunchError(error) {
+  return (
+    typeof error?.code === 'string' &&
+    (error?.syscall?.includes('spawn') ||
+      ['ENOENT', 'EACCES', 'EPERM', 'ENOEXEC'].includes(error.code))
+  );
+}
+
+export function prepareSpawnErrorResult(runner) {
+  if (!runner._spawnError) {
+    return undefined;
+  }
+  if (runner.options.capture && runner.errChunks.length === 0) {
+    runner.errChunks.push(Buffer.from(runner._spawnError.message));
+  }
+  return executionErrorExitCode(runner._spawnError);
+}
+
+export function createExecutionErrorResult(error) {
+  return createResult({
+    code: executionErrorExitCode(error),
+    stdout: error.stdout ?? '',
+    stderr: error.stderr ?? error.message ?? '',
+    stdin: '',
+  });
+}
+
+export function finishExecutionError(runner, error) {
+  if (runner.finished) {
+    return runner.result;
+  }
+
+  return runner.finish(createExecutionErrorResult(error));
+}
