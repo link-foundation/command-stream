@@ -160,6 +160,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [0.18.4] - 2026-09-14
+
+### Fixed
+
+- Lock in exact complex Markdown arguments across direct argv execution and
+  shell-safe macro interpolation.
+
 ## [0.18.3] - 2026-09-14
 
 ### Added
