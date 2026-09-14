@@ -159,6 +159,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [0.18.3] - 2026-09-14
+
+### Added
+
+- Added a pinned 14-project Rust competitor compatibility corpus, complete
+  per-test disposition manifest, reproducible discovery snapshot, and
+  missing-feature audit.
+
+### Fixed
+
+- Propagated exact-executable spawn errors from `StreamingRunner::collect()` instead of returning a false success.
+- Preserved quoted command strings passed through `cmd.exe /c`, including
+  executable paths that require Windows shell quoting.
+
 ## [0.18.2] - 2026-09-13
 
 ### Fixed
