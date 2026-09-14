@@ -20,6 +20,7 @@ import {
   portedCases,
   snapshotDate,
 } from './competitor-corpus.mjs';
+import { COMPLEX_MARKDOWN_BODY } from './fixtures/complex-markdown-body.mjs';
 
 const testDirectory = dirname(fileURLToPath(import.meta.url));
 const packageDirectory = join(testDirectory, '..');
@@ -366,6 +367,7 @@ describe('ported public process behavior', () => {
         ';',
         '*',
         '?',
+        COMPLEX_MARKDOWN_BODY,
       ];
       const result = await runFixture('argv', expected);
 
@@ -378,15 +380,21 @@ describe('ported public process behavior', () => {
     'safe-template-interpolation',
     'quotes untrusted template values as one literal argument',
     async () => {
-      const dangerous = "'; echo injected; echo '$HOME $(uname) *";
-      const result = await $({
-        capture: true,
-        mirror: false,
-        stdin: 'ignore',
-      })`${process.execPath} ${fixturePath} argv ${dangerous}`;
+      const values = [
+        "'; echo injected; echo '$HOME $(uname) *",
+        COMPLEX_MARKDOWN_BODY,
+      ];
 
-      expect(result.code).toBe(0);
-      expect(JSON.parse(result.stdout)).toEqual([dangerous]);
+      for (const value of values) {
+        const result = await $({
+          capture: true,
+          mirror: false,
+          stdin: 'ignore',
+        })`${process.execPath} ${fixturePath} argv ${value}`;
+
+        expect(result.code).toBe(0);
+        expect(JSON.parse(result.stdout)).toEqual([value]);
+      }
     }
   );
 

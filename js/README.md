@@ -406,6 +406,44 @@ option. Use `fs.writeFile` for binary data. See
 [`examples/multiline-content.mjs`](examples/multiline-content.mjs) for both
 text-writing patterns.
 
+### GitHub CLI Markdown Bodies
+
+Pass a generated issue body directly, without adding quotes or escaping the
+Markdown yourself. Fenced code, inline backticks, `${...}` text, shell-looking
+syntax, quotes, backslashes, newlines, and Unicode all stay in one literal
+`--body` argument:
+
+```javascript
+const title = 'Bug report';
+const body = `## Reproduction
+
+\`\`\`javascript
+const message = \`literal \${value}\`;
+\`\`\`
+
+$HOME and $(whoami) are documentation, not shell syntax.`;
+
+await $`gh issue create --repo ${repository} --title ${title} --body ${body}`;
+```
+
+Author-written quotes are also context-aware, so `--body "${body}"` has the
+same one-argument result with the default configuration. The unquoted form is
+simpler and remains safe if legacy code opts out of context-aware quoting with
+`COMMAND_STREAM_QUOTE_CONTEXT=0`.
+
+When the body already comes from a file, GitHub CLI's native `--body-file`
+option avoids loading it into an argument. `-` reads from standard input:
+
+```javascript
+await $({
+  stdin: body,
+})`gh issue create --repo ${repository} --title ${title} --body-file -`;
+```
+
+Neither form requires a GitHub-specific escaping helper. See
+[`examples/github-cli-markdown-body.mjs`](examples/github-cli-markdown-body.mjs)
+for a runnable example of both modes.
+
 ### Go templates & `{{ }}` arguments
 
 `command-stream` gives you a real shell's word-splitting, including for tokens

@@ -8,6 +8,22 @@ use std::collections::HashMap;
 use std::ffi::OsString;
 use std::time::Duration;
 
+const COMPLEX_MARKDOWN_ARGUMENT: &str = r##"## Bug description
+
+Passing Markdown through `gh issue create --body` must preserve:
+
+- fenced code blocks:
+```rust
+let message = format!("literal ${value}");
+```
+- shell-looking text: $HOME ${USER} $(whoami) `date`
+- quotes and operators: "double" 'single' && || ; | > < * ? [abc] {one,two}
+- whitespace: leading,  repeated, tabs\t, and newlines
+- backslashes and paths: C:\Program Files\command-stream\
+- Unicode: snow 雪, rocket 🚀, and café
+
+Nothing above is shell syntax."##;
+
 pub const BEHAVIOR_CASE_IDS: &[&str] = &[
     "direct-exact-argv",
     "argument-edge-cases",
@@ -54,6 +70,7 @@ async fn argument_edge_cases_reach_the_child_verbatim() {
         ";",
         "*",
         "?",
+        COMPLEX_MARKDOWN_ARGUMENT,
     ];
     let result = run_fixture("argv", &expected).await;
 
@@ -65,11 +82,17 @@ async fn argument_edge_cases_reach_the_child_verbatim() {
 #[tokio::test]
 async fn safe_template_interpolation_is_one_literal_argument() {
     let executable = fixture_path().display();
-    let dangerous = "'; echo injected; echo '$HOME $(uname) *";
-    let result = cmd!("{} argv {}", executable, dangerous).await.unwrap();
+    let values = [
+        "'; echo injected; echo '$HOME $(uname) *",
+        COMPLEX_MARKDOWN_ARGUMENT,
+    ];
 
-    assert_eq!(result.code, 0);
-    assert_eq!(decode_hex_lines(&result.stdout), [dangerous]);
+    for value in values {
+        let result = cmd!("{} argv {}", executable, value).await.unwrap();
+
+        assert_eq!(result.code, 0);
+        assert_eq!(decode_hex_lines(&result.stdout), [value]);
+    }
 }
 
 #[tokio::test]
