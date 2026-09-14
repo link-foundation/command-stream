@@ -54,6 +54,17 @@ test('unquoted --body interpolation preserves complex Markdown exactly', async (
   assert.deepEqual(actual, expectedArgs);
 });
 
+test('unquoted --body preserves a backslash immediately before a newline', async () => {
+  const body = 'path ending in a backslash\\\nnext line';
+  const actual = await receivedArgs(
+    $({
+      mirror: false,
+    })`${process.execPath} ${ARGV_PRINTER} --body ${body}`
+  );
+
+  assert.deepEqual(actual, ['--body', body]);
+});
+
 test('double-quoted --body interpolation preserves complex Markdown exactly', async () => {
   const actual = await receivedArgs(
     $({

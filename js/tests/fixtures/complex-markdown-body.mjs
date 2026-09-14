@@ -13,7 +13,7 @@ console.log("double", 'single', message);
 - shell-looking text: $HOME \${USER} $(whoami) \`date\`
 - operators and globs: && || ; | > < * ? [abc] {one,two}
 - whitespace: leading,  repeated, and trailing${'  '}
-- backslashes and paths: C:\\Program Files\\command-stream\\
+- backslashes and paths: C:\\Program Files\\command-stream\\README.md
 - Unicode: snow 雪, rocket 🚀, and café
 
 Nothing above is shell syntax.`;
