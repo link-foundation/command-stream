@@ -175,7 +175,15 @@ async fn nonzero_exit_is_returned_as_a_result() {
     let result = run_fixture("exit", &["23"]).await;
 
     assert_eq!(result.code, 23);
+    assert_eq!(result.exit_code(), 23);
     assert!(!result.is_success());
+
+    // Execa, zx, nano-spawn and the Bun shell turn a failing command into an
+    // error that names the status `exitCode`, while Node.js names it `code`.
+    // Both spellings read the same status here (issue #38).
+    let error = result.error_for_status().unwrap_err();
+    assert_eq!(error.code(), Some(23));
+    assert_eq!(error.exit_code(), error.code());
 }
 
 #[tokio::test]

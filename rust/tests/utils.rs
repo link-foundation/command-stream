@@ -3,6 +3,7 @@
 //! These tests mirror the JavaScript utility tests
 
 use command_stream::utils::{quote, AnsiConfig, AnsiUtils, CommandResult, VirtualUtils};
+use command_stream::Error;
 use std::path::PathBuf;
 
 // ============================================================================
@@ -53,6 +54,64 @@ fn test_command_result_exit_code_alias() {
     let failure = CommandResult::error_with_code("not found", 127);
     assert_eq!(failure.exit_code(), 127);
     assert_eq!(failure.exit_code(), failure.code);
+}
+
+// ============================================================================
+// Error Exit Code Tests
+// ============================================================================
+
+#[test]
+fn test_error_code_and_exit_code_alias() {
+    // Node.js names the property `code`, execa/zx/nano-spawn/Bun Shell name it
+    // `exitCode`; command-stream answers to both spellings (issue #38)
+    let error = Error::command_failed(42, "Command failed with exit code 42");
+    assert_eq!(error.code(), Some(42));
+    assert_eq!(error.exit_code(), Some(42));
+    assert_eq!(error.exit_code(), error.code());
+}
+
+#[test]
+fn test_error_code_for_missing_and_cancelled_commands() {
+    // `command not found` is 127 and an interrupted command is 128 + SIGINT,
+    // matching the statuses reported by POSIX shells and the JS implementation
+    assert_eq!(Error::CommandNotFound("nope".into()).code(), Some(127));
+    assert_eq!(Error::Cancelled.code(), Some(130));
+
+    let missing = Error::Io(std::io::Error::new(std::io::ErrorKind::NotFound, "missing"));
+    assert_eq!(missing.code(), Some(127));
+    assert_eq!(missing.exit_code(), missing.code());
+
+    let denied = Error::Io(std::io::Error::new(
+        std::io::ErrorKind::PermissionDenied,
+        "denied",
+    ));
+    assert_eq!(denied.code(), Some(126));
+}
+
+#[test]
+fn test_error_without_exit_status_reports_none() {
+    // Failures that never reached a child process have no exit status
+    let error = Error::ParseError("unbalanced quote".into());
+    assert_eq!(error.code(), None);
+    assert_eq!(error.exit_code(), None);
+}
+
+#[test]
+fn test_error_for_status_keeps_successful_results() {
+    let result = CommandResult::success("hello").error_for_status().unwrap();
+    assert_eq!(result.stdout, "hello");
+    assert_eq!(result.code, 0);
+}
+
+#[test]
+fn test_error_for_status_turns_failures_into_errors() {
+    let error = CommandResult::error_with_code("boom", 23)
+        .error_for_status()
+        .unwrap_err();
+
+    assert_eq!(error.code(), Some(23));
+    assert_eq!(error.exit_code(), Some(23));
+    assert!(error.to_string().contains("23"));
 }
 
 // ============================================================================
