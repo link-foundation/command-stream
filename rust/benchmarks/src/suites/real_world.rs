@@ -204,8 +204,63 @@ impl Drop for LocalServer {
 }
 
 fn respond(stream: &mut TcpStream) {
-    let mut request = [0_u8; 1_024];
-    let _ = stream.read(&mut request);
+    let mut request = Vec::with_capacity(1_024);
+    let mut chunk = [0_u8; 1_024];
+    loop {
+        let Ok(read) = stream.read(&mut chunk) else {
+            return;
+        };
+        if read == 0 {
+            return;
+        }
+        request.extend_from_slice(&chunk[..read]);
+        if request.windows(4).any(|window| window == b"\r\n\r\n") {
+            break;
+        }
+        if request.len() >= 16 * 1_024 {
+            return;
+        }
+    }
     let response = b"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 12\r\nConnection: close\r\n\r\nbenchmark-ok";
-    let _ = stream.write_all(response);
+    if stream.write_all(response).is_ok() {
+        let _ = stream.flush();
+        let _ = stream.shutdown(std::net::Shutdown::Write);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::ErrorKind;
+
+    #[test]
+    fn local_server_waits_for_complete_request_headers() {
+        let server = LocalServer::start().expect("start server");
+        let mut stream = TcpStream::connect(server.address).expect("connect to server");
+        stream
+            .set_read_timeout(Some(Duration::from_millis(50)))
+            .expect("set timeout");
+
+        stream.write_all(b"G").expect("write request fragment");
+        stream.flush().expect("flush request fragment");
+        let mut byte = [0_u8; 1];
+        let early_response = stream.read(&mut byte);
+        assert!(
+            matches!(
+                early_response,
+                Err(ref error)
+                    if matches!(error.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut)
+            ),
+            "server responded before receiving complete headers: {early_response:?}"
+        );
+
+        stream
+            .write_all(b"ET /health HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n")
+            .expect("finish request");
+        let mut response = String::new();
+        stream
+            .read_to_string(&mut response)
+            .expect("read response without a reset");
+        assert!(response.ends_with("\r\n\r\nbenchmark-ok"));
+    }
 }

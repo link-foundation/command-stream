@@ -41,7 +41,7 @@ async function createData() {
   return { directory, files, log };
 }
 
-async function startLocalServer() {
+export async function startLocalServer() {
   const server = createServer((_request, response) => {
     response.writeHead(200, { 'content-type': 'text/plain' });
     response.end('benchmark-ok');

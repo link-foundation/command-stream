@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { connect } from 'node:net';
 import { join } from 'node:path';
 import {
   BenchmarkRunner,
@@ -14,6 +15,7 @@ import {
 import { escapeHtml, writeReports } from '../benchmarks/lib/report.mjs';
 import { parseArguments } from '../benchmarks/cli.mjs';
 import { parseNpmPackOutput } from '../benchmarks/suites/bundle-size.mjs';
+import { startLocalServer } from '../benchmarks/suites/real-world.mjs';
 import {
   compareBenchmarkReports,
   regressionMarkdown,
@@ -225,5 +227,38 @@ describe('benchmark regression comparison', () => {
       report(1.5, 'after')
     );
     expect(comparison.summary.stable).toBe(1);
+  });
+});
+
+describe('real-world benchmark fixtures', () => {
+  test('handles an HTTP request split across packets', async () => {
+    const server = await startLocalServer();
+    try {
+      const { hostname, port, pathname } = new URL(server.url);
+      const response = await new Promise((resolve, reject) => {
+        const chunks = [];
+        const socket = connect(Number(port), hostname, () => {
+          socket.write('G');
+          setTimeout(
+            () =>
+              socket.end(
+                `ET ${pathname} HTTP/1.1\r\nHost: ${hostname}:${port}\r\nConnection: close\r\n\r\n`
+              ),
+            10
+          );
+        });
+        socket.setTimeout(2_000, () =>
+          socket.destroy(new Error('fragmented HTTP request timed out'))
+        );
+        socket.on('data', (chunk) => chunks.push(chunk));
+        socket.on('end', () => resolve(Buffer.concat(chunks).toString()));
+        socket.on('error', reject);
+      });
+
+      expect(response).toContain('HTTP/1.1 200 OK');
+      expect(response).toContain('\r\nbenchmark-ok\r\n');
+    } finally {
+      await server.close();
+    }
   });
 });

@@ -3,6 +3,8 @@ coverage
 reports
 js/benchmarks/results
 js/benchmarks/baseline
+rust/benchmarks/results
+rust/benchmarks/baseline
 dist
 *.min.js
 package-lock.json
