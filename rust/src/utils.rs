@@ -140,12 +140,12 @@ impl CommandResult {
         self.code
     }
 
-    /// Turn a failing result into [`Error::CommandFailed`].
+    /// Turn a failing result into [`crate::Error::CommandFailed`].
     ///
     /// This is the Rust counterpart of the JavaScript `errexit` mode: a
     /// non-zero status becomes an error whose exit status is readable through
-    /// both [`Error::code`] and [`Error::exit_code`] (issue #38). Successful
-    /// results pass through unchanged.
+    /// both [`crate::Error::code`] and [`crate::Error::exit_code`] (issue
+    /// #38). Successful results pass through unchanged.
     ///
     /// ```
     /// use command_stream::utils::CommandResult;
