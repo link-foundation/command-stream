@@ -288,6 +288,30 @@ export const StreamUtils = {
 };
 
 /**
+ * Stdio mode keywords accepted by the `stdin` option.
+ *
+ * They select how stdin is wired up and are never input data, so a virtual
+ * command must not receive them as its stdin contents (issue #14).
+ */
+const STDIN_MODES = new Set(['inherit', 'ignore', 'pipe']);
+
+/**
+ * Resolve the `stdin` option into the data a command should read.
+ * @param {object} options - Runner options
+ * @returns {string} Input data, or '' when `stdin` selects a stdio mode
+ */
+export function stdinDataFromOptions(options = {}) {
+  const { stdin } = options;
+  if (typeof stdin === 'string') {
+    return STDIN_MODES.has(stdin) ? '' : stdin;
+  }
+  if (Buffer.isBuffer(stdin)) {
+    return stdin.toString('utf8');
+  }
+  return '';
+}
+
+/**
  * Safe write to a stream with parent stream monitoring
  * @param {object} stream - The stream to write to
  * @param {Buffer|string} data - The data to write

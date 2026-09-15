@@ -6,7 +6,7 @@ use command_stream::commands::{
     are_virtual_commands_enabled, disable_virtual_commands, enable_virtual_commands,
     CommandContext, VirtualCommandRegistry,
 };
-use command_stream::{run, ProcessRunner, RunOptions};
+use command_stream::{run, Pipeline, ProcessRunner, RunOptions, StdinOption};
 use tokio::sync::{Mutex, MutexGuard};
 
 static VIRTUAL_COMMANDS_TEST_LOCK: Mutex<()> = Mutex::const_new(());
@@ -244,4 +244,53 @@ async fn test_process_runner_virtual_pwd() {
     let result = runner.run().await.unwrap();
     assert!(result.is_success());
     assert!(!result.stdout.is_empty());
+}
+
+// ============================================================================
+// Virtual Command Stdin Tests
+// ============================================================================
+
+// `StdinOption` keeps stdio modes and input data in separate variants, so a
+// mode can never be mistaken for input the way it was in JavaScript (issue #14).
+#[tokio::test]
+async fn test_stdin_mode_is_not_virtual_command_input() {
+    let _guard = lock_virtual_commands().await;
+    enable_virtual_commands();
+    let options = RunOptions {
+        stdin: StdinOption::Inherit,
+        ..Default::default()
+    };
+    let mut runner = ProcessRunner::new("cat", options);
+    let result = runner.run().await.unwrap();
+    assert!(result.is_success());
+    assert_eq!(result.stdout, "");
+}
+
+#[tokio::test]
+async fn test_stdin_content_reaches_virtual_command() {
+    let _guard = lock_virtual_commands().await;
+    enable_virtual_commands();
+    let options = RunOptions {
+        stdin: StdinOption::Content("from option\n".to_string()),
+        ..Default::default()
+    };
+    let mut runner = ProcessRunner::new("cat", options);
+    let result = runner.run().await.unwrap();
+    assert!(result.is_success());
+    assert_eq!(result.stdout, "from option\n");
+}
+
+#[tokio::test]
+async fn test_piped_input_wins_over_pipeline_stdin() {
+    let _guard = lock_virtual_commands().await;
+    enable_virtual_commands();
+    let result = Pipeline::new()
+        .add("echo piped")
+        .add("cat")
+        .stdin("from option\n")
+        .run()
+        .await
+        .unwrap();
+    assert!(result.is_success());
+    assert_eq!(result.stdout, "piped\n");
 }

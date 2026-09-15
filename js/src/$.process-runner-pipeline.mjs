@@ -4,7 +4,11 @@
 import cp from 'child_process';
 import { trace } from './$.trace.mjs';
 import { findAvailableShell, withExportedProcessContext } from './$.shell.mjs';
-import { StreamUtils, safeWrite } from './$.stream-utils.mjs';
+import {
+  StreamUtils,
+  safeWrite,
+  stdinDataFromOptions,
+} from './$.stream-utils.mjs';
 import { createCommandError, createResult } from './$.result.mjs';
 import {
   applyVirtualProcessContext,
@@ -170,13 +174,7 @@ function getFirstCommandStdin(options) {
  * @returns {string}
  */
 function getStdinString(options) {
-  if (options.stdin && typeof options.stdin === 'string') {
-    return options.stdin;
-  }
-  if (options.stdin && Buffer.isBuffer(options.stdin)) {
-    return options.stdin.toString('utf8');
-  }
-  return '';
+  return stdinDataFromOptions(options);
 }
 
 /**
@@ -502,9 +500,11 @@ async function runVirtualHandler(
   if (handler.constructor.name === 'AsyncGeneratorFunction') {
     const chunks = [];
     for await (const chunk of handler({
-      args: argValues,
-      stdin: currentInput,
       ...options,
+      args: argValues,
+      // The piped input wins over `options.stdin`, which only configures the
+      // pipeline's own input (issue #14).
+      stdin: currentInput,
     })) {
       chunks.push(Buffer.from(chunk));
     }
@@ -518,9 +518,9 @@ async function runVirtualHandler(
     };
   }
   const result = await handler({
+    ...options,
     args: argValues,
     stdin: currentInput,
-    ...options,
   });
   return {
     ...result,
