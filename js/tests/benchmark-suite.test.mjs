@@ -8,6 +8,7 @@ import {
 } from '../benchmarks/lib/benchmark-runner.mjs';
 import {
   EXPECTED_ADAPTERS,
+  executableForZx,
   loadCompetitorAdapters,
 } from '../benchmarks/lib/competitor-adapters.mjs';
 import { escapeHtml, writeReports } from '../benchmarks/lib/report.mjs';
@@ -71,6 +72,13 @@ describe('benchmark statistics', () => {
 });
 
 describe('competitor adapters', () => {
+  test('makes Windows executables addressable by zx default Bash', () => {
+    expect(executableForZx('C:\\Program Files\\Bun\\bun.exe', 'win32')).toBe(
+      'C:/Program Files/Bun/bun.exe'
+    );
+    expect(executableForZx('/usr/bin/bun', 'linux')).toBe('/usr/bin/bun');
+  });
+
   test('executes the same exact-argv workload through every available API', async () => {
     const adapters = await loadCompetitorAdapters();
     const names = adapters.map(({ name }) => name);

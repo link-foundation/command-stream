@@ -34,6 +34,11 @@ const normalizedResult = ({ stdout, stderr, exitCode, code }) => ({
   exitCode: Number(exitCode ?? code ?? 0),
 });
 
+export const executableForZx = (file, platform = process.platform) =>
+  // zx 8 uses Bash on Windows; MSYS Bash can execute drive paths with forward
+  // slashes, while native backslashes are parsed as shell escapes.
+  platform === 'win32' ? file.replaceAll('\\', '/') : file;
+
 function spawnWithCrossSpawn(file, args, options) {
   return new Promise((resolve, reject) => {
     const child = crossSpawn(file, args, {
@@ -160,7 +165,7 @@ export async function loadCompetitorAdapters() {
           nothrow: true,
           quiet: true,
           verbose: false,
-        })`${file} ${args}`;
+        })`${executableForZx(file)} ${args}`;
         return normalizedResult(result);
       },
     },
