@@ -575,6 +575,10 @@ console.log(result.code); // exit code
 console.log(result.exitCode); // alias for result.code
 ```
 
+Errors thrown in `errexit` mode carry the same pair of names, so handlers
+written for Node.js `child_process` (`error.code`) and for Execa, zx,
+nano-spawn or the Bun shell (`error.exitCode`) both work unchanged.
+
 ### Custom Options with $({ options }) Syntax (NEW!)
 
 ```javascript
@@ -1617,6 +1621,8 @@ try {
   await $`ls nonexistent-file`; // Throws error
 } catch (error) {
   console.log('Command failed:', error.code); // → 2
+  console.log('Same status:', error.exitCode); // → 2 (alias for error.code)
+  console.log('Full result:', error.result.exitCode); // → 2
 }
 
 // ✅ Disable errexit: Back to non-throwing behavior

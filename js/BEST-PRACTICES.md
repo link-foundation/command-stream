@@ -286,8 +286,10 @@ shell.errexit(true);
 try {
   await $`critical-operation`;
 } catch (error) {
-  console.error('Critical operation failed:', error);
-  process.exit(1);
+  // The status is available under both names: `code` (Node.js
+  // `child_process`) and `exitCode` (Execa, zx, nano-spawn, Bun shell).
+  console.error('Critical operation failed with', error.exitCode);
+  process.exit(error.code);
 }
 ```
 

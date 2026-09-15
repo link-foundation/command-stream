@@ -11,7 +11,9 @@ import {
 import { StreamUtils, safeWrite, asBuffer } from './$.stream-utils.mjs';
 import { pumpReadable } from './$.quote.mjs';
 import {
+  attachExitCodeAlias,
   createCancelledResult,
+  createCommandError,
   createExecutionErrorResult,
   createResult,
   finishExecutionError,
@@ -505,15 +507,15 @@ function throwErrexitIfNeeded(runner, globalShellSettings) {
 
   trace('ProcessRunner', () => `Errexit mode: throwing error`);
 
-  const error = new Error(
-    `Command failed with exit code ${runner.result.code}`
+  throw createCommandError(
+    `Command failed with exit code ${runner.result.code}`,
+    {
+      code: runner.result.code,
+      stdout: runner.result.stdout,
+      stderr: runner.result.stderr,
+      result: runner.result,
+    }
   );
-  error.code = runner.result.code;
-  error.stdout = runner.result.stdout;
-  error.stderr = runner.result.stderr;
-  error.result = runner.result;
-
-  throw error;
 }
 
 /**
@@ -624,12 +626,12 @@ function processSyncResult(runner, result, globalShellSettings) {
   runner.finish(result);
 
   if (globalShellSettings.errexit && result.code !== 0) {
-    const error = new Error(`Command failed with exit code ${result.code}`);
-    error.code = result.code;
-    error.stdout = result.stdout;
-    error.stderr = result.stderr;
-    error.result = result;
-    throw error;
+    throw createCommandError(`Command failed with exit code ${result.code}`, {
+      code: result.code,
+      stdout: result.stdout,
+      stderr: result.stderr,
+      result,
+    });
   }
 
   return result;
@@ -1206,7 +1208,12 @@ export function attachExecutionMethods(ProcessRunner, deps) {
           })}`
       );
 
-      finishExecutionError(this, error);
+      const errorResult = finishExecutionError(this, error);
+
+      // Rejections escaping here include failures to launch a process, whose
+      // `code` stays the POSIX errno string. `exitCode` always reports the
+      // shell-compatible status the result carries (issue #38).
+      attachExitCodeAlias(error, errorResult?.code);
 
       // Match the library's default shell-like error contract for failures to
       // launch a direct executable. `errexit` continues to opt into rejection,

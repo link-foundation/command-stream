@@ -105,7 +105,7 @@ summary-level assertion.
 | `newline-preservation`        | Captured output preserves final and repeated newlines.                                           |
 | `unicode-output`              | UTF-8 output is decoded without loss.                                                            |
 | `large-output`                | One MiB of output is captured without truncation or deadlock.                                    |
-| `nonzero-exit`                | Non-zero status is returned through `code` and `exitCode`.                                       |
+| `nonzero-exit`                | Non-zero status reads through `code` and `exitCode`, on results and on errors.                   |
 | `result-text`                 | `text()` returns captured stdout.                                                                |
 | `stdin-string`                | String input is written completely and stdin is closed.                                          |
 | `stdin-buffer`                | Buffer input is written without textual coercion.                                                |
