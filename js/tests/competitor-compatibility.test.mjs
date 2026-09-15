@@ -451,13 +451,29 @@ describe('ported public process behavior', () => {
 
   port(
     'stdout-stderr-separation',
-    'captures stdout and stderr independently',
+    'captures stdout-only, stderr-only, and mixed output independently',
     async () => {
-      const result = await runFixture('stdio', ['out\n', 'err\n']);
+      const cases = [
+        { stdout: 'out\n', stderr: 'err\n' },
+        { stdout: 'out-only\n', stderr: '' },
+        // A successful CLI may use stderr for machine-readable output. gh pr
+        // create was reported to do this for its URL in issue #47.
+        {
+          stdout: '',
+          stderr: 'https://github.com/octo/example/pull/123\n',
+        },
+      ];
 
-      expect(result.code).toBe(0);
-      expect(result.stdout).toBe('out\n');
-      expect(result.stderr).toBe('err\n');
+      for (const expected of cases) {
+        const result = await runFixture('stdio', [
+          expected.stdout,
+          expected.stderr,
+        ]);
+
+        expect(result.code).toBe(0);
+        expect(result.stdout).toBe(expected.stdout);
+        expect(result.stderr).toBe(expected.stderr);
+      }
     }
   );
 

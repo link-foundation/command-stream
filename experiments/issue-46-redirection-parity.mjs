@@ -6,7 +6,8 @@
 // (virtual) command is dispatched to that built-in with the shell operators
 // left in place as literal arguments, so the redirection silently does
 // nothing. This script diffs command-stream against /bin/sh so any divergence
-// in exit code, stdout, or files written is visible.
+// in exit code, stdout, stderr, or files written is visible. Issue #47 exposed
+// the stderr part of that contract with a CLI success URL.
 import { execSync, spawnSync } from 'child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
@@ -28,6 +29,8 @@ const CASES = [
   'seq 1 3 > out.txt',
   'basename /a/b > out.txt',
   // stderr redirection on a built-in.
+  'echo https://github.com/octo/example/pull/123 >&2',
+  "sh -c 'echo https://github.com/octo/example/pull/123 >&2' 2>&1",
   'echo hello 2> err.txt',
   'ls /definitely/missing/path 2>/dev/null',
   'ls /definitely/missing/path 2>&1',
@@ -57,14 +60,18 @@ for (const cmd of CASES) {
     cwd: dirSh,
     encoding: 'utf8',
   });
-  const expected = { code: sh.status, stdout: sh.stdout };
+  const expected = {
+    code: sh.status,
+    stdout: sh.stdout,
+    stderr: sh.stderr,
+  };
 
   let actual;
   try {
     const r = await $({ cwd: dirCs, mirror: false })`${{ raw: cmd }}`;
-    actual = { code: r.code, stdout: r.stdout };
+    actual = { code: r.code, stdout: r.stdout, stderr: r.stderr };
   } catch (e) {
-    actual = { code: e.code, stdout: e.stdout };
+    actual = { code: e.code, stdout: e.stdout, stderr: e.stderr };
   }
 
   const shFiles = execSync('ls -1', { cwd: dirSh, encoding: 'utf8' }).trim();
@@ -78,6 +85,8 @@ for (const cmd of CASES) {
     expected.code === actual.code &&
     expected.stdout.replaceAll(dirSh, '<CWD>') ===
       actual.stdout.replaceAll(dirCs, '<CWD>') &&
+    expected.stderr.replaceAll(dirSh, '<CWD>') ===
+      actual.stderr.replaceAll(dirCs, '<CWD>') &&
     shFiles === csFiles &&
     shOut === csOut;
   if (!same) {
@@ -86,10 +95,10 @@ for (const cmd of CASES) {
   console.log(`${same ? 'OK  ' : 'DIFF'} ${JSON.stringify(cmd)}`);
   if (!same) {
     console.log(
-      `      sh: code=${expected.code} stdout=${JSON.stringify(expected.stdout)} files=${JSON.stringify(shFiles)} contents=${JSON.stringify(shOut)}`
+      `      sh: code=${expected.code} stdout=${JSON.stringify(expected.stdout)} stderr=${JSON.stringify(expected.stderr)} files=${JSON.stringify(shFiles)} contents=${JSON.stringify(shOut)}`
     );
     console.log(
-      `      cs: code=${actual.code} stdout=${JSON.stringify(actual.stdout)} files=${JSON.stringify(csFiles)} contents=${JSON.stringify(csOut)}`
+      `      cs: code=${actual.code} stdout=${JSON.stringify(actual.stdout)} stderr=${JSON.stringify(actual.stderr)} files=${JSON.stringify(csFiles)} contents=${JSON.stringify(csOut)}`
     );
   }
   rmSync(dirSh, { recursive: true, force: true });

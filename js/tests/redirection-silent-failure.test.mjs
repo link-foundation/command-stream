@@ -74,6 +74,11 @@ describe('Redirection is never handed to a built-in as an argument (issue #46)',
     'cat /definitely/missing/path 2>/dev/null',
     'ls /definitely/missing/path 2>/dev/null',
     'ls /definitely/missing/path 2>&1',
+    // gh pr create was reported to emit its success URL on stderr (issue #47).
+    // Preserve the stream selected by the child/shell instead of losing or
+    // silently relabelling it.
+    'echo https://github.com/octo/example/pull/123 >&2',
+    "sh -c 'echo https://github.com/octo/example/pull/123 >&2' 2>&1",
     'exit 3 2>&1',
     'echo a > out.txt && echo b >> out.txt',
     'false > out.txt || echo fallback > out.txt',
@@ -93,12 +98,21 @@ describe('Redirection is never handed to a built-in as an argument (issue #46)',
           cwd: csDir,
           mirror: false,
         })`${{ raw: command }}`;
-        actual = { code: result.code, stdout: result.stdout };
+        actual = {
+          code: result.code,
+          stdout: result.stdout,
+          stderr: result.stderr,
+        };
       } catch (error) {
-        actual = { code: error.code, stdout: error.stdout };
+        actual = {
+          code: error.code,
+          stdout: error.stdout,
+          stderr: error.stderr,
+        };
       }
 
       expect(actual.stdout).toBe(expected.stdout);
+      expect(actual.stderr).toBe(expected.stderr);
       expect(actual.code).toBe(expected.code);
       expect(await snapshot(csDir)).toEqual(await snapshot(shDir));
     });
