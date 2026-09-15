@@ -24,6 +24,38 @@ export function createResult({ code, stdout = '', stderr = '', stdin = '' }) {
   };
 }
 
+/**
+ * Create an Error describing a command that exited with a failing status.
+ *
+ * The status is exposed under both `code` (command-stream's original name) and
+ * `exitCode` (the name used by Node.js `child_process`, execa, zx, nano-spawn
+ * and Bun Shell), so either error-handling style works (issue #38).
+ *
+ * @param {string} message - Error message
+ * @param {object} params - Error parameters
+ * @param {number} params.code - Exit code of the failed command
+ * @param {string} [params.stdout] - Captured stdout
+ * @param {string} [params.stderr] - Captured stderr
+ * @param {object} [params.result] - Full result object of the failed command
+ * @returns {Error & {code: number, exitCode: number}} Command failure error
+ */
+export function createCommandError(message, { code, stdout, stderr, result }) {
+  const error = new Error(message);
+  error.code = code;
+  // `exitCode` is an alias for `code` for better compatibility (issue #38)
+  error.exitCode = code;
+  if (stdout !== undefined) {
+    error.stdout = stdout;
+  }
+  if (stderr !== undefined) {
+    error.stderr = stderr;
+  }
+  if (result !== undefined) {
+    error.result = result;
+  }
+  return error;
+}
+
 export function createCancelledResult(signal) {
   const signalCodes = { SIGINT: 130, SIGKILL: 137, SIGTERM: 143 };
   return createResult({

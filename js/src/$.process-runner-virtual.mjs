@@ -8,6 +8,11 @@ import {
   effectiveCwd,
   effectiveEnv,
 } from './$.process-context.mjs';
+import {
+  createCommandError,
+  createResult,
+  executionErrorExitCode,
+} from './$.result.mjs';
 
 /**
  * Get stdin data from options
@@ -83,17 +88,21 @@ function emitOutput(runner, type, data) {
  * @returns {object} Result object
  */
 function handleVirtualError(runner, error, shellSettings, shouldFinish) {
-  let exitCode = error.code ?? 1;
+  // Handlers may throw system errors whose `code` is a POSIX errno string, so
+  // normalize the status to a number before reporting it.
+  let exitCode = executionErrorExitCode(error);
   if (runner._cancelled && runner._cancellationSignal) {
     exitCode = getCancellationExitCode(runner._cancellationSignal);
   }
 
-  const result = {
+  // Built through createResult so the nested `error.result` carries the
+  // `exitCode` alias as well (issues #36 and #38).
+  const result = createResult({
     code: exitCode,
     stdout: error.stdout ?? '',
     stderr: error.stderr ?? error.message,
     stdin: '',
-  };
+  });
 
   emitOutput(runner, 'stderr', result.stderr);
   if (shouldFinish) {
@@ -102,6 +111,8 @@ function handleVirtualError(runner, error, shellSettings, shouldFinish) {
 
   if (shellSettings.errexit) {
     error.result = result;
+    // `exitCode` is an alias for `code` for better compatibility (issue #38)
+    error.exitCode = exitCode;
     throw error;
   }
 
@@ -295,12 +306,15 @@ export function attachVirtualCommandMethods(ProcessRunner, deps) {
       }
 
       if (globalShellSettings.errexit && result.code !== 0) {
-        const error = new Error(`Command failed with exit code ${result.code}`);
-        error.code = result.code;
-        error.stdout = result.stdout;
-        error.stderr = result.stderr;
-        error.result = result;
-        throw error;
+        throw createCommandError(
+          `Command failed with exit code ${result.code}`,
+          {
+            code: result.code,
+            stdout: result.stdout,
+            stderr: result.stderr,
+            result,
+          }
+        );
       }
 
       return result;
