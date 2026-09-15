@@ -1,9 +1,9 @@
-import { test, expect, describe } from 'bun:test';
+import { test, expect, describe, beforeEach } from 'bun:test';
 import { mkdtempSync, readFileSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
-import { $ } from '../src/$.mjs';
+import { $, enableVirtualCommands, register, unregister } from '../src/$.mjs';
 import { stdinDataFromOptions } from '../src/$.stream-utils.mjs';
 
 // Regression coverage for issue #14: the `stdin` option carries either input
@@ -32,7 +32,35 @@ describe('stdinDataFromOptions', () => {
 });
 
 describe('virtual commands and the stdin option', () => {
+  // `bun test` evaluates test-helper.mjs only once, so its reset hooks belong to
+  // whichever file imported it first. Another file may therefore leave virtual
+  // commands disabled, which would send these commands to real binaries and
+  // block on inherited stdin instead of exercising the code under test.
+  beforeEach(() => {
+    enableVirtualCommands();
+  });
+
   test('a stdio mode keyword never becomes command input', async () => {
+    // A dedicated command reports exactly what it was handed, so the assertion
+    // does not depend on any system binary.
+    register('stdin-probe', async ({ stdin }) => ({
+      code: 0,
+      stdout: JSON.stringify(stdin),
+      stderr: '',
+    }));
+    try {
+      const result = await $({
+        mirror: false,
+        stdin: 'inherit',
+      })`stdin-probe`;
+      expect(result.code).toBe(0);
+      expect(result.stdout).toBe('""');
+    } finally {
+      unregister('stdin-probe');
+    }
+  });
+
+  test('a stdio mode keyword leaves a built-in command with no input', async () => {
     const result = await $({ mirror: false, stdin: 'inherit' })`cat`;
     expect(result.code).toBe(0);
     expect(result.stdout).toBe('');
