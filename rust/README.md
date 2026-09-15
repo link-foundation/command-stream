@@ -44,6 +44,31 @@ async fn main() {
 }
 ```
 
+### Successful CLI output on stderr
+
+Command-stream preserves the file descriptor chosen by the child process. A
+zero exit code can therefore accompany an empty `stdout` and useful `stderr`.
+Check both when a CLI version may print a machine-readable result, such as a
+new pull request URL, to stderr:
+
+```rust,no_run
+use command_stream::run;
+
+# async fn example() -> Result<(), command_stream::Error> {
+let result = run("gh pr create --fill").await?;
+let pull_request_url = result
+    .stdout
+    .lines()
+    .chain(result.stderr.lines())
+    .find(|line| line.starts_with("https://github.com/"));
+# let _ = pull_request_url;
+# Ok(())
+# }
+```
+
+Append `2>&1` to the command when normal shell stream merging is preferred. The
+merged output is captured in `stdout`, while `stderr` is empty.
+
 ## Streaming
 
 `StreamingRunner` streams output as it arrives and mirrors the JavaScript

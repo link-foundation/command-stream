@@ -1416,6 +1416,29 @@ console.log('Captured stderr:', result.stderr); // "Error!\n"
 console.log('Exit code:', result.code); // 0
 ```
 
+### Successful CLI output on stderr
+
+Command-stream preserves the file descriptor chosen by the child process. A
+successful command can therefore have an empty `stdout` and useful `stderr`.
+For example, some CLI versions have printed a newly created pull request URL to
+stderr:
+
+```javascript
+const result = await $({ mirror: false })`gh pr create --fill`;
+const prUrl = `${result.stdout}\n${result.stderr}`.match(
+  /^https:\/\/github\.com\/.*\/pull\/\d+$/m
+)?.[0];
+```
+
+When one combined stream is more convenient, use normal shell redirection. It
+is opt-in because the shell-like default keeps stdout and stderr distinct:
+
+```javascript
+const result = await $({ mirror: false })`gh pr create --fill 2>&1`;
+console.log(result.stdout); // includes anything the command wrote to stderr
+console.log(result.stderr); // empty after the redirection
+```
+
 **Key Default Options:**
 
 - `mirror: true` - Live output to terminal (like shell)

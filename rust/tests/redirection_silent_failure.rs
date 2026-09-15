@@ -14,8 +14,8 @@ use std::path::Path;
 use std::process::Command;
 use tempfile::TempDir;
 
-/// Run `command` in `dir` through /bin/sh and return (exit code, stdout).
-fn run_in_sh(command: &str, dir: &Path) -> (i32, String) {
+/// Run `command` in `dir` through /bin/sh and return its captured result.
+fn run_in_sh(command: &str, dir: &Path) -> (i32, String, String) {
     let output = Command::new("/bin/sh")
         .arg("-c")
         .arg(command)
@@ -25,6 +25,7 @@ fn run_in_sh(command: &str, dir: &Path) -> (i32, String) {
     (
         output.status.code().unwrap_or(-1),
         String::from_utf8_lossy(&output.stdout).into_owned(),
+        String::from_utf8_lossy(&output.stderr).into_owned(),
     )
 }
 
@@ -54,7 +55,7 @@ async fn assert_matches_sh(command: &str) {
     let sh_dir = scratch();
     let cs_dir = scratch();
 
-    let (expected_code, expected_stdout) = run_in_sh(command, sh_dir.path());
+    let (expected_code, expected_stdout, expected_stderr) = run_in_sh(command, sh_dir.path());
 
     let mut runner = ProcessRunner::new(
         command,
@@ -69,6 +70,11 @@ async fn assert_matches_sh(command: &str) {
     assert_eq!(
         result.stdout, expected_stdout,
         "stdout mismatch for {:?}",
+        command
+    );
+    assert_eq!(
+        result.stderr, expected_stderr,
+        "stderr mismatch for {:?}",
         command
     );
     assert_eq!(
@@ -101,6 +107,10 @@ async fn redirection_on_virtual_commands_matches_sh() {
         "cat 0< seed.txt",
         "cat /definitely/missing/path 2>/dev/null",
         "ls /definitely/missing/path 2>&1",
+        // gh pr create was reported to emit its success URL on stderr (issue
+        // #47). Preserve that stream instead of dropping or relabelling it.
+        "echo https://github.com/octo/example/pull/123 >&2",
+        "sh -c 'echo https://github.com/octo/example/pull/123 >&2' 2>&1",
         "echo a > out.txt && echo b >> out.txt",
         "false > out.txt || echo fallback > out.txt",
         // Quoted redirection characters are literal in sh, so they must stay

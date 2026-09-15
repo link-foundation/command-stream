@@ -133,11 +133,19 @@ async fn environment_passes_explicit_values_to_the_child() {
 
 #[tokio::test]
 async fn stdout_and_stderr_are_captured_separately() {
-    let result = run_fixture("output", &["out-value", "err-value"]).await;
+    for (stdout, stderr) in [
+        ("out-value", "err-value"),
+        ("out-only", ""),
+        // A successful CLI may use stderr for machine-readable output. gh pr
+        // create was reported to do this for its URL in issue #47.
+        ("", "https://github.com/octo/example/pull/123\n"),
+    ] {
+        let result = run_fixture("output", &[stdout, stderr]).await;
 
-    assert_eq!(result.code, 0);
-    assert_eq!(result.stdout, "out-value");
-    assert_eq!(result.stderr, "err-value");
+        assert_eq!(result.code, 0);
+        assert_eq!(result.stdout, stdout);
+        assert_eq!(result.stderr, stderr);
+    }
 }
 
 #[tokio::test]
