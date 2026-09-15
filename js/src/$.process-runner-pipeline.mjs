@@ -5,7 +5,7 @@ import cp from 'child_process';
 import { trace } from './$.trace.mjs';
 import { findAvailableShell, withExportedProcessContext } from './$.shell.mjs';
 import { StreamUtils, safeWrite } from './$.stream-utils.mjs';
-import { createResult } from './$.result.mjs';
+import { createCommandError, createResult } from './$.result.mjs';
 import {
   applyVirtualProcessContext,
   effectiveCwd,
@@ -188,11 +188,10 @@ function checkPipefail(exitCodes, shellSettings) {
   if (shellSettings.pipefail) {
     const failedIndex = exitCodes.findIndex((code) => code !== 0);
     if (failedIndex !== -1) {
-      const error = new Error(
-        `Pipeline command at index ${failedIndex} failed with exit code ${exitCodes[failedIndex]}`
+      throw createCommandError(
+        `Pipeline command at index ${failedIndex} failed with exit code ${exitCodes[failedIndex]}`,
+        { code: exitCodes[failedIndex] }
       );
-      error.code = exitCodes[failedIndex];
-      throw error;
     }
   }
 }
@@ -204,12 +203,12 @@ function checkPipefail(exitCodes, shellSettings) {
  */
 function throwErrexitError(result, shellSettings) {
   if (shellSettings.errexit && result.code !== 0) {
-    const error = new Error(`Pipeline failed with exit code ${result.code}`);
-    error.code = result.code;
-    error.stdout = result.stdout;
-    error.stderr = result.stderr;
-    error.result = result;
-    throw error;
+    throw createCommandError(`Pipeline failed with exit code ${result.code}`, {
+      code: result.code,
+      stdout: result.stdout,
+      stderr: result.stderr,
+      result,
+    });
   }
 }
 
@@ -655,12 +654,10 @@ async function handleVirtualPipelineCommand(
   }
 
   if (globalShellSettings.errexit && result.code !== 0) {
-    const error = new Error(
-      `Pipeline command failed with exit code ${result.code}`
+    throw createCommandError(
+      `Pipeline command failed with exit code ${result.code}`,
+      { code: result.code, result }
     );
-    error.code = result.code;
-    error.result = result;
-    throw error;
   }
 
   return { input: result.stdout };
@@ -700,11 +697,10 @@ async function handleShellPipelineCommand(
   };
 
   if (globalShellSettings.pipefail && result.code !== 0) {
-    const error = new Error(
-      `Pipeline command '${commandStr}' failed with exit code ${result.code}`
+    throw createCommandError(
+      `Pipeline command '${commandStr}' failed with exit code ${result.code}`,
+      { code: result.code }
     );
-    error.code = result.code;
-    throw error;
   }
 
   if (isLastCommand) {

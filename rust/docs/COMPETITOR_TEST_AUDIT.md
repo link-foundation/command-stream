@@ -106,7 +106,7 @@ inventory total, and ensure all fourteen selected projects are represented.
 | `newline-preservation`        | Captured output preserves final and repeated newlines.                                     |
 | `unicode-output`              | UTF-8 output is captured without loss.                                                     |
 | `large-output`                | One MiB is captured without truncation or deadlock.                                        |
-| `nonzero-exit`                | A non-zero child status is returned without discarding output.                             |
+| `nonzero-exit`                | A non-zero child status is returned, and reads through `code` and `exit_code`.             |
 | `stdin-string`                | String input is written completely and stdin closes.                                       |
 | `lazy-execution`              | Constructing a runner does not spawn it.                                                   |
 | `concurrent-execution`        | Concurrent children keep results isolated.                                                 |

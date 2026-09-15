@@ -11,7 +11,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import './test-helper.mjs';
-import { $, exec, ProcessRunner } from '../src/$.mjs';
+import { $, exec, ProcessRunner, shell } from '../src/$.mjs';
 import {
   competitors,
   excludedTestClasses,
@@ -521,6 +521,24 @@ describe('ported public process behavior', () => {
 
       expect(result.code).toBe(42);
       expect(result.exitCode).toBe(42);
+
+      // Execa, zx, nano-spawn and the Bun shell reject a failing command with
+      // an error that names the status `exitCode`, while Node.js names it
+      // `code`. In errexit mode command-stream answers to both (issue #38).
+      shell.errexit(true);
+      try {
+        const error = await runFixture('exit', ['42']).catch(
+          (thrown) => thrown
+        );
+
+        expect(error).toBeInstanceOf(Error);
+        expect(error.code).toBe(42);
+        expect(error.exitCode).toBe(42);
+        expect(error.result.code).toBe(42);
+        expect(error.result.exitCode).toBe(42);
+      } finally {
+        shell.errexit(false);
+      }
     }
   );
 

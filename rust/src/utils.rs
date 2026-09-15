@@ -139,6 +139,33 @@ impl CommandResult {
     pub fn exit_code(&self) -> i32 {
         self.code
     }
+
+    /// Turn a failing result into [`crate::Error::CommandFailed`].
+    ///
+    /// This is the Rust counterpart of the JavaScript `errexit` mode: a
+    /// non-zero status becomes an error whose exit status is readable through
+    /// both [`crate::Error::code`] and [`crate::Error::exit_code`] (issue
+    /// #38). Successful results pass through unchanged.
+    ///
+    /// ```
+    /// use command_stream::utils::CommandResult;
+    ///
+    /// let error = CommandResult::error_with_code("", 42)
+    ///     .error_for_status()
+    ///     .unwrap_err();
+    /// assert_eq!(error.code(), Some(42));
+    /// assert_eq!(error.exit_code(), error.code());
+    /// ```
+    pub fn error_for_status(self) -> crate::Result<CommandResult> {
+        if self.is_success() {
+            return Ok(self);
+        }
+
+        Err(crate::Error::command_failed(
+            self.code,
+            format!("Command failed with exit code {}", self.code),
+        ))
+    }
 }
 
 /// Utility functions for virtual commands

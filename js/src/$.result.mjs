@@ -24,6 +24,57 @@ export function createResult({ code, stdout = '', stderr = '', stdin = '' }) {
   };
 }
 
+/**
+ * Create an Error describing a command that exited with a failing status.
+ *
+ * The status is exposed under both `code` (command-stream's original name) and
+ * `exitCode` (the name used by Node.js `child_process`, execa, zx, nano-spawn
+ * and Bun Shell), so either error-handling style works (issue #38).
+ *
+ * @param {string} message - Error message
+ * @param {object} params - Error parameters
+ * @param {number} params.code - Exit code of the failed command
+ * @param {string} [params.stdout] - Captured stdout
+ * @param {string} [params.stderr] - Captured stderr
+ * @param {object} [params.result] - Full result object of the failed command
+ * @returns {Error & {code: number, exitCode: number}} Command failure error
+ */
+export function createCommandError(message, { code, stdout, stderr, result }) {
+  const error = new Error(message);
+  error.code = code;
+  // `exitCode` is an alias for `code` for better compatibility (issue #38)
+  error.exitCode = code;
+  if (stdout !== undefined) {
+    error.stdout = stdout;
+  }
+  if (stderr !== undefined) {
+    error.stderr = stderr;
+  }
+  if (result !== undefined) {
+    error.result = result;
+  }
+  return error;
+}
+
+/**
+ * Expose the numeric exit status of a rejected command as `exitCode`.
+ *
+ * Failures that never reached a running process keep the POSIX errno string in
+ * `code` (`ENOENT`, `EACCES`, ...) because that is what Node.js reports, so the
+ * shell-compatible status is taken from the result the runner already built
+ * (issue #38).
+ *
+ * @param {Error & {code?: string|number, exitCode?: number}} error - Thrown error
+ * @param {number} code - Numeric exit status to expose
+ * @returns {Error} The same error
+ */
+export function attachExitCodeAlias(error, code) {
+  if (error && typeof error === 'object' && error.exitCode === undefined) {
+    error.exitCode = code;
+  }
+  return error;
+}
+
 export function createCancelledResult(signal) {
   const signalCodes = { SIGINT: 130, SIGKILL: 137, SIGTERM: 143 };
   return createResult({
