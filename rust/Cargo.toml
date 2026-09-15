@@ -9,6 +9,7 @@ repository = "https://github.com/link-foundation/command-stream"
 keywords = ["shell", "command", "streaming", "async", "process"]
 categories = ["command-line-utilities", "asynchronous"]
 readme = "README.md"
+exclude = ["benchmarks/**"]
 
 [lib]
 name = "command_stream"

@@ -303,6 +303,14 @@ competitor-specific tests are accounted for in the
 Run the focused executable corpus with
 `cargo test --test competitor_compatibility`.
 
+The [Rust benchmark playground](benchmarks/README.md) turns six of those native
+process-library mappings into validated performance, crate-footprint,
+feature-coverage, and real-world comparisons. Its CI-sized profile is:
+
+```bash
+cargo run --release --locked --manifest-path benchmarks/Cargo.toml -- --smoke
+```
+
 - Shell parser for pipelines, command lists, logical operators, and redirection.
 - Built-in command implementations for file-system and shell utility commands.
 - Async execution with `tokio`.
