@@ -1,17 +1,31 @@
-import { test, expect, describe, beforeEach } from 'bun:test';
+import { test, expect, describe, afterEach, beforeEach } from 'bun:test';
 import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
-import { $, exec, shell, listCommands } from '../src/$.mjs';
+import { $, exec, shell, enableVirtualCommands } from '../src/$.mjs';
 
 // Errors thrown by failing commands expose the exit status under both `code`
 // (Node.js `child_process` naming) and `exitCode` (execa, zx, nano-spawn and
 // Bun Shell naming), so handlers written for either convention work (issue #38).
 describe('error exitCode alias for error code', () => {
   beforeEach(() => {
+    // Other test files disable the virtual commands and never restore them:
+    // `test-helper.mjs` registers its cleanup hooks while it is evaluated, so
+    // they belong to the first test file that imports it and no other file is
+    // reset (see experiments/issue-38-hook-scope/). Whether the leak reaches
+    // this file depends on the order Bun picks, which differs per platform, so
+    // the built-in `exit` used below is re-enabled explicitly.
+    enableVirtualCommands();
     shell.errexit(false);
     shell.verbose(false);
     shell.xtrace(false);
     shell.pipefail(false);
     shell.nounset(false);
+  });
+
+  // The same missing cleanup would let this file's `errexit`/`pipefail` escape
+  // into whichever file runs next, so they are restored here.
+  afterEach(() => {
+    shell.errexit(false);
+    shell.pipefail(false);
   });
 
   test('throws an Error carrying both aliases in errexit mode', async () => {
@@ -61,21 +75,6 @@ describe('error exitCode alias for error code', () => {
     shell.pipefail(true);
 
     const error = await $`exit 19 | cat`.catch((thrown) => thrown);
-
-    if (error?.code !== 19) {
-      // Temporary diagnostics for the macOS-only failure seen in CI.
-      console.error(
-        `[issue-38 diag] ${JSON.stringify({
-          platform: process.platform,
-          code: error?.code,
-          exitCode: error?.exitCode,
-          message: error?.message,
-          syscall: error?.syscall,
-          path: error?.path,
-          commands: listCommands(),
-        })}`
-      );
-    }
 
     expect(error).toBeInstanceOf(Error);
     expect(error.code).toBe(19);
