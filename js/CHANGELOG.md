@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.21.8
+
+### Patch Changes
+
+- 0f0cf27: Add a reproducible benchmark playground comparing process performance, package
+  size, feature coverage, and deterministic real-world workloads with Execa,
+  cross-spawn, ShellJS, zx, and Bun Shell.
+
 ## 0.21.7
 
 ### Patch Changes
