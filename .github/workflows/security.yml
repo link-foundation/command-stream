@@ -226,9 +226,11 @@ jobs:
         with:
           tool: cargo-audit@0.22.2
 
-      - name: Audit the committed Cargo.lock
+      - name: Audit the committed Cargo lockfiles
         working-directory: rust
-        run: cargo audit --file Cargo.lock
+        run: |
+          cargo audit --file Cargo.lock
+          cargo audit --file benchmarks/Cargo.lock
 
   secret-scan:
     name: Scan for committed secrets

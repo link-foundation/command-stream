@@ -47,6 +47,19 @@ compatibility corpora with explicit missing-feature ledgers:
 Run the focused suites with `bun run test:competitors` in `js/` and
 `cargo test --test competitor_compatibility` in `rust/`.
 
+The benchmark playgrounds provide measured process, package-footprint,
+feature-coverage, and deterministic real-world comparisons for both maintained
+implementations:
+
+- [JavaScript benchmarks](./js/benchmarks/README.md): Execa, cross-spawn,
+  ShellJS, zx, and Bun Shell. Run `bun run benchmark:smoke` from `js/`.
+- [Rust benchmarks](./rust/benchmarks/README.md): `std::process`, Tokio process,
+  async-process, duct, subprocess, and xshell. Run the documented Cargo smoke
+  command from `rust/`.
+
+CI runs both suites and the language parity check prevents benchmark changes in
+only one implementation unless maintainers explicitly apply `parity-exempt`.
+
 Run all language-specific checks from the language folders:
 
 ```bash
