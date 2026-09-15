@@ -1,8 +1,8 @@
 name: Language parity check
 
-# Ensure behavioral changes are made in both the JavaScript (js/src/**) and the
-# Rust (rust/src/**) implementations. A PR that changes one without the other
-# fails this check unless it carries the `parity-exempt` label.
+# Ensure source and benchmark changes are made in both the JavaScript and Rust
+# implementations. Each category is paired independently. A deliberately
+# single-language PR must carry the `parity-exempt` label.
 #
 # See issue #155 review feedback: "double check that all features that are
 # supported in JavaScript are fully supported in Rust and we have CI/CD rules,
@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   parity:
-    name: JS/Rust source parity
+    name: JS/Rust implementation parity
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # Skip entirely when the PR is explicitly marked as a single-language change.
@@ -32,7 +32,7 @@ jobs:
           # Read-only job: the parity script only diffs the checked-out history.
           persist-credentials: false
 
-      - name: Check JavaScript/Rust source parity
+      - name: Check JavaScript/Rust implementation parity
         env:
           BASE_REF: ${{ github.base_ref }}
         run: bash .github/scripts/check-language-parity.sh
