@@ -294,3 +294,21 @@ async fn test_piped_input_wins_over_pipeline_stdin() {
     assert!(result.is_success());
     assert_eq!(result.stdout, "piped\n");
 }
+
+// Mirrors the `tee` pipeline example in rust/README.md.
+#[tokio::test]
+async fn test_readme_tee_pipeline_example() {
+    let _guard = lock_virtual_commands().await;
+    enable_virtual_commands();
+    let dir = tempfile::tempdir().unwrap();
+    let log = dir.path().join("deploy.log");
+    let result = Pipeline::new()
+        .add("echo deploying")
+        .add(format!("tee {}", log.display()))
+        .run()
+        .await
+        .unwrap();
+    assert!(result.is_success());
+    assert_eq!(result.stdout, "deploying\n");
+    assert_eq!(std::fs::read_to_string(&log).unwrap(), "deploying\n");
+}

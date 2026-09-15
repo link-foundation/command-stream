@@ -288,6 +288,36 @@ Ctrl-D; use `TerminalKey::Raw` for any other escape sequence. An interaction
 must contain at least one action or wait; an empty `TerminalInteraction` is
 rejected before the terminal is opened or input is sent.
 
+### Built-in `tee`
+
+`tee` copies its input to stdout and to every file it is given, so a pipeline
+can be recorded and keep flowing. It follows GNU coreutils: `-a`/`--append`
+appends instead of truncating, `-i`/`--ignore-interrupts` keeps writing when
+the pipeline is cancelled, `--` ends option parsing, and a bare `-` is a file
+named `-` rather than stdout. A write failure is reported on stderr and sets
+exit code 1, while the remaining files are still written.
+
+```rust,no_run
+use command_stream::Pipeline;
+
+#[tokio::main]
+async fn main() {
+    let result = Pipeline::new()
+        .add("echo deploying")
+        .add("tee deploy.log")
+        .run()
+        .await
+        .expect("pipeline should run");
+
+    assert_eq!(result.stdout, "deploying\n");
+}
+```
+
+Built-in commands receive their stdin as one completed buffer, because a
+pipeline reads each upstream stage to the end before handing the result on. So
+`tee` is a pipeline stage, not a live terminal filter; for an interactive `tee`,
+use the PTY sessions described under [Interactive sessions](#interactive-sessions).
+
 ## Features
 
 ### Tracked compatibility corpus

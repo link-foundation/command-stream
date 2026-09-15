@@ -391,6 +391,16 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
       expect(fileContent).toBe('Hello Tee!\n');
     });
 
+    // Mirrors the `tee` pipeline example in js/README.md.
+    test('tee should keep a mid-pipeline stage flowing', async () => {
+      const testFile = join(TEST_DIR, 'tee-midpipeline.txt');
+      const result = await $`echo "deploying" | tee ${testFile} | cat`;
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toBe('deploying\n');
+      expect(readFileSync(testFile, 'utf8')).toBe('deploying\n');
+    });
+
     test('tee should support multiple output files', async () => {
       const file1 = join(TEST_DIR, 'tee1.txt');
       const file2 = join(TEST_DIR, 'tee2.txt');
