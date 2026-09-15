@@ -162,6 +162,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [0.18.6] - 2026-09-15
+
+### Fixed
+
+- Guarantee that successful stderr-only CLI output remains separately captured,
+  including pull request URLs, while `2>&1` retains normal shell merge behavior.
+
 ## [0.18.5] - 2026-09-15
 
 ### Added
