@@ -1,0 +1,136 @@
+name: JavaScript benchmarks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'js/benchmarks/**'
+      - 'js/tests/benchmark-suite.test.mjs'
+      - 'js/tests/competitor-*'
+      - 'js/package.json'
+      - 'js/package-lock.json'
+      - 'js/bun.lock'
+      - '.github/workflows/benchmarks.yml'
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'js/benchmarks/**'
+      - 'js/tests/benchmark-suite.test.mjs'
+      - 'js/tests/competitor-*'
+      - 'js/package.json'
+      - 'js/package-lock.json'
+      - 'js/bun.lock'
+      - '.github/workflows/benchmarks.yml'
+  schedule:
+    - cron: '23 4 * * 1'
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'Benchmark profile'
+        required: true
+        type: choice
+        default: full
+        options:
+          - smoke
+          - full
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    name: Benchmark (${{ github.event_name == 'pull_request' && 'smoke' || inputs.profile || 'full' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-benchmark
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Simulate a fresh merge with the base branch
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash .github/scripts/simulate-fresh-merge.sh
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24.x'
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: latest
+
+      - name: Install pinned dependencies
+        working-directory: js
+        run: bun install --frozen-lockfile
+
+      - name: Test benchmark infrastructure and adapters
+        working-directory: js
+        run: bun run benchmark:test
+
+      - name: Benchmark the pull request base
+        if: github.event_name == 'pull_request'
+        id: baseline
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          if ! git cat-file -e "origin/$BASE_REF:js/benchmarks/cli.mjs"; then
+            echo 'available=false' >> "$GITHUB_OUTPUT"
+            echo 'The base branch predates the benchmark suite; no comparison is available yet.'
+            exit 0
+          fi
+
+          base_directory="$(mktemp -d)"
+          cleanup() {
+            git worktree remove --force "$base_directory" || true
+          }
+          trap cleanup EXIT
+          git worktree add --detach "$base_directory" "origin/$BASE_REF"
+          (
+            cd "$base_directory/js"
+            bun install --frozen-lockfile
+            bun benchmarks/cli.mjs --smoke --output "$GITHUB_WORKSPACE/js/benchmarks/baseline"
+          )
+          echo 'available=true' >> "$GITHUB_OUTPUT"
+
+      - name: Run benchmark profile
+        working-directory: js
+        env:
+          BENCHMARK_PROFILE: ${{ github.event_name == 'pull_request' && 'smoke' || inputs.profile || 'full' }}
+        run: |
+          if [[ "$BENCHMARK_PROFILE" == 'smoke' ]]; then
+            bun run benchmark:smoke
+          else
+            bun run benchmark
+          fi
+
+      - name: Compare base and pull request measurements
+        if: steps.baseline.outputs.available == 'true'
+        working-directory: js
+        run: |
+          bun benchmarks/compare-results.mjs \
+            benchmarks/baseline/benchmark-results.json \
+            benchmarks/results/benchmark-results.json \
+            benchmarks/results
+
+      - name: Upload JSON and HTML reports
+        uses: actions/upload-artifact@v7
+        with:
+          name: command-stream-benchmarks-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            js/benchmarks/baseline/benchmark-results.json
+            js/benchmarks/results/benchmark-results.json
+            js/benchmarks/results/benchmark-report.html
+            js/benchmarks/results/benchmark-regressions.json
+            js/benchmarks/results/benchmark-regressions.md
+          if-no-files-found: error
+          retention-days: 30
