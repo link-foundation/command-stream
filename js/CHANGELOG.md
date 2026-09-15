@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.21.7
+
+### Patch Changes
+
+- 728030c: Guarantee that successful stderr-only CLI output remains separately captured,
+  including pull request URLs, while `2>&1` retains normal shell merge behavior.
+
 ## 0.21.6
 
 ### Patch Changes
