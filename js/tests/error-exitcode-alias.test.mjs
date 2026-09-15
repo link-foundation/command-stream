@@ -1,6 +1,6 @@
 import { test, expect, describe, beforeEach } from 'bun:test';
 import './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
-import { $, shell } from '../src/$.mjs';
+import { $, exec, shell, listCommands } from '../src/$.mjs';
 
 // Errors thrown by failing commands expose the exit status under both `code`
 // (Node.js `child_process` naming) and `exitCode` (execa, zx, nano-spawn and
@@ -62,6 +62,21 @@ describe('error exitCode alias for error code', () => {
 
     const error = await $`exit 19 | cat`.catch((thrown) => thrown);
 
+    if (error?.code !== 19) {
+      // Temporary diagnostics for the macOS-only failure seen in CI.
+      console.error(
+        `[issue-38 diag] ${JSON.stringify({
+          platform: process.platform,
+          code: error?.code,
+          exitCode: error?.exitCode,
+          message: error?.message,
+          syscall: error?.syscall,
+          path: error?.path,
+          commands: listCommands(),
+        })}`
+      );
+    }
+
     expect(error).toBeInstanceOf(Error);
     expect(error.code).toBe(19);
     expect(error.exitCode).toBe(19);
@@ -86,6 +101,21 @@ describe('error exitCode alias for error code', () => {
     expect(error).toBeInstanceOf(Error);
     expect(typeof error.code).toBe('number');
     expect(error.exitCode).toBe(error.code);
+  });
+
+  test('reports a numeric exitCode when the executable cannot be launched', async () => {
+    shell.errexit(true);
+
+    const error = await exec('command-stream-missing-binary-38', [], {
+      capture: true,
+      mirror: false,
+    }).catch((thrown) => thrown);
+
+    expect(error).toBeInstanceOf(Error);
+    // A process that never started has no exit status of its own, so Node
+    // reports the POSIX errno in `code`. `exitCode` still answers with the
+    // shell-compatible status the result carries.
+    expect(error.exitCode).toBe(127);
   });
 
   test('leaves the non-errexit result path unchanged', async () => {

@@ -9,6 +9,7 @@ import {
   effectiveEnv,
 } from './$.process-context.mjs';
 import {
+  attachExitCodeAlias,
   createCommandError,
   createResult,
   executionErrorExitCode,
@@ -112,7 +113,7 @@ function handleVirtualError(runner, error, shellSettings, shouldFinish) {
   if (shellSettings.errexit) {
     error.result = result;
     // `exitCode` is an alias for `code` for better compatibility (issue #38)
-    error.exitCode = exitCode;
+    attachExitCodeAlias(error, exitCode);
     throw error;
   }
 

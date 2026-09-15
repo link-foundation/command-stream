@@ -11,6 +11,7 @@ import {
 import { StreamUtils, safeWrite, asBuffer } from './$.stream-utils.mjs';
 import { pumpReadable } from './$.quote.mjs';
 import {
+  attachExitCodeAlias,
   createCancelledResult,
   createCommandError,
   createExecutionErrorResult,
@@ -1207,7 +1208,12 @@ export function attachExecutionMethods(ProcessRunner, deps) {
           })}`
       );
 
-      finishExecutionError(this, error);
+      const errorResult = finishExecutionError(this, error);
+
+      // Rejections escaping here include failures to launch a process, whose
+      // `code` stays the POSIX errno string. `exitCode` always reports the
+      // shell-compatible status the result carries (issue #38).
+      attachExitCodeAlias(error, errorResult?.code);
 
       // Match the library's default shell-like error contract for failures to
       // launch a direct executable. `errexit` continues to opt into rejection,

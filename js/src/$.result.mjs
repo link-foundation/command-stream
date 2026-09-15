@@ -56,6 +56,25 @@ export function createCommandError(message, { code, stdout, stderr, result }) {
   return error;
 }
 
+/**
+ * Expose the numeric exit status of a rejected command as `exitCode`.
+ *
+ * Failures that never reached a running process keep the POSIX errno string in
+ * `code` (`ENOENT`, `EACCES`, ...) because that is what Node.js reports, so the
+ * shell-compatible status is taken from the result the runner already built
+ * (issue #38).
+ *
+ * @param {Error & {code?: string|number, exitCode?: number}} error - Thrown error
+ * @param {number} code - Numeric exit status to expose
+ * @returns {Error} The same error
+ */
+export function attachExitCodeAlias(error, code) {
+  if (error && typeof error === 'object' && error.exitCode === undefined) {
+    error.exitCode = code;
+  }
+  return error;
+}
+
 export function createCancelledResult(signal) {
   const signalCodes = { SIGINT: 130, SIGKILL: 137, SIGTERM: 143 };
   return createResult({
