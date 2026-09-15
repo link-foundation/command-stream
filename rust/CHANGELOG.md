@@ -161,6 +161,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [0.18.5] - 2026-09-15
+
+### Added
+
+- `Error::code()` and its `Error::exit_code()` alias report the exit status of a
+  failed command, and `CommandResult::error_for_status()` turns a non-zero
+  result into that error.
+
 ## [0.18.4] - 2026-09-14
 
 ### Fixed
