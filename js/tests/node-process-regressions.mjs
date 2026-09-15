@@ -5,7 +5,16 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { afterEach, test } from 'node:test';
 
-import { exec, ProcessRunner, resetGlobalState, set } from '../src/$.mjs';
+import {
+  $,
+  enableVirtualCommands,
+  exec,
+  ProcessRunner,
+  register,
+  resetGlobalState,
+  set,
+  unregister,
+} from '../src/$.mjs';
 
 const processOptions = {
   capture: true,
@@ -60,4 +69,44 @@ test('an in-flight launch keeps its captured errexit setting', async () => {
 
   const result = await completion;
   assert.equal(result.code, 127);
+});
+
+// Node runs pipelines through the non-streaming path, where the `stdin` option
+// used to overwrite the input piped from the previous stage (issue #14).
+test('a stdio mode keyword never becomes virtual command input in Node.js', async () => {
+  // A dedicated command reports exactly what it was handed, so the assertion
+  // cannot fall through to a real binary blocking on inherited stdin.
+  enableVirtualCommands();
+  register('stdin-probe', async ({ stdin }) => ({
+    code: 0,
+    stdout: JSON.stringify(stdin),
+    stderr: '',
+  }));
+  try {
+    const result = await $({ mirror: false, stdin: 'inherit' })`stdin-probe`;
+
+    assert.equal(result.code, 0);
+    assert.equal(result.stdout, '""');
+  } finally {
+    unregister('stdin-probe');
+  }
+});
+
+test('piped input reaches a virtual command in Node.js', async () => {
+  enableVirtualCommands();
+  const result = await $({ mirror: false })`echo hello | cat`;
+
+  assert.equal(result.code, 0);
+  assert.equal(result.stdout, 'hello\n');
+});
+
+test('piped input wins over the pipeline stdin option in Node.js', async () => {
+  enableVirtualCommands();
+  const result = await $({
+    mirror: false,
+    stdin: 'from option\n',
+  })`echo piped | cat`;
+
+  assert.equal(result.code, 0);
+  assert.equal(result.stdout, 'piped\n');
 });

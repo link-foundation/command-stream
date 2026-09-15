@@ -2,7 +2,7 @@
 // Part of the modular ProcessRunner architecture
 
 import { trace } from './$.trace.mjs';
-import { safeWrite } from './$.stream-utils.mjs';
+import { safeWrite, stdinDataFromOptions } from './$.stream-utils.mjs';
 import {
   applyVirtualProcessContext,
   effectiveCwd,
@@ -21,13 +21,7 @@ import {
  * @returns {string} Stdin data
  */
 function getStdinData(options) {
-  if (options.stdin && typeof options.stdin === 'string') {
-    return options.stdin;
-  }
-  if (options.stdin && Buffer.isBuffer(options.stdin)) {
-    return options.stdin.toString('utf8');
-  }
-  return '';
+  return stdinDataFromOptions(options);
 }
 
 /**

@@ -8,6 +8,7 @@ import {
   shell,
 } from '../src/$.mjs';
 import { trace } from '../src/$.utils.mjs';
+import { tee as teeHandler } from '../src/commands/index.mjs';
 import { rmSync, existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
 import { join } from 'path';
 
@@ -367,6 +368,235 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
       const result = await $`which`;
       expect(result.code).toBe(1);
       expect(result.stderr).toContain('missing operand');
+    });
+  });
+
+  describe('Tee Command (Virtual)', () => {
+    test('tee should be a virtual command, not the system binary', async () => {
+      const result = await $`which tee`;
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toBe('tee: shell builtin\n');
+    });
+
+    test('tee should write to file and stdout', async () => {
+      const testFile = join(TEST_DIR, 'tee-output.txt');
+      const result = await $`echo "Hello Tee!" | tee ${testFile}`;
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toBe('Hello Tee!\n');
+      expect(existsSync(testFile)).toBe(true);
+
+      const fileContent = readFileSync(testFile, 'utf8');
+      expect(fileContent).toBe('Hello Tee!\n');
+    });
+
+    // Mirrors the `tee` pipeline example in js/README.md.
+    test('tee should keep a mid-pipeline stage flowing', async () => {
+      const testFile = join(TEST_DIR, 'tee-midpipeline.txt');
+      const result = await $`echo "deploying" | tee ${testFile} | cat`;
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toBe('deploying\n');
+      expect(readFileSync(testFile, 'utf8')).toBe('deploying\n');
+    });
+
+    test('tee should support multiple output files', async () => {
+      const file1 = join(TEST_DIR, 'tee1.txt');
+      const file2 = join(TEST_DIR, 'tee2.txt');
+      const file3 = join(TEST_DIR, 'tee3.txt');
+
+      const result =
+        await $`echo "Multiple files" | tee ${file1} ${file2} ${file3}`;
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toBe('Multiple files\n');
+
+      [file1, file2, file3].forEach((file) => {
+        expect(existsSync(file)).toBe(true);
+        const content = readFileSync(file, 'utf8');
+        expect(content).toBe('Multiple files\n');
+      });
+    });
+
+    test('tee should support append mode with -a flag', async () => {
+      const testFile = join(TEST_DIR, 'tee-append.txt');
+
+      // First write
+      await $`echo "First line" | tee ${testFile}`;
+
+      // Append second line
+      const result = await $`echo "Second line" | tee -a ${testFile}`;
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toBe('Second line\n');
+
+      const fileContent = readFileSync(testFile, 'utf8');
+      expect(fileContent).toBe('First line\nSecond line\n');
+    });
+
+    test('tee should truncate existing files without -a', async () => {
+      const testFile = join(TEST_DIR, 'tee-truncate.txt');
+      writeFileSync(testFile, 'old content that is much longer\n');
+
+      const result = await $({ stdin: 'new\n' })`tee ${testFile}`;
+
+      expect(result.code).toBe(0);
+      expect(readFileSync(testFile, 'utf8')).toBe('new\n');
+    });
+
+    test('tee should support long options', async () => {
+      const testFile = join(TEST_DIR, 'tee-long-options.txt');
+
+      await $({ stdin: 'first\n' })`tee ${testFile}`;
+      const result = await $({
+        stdin: 'second\n',
+      })`tee --append --ignore-interrupts ${testFile}`;
+
+      expect(result.code).toBe(0);
+      expect(readFileSync(testFile, 'utf8')).toBe('first\nsecond\n');
+    });
+
+    test('tee should support clustered short options', async () => {
+      const testFile = join(TEST_DIR, 'tee-clustered.txt');
+
+      await $({ stdin: 'first\n' })`tee ${testFile}`;
+      const result = await $({ stdin: 'second\n' })`tee -ai ${testFile}`;
+
+      expect(result.code).toBe(0);
+      expect(readFileSync(testFile, 'utf8')).toBe('first\nsecond\n');
+    });
+
+    test('tee should stop option parsing at --', async () => {
+      const result = await $({
+        stdin: 'literal\n',
+        cwd: TEST_DIR,
+      })`tee -- -a`;
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toBe('literal\n');
+      // `-a` after `--` is a file name, not the append flag.
+      expect(readFileSync(join(TEST_DIR, '-a'), 'utf8')).toBe('literal\n');
+      expect(existsSync(join(TEST_DIR, '--'))).toBe(false);
+    });
+
+    test('tee should treat a bare - as a file name', async () => {
+      // GNU tee has no special case for `-`: it is a file named `-`.
+      const result = await $({ stdin: 'dash\n', cwd: TEST_DIR })`tee -`;
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toBe('dash\n');
+      expect(readFileSync(join(TEST_DIR, '-'), 'utf8')).toBe('dash\n');
+    });
+
+    test('tee should work with direct stdin input', async () => {
+      const testFile = join(TEST_DIR, 'tee-stdin.txt');
+      const inputData = 'line1\nline2\nline3\n';
+
+      const result = await $({ stdin: inputData })`tee ${testFile}`;
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toBe(inputData);
+
+      const fileContent = readFileSync(testFile, 'utf8');
+      expect(fileContent).toBe(inputData);
+    });
+
+    test('tee should handle empty input', async () => {
+      const testFile = join(TEST_DIR, 'tee-empty.txt');
+
+      const result = await $({ stdin: '' })`tee ${testFile}`;
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toBe('');
+      expect(existsSync(testFile)).toBe(true);
+
+      const fileContent = readFileSync(testFile, 'utf8');
+      expect(fileContent).toBe('');
+    });
+
+    test('tee without file operands should pass stdin through', async () => {
+      const result = await $({ stdin: 'just stdout\n' })`tee`;
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toBe('just stdout\n');
+      expect(result.stderr).toBe('');
+    });
+
+    test('tee should work in complex pipelines', async () => {
+      const testFile = join(TEST_DIR, 'tee-pipeline.txt');
+
+      const result = await $`echo "pipeline test" | tee ${testFile} | cat`;
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toBe('pipeline test\n');
+
+      const fileContent = readFileSync(testFile, 'utf8');
+      expect(fileContent).toBe('pipeline test\n');
+    });
+
+    test('tee should report write errors and keep writing remaining targets', async () => {
+      const invalidPath = '/invalid/path/tee-error.txt';
+      const goodFile = join(TEST_DIR, 'tee-good.txt');
+
+      const result = await $({
+        stdin: 'error test',
+      })`tee ${invalidPath} ${goodFile}`;
+
+      expect(result.code).toBe(1);
+      expect(result.stderr).toBe(
+        `tee: ${invalidPath}: No such file or directory\n`
+      );
+      // stdout and the remaining file are still written, like GNU tee.
+      expect(result.stdout).toBe('error test');
+      expect(readFileSync(goodFile, 'utf8')).toBe('error test');
+    });
+
+    test('tee should reject unknown long options', async () => {
+      const result = await $({ stdin: 'test' })`tee --unknown-option file.txt`;
+
+      expect(result.code).toBe(1);
+      expect(result.stderr).toBe(
+        "tee: unrecognized option '--unknown-option'\n"
+      );
+      expect(result.stdout).toBe('');
+      expect(existsSync('file.txt')).toBe(false);
+    });
+
+    test('tee should reject unknown short options', async () => {
+      const result = await $({ stdin: 'test' })`tee -z file.txt`;
+
+      expect(result.code).toBe(1);
+      expect(result.stderr).toBe("tee: invalid option -- 'z'\n");
+      expect(existsSync('file.txt')).toBe(false);
+    });
+
+    test('tee should stop writing files when cancelled', async () => {
+      const testFile = join(TEST_DIR, 'tee-cancelled.txt');
+
+      const result = await teeHandler({
+        args: [testFile],
+        stdin: 'payload',
+        isCancelled: () => true,
+      });
+
+      // SIGINT exit code, with the input still forwarded to stdout.
+      expect(result.code).toBe(130);
+      expect(result.stdout).toBe('payload');
+      expect(existsSync(testFile)).toBe(false);
+    });
+
+    test('tee -i should keep writing files when cancelled', async () => {
+      const testFile = join(TEST_DIR, 'tee-ignore-interrupts.txt');
+
+      const result = await teeHandler({
+        args: ['-i', testFile],
+        stdin: 'payload',
+        isCancelled: () => true,
+      });
+
+      expect(result.code).toBe(0);
+      expect(readFileSync(testFile, 'utf8')).toBe('payload');
     });
   });
 

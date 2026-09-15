@@ -3,8 +3,8 @@
 //! These tests mirror the JavaScript tests in js/tests/builtin-commands.test.mjs
 
 use command_stream::commands::{
-    basename, cat, cp, dirname, echo, env, exit, ls, mkdir, mv, pwd, rm, seq, sleep, test, touch,
-    which, yes, CommandContext,
+    basename, cat, cp, dirname, echo, env, exit, ls, mkdir, mv, pwd, rm, seq, sleep, tee, test,
+    touch, which, yes, CommandContext,
 };
 use std::fs;
 use std::path::PathBuf;
@@ -506,6 +506,231 @@ async fn test_yes_with_cancel() {
     let result = yes(ctx).await;
     // Yes command should have produced some output before being cancelled
     assert!(result.stdout.contains("y") || result.is_success());
+}
+
+// ============================================================================
+// Tee Command Tests
+// ============================================================================
+
+/// Helper to create a command context with stdin and cwd
+fn ctx_with_stdin_and_cwd(args: Vec<&str>, stdin: &str, cwd: PathBuf) -> CommandContext {
+    CommandContext {
+        args: args.into_iter().map(String::from).collect(),
+        stdin: Some(stdin.to_string()),
+        cwd: Some(cwd),
+        env: None,
+        output_tx: None,
+        is_cancelled: None,
+    }
+}
+
+#[tokio::test]
+async fn test_tee_is_a_virtual_command() {
+    let result = which(ctx(vec!["tee"])).await;
+    assert!(result.is_success());
+    assert_eq!(result.stdout, "tee: shell builtin\n");
+}
+
+#[tokio::test]
+async fn test_tee_writes_file_and_stdout() {
+    let dir = TempDir::new().unwrap();
+    let file = dir.path().join("tee-output.txt");
+
+    let result = tee(ctx_with_stdin(vec![file.to_str().unwrap()], "Hello Tee!\n")).await;
+
+    assert!(result.is_success());
+    assert_eq!(result.stdout, "Hello Tee!\n");
+    assert_eq!(fs::read_to_string(&file).unwrap(), "Hello Tee!\n");
+}
+
+#[tokio::test]
+async fn test_tee_multiple_output_files() {
+    let dir = TempDir::new().unwrap();
+    let file1 = dir.path().join("tee1.txt");
+    let file2 = dir.path().join("tee2.txt");
+    let file3 = dir.path().join("tee3.txt");
+
+    let result = tee(ctx_with_stdin(
+        vec![
+            file1.to_str().unwrap(),
+            file2.to_str().unwrap(),
+            file3.to_str().unwrap(),
+        ],
+        "Multiple files\n",
+    ))
+    .await;
+
+    assert!(result.is_success());
+    assert_eq!(result.stdout, "Multiple files\n");
+    for file in [&file1, &file2, &file3] {
+        assert_eq!(fs::read_to_string(file).unwrap(), "Multiple files\n");
+    }
+}
+
+#[tokio::test]
+async fn test_tee_append_flag() {
+    let dir = TempDir::new().unwrap();
+    let file = dir.path().join("tee-append.txt");
+
+    tee(ctx_with_stdin(vec![file.to_str().unwrap()], "First line\n")).await;
+    let result = tee(ctx_with_stdin(
+        vec!["-a", file.to_str().unwrap()],
+        "Second line\n",
+    ))
+    .await;
+
+    assert!(result.is_success());
+    assert_eq!(result.stdout, "Second line\n");
+    assert_eq!(
+        fs::read_to_string(&file).unwrap(),
+        "First line\nSecond line\n"
+    );
+}
+
+#[tokio::test]
+async fn test_tee_truncates_without_append() {
+    let dir = TempDir::new().unwrap();
+    let file = dir.path().join("tee-truncate.txt");
+    fs::write(&file, "old content that is much longer\n").unwrap();
+
+    let result = tee(ctx_with_stdin(vec![file.to_str().unwrap()], "new\n")).await;
+
+    assert!(result.is_success());
+    assert_eq!(fs::read_to_string(&file).unwrap(), "new\n");
+}
+
+#[tokio::test]
+async fn test_tee_long_options() {
+    let dir = TempDir::new().unwrap();
+    let file = dir.path().join("tee-long-options.txt");
+
+    tee(ctx_with_stdin(vec![file.to_str().unwrap()], "first\n")).await;
+    let result = tee(ctx_with_stdin(
+        vec!["--append", "--ignore-interrupts", file.to_str().unwrap()],
+        "second\n",
+    ))
+    .await;
+
+    assert!(result.is_success());
+    assert_eq!(fs::read_to_string(&file).unwrap(), "first\nsecond\n");
+}
+
+#[tokio::test]
+async fn test_tee_clustered_short_options() {
+    let dir = TempDir::new().unwrap();
+    let file = dir.path().join("tee-clustered.txt");
+
+    tee(ctx_with_stdin(vec![file.to_str().unwrap()], "first\n")).await;
+    let result = tee(ctx_with_stdin(
+        vec!["-ai", file.to_str().unwrap()],
+        "second\n",
+    ))
+    .await;
+
+    assert!(result.is_success());
+    assert_eq!(fs::read_to_string(&file).unwrap(), "first\nsecond\n");
+}
+
+#[tokio::test]
+async fn test_tee_stops_option_parsing_at_double_dash() {
+    let dir = TempDir::new().unwrap();
+
+    let result = tee(ctx_with_stdin_and_cwd(
+        vec!["--", "-a"],
+        "literal\n",
+        dir.path().to_path_buf(),
+    ))
+    .await;
+
+    assert!(result.is_success());
+    assert_eq!(result.stdout, "literal\n");
+    // `-a` after `--` is a file name, not the append flag.
+    assert_eq!(
+        fs::read_to_string(dir.path().join("-a")).unwrap(),
+        "literal\n"
+    );
+    assert!(!dir.path().join("--").exists());
+}
+
+#[tokio::test]
+async fn test_tee_treats_bare_dash_as_a_file_name() {
+    let dir = TempDir::new().unwrap();
+
+    // GNU tee has no special case for `-`: it is a file named `-`.
+    let result = tee(ctx_with_stdin_and_cwd(
+        vec!["-"],
+        "dash\n",
+        dir.path().to_path_buf(),
+    ))
+    .await;
+
+    assert!(result.is_success());
+    assert_eq!(result.stdout, "dash\n");
+    assert_eq!(fs::read_to_string(dir.path().join("-")).unwrap(), "dash\n");
+}
+
+#[tokio::test]
+async fn test_tee_empty_input_creates_file() {
+    let dir = TempDir::new().unwrap();
+    let file = dir.path().join("tee-empty.txt");
+
+    let result = tee(ctx_with_stdin(vec![file.to_str().unwrap()], "")).await;
+
+    assert!(result.is_success());
+    assert_eq!(result.stdout, "");
+    assert_eq!(fs::read_to_string(&file).unwrap(), "");
+}
+
+#[tokio::test]
+async fn test_tee_without_file_operands_passes_stdin_through() {
+    let result = tee(ctx_with_stdin(vec![], "just stdout\n")).await;
+
+    assert!(result.is_success());
+    assert_eq!(result.stdout, "just stdout\n");
+    assert_eq!(result.stderr, "");
+}
+
+#[tokio::test]
+async fn test_tee_reports_write_errors_and_keeps_going() {
+    let dir = TempDir::new().unwrap();
+    let good = dir.path().join("tee-good.txt");
+
+    let result = tee(ctx_with_stdin(
+        vec!["/invalid/path/tee-error.txt", good.to_str().unwrap()],
+        "error test",
+    ))
+    .await;
+
+    assert_eq!(result.code, 1);
+    assert_eq!(
+        result.stderr,
+        "tee: /invalid/path/tee-error.txt: No such file or directory\n"
+    );
+    // stdout and the remaining file are still written, like GNU tee.
+    assert_eq!(result.stdout, "error test");
+    assert_eq!(fs::read_to_string(&good).unwrap(), "error test");
+}
+
+#[tokio::test]
+async fn test_tee_rejects_unknown_long_options() {
+    let result = tee(ctx_with_stdin(vec!["--unknown-option", "file.txt"], "test")).await;
+
+    assert_eq!(result.code, 1);
+    assert_eq!(
+        result.stderr,
+        "tee: unrecognized option '--unknown-option'\n"
+    );
+    assert_eq!(result.stdout, "");
+    assert!(!PathBuf::from("file.txt").exists());
+}
+
+#[tokio::test]
+async fn test_tee_rejects_unknown_short_options() {
+    let result = tee(ctx_with_stdin(vec!["-z", "file.txt"], "test")).await;
+
+    assert_eq!(result.code, 1);
+    assert_eq!(result.stderr, "tee: invalid option -- 'z'\n");
+    assert!(!PathBuf::from("file.txt").exists());
 }
 
 // ============================================================================

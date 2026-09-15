@@ -25,6 +25,7 @@ import basenameCommand from './commands/$.basename.mjs';
 import dirnameCommand from './commands/$.dirname.mjs';
 import yesCommand from './commands/$.yes.mjs';
 import seqCommand from './commands/$.seq.mjs';
+import teeCommand from './commands/$.tee.mjs';
 import testCommand from './commands/$.test.mjs';
 
 /**
@@ -109,5 +110,6 @@ export function registerBuiltins() {
   register('dirname', dirnameCommand);
   register('yes', yesCommand);
   register('seq', seqCommand);
+  register('tee', teeCommand);
   register('test', testCommand);
 }

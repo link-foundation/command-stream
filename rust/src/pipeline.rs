@@ -325,6 +325,7 @@ impl Pipeline {
             "which" => (crate::commands::which(ctx).await, None),
             "yes" => (crate::commands::yes(ctx).await, None),
             "seq" => (crate::commands::seq(ctx).await, None),
+            "tee" => (crate::commands::tee(ctx).await, None),
             "test" => (crate::commands::test(ctx).await, None),
             _ => return None,
         };

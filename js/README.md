@@ -24,7 +24,7 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 - ⚡ **Performance**: Memory-efficient streaming prevents large buffer accumulation
 - 🎯 **Backward Compatible**: Existing `await $` syntax continues to work + Bun.$ `.text()` method
 - 🛡️ **Type Safe**: Full TypeScript support (coming soon)
-- 🔧 **Built-in Commands**: 18 essential commands work identically across platforms
+- 🔧 **Built-in Commands**: 22 essential commands work identically across platforms
 
 ## Comparison with Other Libraries
 
@@ -51,7 +51,7 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 | **Stdout Support**             | ✅ Real-time streaming + events                                                                         | ✅ Node.js streams + interleaved                                                      | ✅ Inherited/buffered                                                                             | ✅ Shell redirection + buffered                            | ✅ Direct output                                                                          | ✅ Readable streams + `.pipe.stdout`                                            |
 | **Stderr Support**             | ✅ Real-time streaming + events                                                                         | ✅ Streams + interleaved output                                                       | ✅ Inherited/buffered                                                                             | ✅ Redirection + `.quiet()` access                         | ✅ Error output                                                                           | ✅ Readable streams + `.pipe.stderr`                                            |
 | **Stdin Support**              | ✅ string/Buffer/inherit/ignore                                                                         | ✅ Input/output streams                                                               | ✅ Full stdio support                                                                             | ✅ Pipe operations                                         | 🟡 Basic                                                                                  | ✅ Basic stdin                                                                  |
-| **Built-in Commands**          | ✅ **18 commands**: cat, ls, mkdir, rm, mv, cp, touch, basename, dirname, seq, yes + all Bun.$ commands | ❌ Uses system                                                                        | ❌ Uses system                                                                                    | ✅ echo, cd, etc.                                          | ✅ **20+ commands**: cat, ls, mkdir, rm, mv, cp, etc.                                     | ❌ Uses system                                                                  |
+| **Built-in Commands**          | ✅ **22 commands**: cat, ls, mkdir, rm, mv, cp, touch, basename, dirname, seq, yes + all Bun.$ commands | ❌ Uses system                                                                        | ❌ Uses system                                                                                    | ✅ echo, cd, etc.                                          | ✅ **20+ commands**: cat, ls, mkdir, rm, mv, cp, etc.                                     | ❌ Uses system                                                                  |
 | **Virtual Commands Engine**    | ✅ **Revolutionary**: Register JavaScript functions as shell commands with full pipeline support        | ❌ No custom commands                                                                 | ❌ No custom commands                                                                             | ❌ No extensibility                                        | ❌ No custom commands                                                                     | ❌ No custom commands                                                           |
 | **Pipeline/Piping Support**    | ✅ **Advanced**: System + Built-ins + Virtual + Mixed + `.pipe()` method                                | ✅ Programmatic `.pipe()` + multi-destination                                         | ❌ No piping                                                                                      | ✅ Standard shell piping                                   | ✅ Shell piping + `.to()` method                                                          | ✅ Shell piping + `.pipe()` method                                              |
 | **Bundle Size**                | [Measured](benchmarks/README.md)                                                                        | [Measured](benchmarks/README.md)                                                      | [Measured](benchmarks/README.md)                                                                  | [Measured](benchmarks/README.md)                           | [Measured](benchmarks/README.md)                                                          | [Measured](benchmarks/README.md)                                                |
@@ -104,7 +104,7 @@ Run the focused executable corpus with `bun run test:competitors`.
 
 ## Built-in Commands (🚀 NEW!)
 
-command-stream now includes **18 built-in commands** that work identically to their bash/sh counterparts, providing true cross-platform shell scripting without system dependencies:
+command-stream now includes **22 built-in commands** that work identically to their bash/sh counterparts, providing true cross-platform shell scripting without system dependencies:
 
 ### 📁 **File System Commands**
 
@@ -121,6 +121,7 @@ command-stream now includes **18 built-in commands** that work identically to th
 - `basename` - Extract filename from path
 - `dirname` - Extract directory from path
 - `seq` - Generate number sequences
+- `tee` - Copy input to stdout and to files (supports `-a`, `-i`)
 - `yes` - Output string repeatedly (streaming)
 
 ### ⚡ **System Commands**
@@ -160,6 +161,33 @@ await $`rm -r project-backup`;
 await $`seq 1 5 | cat > numbers.txt`;
 await $`basename /path/to/file.txt .txt`; // → "file"
 ```
+
+### 🔀 `tee`: splitting a pipeline
+
+`tee` copies its input to stdout and to every file it is given, so a pipeline
+can be recorded and kept flowing at the same time. It follows GNU coreutils:
+`-a`/`--append` appends instead of truncating, `-i`/`--ignore-interrupts`
+keeps writing when the pipeline is cancelled, `--` ends option parsing, and a
+bare `-` is a file named `-` rather than stdout.
+
+```javascript
+// Record a step without consuming it
+await $`echo "deploying" | tee deploy.log | cat`;
+
+// Fan out to several files, appending to each
+await $`echo "second run" | tee -a deploy.log audit.log`;
+```
+
+A write failure is reported on stderr and sets exit code 1, but the remaining
+files are still written and the input still reaches stdout, exactly as
+coreutils does.
+
+**On interactive use:** built-in commands receive their stdin as one completed
+buffer, because a pipeline reads each upstream stage to the end before handing
+the result on. So this `tee` is a pipeline stage, not a live terminal filter --
+it cannot echo keystrokes back as you type them. The `interactive: true` option
+applies to spawned system processes; for a live `tee`, disable virtual commands
+and let the system binary run.
 
 ## Installation
 
@@ -1825,10 +1853,10 @@ await $`${raw(trustedCommand)}`;
 
 ### Built-in Commands
 
-18 cross-platform commands that work identically everywhere:
+22 cross-platform commands that work identically everywhere:
 
 **File System**: `cat`, `ls`, `mkdir`, `rm`, `mv`, `cp`, `touch`
-**Utilities**: `basename`, `dirname`, `seq`, `yes`
+**Utilities**: `basename`, `dirname`, `seq`, `tee`, `yes`
 **System**: `cd`, `pwd`, `echo`, `sleep`, `true`, `false`, `which`, `exit`, `env`, `test`
 
 All built-in commands support:
