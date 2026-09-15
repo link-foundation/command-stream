@@ -550,6 +550,7 @@ impl ProcessRunner {
             "which" => Some(commands::which(ctx).await),
             "yes" => Some(commands::yes(ctx).await),
             "seq" => Some(commands::seq(ctx).await),
+            "tee" => Some(commands::tee(ctx).await),
             "test" => Some(commands::test(ctx).await),
             _ => None,
         }
