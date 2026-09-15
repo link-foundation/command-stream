@@ -47,6 +47,11 @@ compatibility corpora with explicit missing-feature ledgers:
 Run the focused suites with `bun run test:competitors` in `js/` and
 `cargo test --test competitor_compatibility` in `rust/`.
 
+The [JavaScript benchmark playground](./js/benchmarks/README.md) adds measured
+process, bundle-size, feature-coverage, and deterministic real-world comparisons
+for Execa, cross-spawn, ShellJS, zx, and Bun Shell. Run its CI-sized profile
+with `bun run benchmark:smoke` from `js/`.
+
 Run all language-specific checks from the language folders:
 
 ```bash

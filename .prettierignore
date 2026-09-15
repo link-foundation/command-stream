@@ -1,6 +1,8 @@
 node_modules
 coverage
 reports
+js/benchmarks/results
+js/benchmarks/baseline
 dist
 *.min.js
 package-lock.json
