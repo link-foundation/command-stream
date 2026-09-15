@@ -33,6 +33,14 @@ async fn main() {
     // `exit_code()` is an alias for the `code` field, mirroring the
     // JavaScript `exitCode` alias.
     assert_eq!(result.exit_code(), result.code);
+
+    // `error_for_status()` turns a failing result into an error, whose status
+    // reads through the same pair of names.
+    let error = CommandResult::error_with_code("boom", 2)
+        .error_for_status()
+        .unwrap_err();
+    assert_eq!(error.code(), Some(2));
+    assert_eq!(error.exit_code(), error.code());
 }
 ```
 
