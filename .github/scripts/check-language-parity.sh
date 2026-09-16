@@ -50,6 +50,7 @@ while IFS= read -r f; do
     js/src/*) js_source_changed=true ;;
     rust/src/*) rust_source_changed=true ;;
     js/benchmarks/* | js/tests/benchmark-*) js_benchmarks_changed=true ;;
+    rust/benchmarks/Cargo.lock) ;;
     rust/benchmarks/*) rust_benchmarks_changed=true ;;
   esac
 done <<EOF
