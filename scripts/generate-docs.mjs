@@ -12,8 +12,15 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import prettier from '../js/node_modules/prettier/index.mjs';
 import { runExamples } from './run-examples.mjs';
-import { features, libraries, categories } from '../examples/features/catalog.mjs';
+import {
+  features,
+  libraries,
+  categories,
+  languages,
+  rustApiByFeature,
+} from '../js/examples/features/catalog.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const docsDir = path.join(root, 'docs');
@@ -29,33 +36,42 @@ function emit(relativePath, contents) {
   generated.set(relativePath, contents);
 }
 
-function escapeHtml(text) {
-  return String(text)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
 function alternativeText(alternative) {
-  if (!alternative) return null;
-  if (typeof alternative === 'string') return { supported: true, code: alternative };
+  if (!alternative) {
+    return null;
+  }
+  if (typeof alternative === 'string') {
+    return { supported: true, code: alternative };
+  }
   return { supported: false, reason: alternative.unsupported };
 }
 
 // ---------------------------------------------------------------- feature page
 
+// The sequential pushes mirror the document's section order and keep the
+// generated Markdown easy to compare with the rendered page.
+// eslint-disable-next-line max-statements
 function featurePage(feature, run, runtimes) {
   const lines = [];
   lines.push(`# ${feature.title}`);
   lines.push('');
   lines.push(feature.summary);
   lines.push('');
-  lines.push(`**Category:** ${feature.category}  `);
-  lines.push(`**API:** ${feature.api.map(name => `\`${name}\``).join(', ')}  `);
-  lines.push(`**Runs in:** ${runtimes.map(runtime => runtime.label).join(', ')}`);
+  lines.push(`**Category:** ${feature.category}`);
   lines.push('');
-  lines.push('## Example');
+  lines.push(
+    `**Languages:** ${languages.map((language) => language.name).join(', ')}`
+  );
+  lines.push('');
+  lines.push('## JavaScript');
+  lines.push('');
+  lines.push(`**API:** ${feature.api.map((name) => `\`${name}\``).join(', ')}`);
+  lines.push('');
+  lines.push(
+    `**Verified in:** ${runtimes.map((runtime) => runtime.label).join(', ')}`
+  );
+  lines.push('');
+  lines.push('### Example');
   lines.push('');
   lines.push(`[\`${feature.file}\`](${REPO}/blob/main/${feature.file})`);
   lines.push('');
@@ -63,21 +79,23 @@ function featurePage(feature, run, runtimes) {
   lines.push(run.source.trimEnd());
   lines.push('```');
   lines.push('');
-  lines.push('## Output');
+  lines.push('### Output');
   lines.push('');
 
-  const reports = runtimes.map(runtime => run.runs[runtime.id]?.report ?? '');
-  const identical = reports.every(report => report === reports[0]);
+  const reports = runtimes.map((runtime) => run.runs[runtime.id]?.report ?? '');
+  const identical = reports.every((report) => report === reports[0]);
 
   if (identical) {
-    lines.push(`Identical in ${runtimes.map(runtime => `${runtime.label} ${runtime.version}`).join(', ')}:`);
+    lines.push(
+      `Identical in ${runtimes.map((runtime) => runtime.label).join(' and ')}:`
+    );
     lines.push('');
     lines.push('```');
     lines.push(reports[0].trimEnd());
     lines.push('```');
   } else {
     for (const [index, runtime] of runtimes.entries()) {
-      lines.push(`### ${runtime.label} ${runtime.version}`);
+      lines.push(`### ${runtime.label}`);
       lines.push('');
       lines.push('```');
       lines.push(reports[index].trimEnd());
@@ -86,10 +104,37 @@ function featurePage(feature, run, runtimes) {
     }
   }
   lines.push('');
+  lines.push('## Rust');
+  lines.push('');
+  lines.push(
+    `**API:** ${rustApiByFeature
+      .get(feature.id)
+      .map((name) => `\`${name}\``)
+      .join(', ')}`
+  );
+  lines.push('');
+  lines.push('### Example');
+  lines.push('');
+  lines.push(
+    `[\`rust/examples/language_features.rs\`](${REPO}/blob/main/rust/examples/language_features.rs)`
+  );
+  lines.push('');
+  lines.push('```rust');
+  lines.push(run.rust.source.trimEnd());
+  lines.push('```');
+  lines.push('');
+  lines.push('### Output');
+  lines.push('');
+  lines.push('```');
+  lines.push(run.rust.report.trimEnd());
+  lines.push('```');
+  lines.push('');
   lines.push('## The same thing in other libraries');
   lines.push('');
 
-  for (const library of libraries.filter(library => library.id !== 'command-stream')) {
+  for (const library of libraries.filter(
+    (library) => library.id !== 'command-stream'
+  )) {
     const alternative = alternativeText(feature.alternatives[library.id]);
     lines.push(`### [${library.name}](${library.url})`);
     lines.push('');
@@ -119,49 +164,76 @@ function indexPage(report) {
   const lines = [];
   lines.push('# Feature documentation');
   lines.push('');
-  lines.push('Every feature of command-stream, with a runnable example, the output that');
-  lines.push('example produced in each runtime, and the same thing written with the other');
-  lines.push('shell libraries.');
+  lines.push(
+    'Every feature of command-stream, with executable JavaScript and Rust examples,'
+  );
+  lines.push(
+    'captured output, and the same thing written with other shell libraries.'
+  );
   lines.push('');
-  lines.push('This file is generated by `node scripts/generate-docs.mjs`. Edit the examples in');
-  lines.push('`examples/features/` or the catalog in `examples/features/catalog.mjs` instead.');
+  lines.push(
+    'This file is generated by `node scripts/generate-docs.mjs`. Edit the examples in'
+  );
+  lines.push(
+    '`js/examples/features/` or the catalog in `js/examples/features/catalog.mjs` instead.'
+  );
   lines.push('');
-  lines.push('## Runtime parity');
+  lines.push('## Language and runtime parity');
   lines.push('');
-  lines.push(`All ${report.features.length} examples were executed in ${runtimes.map(runtime => `${runtime.label} ${runtime.version}`).join(', ')}.`);
+  lines.push(
+    `All ${report.features.length} examples were executed in JavaScript and Rust. JavaScript was checked in ${runtimes.map((runtime) => runtime.label).join(' and ')}.`
+  );
   lines.push('');
-  lines.push(`| Feature | ${runtimes.map(runtime => runtime.label).join(' | ')} |`);
-  lines.push(`| --- | ${runtimes.map(() => '---').join(' | ')} |`);
+  lines.push(
+    `| Feature | ${runtimes.map((runtime) => `JavaScript (${runtime.label})`).join(' | ')} | Rust |`
+  );
+  lines.push(`| --- | ${runtimes.map(() => '---').join(' | ')} | --- |`);
   for (const run of report.features) {
-    const feature = features.find(entry => entry.id === run.id);
-    const cells = runtimes.map(runtime => (run.runs[runtime.id]?.failed ? '✗' : '✓'));
-    lines.push(`| [${feature.title}](features/${feature.id}.md) | ${cells.join(' | ')} |`);
+    const feature = features.find((entry) => entry.id === run.id);
+    const cells = runtimes.map((runtime) =>
+      run.runs[runtime.id]?.failed ? '✗' : '✓'
+    );
+    lines.push(
+      `| [${feature.title}](features/${feature.id}.md) | ${cells.join(' | ')} | ${run.rust.failed ? '✗' : '✓'} |`
+    );
   }
   lines.push('');
   lines.push('## Library comparison');
   lines.push('');
-  lines.push('✓ supported, — not supported. Follow a feature for the code in each library.');
+  lines.push(
+    '✓ supported, — not supported. Follow a feature for the code in each library.'
+  );
   lines.push('');
-  const others = libraries.filter(library => library.id !== 'command-stream');
-  lines.push(`| Feature | command-stream | ${others.map(library => library.name).join(' | ')} |`);
+  const others = libraries.filter((library) => library.id !== 'command-stream');
+  lines.push(
+    `| Feature | command-stream | ${others.map((library) => library.name).join(' | ')} |`
+  );
   lines.push(`| --- | --- | ${others.map(() => '---').join(' | ')} |`);
   for (const feature of features) {
-    const cells = others.map(library => {
+    const cells = others.map((library) => {
       const alternative = alternativeText(feature.alternatives[library.id]);
       return alternative?.supported ? '✓' : '—';
     });
-    lines.push(`| [${feature.title}](features/${feature.id}.md) | ✓ | ${cells.join(' | ')} |`);
+    lines.push(
+      `| [${feature.title}](features/${feature.id}.md) | ✓ | ${cells.join(' | ')} |`
+    );
   }
   lines.push('');
   lines.push('## Features by category');
   lines.push('');
   for (const category of categories) {
-    const inCategory = features.filter(feature => feature.category === category);
-    if (inCategory.length === 0) continue;
+    const inCategory = features.filter(
+      (feature) => feature.category === category
+    );
+    if (inCategory.length === 0) {
+      continue;
+    }
     lines.push(`### ${category}`);
     lines.push('');
     for (const feature of inCategory) {
-      lines.push(`- [${feature.title}](features/${feature.id}.md) — ${feature.summary}`);
+      lines.push(
+        `- [${feature.title}](features/${feature.id}.md) — ${feature.summary}`
+      );
     }
     lines.push('');
   }
@@ -170,7 +242,9 @@ function indexPage(report) {
   lines.push('| Library | Version | Runs in |');
   lines.push('| --- | --- | --- |');
   for (const library of libraries) {
-    lines.push(`| [${library.name}](${library.url}) | ${library.version ?? 'this repository'} | ${library.runtimes.join(', ')} |`);
+    lines.push(
+      `| [${library.name}](${library.url}) | ${library.version ?? 'this repository'} | ${library.runtimes.join(', ')} |`
+    );
   }
   lines.push('');
   return lines.join('\n');
@@ -178,20 +252,36 @@ function indexPage(report) {
 
 // -------------------------------------------------------------------- website
 
+// Keeping the site in one template makes the single-file Pages artifact
+// portable and avoids a second asset-generation pipeline.
+// eslint-disable-next-line max-lines-per-function
 function website(report) {
-  const others = libraries.filter(library => library.id !== 'command-stream');
   const data = {
-    runtimes: report.runtimes.map(runtime => ({ id: runtime.id, label: runtime.label, version: runtime.version })),
+    runtimes: report.runtimes.map((runtime) => ({
+      id: runtime.id,
+      label: runtime.label,
+    })),
+    languages,
     libraries,
     categories,
-    features: features.map(feature => {
-      const run = report.features.find(entry => entry.id === feature.id);
-      const reports = report.runtimes.map(runtime => run.runs[runtime.id]?.report ?? '');
+    features: features.map((feature) => {
+      const run = report.features.find((entry) => entry.id === feature.id);
+      const reports = report.runtimes.map(
+        (runtime) => run.runs[runtime.id]?.report ?? ''
+      );
       return {
         ...feature,
         source: run.source.trimEnd(),
-        identicalOutput: reports.every(text => text === reports[0]),
-        output: Object.fromEntries(report.runtimes.map((runtime, index) => [runtime.id, reports[index].trimEnd()])),
+        rustApi: rustApiByFeature.get(feature.id),
+        rustSource: run.rust.source.trimEnd(),
+        rustOutput: run.rust.report.trimEnd(),
+        identicalOutput: reports.every((text) => text === reports[0]),
+        output: Object.fromEntries(
+          report.runtimes.map((runtime, index) => [
+            runtime.id,
+            reports[index].trimEnd(),
+          ])
+        ),
       };
     }),
   };
@@ -229,7 +319,7 @@ footer { padding: 1rem 1.5rem 3rem; opacity: .7; font-size: .85rem; }
 <body>
 <header>
   <h1>command-stream — feature comparison</h1>
-  <p class="lede">Every feature, the output it produced in each runtime, and the same thing in other shell libraries.</p>
+  <p class="lede">Every feature in JavaScript and Rust, plus equivalent code in other shell libraries.</p>
 </header>
 <main>
   <nav>
@@ -239,7 +329,7 @@ footer { padding: 1rem 1.5rem 3rem; opacity: .7; font-size: .85rem; }
   </nav>
   <section id="content"></section>
 </main>
-<footer>Generated by <code>node scripts/generate-docs.mjs</code> from <code>examples/features/</code>.</footer>
+<footer>Generated from executable examples in <code>js/examples/features/</code> and <code>rust/examples/language_features.rs</code>.</footer>
 <script id="data" type="application/json">${JSON.stringify(data).replace(/</g, '\\u003c')}</script>
 <script>
 const data = JSON.parse(document.getElementById('data').textContent);
@@ -270,10 +360,10 @@ function markActive() {
 }
 
 function overview() {
-  const runtimeHeader = data.runtimes.map(runtime => '<th>' + escape(runtime.label) + ' ' + escape(runtime.version) + '</th>').join('');
+  const runtimeHeader = data.runtimes.map(runtime => '<th>JavaScript (' + escape(runtime.label) + ')</th>').join('') + '<th>Rust</th>';
   const runtimeRows = data.features.map(feature =>
     '<tr><td><a href="#' + feature.id + '">' + escape(feature.title) + '</a></td>' +
-    data.runtimes.map(() => '<td>&#10003;</td>').join('') + '</tr>').join('');
+    data.runtimes.map(() => '<td>&#10003;</td>').join('') + '<td>&#10003;</td></tr>').join('');
 
   const libraryHeader = others.map(library => '<th>' + escape(library.name) + '</th>').join('');
   const libraryRows = data.features.map(feature =>
@@ -284,8 +374,8 @@ function overview() {
       return '<td>' + (supported ? '&#10003;' : '&mdash;') + '</td>';
     }).join('') + '</tr>').join('');
 
-  return '<h2>Runtime parity</h2>' +
-    '<p>Every example below was executed in each runtime and produced the same output.</p>' +
+  return '<h2>Language and runtime parity</h2>' +
+    '<p>Every feature below has an executable JavaScript and Rust example. JavaScript output is also compared across Node and Bun.</p>' +
     '<table><thead><tr><th>Feature</th>' + runtimeHeader + '</tr></thead><tbody>' + runtimeRows + '</tbody></table>' +
     '<h2>Library comparison</h2>' +
     '<table><thead><tr><th>Feature</th><th>command-stream</th>' + libraryHeader + '</tr></thead><tbody>' + libraryRows + '</tbody></table>';
@@ -293,7 +383,7 @@ function overview() {
 
 function featureView(feature) {
   const output = feature.identicalOutput
-    ? '<p>Identical in ' + data.runtimes.map(runtime => escape(runtime.label) + ' ' + escape(runtime.version)).join(', ') + ':</p><pre><code>' + escape(feature.output[data.runtimes[0].id]) + '</code></pre>'
+    ? '<p>Identical in ' + data.runtimes.map(runtime => escape(runtime.label)).join(' and ') + ':</p><pre><code>' + escape(feature.output[data.runtimes[0].id]) + '</code></pre>'
     : data.runtimes.map(runtime => '<h4>' + escape(runtime.label) + '</h4><pre><code>' + escape(feature.output[runtime.id]) + '</code></pre>').join('');
 
   const comparison = others.map(library => {
@@ -307,9 +397,14 @@ function featureView(feature) {
   return '<h2>' + escape(feature.title) + '</h2>' +
     '<p>' + escape(feature.summary) + '</p>' +
     '<p><span class="badge">' + escape(feature.category) + '</span> ' +
+    '</p><h3>JavaScript</h3><p>' +
     feature.api.map(name => '<span class="badge"><code>' + escape(name) + '</code></span>').join(' ') + '</p>' +
-    '<h3>Example</h3><pre><code>' + escape(feature.source) + '</code></pre>' +
-    '<h3>Output</h3>' + output +
+    '<h4>Example</h4><pre><code>' + escape(feature.source) + '</code></pre>' +
+    '<h4>Output</h4>' + output +
+    '<h3>Rust</h3><p>' +
+    feature.rustApi.map(name => '<span class="badge"><code>' + escape(name) + '</code></span>').join(' ') + '</p>' +
+    '<h4>Example</h4><pre><code>' + escape(feature.rustSource) + '</code></pre>' +
+    '<h4>Output</h4><pre><code>' + escape(feature.rustOutput) + '</code></pre>' +
     '<h3>The same thing in other libraries</h3>' + comparison;
 }
 
@@ -335,32 +430,56 @@ render();
 
 const report = await runExamples();
 
-const broken = report.features.filter(feature => !feature.parity);
+const broken = report.features.filter((feature) => !feature.parity);
 if (broken.length > 0) {
-  console.error(`Refusing to document behaviour that differs between runtimes: ${broken.map(feature => feature.id).join(', ')}`);
+  console.error(
+    `Refusing to document behaviour that differs between runtimes: ${broken.map((feature) => feature.id).join(', ')}`
+  );
   console.error('Run `node scripts/check-parity.mjs` to see the differences.');
   process.exit(1);
 }
 
 for (const feature of features) {
-  const run = report.features.find(entry => entry.id === feature.id);
-  emit(path.join('docs', 'features', `${feature.id}.md`), featurePage(feature, run, report.runtimes));
+  const run = report.features.find((entry) => entry.id === feature.id);
+  emit(
+    path.join('docs', 'features', `${feature.id}.md`),
+    featurePage(feature, run, report.runtimes)
+  );
 }
 emit(path.join('docs', 'README.md'), indexPage(report));
 emit(path.join('docs', 'site', 'index.html'), website(report));
+
+const prettierConfig =
+  (await prettier.resolveConfig(path.join(root, 'README.md'))) ?? {};
+for (const [relativePath, contents] of generated) {
+  generated.set(
+    relativePath,
+    await prettier.format(contents, {
+      ...prettierConfig,
+      filepath: path.join(root, relativePath),
+    })
+  );
+}
 
 if (checkOnly) {
   const stale = [];
   for (const [relativePath, contents] of generated) {
     const absolute = path.join(root, relativePath);
-    if (!fs.existsSync(absolute) || fs.readFileSync(absolute, 'utf8') !== contents) {
+    if (
+      !fs.existsSync(absolute) ||
+      fs.readFileSync(absolute, 'utf8') !== contents
+    ) {
       stale.push(relativePath);
     }
   }
   if (stale.length > 0) {
     console.error('Generated documentation is out of date:');
-    for (const file of stale) console.error(`  ${file}`);
-    console.error('\nRun `node scripts/generate-docs.mjs` and commit the result.');
+    for (const file of stale) {
+      console.error(`  ${file}`);
+    }
+    console.error(
+      '\nRun `node scripts/generate-docs.mjs` and commit the result.'
+    );
     process.exit(1);
   }
   console.log(`Documentation is up to date (${generated.size} files).`);

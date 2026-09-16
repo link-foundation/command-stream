@@ -75,8 +75,10 @@ describe('repository language layout', () => {
     );
   });
 
-  test('does not keep language release scripts at the repository root', () => {
-    expect(existsFromRepo('scripts')).toBe(false);
+  test('keeps shared tooling at root and language release scripts in their packages', () => {
+    expect(existsFromRepo('scripts')).toBe(true);
+    expect(existsFromRepo('scripts/check-parity.mjs')).toBe(true);
+    expect(existsFromRepo('scripts/generate-docs.mjs')).toBe(true);
     expect(existsFromRepo('scripts/publish-to-npm.mjs')).toBe(false);
     expect(existsFromRepo('scripts/publish-to-crates.mjs')).toBe(false);
     expect(existsFromRepo('scripts/sync-rust-version.mjs')).toBe(false);
