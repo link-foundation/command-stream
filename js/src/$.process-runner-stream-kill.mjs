@@ -8,6 +8,12 @@ import { createResult } from './$.result.mjs';
 const isBun = typeof globalThis.Bun !== 'undefined';
 
 /**
+ * Default milliseconds a child is given to handle the kill signal before
+ * SIGKILL follows. Mirrors the Rust `kill_grace_ms` default.
+ */
+const DEFAULT_KILL_GRACE = 100;
+
+/**
  * Send a signal to a process and its group
  * @param {number} pid - Process ID
  * @param {string} sig - Signal name (e.g., 'SIGTERM', 'SIGKILL')
@@ -47,50 +53,126 @@ function sendSignalToProcess(pid, sig, runtime) {
 }
 
 /**
+ * Check whether a process still exists, without signalling it.
+ * @param {number} pid - Process ID
+ * @returns {boolean} True when the process is still alive
+ */
+function processIsAlive(pid) {
+  try {
+    // Signal 0 performs the permission and existence checks without delivery.
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Is anything from the original command still running?
+ *
+ * The check must cover the same target the signal was delivered to: the direct
+ * child *and* its process group. A shell wrapper frequently dies on the first
+ * signal while the grandchild doing the real work survives and is reparented to
+ * init; looking only at the direct child would report "already gone" and skip
+ * the escalation, leaving that grandchild running forever.
+ *
+ * @param {number} pid - Process ID of the direct child / group leader
+ * @returns {boolean} True when the process or any group member is still alive
+ */
+function processTreeIsAlive(pid) {
+  return processIsAlive(pid) || processIsAlive(-pid);
+}
+
+/**
+ * Schedule the forceful SIGKILL escalation that guarantees termination.
+ *
+ * The escalation is deliberately deferred: sending SIGKILL in the same tick as
+ * the requested signal means a child that handles SIGTERM (to flush output,
+ * remove a lock file, stop its own children) is destroyed before its handler
+ * can run, so a "graceful" stop was never actually graceful.
+ *
+ * @param {number} pid - Process ID
+ * @param {number} graceMilliseconds - Time to wait before SIGKILL
+ * @param {string} runtime - Runtime identifier for logging
+ */
+function scheduleForcefulEscalation(pid, graceMilliseconds, runtime) {
+  if (!(graceMilliseconds > 0)) {
+    sendSignalToProcess(pid, 'SIGKILL', runtime);
+    return;
+  }
+
+  const timer = setTimeout(() => {
+    if (!processTreeIsAlive(pid)) {
+      trace(
+        'ProcessRunner',
+        () => `Process ${pid} exited within the grace period; no SIGKILL needed`
+      );
+      return;
+    }
+    trace(
+      'ProcessRunner',
+      () => `Grace period elapsed, escalating to SIGKILL for process ${pid}`
+    );
+    sendSignalToProcess(pid, 'SIGKILL', runtime);
+  }, graceMilliseconds);
+
+  // The escalation must never be the reason the process stays alive: an
+  // unref'd timer lets the runtime exit as soon as everything else is done.
+  timer.unref?.();
+}
+
+/**
  * Kill a child process with escalating signals
  * @param {object} child - Child process object
  * @param {string} [signal] - Signal to send first (default 'SIGTERM')
+ * @param {number} [graceMilliseconds] - Time the child is given to handle the
+ *   signal before SIGKILL follows (default 100)
  */
-function killChildProcess(child, signal = 'SIGTERM') {
+function killChildProcess(
+  child,
+  signal = 'SIGTERM',
+  graceMilliseconds = DEFAULT_KILL_GRACE
+) {
   if (!child || !child.pid) {
     return;
   }
 
   const runtime = isBun ? 'Bun' : 'Node';
+  const pid = child.pid;
   trace(
     'ProcessRunner',
     () =>
-      `Killing ${runtime} process | ${JSON.stringify({ pid: child.pid, signal }, null, 2)}`
+      `Killing ${runtime} process | ${JSON.stringify({ pid, signal, graceMilliseconds }, null, 2)}`
   );
 
-  // Send the configured signal first, then escalate to SIGKILL to guarantee
-  // termination even if the process ignores or handles the first signal.
-  // When the configured signal already is SIGKILL we skip the redundant second
-  // delivery.
-  const killOperations = [];
-  killOperations.push(...sendSignalToProcess(child.pid, signal, runtime));
-  if (signal !== 'SIGKILL') {
-    killOperations.push(...sendSignalToProcess(child.pid, 'SIGKILL', runtime));
-  }
+  // Send the requested signal first, then escalate to SIGKILL once the grace
+  // period has passed, so termination is still guaranteed for a process that
+  // ignores the signal. When the requested signal already is SIGKILL there is
+  // nothing to wait for and no second delivery to make.
+  const killOperations = sendSignalToProcess(pid, signal, runtime);
 
   trace(
     'ProcessRunner',
     () => `${runtime} kill operations attempted: ${killOperations.join(', ')}`
   );
 
-  if (isBun) {
-    try {
-      child.kill();
-      trace(
-        'ProcessRunner',
-        () => `Called child.kill() for Bun process ${child.pid}`
-      );
-    } catch (err) {
-      trace(
-        'ProcessRunner',
-        () => `Error calling child.kill(): ${err.message}`
-      );
+  if (signal === 'SIGKILL') {
+    if (isBun) {
+      try {
+        child.kill();
+        trace(
+          'ProcessRunner',
+          () => `Called child.kill() for Bun process ${pid}`
+        );
+      } catch (err) {
+        trace(
+          'ProcessRunner',
+          () => `Error calling child.kill(): ${err.message}`
+        );
+      }
     }
+  } else {
+    scheduleForcefulEscalation(pid, graceMilliseconds, runtime);
   }
 
   child.removeAllListeners?.();
@@ -236,7 +318,7 @@ function killRunner(runner, signal) {
   if (runner.child && !runner.finished) {
     trace('ProcessRunner', () => `Killing child process ${runner.child.pid}`);
     try {
-      killChildProcess(runner.child, signal);
+      killChildProcess(runner.child, signal, runner.options?.killGrace);
       runner.child = null;
     } catch (err) {
       trace('ProcessRunner', () => `Error killing process: ${err.message}`);

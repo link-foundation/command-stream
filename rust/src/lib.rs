@@ -68,6 +68,7 @@ pub mod events;
 pub mod macros;
 pub mod pipeline;
 pub mod quote;
+pub mod signal;
 pub mod state;
 pub mod stream;
 pub mod terminal;
@@ -98,6 +99,7 @@ pub use quote::{
     is_pre_quoted_passthrough_enabled, is_quote_context_enabled, quote, quote_for_context,
     scan_quote_context, QuoteContext,
 };
+pub use signal::{signal_exit_code, signal_number, DEFAULT_KILL_GRACE_MS, DEFAULT_KILL_SIGNAL};
 pub use state::{
     get_shell_settings, global_state, reset_global_state, set_shell_option, unset_shell_option,
     GlobalState, ShellSettings,
@@ -283,6 +285,18 @@ pub struct RunOptions {
     pub shell_operators: bool,
     /// Enable tracing for this command
     pub trace: bool,
+    /// Signal used to stop the process when it is killed without an explicit
+    /// signal, i.e. [`ProcessRunner::kill`] (default `SIGTERM`).
+    ///
+    /// Mirrors the JavaScript `killSignal` option. An explicit
+    /// [`ProcessRunner::kill_with`] argument always overrides it.
+    pub kill_signal: String,
+    /// Milliseconds the child is given to handle the kill signal before
+    /// `SIGKILL` is sent (default 100).
+    ///
+    /// Mirrors the JavaScript `killGrace` option. This is the window in which a
+    /// child running its own signal handler can shut down on its own terms.
+    pub kill_grace_ms: u64,
 }
 
 impl Default for RunOptions {
@@ -296,6 +310,8 @@ impl Default for RunOptions {
             interactive: false,
             shell_operators: true,
             trace: true,
+            kill_signal: signal::DEFAULT_KILL_SIGNAL.to_string(),
+            kill_grace_ms: signal::DEFAULT_KILL_GRACE_MS,
         }
     }
 }
@@ -556,12 +572,69 @@ impl ProcessRunner {
         }
     }
 
-    /// Kill the process
+    /// Stop the process using the configured kill signal
+    /// ([`RunOptions::kill_signal`], default `SIGTERM`).
+    ///
+    /// Mirrors the JavaScript `kill()` with no argument.
     pub fn kill(&mut self) -> Result<()> {
+        let signal = self.options.kill_signal.clone();
+        self.kill_with(&signal)
+    }
+
+    /// Stop the process using an explicit signal, overriding
+    /// [`RunOptions::kill_signal`] for this call.
+    ///
+    /// Mirrors the JavaScript `kill(signal)`. The signal is delivered to the
+    /// child and its process group, so grandchildren behind a `sh -c` wrapper
+    /// are stopped too. The child then has [`RunOptions::kill_grace_ms`] to run
+    /// its own handler before `SIGKILL` follows, so a process that ignores the
+    /// signal still terminates.
+    ///
+    /// ```no_run
+    /// use command_stream::{ProcessRunner, RunOptions};
+    ///
+    /// # #[tokio::main]
+    /// # async fn main() -> command_stream::Result<()> {
+    /// let mut runner = ProcessRunner::new("sleep 30", RunOptions::default());
+    /// runner.start().await?;
+    /// runner.kill_with("SIGINT")?; // the CTRL+C signal
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn kill_with(&mut self, signal: &str) -> Result<()> {
         self.cancelled = true;
-        if let Some(ref mut child) = self.child {
+        utils::trace_lazy("ProcessRunner", || format!("kill | signal={signal}"));
+
+        let Some(child) = self.child.as_mut() else {
+            return Ok(());
+        };
+
+        // Without a pid the process never spawned (or was already reaped);
+        // fall back to the forceful stop so `kill()` still terminates it.
+        let Some(pid) = child.id() else {
             child.start_kill()?;
+            return Ok(());
+        };
+
+        signal::send_signal_to_process(pid, signal);
+
+        // `SIGKILL` cannot be handled, so there is nothing to wait for.
+        if signal == "SIGKILL" {
+            let _ = child.start_kill();
+            return Ok(());
         }
+
+        // Escalate in the background so the child keeps its grace period
+        // without blocking the caller, which may not be inside an await point.
+        let grace = self.options.kill_grace_ms;
+        tokio::spawn(async move {
+            tokio::time::sleep(std::time::Duration::from_millis(grace)).await;
+            // Best effort: if the child already exited on the first signal this
+            // delivery simply fails, and the pid has not been reused because
+            // the `Child` handle above has not reaped it yet.
+            signal::send_signal_to_process(pid, "SIGKILL");
+        });
+
         Ok(())
     }
 
