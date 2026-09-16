@@ -1,0 +1,106 @@
+name: Workflows
+
+# Lints the workflows themselves. Nothing else in CI reads .github/workflows/**,
+# so before this existed a broken `if:` condition, an unquoted variable in a
+# `run:` block or an unpinned third-party action reached main unchallenged.
+
+on:
+  push:
+    branches: [main]
+    paths: ['.github/**']
+  pull_request:
+    paths: ['.github/**']
+  workflow_dispatch:
+
+# Keep the workflow read-only unless a job explicitly needs an additional scope.
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    name: Actionlint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-actionlint
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # The merge simulation below needs the base branch's history.
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Run the checks below against the real merge result rather than a
+      # possibly stale merge preview, and fail on a conflict here rather than at
+      # merge time. Rationale in .github/scripts/simulate-fresh-merge.sh.
+      - name: Simulate a fresh merge with the base branch
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash .github/scripts/simulate-fresh-merge.sh
+
+      # The Docker image bundles shellcheck and pyflakes, so this also lints
+      # every `run:` block. A *native* actionlint binary without shellcheck on
+      # PATH silently skips the shell checks and exits 0. Reproduce locally with
+      # the same image:
+      #   docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -color
+      - uses: docker://rhysd/actionlint:1.7.7
+        with:
+          args: -color
+
+  zizmor:
+    name: Zizmor
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-zizmor
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # The merge simulation below needs the base branch's history.
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Run the checks below against the real merge result rather than a
+      # possibly stale merge preview, and fail on a conflict here rather than at
+      # merge time. Rationale in .github/scripts/simulate-fresh-merge.sh.
+      - name: Simulate a fresh merge with the base branch
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash .github/scripts/simulate-fresh-merge.sh
+
+      # actionlint cannot see workflow *security* defects: unpinned third-party
+      # actions, checkouts that persist `GITHUB_TOKEN` in `.git/config`, or
+      # template injection into `run:` blocks. zizmor covers those. Reproduce
+      # locally with the same configuration:
+      #   pipx run zizmor --config .github/zizmor.yml \
+      #     --min-confidence medium --persona regular .github/workflows
+      #
+      # Annotations instead of SARIF: code scanning is not enabled on forks, and
+      # the job should fail loudly either way.
+      - uses: zizmorcore/zizmor-action@v0.6.2
+        with:
+          advanced-security: false
+          annotations: true
+          config: .github/zizmor.yml
+          # Low, not medium: `artipacked` is a Low-confidence audit, so
+          # `medium` hides every checkout that persists credentials -- the exact
+          # blind spot reported upstream as js-template#160. At `low` the six
+          # writer jobs that need the credential carry an
+          # inline artipacked suppression, and everything else has to set
+          # persist-credentials: false.
+          min-confidence: low
+          # Audit the workflows this repository runs, not every workflow file
+          # in the tree. The action's default input is `.`, which also collects
+          # docs/case-studies/**/templates/** -- verbatim archived copies of
+          # other repositories' workflows, kept as evidence and deliberately not
+          # edited. Auditing those reported 30 findings in files that never run
+          # here and that a fix would falsify.
+          inputs: .github/workflows
