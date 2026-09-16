@@ -11,6 +11,6 @@ time, so the same value is reported from `await`, `.sync()`, `.stream()` and the
 `streams` getters, and it stays readable after the command is done.
 
 Documents the behavior in "Process ID of a Running Command" - including what the
-id names (the shell wrapper, which leads its own process group, unless `exec`
-mode is used) and why built-in commands have none - and adds a runnable
-`examples/process-pid-access.mjs`.
+id names (the process the shell put there, which leads its own process group,
+unless `exec` mode is used to skip the shell) and why built-in commands have
+none - and adds a runnable `examples/process-pid-access.mjs`.
