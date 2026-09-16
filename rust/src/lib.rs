@@ -609,33 +609,47 @@ impl ProcessRunner {
             return Ok(());
         };
 
-        // Without a pid the process never spawned (or was already reaped);
-        // fall back to the forceful stop so `kill()` still terminates it.
-        let Some(pid) = child.id() else {
+        // Windows has no signals to deliver and no handler for the child to
+        // run, so there is nothing to grant a grace period to: the forceful
+        // stop is the only way to end the process.
+        #[cfg(not(unix))]
+        {
+            let _ = signal;
             child.start_kill()?;
-            return Ok(());
-        };
-
-        signal::send_signal_to_process(pid, signal);
-
-        // `SIGKILL` cannot be handled, so there is nothing to wait for.
-        if signal == "SIGKILL" {
-            let _ = child.start_kill();
             return Ok(());
         }
 
-        // Escalate in the background so the child keeps its grace period
-        // without blocking the caller, which may not be inside an await point.
-        let grace = self.options.kill_grace_ms;
-        tokio::spawn(async move {
-            tokio::time::sleep(std::time::Duration::from_millis(grace)).await;
-            // Best effort: if the child already exited on the first signal this
-            // delivery simply fails, and the pid has not been reused because
-            // the `Child` handle above has not reaped it yet.
-            signal::send_signal_to_process(pid, "SIGKILL");
-        });
+        // Without a pid the process never spawned (or was already reaped);
+        // fall back to the forceful stop so `kill()` still terminates it.
+        #[cfg(unix)]
+        {
+            let Some(pid) = child.id() else {
+                child.start_kill()?;
+                return Ok(());
+            };
 
-        Ok(())
+            signal::send_signal_to_process(pid, signal);
+
+            // `SIGKILL` cannot be handled, so there is nothing to wait for.
+            if signal == "SIGKILL" {
+                let _ = child.start_kill();
+                return Ok(());
+            }
+
+            // Escalate in the background so the child keeps its grace period
+            // without blocking the caller, which may not be inside an await
+            // point.
+            let grace = self.options.kill_grace_ms;
+            tokio::spawn(async move {
+                tokio::time::sleep(std::time::Duration::from_millis(grace)).await;
+                // Best effort: if the child already exited on the first signal
+                // this delivery simply fails, and the pid has not been reused
+                // because the `Child` handle above has not reaped it yet.
+                signal::send_signal_to_process(pid, "SIGKILL");
+            });
+
+            Ok(())
+        }
     }
 
     /// Check if the process is finished
