@@ -650,6 +650,48 @@ function createResult({ code, stdout = '', stderr = '', stdin = '' }) {
   };
 }
 
+// 'inherit', 'ignore' and 'pipe' are stdio mode sentinels, not payloads.
+// Only real string/Buffer input is data that can be handed to a virtual command.
+function resolveStdinData(stdin) {
+  if (typeof stdin === 'string') {
+    return (stdin === 'inherit' || stdin === 'ignore' || stdin === 'pipe') ? '' : stdin;
+  }
+  if (Buffer.isBuffer(stdin)) return stdin.toString('utf8');
+  return '';
+}
+
+// Applies `>` and `>>` redirects the way a POSIX shell does: every target file is
+// opened (created, and truncated for `>`), but only the last redirect receives
+// the command output.
+function applyOutputRedirects(redirects, stdout) {
+  for (let i = 0; i < redirects.length; i++) {
+    const { type, target } = redirects[i];
+    const data = i === redirects.length - 1 ? (stdout ?? '') : '';
+    if (type === '>') {
+      fs.writeFileSync(target, data);
+    } else {
+      fs.appendFileSync(target, data);
+    }
+  }
+}
+
+// Bun.$ compatibility: every result object exposes an async text() method.
+// Some execution paths build plain result literals, so this normalizes them.
+function ensureTextMethod(result) {
+  if (!result || typeof result !== 'object' || typeof result.text === 'function') {
+    return result;
+  }
+  Object.defineProperty(result, 'text', {
+    value: async function text() {
+      return result.stdout ?? '';
+    },
+    writable: true,
+    configurable: true,
+    enumerable: false
+  });
+  return result;
+}
+
 const virtualCommands = new Map();
 
 let virtualCommandsEnabled = true;
@@ -1198,6 +1240,11 @@ class ProcessRunner extends StreamEmitter {
       return this.result || result;
     }
 
+    // Guarantee the documented Bun.$ compatible `.text()` method on every result,
+    // regardless of which execution path produced it (system, built-in, virtual,
+    // pipeline, sync or async).
+    ensureTextMethod(result);
+
     // Store result
     this.result = result;
     trace('ProcessRunner', () => `Result stored, about to emit events`);
@@ -1684,6 +1731,21 @@ class ProcessRunner extends StreamEmitter {
             return await this._runPipeline(enhancedParsed.commands);
           }
         }
+      }
+
+      // Redirection (`>`, `>>`, `<`) for built-in and virtual commands.
+      // The simple parser below has no notion of redirects, so without this
+      // `echo hi > file` would hand ">" and "file" to the built-in echo as plain
+      // arguments. Commands that only use real binaries keep going to the shell,
+      // which redirects them natively.
+      const redirection = this._parseRedirection(this.spec.command);
+      if (redirection) {
+        trace('ProcessRunner', () => `BRANCH: redirection => ${JSON.stringify({
+          stages: redirection.commands.length,
+          outputs: redirection.outputs.map(r => `${r.type} ${r.target}`),
+          inputFile: redirection.inputFile
+        }, null, 2)}`);
+        return await this._runRedirected(redirection);
       }
 
       // Fallback to original simple parser
@@ -2284,6 +2346,26 @@ class ProcessRunner extends StreamEmitter {
     return { type: 'pipeline', commands };
   }
 
+  // Builds the argument object handed to a virtual command handler.
+  // The shape is identical for standalone commands and for commands inside a
+  // pipeline, in every runtime, so handlers behave the same everywhere.
+  _virtualContext(argValues, stdinData) {
+    const { stdin: _stdinOption, ...optionsWithoutStdin } = this.options;
+    return {
+      // Legacy top-level option spread, kept for backwards compatibility
+      ...optionsWithoutStdin,
+      args: argValues,
+      stdin: stdinData,
+      // Documented convenience fields. They are always resolved, so a handler
+      // can rely on them whether or not the caller passed cwd/env explicitly.
+      cwd: this.options.cwd ?? process.cwd(),
+      env: this.options.env ?? process.env,
+      options: this.options,
+      abortSignal: this._abortController?.signal,
+      isCancelled: () => this._cancelled
+    };
+  }
+
   async _runVirtual(cmd, args, originalCommand = null) {
     trace('ProcessRunner', () => `_runVirtual ENTER | ${JSON.stringify({ cmd, args, originalCommand }, null, 2)}`);
 
@@ -2317,10 +2399,8 @@ class ProcessRunner extends StreamEmitter {
         };
         const realRunner = new ProcessRunner({ mode: 'shell', command: originalCommand || cmd }, modifiedOptions);
         return await realRunner._doStartAsync();
-      } else if (this.options.stdin && typeof this.options.stdin === 'string') {
-        stdinData = this.options.stdin;
-      } else if (this.options.stdin && Buffer.isBuffer(this.options.stdin)) {
-        stdinData = this.options.stdin.toString('utf8');
+      } else {
+        stdinData = resolveStdinData(this.options.stdin);
       }
 
       // Extract actual values for virtual command
@@ -2339,15 +2419,6 @@ class ProcessRunner extends StreamEmitter {
       if (handler.constructor.name === 'AsyncGeneratorFunction') {
         const chunks = [];
 
-        const commandOptions = {
-          // Commonly used options at top level for convenience
-          cwd: this.options.cwd,
-          env: this.options.env,
-          // All original options (built-in + custom) in options object
-          options: this.options,
-          isCancelled: () => this._cancelled
-        };
-        
         trace('ProcessRunner', () => `_runVirtual signal details | ${JSON.stringify({
           cmd,
           hasAbortController: !!this._abortController,
@@ -2356,12 +2427,7 @@ class ProcessRunner extends StreamEmitter {
           optionsSignalAborted: this.options.signal?.aborted
         }, null, 2)}`);
 
-        const generator = handler({ 
-          args: argValues, 
-          stdin: stdinData, 
-          abortSignal: this._abortController?.signal,
-          ...commandOptions 
-        });
+        const generator = handler(this._virtualContext(argValues, stdinData));
         this._virtualGenerator = generator;
 
         const cancelPromise = new Promise(resolve => {
@@ -2449,15 +2515,6 @@ class ProcessRunner extends StreamEmitter {
         };
       } else {
         // Regular async function - race with abort signal
-        const commandOptions = {
-          // Commonly used options at top level for convenience
-          cwd: this.options.cwd,
-          env: this.options.env,
-          // All original options (built-in + custom) in options object
-          options: this.options,
-          isCancelled: () => this._cancelled
-        };
-        
         trace('ProcessRunner', () => `_runVirtual signal details (non-generator) | ${JSON.stringify({
           cmd,
           hasAbortController: !!this._abortController,
@@ -2466,12 +2523,7 @@ class ProcessRunner extends StreamEmitter {
           optionsSignalAborted: this.options.signal?.aborted
         }, null, 2)}`);
         
-        const handlerPromise = handler({ 
-          args: argValues, 
-          stdin: stdinData, 
-          abortSignal: this._abortController?.signal,
-          ...commandOptions 
-        });
+        const handlerPromise = handler(this._virtualContext(argValues, stdinData));
         
         // Create an abort promise that rejects when cancelled
         const abortPromise = new Promise((_, reject) => {
@@ -2960,11 +3012,13 @@ class ProcessRunner extends StreamEmitter {
     let currentInputStream = null;
     let finalOutput = '';
     let allStderr = '';
+    // Exit code of every stage (a number for virtual commands, a promise for
+    // spawned processes) so the pipeline can report the same code as Node.js.
+    const stageCodes = [];
 
-    if (this.options.stdin) {
-      const inputData = typeof this.options.stdin === 'string'
-        ? this.options.stdin
-        : this.options.stdin.toString('utf8');
+    const pipelineInput = resolveStdinData(this.options.stdin);
+    if (pipelineInput) {
+      const inputData = pipelineInput;
 
       currentInputStream = new ReadableStream({
         start(controller) {
@@ -3005,34 +3059,42 @@ class ProcessRunner extends StreamEmitter {
         if (handler.constructor.name === 'AsyncGeneratorFunction') {
           const chunks = [];
           const self = this; // Capture this context
+          let generatorDone;
           currentInputStream = new ReadableStream({
-            async start(controller) {
-              const { stdin: _, ...optionsWithoutStdin } = self.options;
-              for await (const chunk of handler({ args: argValues, stdin: inputData, ...optionsWithoutStdin })) {
-                const data = Buffer.from(chunk);
-                controller.enqueue(data);
+            start(controller) {
+              generatorDone = (async () => {
+                for await (const chunk of handler(self._virtualContext(argValues, inputData))) {
+                  const data = Buffer.from(chunk);
+                  controller.enqueue(data);
 
-                // Emit for last command
-                if (isLastCommand) {
-                  chunks.push(data);
-                  if (self.options.mirror) {
-                    safeWrite(process.stdout, data);
+                  // Emit for last command
+                  if (isLastCommand) {
+                    chunks.push(data);
+                    if (self.options.mirror) {
+                      safeWrite(process.stdout, data);
+                    }
+                    self.emit('stdout', data);
+                    self.emit('data', { type: 'stdout', data });
                   }
-                  self.emit('stdout', data);
-                  self.emit('data', { type: 'stdout', data });
                 }
-              }
-              controller.close();
+                controller.close();
 
-              if (isLastCommand) {
-                finalOutput = Buffer.concat(chunks).toString('utf8');
-              }
+                if (isLastCommand) {
+                  finalOutput = Buffer.concat(chunks).toString('utf8');
+                }
+              })();
+              return generatorDone;
             }
           });
+          // Enqueueing never blocks, so waiting for the generator here cannot
+          // deadlock and it guarantees finalOutput is complete before the
+          // pipeline result is built.
+          await generatorDone;
+          stageCodes.push(0);
         } else {
           // Regular async function
-          const { stdin: _, ...optionsWithoutStdin } = this.options;
-          const result = await handler({ args: argValues, stdin: inputData, ...optionsWithoutStdin });
+          const result = await handler(this._virtualContext(argValues, inputData));
+          stageCodes.push(result.code ?? 0);
           const outputData = result.stdout || '';
 
           if (isLastCommand) {
@@ -3122,6 +3184,7 @@ class ProcessRunner extends StreamEmitter {
         }
 
         currentInputStream = proc.stdout;
+        stageCodes.push(proc.exited);
 
         (async () => {
           for await (const chunk of proc.stderr) {
@@ -3153,16 +3216,37 @@ class ProcessRunner extends StreamEmitter {
       }
     }
 
+    // A shell reports the exit code of the *last* stage, unless pipefail is set.
+    const exitCodes = await Promise.all(stageCodes);
+    const lastExitCode = exitCodes.length > 0 ? (exitCodes[exitCodes.length - 1] || 0) : 0;
+
+    if (globalShellSettings.pipefail) {
+      const failedIndex = exitCodes.findIndex(code => code !== 0);
+      if (failedIndex !== -1) {
+        const error = new Error(`Pipeline command at index ${failedIndex} failed with exit code ${exitCodes[failedIndex]}`);
+        error.code = exitCodes[failedIndex];
+        throw error;
+      }
+    }
+
     const result = createResult({
-      code: 0, // TODO: Track exit codes properly
+      code: lastExitCode,
       stdout: finalOutput,
       stderr: allStderr,
-      stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin :
-        this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
+      stdin: resolveStdinData(this.options.stdin)
     });
 
     // Finish the process with proper event emission order
     this.finish(result);
+
+    if (globalShellSettings.errexit && result.code !== 0) {
+      const error = new Error(`Pipeline failed with exit code ${result.code}`);
+      error.code = result.code;
+      error.stdout = result.stdout;
+      error.stderr = result.stderr;
+      error.result = result;
+      throw error;
+    }
 
     return result;
   }
@@ -3173,13 +3257,7 @@ class ProcessRunner extends StreamEmitter {
     }, null, 2)}`);
 
     let currentOutput = '';
-    let currentInput = '';
-
-    if (this.options.stdin && typeof this.options.stdin === 'string') {
-      currentInput = this.options.stdin;
-    } else if (this.options.stdin && Buffer.isBuffer(this.options.stdin)) {
-      currentInput = this.options.stdin.toString('utf8');
-    }
+    let currentInput = resolveStdinData(this.options.stdin);
 
     // Execute each command in the pipeline
     for (let i = 0; i < commands.length; i++) {
@@ -3212,7 +3290,7 @@ class ProcessRunner extends StreamEmitter {
           if (handler.constructor.name === 'AsyncGeneratorFunction') {
             trace('ProcessRunner', () => `BRANCH: _runPipelineNonStreaming => ASYNC_GENERATOR | ${JSON.stringify({ cmd }, null, 2)}`);
             const chunks = [];
-            for await (const chunk of handler({ args: argValues, stdin: currentInput, ...this.options })) {
+            for await (const chunk of handler(this._virtualContext(argValues, currentInput))) {
               chunks.push(Buffer.from(chunk));
             }
             result = {
@@ -3223,7 +3301,7 @@ class ProcessRunner extends StreamEmitter {
             };
           } else {
             // Regular async function
-            result = await handler({ args: argValues, stdin: currentInput, ...this.options });
+            result = await handler(this._virtualContext(argValues, currentInput));
             result = {
               ...result,
               code: result.code ?? 0,
@@ -3236,6 +3314,11 @@ class ProcessRunner extends StreamEmitter {
           // If this isn't the last command, pass stdout as stdin to next command
           if (i < commands.length - 1) {
             currentInput = result.stdout;
+            // A shell shows the stderr of every stage, not just of the last one.
+            if (result.stderr && this.options.capture) {
+              this.errChunks = this.errChunks || [];
+              this.errChunks.push(Buffer.from(result.stderr));
+            }
           } else {
             // This is the last command - emit output and store final result
             currentOutput = result.stdout;
@@ -3257,12 +3340,20 @@ class ProcessRunner extends StreamEmitter {
               this._emitProcessedData('stderr', buf);
             }
 
+            // Collect the stderr accumulated by the earlier stages as well.
+            let allStderr = '';
+            if (this.errChunks && this.errChunks.length > 0) {
+              allStderr = Buffer.concat(this.errChunks).toString('utf8');
+            }
+            if (result.stderr) {
+              allStderr += result.stderr;
+            }
+
             const finalResult = createResult({
               code: result.code,
               stdout: currentOutput,
-              stderr: result.stderr,
-              stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin :
-                this.options.stdin && Buffer.isBuffer(this.options.stdin) ? this.options.stdin.toString('utf8') : ''
+              stderr: allStderr,
+              stdin: resolveStdinData(this.options.stdin)
             });
 
             // Finish the process with proper event emission order
@@ -3739,6 +3830,131 @@ class ProcessRunner extends StreamEmitter {
     }
   }
 
+  // Detects `cmd > file`, `cmd >> file` and `cmd < file` for a single command or
+  // for a pipeline that contains at least one built-in/virtual command.
+  // Returns null (so the caller falls back to its normal handling) whenever the
+  // redirection is something the shell should do itself.
+  _parseRedirection(command) {
+    if (!virtualCommandsEnabled || this.options._bypassVirtual) return null;
+    if (!/[<>]/.test(command)) return null;
+    // needsRealShell() covers `2>`, `&>`, `>&`, `<<` and globs, which the parser
+    // below does not model.
+    if (needsRealShell(command)) return null;
+
+    let parsed;
+    try {
+      parsed = parseShellCommand(command);
+    } catch (error) {
+      trace('ProcessRunner', () => `Redirection parsing failed | ${JSON.stringify({ error: error.message }, null, 2)}`);
+      return null;
+    }
+
+    const commands = parsed?.type === 'simple' ? [parsed]
+      : parsed?.type === 'pipeline' ? parsed.commands
+        : null;
+    if (!commands || commands.length === 0) return null;
+    // Pipelines made only of real commands are redirected by the shell itself.
+    if (!commands.some(c => virtualCommands.has(c.cmd))) return null;
+
+    const outputs = [];
+    let inputFile = null;
+
+    for (let i = 0; i < commands.length; i++) {
+      for (const redirect of commands[i].redirects || []) {
+        if (redirect.type === '<') {
+          // Only the first stage can read its input from a file.
+          if (i !== 0 || inputFile) return null;
+          inputFile = redirect.target;
+        } else if (redirect.type === '>' || redirect.type === '>>') {
+          // Only the last stage writes the output of the pipeline.
+          if (i !== commands.length - 1) return null;
+          outputs.push(redirect);
+        } else {
+          return null;
+        }
+      }
+    }
+
+    if (outputs.length === 0 && !inputFile) return null;
+
+    return {
+      commands: commands.map(({ redirects, ...rest }) => rest),
+      outputs,
+      inputFile
+    };
+  }
+
+  // Runs a command/pipeline whose redirects were extracted by _parseRedirection().
+  // The inner runner never mirrors, so redirected output cannot leak to the
+  // terminal before it is written to its target file.
+  async _runRedirected(plan) {
+    const options = { ...this.options, mirror: false, capture: true };
+    if (plan.inputFile) {
+      options.stdin = fs.readFileSync(plan.inputFile, 'utf8');
+    }
+
+    const inner = new ProcessRunner(this.spec, options);
+    inner.started = true;
+    inner._mode = 'async';
+
+    let innerResult;
+    let thrown = null;
+    try {
+      innerResult = plan.commands.length > 1
+        ? await inner._runPipeline(plan.commands)
+        : await inner._runSimpleCommand(plan.commands[0]);
+    } catch (error) {
+      thrown = error;
+      innerResult = error.result || {
+        code: error.code ?? 1,
+        stdout: error.stdout ?? '',
+        stderr: error.stderr ?? error.message
+      };
+    }
+
+    if (plan.outputs.length > 0) {
+      applyOutputRedirects(plan.outputs, innerResult.stdout ?? '');
+    }
+
+    const result = createResult({
+      code: innerResult.code ?? 0,
+      // When stdout was redirected there is nothing left for the caller to read.
+      stdout: plan.outputs.length > 0 ? '' : (innerResult.stdout ?? ''),
+      stderr: innerResult.stderr ?? '',
+      stdin: resolveStdinData(this.options.stdin)
+    });
+
+    if (result.stdout) {
+      const buf = Buffer.from(result.stdout);
+      if (this.options.mirror) {
+        safeWrite(process.stdout, buf);
+      }
+      this._emitProcessedData('stdout', buf);
+    }
+    if (result.stderr) {
+      const buf = Buffer.from(result.stderr);
+      if (this.options.mirror) {
+        safeWrite(process.stderr, buf);
+      }
+      this._emitProcessedData('stderr', buf);
+    }
+
+    this.finish(result);
+
+    if (thrown) throw thrown;
+
+    if (globalShellSettings.errexit && result.code !== 0) {
+      const error = new Error(`Command failed with exit code ${result.code}`);
+      error.code = result.code;
+      error.stdout = result.stdout;
+      error.stderr = result.stderr;
+      error.result = result;
+      throw error;
+    }
+
+    return result;
+  }
+
   async _runSimpleCommand(command) {
     trace('ProcessRunner', () => `_runSimpleCommand ENTER | ${JSON.stringify({
       cmd: command.cmd,
@@ -3752,24 +3968,30 @@ class ProcessRunner extends StreamEmitter {
     if (virtualCommandsEnabled && virtualCommands.has(cmd)) {
       trace('ProcessRunner', () => `Using virtual command: ${cmd}`);
       const argValues = args.map(a => a.value || a);
-      const result = await this._runVirtual(cmd, argValues);
-      
-      // Handle output redirection for virtual commands
-      if (redirects && redirects.length > 0) {
-        for (const redirect of redirects) {
-          if (redirect.type === '>' || redirect.type === '>>') {
-            const fs = await import('fs');
-            if (redirect.type === '>') {
-              fs.writeFileSync(redirect.target, result.stdout);
-            } else {
-              fs.appendFileSync(redirect.target, result.stdout);
-            }
-            // Clear stdout since it was redirected
-            result.stdout = '';
-          }
+
+      const inputRedirect = (redirects || []).find(r => r.type === '<');
+      const previousStdin = this.options.stdin;
+      if (inputRedirect) {
+        this.options.stdin = fs.readFileSync(inputRedirect.target, 'utf8');
+      }
+
+      let result;
+      try {
+        result = await this._runVirtual(cmd, argValues);
+      } finally {
+        if (inputRedirect) {
+          this.options.stdin = previousStdin;
         }
       }
-      
+
+      // Handle output redirection for virtual commands
+      const outputs = (redirects || []).filter(r => r.type === '>' || r.type === '>>');
+      if (outputs.length > 0) {
+        applyOutputRedirects(outputs, result.stdout);
+        // Clear stdout since it was redirected
+        result.stdout = '';
+      }
+
       return result;
     }
     
