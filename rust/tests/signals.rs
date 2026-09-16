@@ -142,10 +142,7 @@ async fn process_runner_kill_with_sends_the_requested_signal() {
     runner.kill_with("SIGINT").unwrap();
     tokio::time::sleep(Duration::from_millis(400)).await;
 
-    assert!(
-        handler_ran(&marker),
-        "the child's SIGINT handler never ran"
-    );
+    assert!(handler_ran(&marker), "the child's SIGINT handler never ran");
 }
 
 /// A configured `kill_signal` is what an argument-less `kill()` delivers.

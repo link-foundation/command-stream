@@ -200,23 +200,15 @@ impl StreamingRunner {
         let cwd = self.cwd.take();
         let env = self.env.take();
         let stdin_content = self.stdin_content.take();
-        let grace = self.exit_pump_grace_ms;
-        let kill_grace = self.kill_grace_ms;
+        let grace = GraceWindows {
+            exit_pump_ms: self.exit_pump_grace_ms,
+            kill_ms: self.kill_grace_ms,
+        };
         let kill_signal = self.kill_signal.clone();
 
         let task = tokio::spawn(async move {
             let result =
-                run_streaming_process(
-                    command,
-                    cwd,
-                    env,
-                    stdin_content,
-                    grace,
-                    kill_grace,
-                    tx,
-                    kill_rx,
-                )
-                .await;
+                run_streaming_process(command, cwd, env, stdin_content, grace, tx, kill_rx).await;
             if let Err(error) = &result {
                 trace_lazy("StreamingRunner", || format!("Error: {error}"));
             }
@@ -345,14 +337,25 @@ impl Drop for OutputStream {
     }
 }
 
+/// How long the runner waits, in milliseconds, at the two points where it gives
+/// something a chance to finish on its own before forcing the issue.
+#[derive(Debug, Clone, Copy)]
+struct GraceWindows {
+    /// Time allowed for the readers to drain buffered output after the child
+    /// exits, before the `Exit` chunk is emitted.
+    exit_pump_ms: u64,
+    /// Time allowed for the child to handle the delivered signal, before the
+    /// escalation to `SIGKILL`.
+    kill_ms: u64,
+}
+
 /// Run a streaming process and send output to the channel
 async fn run_streaming_process(
     command: StreamingCommand,
     cwd: Option<PathBuf>,
     env: Option<HashMap<String, String>>,
     stdin_content: Option<String>,
-    exit_pump_grace_ms: u64,
-    kill_grace_ms: u64,
+    grace: GraceWindows,
     tx: mpsc::Sender<OutputChunk>,
     mut kill_rx: mpsc::UnboundedReceiver<String>,
 ) -> Result<()> {
@@ -488,7 +491,7 @@ async fn run_streaming_process(
             // Give the child its grace period to run its own handler and exit
             // on its own terms, then escalate to a forceful kill so a process
             // that ignores the signal still terminates.
-            if tokio::time::timeout(Duration::from_millis(kill_grace_ms), child.wait())
+            if tokio::time::timeout(Duration::from_millis(grace.kill_ms), child.wait())
                 .await
                 .is_err()
             {
@@ -514,7 +517,7 @@ async fn run_streaming_process(
             let _ = handle.await;
         }
     };
-    if tokio::time::timeout(Duration::from_millis(exit_pump_grace_ms), drain)
+    if tokio::time::timeout(Duration::from_millis(grace.exit_pump_ms), drain)
         .await
         .is_err()
     {
@@ -551,7 +554,6 @@ fn status_to_code(status: std::process::ExitStatus) -> i32 {
     }
     -1
 }
-
 
 /// Shell configuration
 #[derive(Debug, Clone)]
