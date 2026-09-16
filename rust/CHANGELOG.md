@@ -167,6 +167,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [0.23.0] - 2026-09-16
+
+### Added
+
+- `ProcessRunner::pid()` reporting the process id of a started command, matching
+  the JavaScript `command.pid` property (issue #18). The id is recorded at spawn
+  time, so it stays readable after `run()` has consumed the child handle, and is
+  `None` for built-in commands, which spawn no process.
+- `OutputStream::pid()` and `OutputStream::wait_for_pid()` for streamed
+  commands, whose child is spawned inside a background task: `pid()` reports what
+  is known now, `wait_for_pid()` waits for the spawn and returns `None` if it
+  fails.
+- A `## Process ID of a Running Command` section in the README covering what the
+  id names and why built-in commands have none, plus a runnable
+  `examples/process_pid_access.rs`.
+
 ## [0.22.1] - 2026-09-16
 
 ### Added
