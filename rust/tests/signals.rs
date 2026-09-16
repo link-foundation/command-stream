@@ -7,7 +7,7 @@
 //! The JavaScript counterpart is `js/tests/signal-handling.test.mjs`; both
 //! suites assert the same behavior so the two implementations stay in parity.
 use command_stream::signal::{signal_exit_code, signal_number};
-use command_stream::{OutputChunk, ProcessRunner, RunOptions, StreamingRunner};
+use command_stream::{OutputChunk, ProcessRunner, RunOptions, StdinOption, StreamingRunner};
 use std::time::Duration;
 
 /// A command that traps a signal, records that its handler ran, and exits.
@@ -48,10 +48,36 @@ fn stubborn_heartbeat_child(heartbeat: &std::path::Path) -> String {
     )
 }
 
+/// A command whose real work runs in a *grandchild*, behind a shell that waits.
+///
+/// This is the shape both READMEs promise to handle: `sh` stays alive as the
+/// parent, so signalling only the direct child leaves the actual worker running
+/// and the group delivery is what has to reach it.
+#[cfg(unix)]
+fn grandchild_heartbeat_command(heartbeat: &std::path::Path) -> String {
+    format!(
+        "sh -c 'while true; do echo tick >> {beat}; sleep 0.05; done' & \
+         echo ready; \
+         wait",
+        beat = heartbeat.display()
+    )
+}
+
 #[cfg(unix)]
 fn heartbeat_len(path: &std::path::Path) -> u64 {
     std::fs::metadata(path).map(|meta| meta.len()).unwrap_or(0)
 }
+
+/// Grace period used by the tests that assert a signal handler actually ran.
+///
+/// The 100ms default is plenty in isolation, but these tests share a machine
+/// with the rest of the binary, and under that contention the child's trap can
+/// be scheduled after the escalation deadline - which failed the assertion in
+/// roughly one run out of eight. A generous window removes the race without
+/// weakening the test: the bug being guarded against sent SIGKILL in the same
+/// step as the signal, so no grace period would have saved the handler.
+#[cfg(unix)]
+const GRACEFUL_KILL_GRACE_MS: u64 = 2000;
 
 #[cfg(unix)]
 fn handler_ran(marker: &std::path::Path) -> bool {
@@ -108,6 +134,7 @@ async fn process_runner_kill_lets_the_child_handle_sigterm() {
         graceful_child(&marker),
         RunOptions {
             mirror: false,
+            kill_grace_ms: GRACEFUL_KILL_GRACE_MS,
             ..Default::default()
         },
     );
@@ -133,6 +160,7 @@ async fn process_runner_kill_with_sends_the_requested_signal() {
         graceful_child(&marker),
         RunOptions {
             mirror: false,
+            kill_grace_ms: GRACEFUL_KILL_GRACE_MS,
             ..Default::default()
         },
     );
@@ -162,6 +190,7 @@ async fn process_runner_honors_the_configured_kill_signal() {
         RunOptions {
             mirror: false,
             kill_signal: "SIGINT".to_string(),
+            kill_grace_ms: GRACEFUL_KILL_GRACE_MS,
             ..Default::default()
         },
     );
@@ -214,6 +243,49 @@ async fn process_runner_escalates_to_sigkill_when_the_signal_is_ignored() {
     );
 }
 
+/// Killing the runner also stops grandchildren, not just the direct child.
+///
+/// Without the child in its own process group, `kill(-pid, ...)` names a group
+/// the runner does not own, so the worker behind the shell kept running and
+/// kept writing its heartbeat long after the command was stopped.
+#[cfg(unix)]
+#[tokio::test]
+async fn process_runner_kill_reaches_grandchildren() {
+    let dir = tempfile::tempdir().unwrap();
+    let heartbeat = dir.path().join("heartbeat");
+
+    let mut runner = ProcessRunner::new(
+        grandchild_heartbeat_command(&heartbeat),
+        RunOptions {
+            mirror: false,
+            kill_grace_ms: 50,
+            // Explicit, so the result does not depend on whether the test
+            // harness happened to be given a terminal: a child sharing the
+            // caller's terminal stays in its process group by design.
+            stdin: StdinOption::Null,
+            ..Default::default()
+        },
+    );
+    runner.start().await.unwrap();
+    tokio::time::sleep(Duration::from_millis(400)).await;
+    assert!(
+        heartbeat_len(&heartbeat) > 0,
+        "the grandchild never started: no heartbeat was written"
+    );
+
+    runner.kill().unwrap();
+    // Past the grace period, so the escalation has been delivered too.
+    tokio::time::sleep(Duration::from_millis(400)).await;
+    let after_kill = heartbeat_len(&heartbeat);
+    tokio::time::sleep(Duration::from_millis(400)).await;
+
+    assert_eq!(
+        heartbeat_len(&heartbeat),
+        after_kill,
+        "the grandchild survived the kill and kept writing its heartbeat"
+    );
+}
+
 // ============================================================================
 // StreamingRunner
 // ============================================================================
@@ -226,7 +298,9 @@ async fn stream_kill_lets_the_child_handle_the_signal() {
     let dir = tempfile::tempdir().unwrap();
     let marker = dir.path().join("marker");
 
-    let mut stream = StreamingRunner::new(graceful_child(&marker)).stream();
+    let mut stream = StreamingRunner::new(graceful_child(&marker))
+        .kill_grace_ms(GRACEFUL_KILL_GRACE_MS)
+        .stream();
 
     let mut exit_code = None;
     let mut killed = false;
@@ -273,4 +347,72 @@ async fn stream_zero_grace_escalates_immediately() {
     // The reported code still reflects the requested signal, even though the
     // process was actually stopped by the SIGKILL escalation.
     assert_eq!(exit_code, Some(143));
+}
+
+/// Number of times the zero-grace tests repeat their scenario.
+///
+/// The bug they guard against is a lost race, not a constant failure: awaiting a
+/// zero-length timeout yields to the runtime, and the child wins that gap only
+/// sometimes. A single attempt caught the old behavior in roughly one run out of
+/// three, so the scenario is repeated to turn a coin flip into a reliable signal.
+#[cfg(unix)]
+const ZERO_GRACE_ATTEMPTS: usize = 10;
+
+/// With no grace period the child never gets to run its handler, even though it
+/// traps the signal. The escalation must therefore happen in the same step as
+/// the signal, leaving no scheduling gap for the shell to run its trap in.
+#[cfg(unix)]
+#[tokio::test]
+async fn stream_zero_grace_leaves_no_room_for_the_handler() {
+    for attempt in 0..ZERO_GRACE_ATTEMPTS {
+        let dir = tempfile::tempdir().unwrap();
+        let marker = dir.path().join("marker");
+
+        let mut stream = StreamingRunner::new(graceful_child(&marker))
+            .kill_grace_ms(0)
+            .stream();
+
+        let mut killed = false;
+        while let Some(chunk) = stream.next().await {
+            if matches!(chunk, OutputChunk::Stdout(_)) && !killed {
+                killed = true;
+                stream.kill();
+            }
+        }
+        tokio::time::sleep(Duration::from_millis(200)).await;
+
+        assert!(
+            !handler_ran(&marker),
+            "attempt {attempt}: kill_grace_ms(0) still left the child time to run its SIGTERM handler"
+        );
+    }
+}
+
+/// The same guarantee for `ProcessRunner`, whose escalation runs in a spawned
+/// task: with `kill_grace_ms: 0` it must not wait for that task to be polled.
+#[cfg(unix)]
+#[tokio::test]
+async fn process_runner_zero_grace_leaves_no_room_for_the_handler() {
+    for attempt in 0..ZERO_GRACE_ATTEMPTS {
+        let dir = tempfile::tempdir().unwrap();
+        let marker = dir.path().join("marker");
+
+        let mut runner = ProcessRunner::new(
+            graceful_child(&marker),
+            RunOptions {
+                mirror: false,
+                kill_grace_ms: 0,
+                ..Default::default()
+            },
+        );
+        runner.start().await.unwrap();
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        runner.kill().unwrap();
+        tokio::time::sleep(Duration::from_millis(200)).await;
+
+        assert!(
+            !handler_ran(&marker),
+            "attempt {attempt}: kill_grace_ms: 0 still left the child time to run its SIGTERM handler"
+        );
+    }
 }

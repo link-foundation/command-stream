@@ -1617,7 +1617,7 @@ As with any shell-enabled process, pass only trusted `file` and `args` values; s
 - `env: object` - Environment variables
 - `exitPumpGrace: number` - Milliseconds to wait for buffered output to drain after the process exits before aborting stdio reads held open by a grandchild (default `100`; see [Async Iteration](#async-iteration-real-time-streaming))
 - `killSignal: string` - Signal used to stop the process when it is killed without an explicit signal — i.e. `kill()` with no argument, `break`ing out of a `stream()` loop, or an external `AbortSignal` firing (default `'SIGTERM'`). An explicit `kill(signal)` argument always overrides this. The reported exit code follows the conventional `128 + signal` mapping (e.g. `SIGTERM` → 143, `SIGINT` → 130, `SIGKILL` → 137)
-- `killGrace: number` - Milliseconds to wait after delivering `killSignal` before escalating to `SIGKILL`, giving the child a chance to run its own signal handler and shut down cleanly (default `100`). Set to `0` to escalate immediately, with no chance to clean up. `SIGKILL` itself is never delayed. See [Sending Signals to a Running Command](#sending-signals-to-a-running-command)
+- `killGrace: number` - Milliseconds to wait after delivering `killSignal` before escalating to `SIGKILL`, giving the child a chance to run its own signal handler and shut down cleanly (default `100`). Set to `0` to escalate immediately, with no chance to clean up (only `SIGKILL` is delivered). `SIGKILL` itself is never delayed. See [Sending Signals to a Running Command](#sending-signals-to-a-running-command)
 
 **Override defaults:**
 
@@ -1989,6 +1989,11 @@ const cmd = $({ killGrace: 5000 })`./server --graceful-shutdown`;
 const cmd = $({ killGrace: 0 })`stuck-process`;
 ```
 
+With `killGrace: 0` the requested signal is not delivered at all — only
+`SIGKILL` is. Delivering it first and then killing would leave a window the
+child can be scheduled in, which makes "no grace" a race rather than a
+guarantee. The reported exit code still reflects the signal you requested.
+
 `SIGKILL` is never delayed: it cannot be caught, so `kill('SIGKILL')` skips the
 grace period regardless of the `killGrace` value.
 
@@ -2018,6 +2023,11 @@ with the real work in a grandchild. Signals are delivered to the whole process
 group rather than just the direct child, so the grandchild is stopped too —
 including the common case where the wrapper dies on the first signal and the
 grandchild is reparented to init.
+
+The one exception is interactive mode, where the command shares your terminal
+and is spawned into the caller's process group so that CTRL+C keeps reaching it.
+There `kill()` signals the direct child alone — but CTRL+C from the terminal
+already reaches the whole group anyway.
 
 #### Rust parity
 

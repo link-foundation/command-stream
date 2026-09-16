@@ -159,6 +159,23 @@ Step 2 is what makes a shutdown _graceful_: without it, a child that traps
 SIGTERM to flush output, release a lock, or stop its own workers is destroyed
 before its handler can run.
 
+### Grandchildren and process groups
+
+Commands run through a shell, so the real work is usually a grandchild of the
+`sh` that was spawned. Both runners therefore start the child in its own process
+group and signal the group, not just the direct child — including the common
+case where the wrapper dies on the first signal and the grandchild is reparented
+to init.
+
+The one exception is a command that shares your terminal: when `interactive` is
+set, or when stdin is inherited and is a tty, `ProcessRunner` leaves the child in
+the caller's process group. It has to, because the terminal delivers CTRL+C to
+its foreground group only, and a background child that read from the terminal
+would be stopped with SIGTTIN. For those commands the signal reaches the direct
+child alone — and CTRL+C from the terminal already reaches the whole group
+anyway. Set `stdin` to `StdinOption::Null` or `StdinOption::Pipe` if you need
+group delivery from `kill()`.
+
 ### ProcessRunner
 
 `kill()` sends the configured signal; `kill_with(signal)` overrides it for a
@@ -217,8 +234,13 @@ async fn main() {
 
 `kill_grace_ms` is the number of milliseconds between the requested signal and
 the SIGKILL escalation. Set it to `0` to escalate immediately, with no chance to
-clean up. `SIGKILL` is never delayed: it cannot be caught, so `kill_with("SIGKILL")`
-skips the grace period regardless of the configured value.
+clean up: the requested signal is then not delivered at all, only `SIGKILL`.
+Delivering it first and then killing would leave a window the child can be
+scheduled in, which makes "no grace" a race rather than a guarantee. The
+reported exit code still reflects the signal you requested.
+
+`SIGKILL` is never delayed: it cannot be caught, so `kill_with("SIGKILL")` skips
+the grace period regardless of the configured value.
 
 ### Signal exit codes
 

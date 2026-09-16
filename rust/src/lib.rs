@@ -364,6 +364,21 @@ impl ProcessRunner {
         }
     }
 
+    /// Whether the child will read from the caller's terminal.
+    ///
+    /// Only an *inherited* stdin that is actually a tty counts: a pipe, a null
+    /// stdin, or inherited stdin that has been redirected to a file carries no
+    /// terminal, and neither does output-only inheritance. This is the one case
+    /// where the child must stay in the caller's process group.
+    #[cfg(unix)]
+    fn shares_the_terminal(&self) -> bool {
+        use std::io::IsTerminal;
+
+        self.options.interactive
+            || (matches!(self.options.stdin, StdinOption::Inherit)
+                && std::io::stdin().is_terminal())
+    }
+
     /// Start the process
     pub async fn start(&mut self) -> Result<()> {
         if self.started {
@@ -445,6 +460,20 @@ impl ProcessRunner {
             for (key, value) in env_vars {
                 cmd.env(key, value);
             }
+        }
+
+        // Run the child in its own process group so that killing it can signal
+        // the whole group (parent + grandchildren), matching `StreamingRunner`
+        // and the JavaScript implementation's `detached` spawn.
+        //
+        // A child that shares the terminal is deliberately left in the caller's
+        // group. The tty delivers CTRL+C to its foreground group only, so
+        // moving such a child out would both hide CTRL+C from it and stop it
+        // with SIGTTIN the moment it read from the terminal. JavaScript draws
+        // the same line, spawning interactive commands without `detached`.
+        #[cfg(unix)]
+        if !self.shares_the_terminal() {
+            cmd.process_group(0);
         }
 
         // Spawn the process
@@ -586,9 +615,11 @@ impl ProcessRunner {
     ///
     /// Mirrors the JavaScript `kill(signal)`. The signal is delivered to the
     /// child and its process group, so grandchildren behind a `sh -c` wrapper
-    /// are stopped too. The child then has [`RunOptions::kill_grace_ms`] to run
-    /// its own handler before `SIGKILL` follows, so a process that ignores the
-    /// signal still terminates.
+    /// are stopped too - except for a child sharing the caller's terminal,
+    /// which stays in the caller's group so CTRL+C keeps reaching it. The child
+    /// then has [`RunOptions::kill_grace_ms`] to run its own handler before
+    /// `SIGKILL` follows, so a process that ignores the signal still
+    /// terminates.
     ///
     /// ```no_run
     /// use command_stream::{ProcessRunner, RunOptions};
@@ -628,18 +659,27 @@ impl ProcessRunner {
                 return Ok(());
             };
 
-            signal::send_signal_to_process(pid, signal);
-
             // `SIGKILL` cannot be handled, so there is nothing to wait for.
-            if signal == "SIGKILL" {
+            //
+            // A zero grace period means the child is given no opportunity to
+            // handle the signal either, so the requested signal is not
+            // delivered at all. Anything done between it and `SIGKILL` - even a
+            // single syscall - is a window the child can be scheduled in, which
+            // made "no grace" a race the child occasionally won rather than a
+            // guarantee. The reported exit code still comes from the signal
+            // that was requested.
+            let grace = self.options.kill_grace_ms;
+            if grace == 0 || signal == "SIGKILL" {
+                signal::send_signal_to_process(pid, "SIGKILL");
                 let _ = child.start_kill();
                 return Ok(());
             }
 
-            // Escalate in the background so the child keeps its grace period
-            // without blocking the caller, which may not be inside an await
-            // point.
-            let grace = self.options.kill_grace_ms;
+            signal::send_signal_to_process(pid, signal);
+
+            // Otherwise escalate in the background so the child keeps its grace
+            // period without blocking the caller, which may not be inside an
+            // await point.
             tokio::spawn(async move {
                 tokio::time::sleep(std::time::Duration::from_millis(grace)).await;
                 // Best effort: if the child already exited on the first signal

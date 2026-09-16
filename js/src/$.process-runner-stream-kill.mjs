@@ -96,11 +96,6 @@ function processTreeIsAlive(pid) {
  * @param {string} runtime - Runtime identifier for logging
  */
 function scheduleForcefulEscalation(pid, graceMilliseconds, runtime) {
-  if (!(graceMilliseconds > 0)) {
-    sendSignalToProcess(pid, 'SIGKILL', runtime);
-    return;
-  }
-
   const timer = setTimeout(() => {
     if (!processTreeIsAlive(pid)) {
       trace(
@@ -145,18 +140,25 @@ function killChildProcess(
       `Killing ${runtime} process | ${JSON.stringify({ pid, signal, graceMilliseconds }, null, 2)}`
   );
 
-  // Send the requested signal first, then escalate to SIGKILL once the grace
-  // period has passed, so termination is still guaranteed for a process that
-  // ignores the signal. When the requested signal already is SIGKILL there is
-  // nothing to wait for and no second delivery to make.
-  const killOperations = sendSignalToProcess(pid, signal, runtime);
+  // SIGKILL cannot be handled, so there is nothing to wait for. A zero grace
+  // period means the child is given no opportunity to handle the signal
+  // either, so the requested signal is not delivered at all: anything done
+  // between it and SIGKILL is a window the child can be scheduled in, which
+  // would make "no grace" a race the child can win rather than a guarantee.
+  // The reported exit code still comes from the signal that was requested.
+  const forceful = signal === 'SIGKILL' || !(graceMilliseconds > 0);
+  const killOperations = sendSignalToProcess(
+    pid,
+    forceful ? 'SIGKILL' : signal,
+    runtime
+  );
 
   trace(
     'ProcessRunner',
     () => `${runtime} kill operations attempted: ${killOperations.join(', ')}`
   );
 
-  if (signal === 'SIGKILL') {
+  if (forceful) {
     if (isBun) {
       try {
         child.kill();
@@ -172,6 +174,8 @@ function killChildProcess(
       }
     }
   } else {
+    // Otherwise escalate to SIGKILL once the grace period has passed, so
+    // termination is still guaranteed for a process that ignores the signal.
     scheduleForcefulEscalation(pid, graceMilliseconds, runtime);
   }
 

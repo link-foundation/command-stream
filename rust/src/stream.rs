@@ -485,16 +485,30 @@ async fn run_streaming_process(
             // being dropped). Stop the process group with the requested signal.
             let signal = maybe_signal.unwrap_or_else(|| DEFAULT_KILL_SIGNAL.to_string());
             trace_lazy("StreamingRunner", || format!("Kill requested | signal={}", signal));
-            if let Some(pid) = pid {
-                send_signal_to_process(pid, &signal);
-            }
             // Give the child its grace period to run its own handler and exit
             // on its own terms, then escalate to a forceful kill so a process
             // that ignores the signal still terminates.
-            if tokio::time::timeout(Duration::from_millis(grace.kill_ms), child.wait())
-                .await
-                .is_err()
-            {
+            //
+            // A zero grace period means the child is given no opportunity to
+            // handle the signal, so the requested signal is not delivered at
+            // all. Anything done between it and the forceful kill - a syscall,
+            // or awaiting a zero-length timeout, which yields to the runtime -
+            // is a window the child can be scheduled in, which made "no grace"
+            // a race the child occasionally won rather than a guarantee.
+            let survived_grace = if grace.kill_ms == 0 {
+                true
+            } else {
+                if let Some(pid) = pid {
+                    send_signal_to_process(pid, &signal);
+                }
+                tokio::time::timeout(Duration::from_millis(grace.kill_ms), child.wait())
+                    .await
+                    .is_err()
+            };
+            if survived_grace {
+                if let Some(pid) = pid {
+                    send_signal_to_process(pid, "SIGKILL");
+                }
                 let _ = child.start_kill();
                 let _ = child.wait().await;
             }

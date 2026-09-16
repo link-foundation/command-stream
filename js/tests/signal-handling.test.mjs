@@ -154,6 +154,33 @@ describe.skipIf(isWindows)('Signal handling', () => {
     });
   });
 
+  describe('process group', () => {
+    it('reaches grandchildren, not just the direct child', async () => {
+      const heartbeat = join(workDir, 'heartbeat');
+      // The real work runs in a grandchild behind a shell that waits, so
+      // signalling only the direct child would leave the worker running.
+      // Delivering to the process group is what reaches it.
+      const command =
+        `sh -c 'while true; do echo tick >> ${heartbeat}; sleep 0.05; done' & ` +
+        `echo ready; wait`;
+
+      const cmd = $({ mirror: false, killGrace: 50 })`sh -c ${command}`;
+      cmd.start();
+      await sleep(400);
+
+      expect(fileSize(heartbeat)).toBeGreaterThan(0);
+
+      cmd.kill();
+      // Past the grace period, so the escalation has been delivered too.
+      await sleep(400);
+      const afterKill = fileSize(heartbeat);
+      // A surviving grandchild would keep appending here.
+      await sleep(400);
+
+      expect(fileSize(heartbeat)).toBe(afterKill);
+    });
+  });
+
   describe('exit codes', () => {
     it('follows the 128 + signal convention', async () => {
       // A child that ignores nothing, stopped with a range of signals.

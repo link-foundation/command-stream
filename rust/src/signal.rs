@@ -11,7 +11,10 @@
 //! The model mirrors the JavaScript implementation exactly:
 //!
 //!   1. The requested signal is delivered to the child **and** its process
-//!      group, so grandchildren spawned by a shell are stopped too.
+//!      group, so grandchildren spawned by a shell are stopped too. The group
+//!      is skipped for a child that shares the caller's terminal, which stays
+//!      in the caller's process group by design so that CTRL+C keeps reaching
+//!      it.
 //!   2. The child is given a grace period ([`DEFAULT_KILL_GRACE_MS`]) to run its
 //!      own signal handler and exit on its own terms.
 //!   3. If it is still alive when the grace period expires, `SIGKILL` follows,
@@ -71,12 +74,16 @@ pub fn signal_exit_code(signal: &str) -> i32 {
     128 + signal_number(signal)
 }
 
-/// Send a signal to a process and its process group (best effort).
+/// Send a signal to a process and, when we own it, its process group.
 ///
 /// Delivery to the group (negative pid) is what reaches grandchildren, e.g. the
-/// real command behind a `sh -c` wrapper. Both deliveries are best effort: the
-/// process may already have exited, which is not an error for a caller that
-/// only wants it stopped.
+/// real command behind a `sh -c` wrapper. It is only attempted when the child
+/// leads its own group: a child that was left in the caller's group would make
+/// `-pid` refer to a group we do not own - at best a non-existent one, at worst
+/// an unrelated group that reused the number. See [`send_to_group`].
+///
+/// Both deliveries are best effort: the process may already have exited, which
+/// is not an error for a caller that only wants it stopped.
 #[cfg(unix)]
 pub(crate) fn send_signal_to_process(pid: u32, signal: &str) {
     use nix::sys::signal::{kill, Signal};
@@ -96,7 +103,22 @@ pub(crate) fn send_signal_to_process(pid: u32, signal: &str) {
     // Signal the process itself.
     let _ = kill(Pid::from_raw(pid as i32), sig);
     // Signal the whole process group (negative pid) to reach grandchildren.
-    let _ = kill(Pid::from_raw(-(pid as i32)), sig);
+    if send_to_group(pid) {
+        let _ = kill(Pid::from_raw(-(pid as i32)), sig);
+    }
+}
+
+/// Whether `pid` leads its own process group, and so may be signalled as one.
+///
+/// Runners spawn children with `process_group(0)`, which makes the child its
+/// own group leader and its pid the group id. The exception is a child that
+/// inherits the terminal: it stays in the caller's group so that CTRL+C keeps
+/// reaching it, and there `-pid` would name a group belonging to someone else.
+#[cfg(unix)]
+fn send_to_group(pid: u32) -> bool {
+    use nix::unistd::{getpgid, Pid};
+
+    matches!(getpgid(Some(Pid::from_raw(pid as i32))), Ok(pgid) if pgid.as_raw() == pid as i32)
 }
 
 /// On non-Unix platforms there is no signal delivery; the forceful
