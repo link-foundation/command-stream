@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.23.1
+
+### Patch Changes
+
+- 35b7589: Cover parallel execution of sleeping commands with tests (issue #22). Two and
+  three commands started together — through the built-in `sleep`, through real
+  `sleep` processes with virtual commands disabled, and through `sh -c` scripts
+  that sleep between writes — must all finish, keep their own output and
+  environment, and overlap in time instead of running one after another.
+
 ## 0.23.0
 
 ### Minor Changes
