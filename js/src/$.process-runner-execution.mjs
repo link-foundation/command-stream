@@ -604,6 +604,9 @@ function executeSyncProcess(argv, options) {
  * @returns {object} Result
  */
 function processSyncResult(runner, result, globalShellSettings) {
+  // The sync spawn has already exited, but reports the pid it ran under.
+  runner._pid = result.child?.pid ?? runner._pid;
+
   if (runner.options.mirror) {
     if (result.stdout) {
       safeWrite(process.stdout, result.stdout);
@@ -923,6 +926,7 @@ async function executeChildProcess(runner, argv, config) {
   const { stdin, isInteractive } = config;
 
   runner.child = spawnChild(argv, config);
+  runner._pid = runner.child?.pid; // recorded before _cleanup() drops `child`
 
   if (runner.child) {
     trace(

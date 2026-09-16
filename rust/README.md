@@ -137,6 +137,118 @@ The exact-argv form bypasses `/bin/sh -c` and `cmd.exe /c`, so it does not
 require shell-specific quoting. It also accepts OS-native executable and
 argument values such as `PathBuf` and `OsString`.
 
+## Process ID of a Running Command
+
+`pid()` is the id of the operating system process behind a command. It is
+recorded when the process is spawned, so — unlike the child handle, which `run()`
+consumes in order to await it — it stays readable after the command has finished
+(issue #18). It mirrors the JavaScript `runner.pid` property
+([JS process id documentation](../js/README.md#process-id-of-a-running-command)).
+
+```rust,no_run
+use command_stream::{ProcessRunner, RunOptions};
+
+#[tokio::main]
+async fn main() -> command_stream::Result<()> {
+    let mut runner = ProcessRunner::new("/bin/sleep 5", RunOptions::default());
+    assert_eq!(runner.pid(), None); // nothing has been spawned yet
+
+    runner.start().await?;
+    println!("running as {:?}", runner.pid()); // Some(51234)
+
+    runner.kill()?;
+    runner.run().await?;
+
+    println!("still readable: {:?}", runner.pid()); // Some(51234)
+    Ok(())
+}
+```
+
+### Streaming commands
+
+`StreamingRunner` spawns its child inside a background task, so the id is not
+known the moment `stream()` returns. `wait_for_pid()` waits for the spawn to
+complete; `pid()` reports whatever is known right now, without waiting:
+
+```rust,no_run
+use command_stream::StreamingRunner;
+
+#[tokio::main]
+async fn main() {
+    let mut stream = StreamingRunner::new("/bin/sleep 30").stream();
+
+    assert_eq!(stream.pid(), None); // the spawn has not happened yet
+
+    let pid = stream.wait_for_pid().await.expect("the child was spawned");
+    println!("running as {pid}");
+
+    stream.kill();
+    while stream.next().await.is_some() {}
+}
+```
+
+Both return `None` if the spawn fails, so `wait_for_pid()` never waits forever
+for a process that will not exist.
+
+### What the id names
+
+A command string is handed to a shell, so the id names **the process that shell
+put there**. Usually that is the shell itself, with the command running as its
+child:
+
+```console
+$ ps -o args= -p 51234
+/bin/sh -c /bin/sleep 5
+```
+
+Some shells replace themselves with the command when the string is a single
+simple command, so the same id can name the command directly instead — macOS
+`/bin/sh` does this, where the line above reads `/bin/sleep 5`. Do not depend on
+either shape; what holds everywhere is that the id names the process the library
+spawned to run your command.
+
+The spawned process leads its own process group, so the group id equals the
+pid. That is what lets `kill()` reach the command underneath the
+wrapper (see [Grandchildren and process groups](#grandchildren-and-process-groups)).
+
+A consequence worth knowing: a command that does not exist is reported by the
+shell that looked for it, so there is still an id even though nothing you asked
+for ran. The failure code is the shell's convention rather than the library's:
+POSIX shells use `127`, "command not found", while `cmd.exe` exits with `1`.
+
+To get the id of the command itself, with no shell in between, use
+[`StreamingRunner::from_argv`](#streaming), which bypasses `/bin/sh -c` and
+`cmd.exe /c` entirely. With no shell to fall back on, a missing executable is
+then a failed spawn, and the id stays `None`.
+
+### Built-in commands have no id
+
+Built-in commands such as `echo`, `sleep` and `cat` run inside your process and
+never spawn anything, so there is no operating system process to identify and
+`pid()` stays `None`:
+
+```rust,no_run
+use command_stream::{ProcessRunner, RunOptions};
+
+#[tokio::main]
+async fn main() -> command_stream::Result<()> {
+    let mut builtin = ProcessRunner::new("echo hello", RunOptions::default());
+    builtin.run().await?;
+    assert_eq!(builtin.pid(), None);
+
+    // The absolute path bypasses the built-in, so a real process is spawned.
+    let mut external = ProcessRunner::new("/bin/echo hello", RunOptions::default());
+    external.run().await?;
+    assert!(external.pid().is_some());
+
+    Ok(())
+}
+```
+
+A runnable walkthrough of all of the above is in
+[`rust/examples/process_pid_access.rs`](examples/process_pid_access.rs), which
+can be run with `cargo run --example process_pid_access`.
+
 ## Signals
 
 `kill()` stops a running command. It defaults to `SIGTERM` and works the same way

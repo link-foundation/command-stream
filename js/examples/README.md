@@ -174,6 +174,12 @@ The simplest examples to get started:
 - `syntax-piping-comparison.mjs` - Command chaining comparison
 - `syntax-multiple-listeners.mjs` - Multiple event listeners comparison
 
+### 🆔 Process Management
+
+**PID Access:**
+
+- `process-pid-access.mjs` - Reading `command.pid`: when it becomes available, what it names, and how to use it
+
 ### 🧪 Testing and Debugging
 
 **Core Functionality Tests:**
@@ -322,11 +328,21 @@ The simplest examples to get started:
 - ✅ **No resource leaks** - Virtual commands are properly closed
 - ✅ **Clean exit** - No hanging processes after iteration stops
 
+### 🆔 Process Management
+
+- ✅ **PID access** - Read the process id via `command.pid`
+- ✅ **Process lifecycle** - Recorded at spawn time, so it stays readable after the command finishes
+- ✅ **Every execution path** - Same value from `await`, `sync()`, `stream()` and the `streams` getters
+- ✅ **Built-in commands** - `undefined` for commands that run in-process and spawn nothing
+
 ## Usage Examples
 
 ```bash
 # Run a basic example
 bun js/examples/ping-streaming-simple.mjs
+
+# Learn how to get process PIDs
+node js/examples/process-pid-access.mjs
 
 # Test ANSI color handling
 node js/examples/colors-default-preserved.mjs
