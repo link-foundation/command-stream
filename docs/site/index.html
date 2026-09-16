@@ -891,49 +891,90 @@
         data.features.map((feature) => [feature.id, feature])
       );
 
-      const escape = (text) =>
-        String(text)
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;');
+      function element(tag, text, className) {
+        const result = document.createElement(tag);
+        if (text !== undefined) result.textContent = String(text);
+        if (className) result.className = className;
+        return result;
+      }
+
+      function featureLink(feature) {
+        const link = element('a', feature.title);
+        link.href = '#' + encodeURIComponent(feature.id);
+        return link;
+      }
+
+      function externalLink(library) {
+        const link = element('a', library.name);
+        const url = new URL(library.url);
+        if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+          throw new Error('Unsupported documentation URL protocol');
+        }
+        link.href = url.href;
+        return link;
+      }
+
+      function codeBlock(text) {
+        const pre = element('pre');
+        pre.append(element('code', text));
+        return pre;
+      }
+
+      function badges(names) {
+        const paragraph = element('p');
+        for (const name of names) {
+          const badge = element('span', undefined, 'badge');
+          badge.append(element('code', name));
+          paragraph.append(badge, ' ');
+        }
+        return paragraph;
+      }
+
+      function comparisonTable(headers, rows) {
+        const table = element('table');
+        const head = element('thead');
+        const headRow = element('tr');
+        for (const header of headers) headRow.append(element('th', header));
+        head.append(headRow);
+
+        const body = element('tbody');
+        for (const values of rows) {
+          const row = element('tr');
+          for (const value of values) {
+            const cell = element('td');
+            if (typeof value === 'string') cell.textContent = value;
+            else cell.append(value);
+            row.append(cell);
+          }
+          body.append(row);
+        }
+        table.append(head, body);
+        return table;
+      }
 
       function renderNav(query) {
         const needle = query.trim().toLowerCase();
-        const html = data.categories
-          .map((category) => {
-            const matches = data.features.filter(
-              (feature) =>
-                feature.category === category &&
-                (needle === '' ||
-                  (
-                    feature.title +
-                    ' ' +
-                    feature.summary +
-                    ' ' +
-                    feature.api.join(' ')
-                  )
-                    .toLowerCase()
-                    .includes(needle))
-            );
-            if (matches.length === 0) return '';
-            return (
-              '<h2>' +
-              escape(category) +
-              '</h2>' +
-              matches
-                .map(
-                  (feature) =>
-                    '<a href="#' +
-                    feature.id +
-                    '">' +
-                    escape(feature.title) +
-                    '</a>'
+        const fragment = document.createDocumentFragment();
+        for (const category of data.categories) {
+          const matches = data.features.filter(
+            (feature) =>
+              feature.category === category &&
+              (needle === '' ||
+                (
+                  feature.title +
+                  ' ' +
+                  feature.summary +
+                  ' ' +
+                  feature.api.join(' ')
                 )
-                .join('')
-            );
-          })
-          .join('');
-        document.getElementById('nav-links').innerHTML = html;
+                  .toLowerCase()
+                  .includes(needle))
+          );
+          if (matches.length === 0) continue;
+          fragment.append(element('h2', category));
+          for (const feature of matches) fragment.append(featureLink(feature));
+        }
+        document.getElementById('nav-links').replaceChildren(fragment);
         markActive();
       }
 
@@ -948,154 +989,122 @@
       }
 
       function overview() {
-        const runtimeHeader =
-          data.runtimes
-            .map(
-              (runtime) => '<th>JavaScript (' + escape(runtime.label) + ')</th>'
-            )
-            .join('') + '<th>Rust</th>';
-        const runtimeRows = data.features
-          .map(
-            (feature) =>
-              '<tr><td><a href="#' +
-              feature.id +
-              '">' +
-              escape(feature.title) +
-              '</a></td>' +
-              data.runtimes.map(() => '<td>&#10003;</td>').join('') +
-              '<td>&#10003;</td></tr>'
+        const fragment = document.createDocumentFragment();
+        fragment.append(
+          element('h2', 'Language and runtime parity'),
+          element(
+            'p',
+            'Every feature below has an executable JavaScript and Rust example. JavaScript output is also compared across Node and Bun.'
+          ),
+          comparisonTable(
+            [
+              'Feature',
+              ...data.runtimes.map(
+                (runtime) => 'JavaScript (' + runtime.label + ')'
+              ),
+              'Rust',
+            ],
+            data.features.map((feature) => [
+              featureLink(feature),
+              ...data.runtimes.map(() => '✓'),
+              '✓',
+            ])
+          ),
+          element('h2', 'Library comparison'),
+          comparisonTable(
+            [
+              'Feature',
+              'command-stream',
+              ...others.map((library) => library.name),
+            ],
+            data.features.map((feature) => [
+              featureLink(feature),
+              '✓',
+              ...others.map((library) => {
+                const alternative = feature.alternatives[library.id];
+                return typeof alternative === 'string' ? '✓' : '—';
+              }),
+            ])
           )
-          .join('');
-
-        const libraryHeader = others
-          .map((library) => '<th>' + escape(library.name) + '</th>')
-          .join('');
-        const libraryRows = data.features
-          .map(
-            (feature) =>
-              '<tr><td><a href="#' +
-              feature.id +
-              '">' +
-              escape(feature.title) +
-              '</a></td><td>&#10003;</td>' +
-              others
-                .map((library) => {
-                  const alternative = feature.alternatives[library.id];
-                  const supported = typeof alternative === 'string';
-                  return (
-                    '<td>' + (supported ? '&#10003;' : '&mdash;') + '</td>'
-                  );
-                })
-                .join('') +
-              '</tr>'
-          )
-          .join('');
-
-        return (
-          '<h2>Language and runtime parity</h2>' +
-          '<p>Every feature below has an executable JavaScript and Rust example. JavaScript output is also compared across Node and Bun.</p>' +
-          '<table><thead><tr><th>Feature</th>' +
-          runtimeHeader +
-          '</tr></thead><tbody>' +
-          runtimeRows +
-          '</tbody></table>' +
-          '<h2>Library comparison</h2>' +
-          '<table><thead><tr><th>Feature</th><th>command-stream</th>' +
-          libraryHeader +
-          '</tr></thead><tbody>' +
-          libraryRows +
-          '</tbody></table>'
         );
+        return fragment;
       }
 
       function featureView(feature) {
-        const output = feature.identicalOutput
-          ? '<p>Identical in ' +
-            data.runtimes
-              .map((runtime) => escape(runtime.label))
-              .join(' and ') +
-            ':</p><pre><code>' +
-            escape(feature.output[data.runtimes[0].id]) +
-            '</code></pre>'
-          : data.runtimes
-              .map(
-                (runtime) =>
-                  '<h4>' +
-                  escape(runtime.label) +
-                  '</h4><pre><code>' +
-                  escape(feature.output[runtime.id]) +
-                  '</code></pre>'
-              )
-              .join('');
-
-        const comparison = others
-          .map((library) => {
-            const alternative = feature.alternatives[library.id];
-            const body =
-              typeof alternative === 'string'
-                ? '<pre><code>' + escape(alternative) + '</code></pre>'
-                : '<p class="unsupported">Not supported &mdash; ' +
-                  escape(alternative.unsupported) +
-                  '.</p>';
-            return (
-              '<h4><a href="' +
-              library.url +
-              '">' +
-              escape(library.name) +
-              '</a></h4>' +
-              body
-            );
-          })
-          .join('');
-
-        return (
-          '<h2>' +
-          escape(feature.title) +
-          '</h2>' +
-          '<p>' +
-          escape(feature.summary) +
-          '</p>' +
-          '<p><span class="badge">' +
-          escape(feature.category) +
-          '</span> ' +
-          '</p><h3>JavaScript</h3><p>' +
-          feature.api
-            .map(
-              (name) =>
-                '<span class="badge"><code>' + escape(name) + '</code></span>'
-            )
-            .join(' ') +
-          '</p>' +
-          '<h4>Example</h4><pre><code>' +
-          escape(feature.source) +
-          '</code></pre>' +
-          '<h4>Output</h4>' +
-          output +
-          '<h3>Rust</h3><p>' +
-          feature.rustApi
-            .map(
-              (name) =>
-                '<span class="badge"><code>' + escape(name) + '</code></span>'
-            )
-            .join(' ') +
-          '</p>' +
-          '<h4>Example</h4><pre><code>' +
-          escape(feature.rustSource) +
-          '</code></pre>' +
-          '<h4>Output</h4><pre><code>' +
-          escape(feature.rustOutput) +
-          '</code></pre>' +
-          '<h3>The same thing in other libraries</h3>' +
-          comparison
+        const fragment = document.createDocumentFragment();
+        fragment.append(
+          element('h2', feature.title),
+          element('p', feature.summary)
         );
+        const category = element('p');
+        category.append(element('span', feature.category, 'badge'));
+        fragment.append(
+          category,
+          element('h3', 'JavaScript'),
+          badges(feature.api),
+          element('h4', 'Example'),
+          codeBlock(feature.source),
+          element('h4', 'Output')
+        );
+
+        if (feature.identicalOutput) {
+          fragment.append(
+            element(
+              'p',
+              'Identical in ' +
+                data.runtimes.map((runtime) => runtime.label).join(' and ') +
+                ':'
+            ),
+            codeBlock(feature.output[data.runtimes[0].id])
+          );
+        } else {
+          for (const runtime of data.runtimes) {
+            fragment.append(
+              element('h4', runtime.label),
+              codeBlock(feature.output[runtime.id])
+            );
+          }
+        }
+
+        fragment.append(
+          element('h3', 'Rust'),
+          badges(feature.rustApi),
+          element('h4', 'Example'),
+          codeBlock(feature.rustSource),
+          element('h4', 'Output'),
+          codeBlock(feature.rustOutput),
+          element('h3', 'The same thing in other libraries')
+        );
+
+        for (const library of others) {
+          const heading = element('h4');
+          heading.append(externalLink(library));
+          fragment.append(heading);
+          const alternative = feature.alternatives[library.id];
+          fragment.append(
+            typeof alternative === 'string'
+              ? codeBlock(alternative)
+              : element(
+                  'p',
+                  'Not supported — ' + alternative.unsupported + '.',
+                  'unsupported'
+                )
+          );
+        }
+        return fragment;
       }
 
       function render() {
-        const id = location.hash.slice(1);
+        let id = '';
+        try {
+          id = decodeURIComponent(location.hash.slice(1));
+        } catch {
+          /* Invalid hash: show overview. */
+        }
         const feature = byId.get(id);
-        document.getElementById('content').innerHTML = feature
-          ? featureView(feature)
-          : overview();
+        document
+          .getElementById('content')
+          .replaceChildren(feature ? featureView(feature) : overview());
         markActive();
         window.scrollTo(0, 0);
       }

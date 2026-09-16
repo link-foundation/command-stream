@@ -111,6 +111,16 @@ describe('documentation validation', () => {
     expect(executable).toEqual([]);
   });
 
+  test('the generated website never reparses feature data as HTML', () => {
+    // Catalog entries and captured command output are text. Assigning rendered
+    // strings to an HTML sink would turn any markup in that data into active
+    // DOM content (the DOM-XSS pattern reported by CodeQL).
+    for (const file of ['scripts/generate-docs.mjs', 'docs/site/index.html']) {
+      const text = readFileSync(join(repoRoot, file), 'utf8');
+      expect(text).not.toMatch(/\.(?:inner|outer)HTML\s*=|insertAdjacentHTML/);
+    }
+  });
+
   // A reader following a cross-reference lands on a heading. These are the
   // headings other documents and the workflows point at.
   test.each([
