@@ -119,8 +119,9 @@ async fn test_streaming_exit_code() {
 #[tokio::test]
 async fn test_streaming_runner_cwd() {
     let temp_dir = tempfile::tempdir().unwrap();
-    let command = if cfg!(windows) { "cd" } else { "pwd" };
-    let runner = StreamingRunner::new(command).cwd(temp_dir.path());
+    // Command strings use the preferred POSIX shell on Windows as well; bare
+    // `cd` changes to $HOME in Bash and intentionally prints nothing.
+    let runner = StreamingRunner::new("pwd").cwd(temp_dir.path());
     let result = runner.collect().await.unwrap();
 
     assert!(result.is_success());
