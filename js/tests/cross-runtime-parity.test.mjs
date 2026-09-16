@@ -157,6 +157,49 @@ describe('virtual command stdin', () => {
   });
 });
 
+describe('virtual command streaming', () => {
+  test('starts a downstream process before an async generator finishes', async () => {
+    const dir = tempDir();
+    const consumer = path.join(dir, 'consumer.cjs');
+    const marker = path.join(dir, 'consumer-started');
+    fs.writeFileSync(
+      consumer,
+      [
+        "const fs = require('fs');",
+        'let started = false;',
+        "process.stdin.on('data', (chunk) => {",
+        '  if (!started) {',
+        '    started = true;',
+        '    fs.writeFileSync(process.argv[2], "");',
+        '  }',
+        '  process.stdout.write(chunk);',
+        '});',
+      ].join('\n')
+    );
+
+    register('parity-handshake', async function* () {
+      yield 'first\n';
+      const deadline = Date.now() + 2000;
+      while (!fs.existsSync(marker)) {
+        if (Date.now() >= deadline) {
+          throw new Error('downstream process did not consume the first chunk');
+        }
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      yield 'second\n';
+    });
+
+    try {
+      const result =
+        await $q`parity-handshake | ${process.execPath} ${consumer} ${marker}`;
+      expect(result.stdout).toBe('first\nsecond\n');
+      expect(fs.existsSync(marker)).toBe(true);
+    } finally {
+      unregister('parity-handshake');
+    }
+  }, 10000);
+});
+
 describe('pipeline exit codes', () => {
   test('the exit code of the last virtual command is propagated', async () => {
     register('parity-fail', async () => ({

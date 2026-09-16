@@ -967,8 +967,11 @@ export function attachPipelineMethods(ProcessRunner, deps) {
               return generatorDone;
             },
           });
-          await generatorDone;
-          stageCodes.push(0);
+          // Track completion without awaiting it here. The next process must
+          // start now so it can consume chunks while the generator is still
+          // producing them (and so producer/consumer handshakes cannot
+          // deadlock).
+          stageCodes.push(generatorDone.then(() => 0));
         } else {
           const { stdin: _, ...opts } = this.options;
           const result = await handler({
