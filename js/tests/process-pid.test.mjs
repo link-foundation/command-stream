@@ -153,21 +153,24 @@ describe('issue #18 - process id access', () => {
 });
 
 // `ps` is the reference for "which process is this really?", and it is POSIX
-// only. The behavior it pins down (shell wrapper vs. exact executable) is not
-// Unix-specific, but its verification is.
+// only. The behavior it pins down (the process behind the id, shell-wrapped or
+// not) is not Unix-specific, but its verification is.
 describe.skipIf(isWindows)('issue #18 - what the id names', () => {
-  test('a shell command reports the shell that runs it', async () => {
+  test('a shell command reports the process running it', async () => {
     // Worth pinning down because it is surprising: a command string goes
-    // through the platform shell, so the pid names that shell and the command
-    // itself is its child. The shell leads its own process group, which is how
-    // kill() reaches both.
+    // through the platform shell, so the pid names the process the shell put
+    // there rather than something the caller wrote. Which process that is
+    // depends on the shell: most fork, leaving the wrapper named with the
+    // command as its child, while some replace themselves with a single simple
+    // command (macOS `/bin/sh` does, and Rust CI caught it there). Either way
+    // the named process leads its own process group, which is how kill()
+    // reaches the whole tree.
     const runner = $(quiet)`/bin/sleep 5`;
     await runner.streams.stdout;
     const pid = runner.pid;
 
     const args = execSync(`ps -o args= -p ${pid}`).toString().trim();
     expect(args).toContain('/bin/sleep 5');
-    expect(args).not.toBe('/bin/sleep 5'); // a shell wrapper, not the command
 
     const pgid = Number(execSync(`ps -o pgid= -p ${pid}`).toString().trim());
     expect(pgid).toBe(pid);

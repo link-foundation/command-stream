@@ -92,9 +92,11 @@ async fn main() -> command_stream::Result<()> {
     external.run().await?;
     println!("/bin/echo instead:  {:?}", external.pid());
 
-    // 4. What the id names. A command string is handed to a shell, so the id is
-    //    the shell's, and the command itself runs as its child. The shell leads
-    //    its own process group, which is how kill() reaches both of them.
+    // 4. What the id names. A command string is handed to a shell, so the id
+    //    names the process that shell put there: usually the shell itself, with
+    //    the command as its child, but some shells (macOS `/bin/sh`) replace
+    //    themselves with a single simple command instead. Either way it leads
+    //    its own process group, which is how kill() reaches the whole tree.
     println!("\n=== 4. What the id names ===");
     let mut shell_run = ProcessRunner::new(format!("{SLEEP} 30"), quiet());
     shell_run.start().await?;
@@ -105,9 +107,13 @@ async fn main() -> command_stream::Result<()> {
         "its process group:  {} (same as the pid)",
         ps("pgid=", shell_pid)
     );
-    for child in children(shell_pid) {
+    let shell_children = children(shell_pid);
+    for child in &shell_children {
         let child_pid: u32 = child.parse().expect("pgrep prints ids");
         println!("  child {child_pid}: {}", ps("args=", child_pid));
+    }
+    if shell_children.is_empty() {
+        println!("  no children - this shell replaced itself with the command");
     }
 
     // kill() signals the whole group, which is how it reaches the command

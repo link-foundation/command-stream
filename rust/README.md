@@ -192,16 +192,23 @@ for a process that will not exist.
 
 ### What the id names
 
-A command string is handed to a shell, so the id names **the shell**, and the
-command itself runs as its child:
+A command string is handed to a shell, so the id names **the process that shell
+put there**. Usually that is the shell itself, with the command running as its
+child:
 
 ```console
 $ ps -o args= -p 51234
 /bin/sh -c /bin/sleep 5
 ```
 
-The shell is spawned as the leader of its own process group, so the group id
-equals the pid. That is what lets `kill()` reach the command underneath the
+Some shells replace themselves with the command when the string is a single
+simple command, so the same id can name the command directly instead — macOS
+`/bin/sh` does this, where the line above reads `/bin/sleep 5`. Do not depend on
+either shape; what holds everywhere is that the id names the process the library
+spawned to run your command.
+
+The spawned process leads its own process group, so the group id equals the
+pid. That is what lets `kill()` reach the command underneath the
 wrapper (see [Grandchildren and process groups](#grandchildren-and-process-groups)).
 
 A consequence worth knowing: a command that does not exist is reported by the

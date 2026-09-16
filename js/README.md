@@ -729,6 +729,11 @@ $ ps -o args= -p 51234
 /bin/sh -l -c /bin/sleep 5
 ```
 
+Do not depend on the wrapper being there. Some shells replace themselves with
+the command when the string is a single simple command, in which case the same
+id names the command directly. What holds everywhere is that the id names the
+process the library spawned to run your command.
+
 The shell is spawned as the leader of its own process group, so the group id
 equals the pid. That is what lets `kill()` reach the command underneath the
 wrapper (see

@@ -135,11 +135,18 @@ async fn streaming_pid_is_set_by_the_time_output_arrives() {
 }
 
 /// `ps` is the reference for "which process is this really?", and it is POSIX
-/// only. The behavior it pins down - a command string being run *by a shell*,
-/// so the id names that shell - is not Unix-specific, but its verification is.
+/// only. The behavior it pins down - the id naming the process that was spawned
+/// to run the command string - is not Unix-specific, but its verification is.
+///
+/// Which process that is depends on the shell. Most shells fork, leaving
+/// `/bin/sh -c <command>` as the named process with the command as its child.
+/// Others replace themselves with the command when the string is a single
+/// simple command - macOS `/bin/sh` does this, and CI caught it - in which case
+/// the id names the command directly. The assertion is therefore on what both
+/// shapes share: the named process is running the command that was asked for.
 #[cfg(unix)]
 #[tokio::test]
-async fn a_shell_command_reports_the_shell_that_runs_it() {
+async fn a_shell_command_reports_the_process_running_it() {
     let mut runner = ProcessRunner::new(IDLE_COMMAND, quiet());
     runner.start().await.unwrap();
     let pid = runner.pid().expect("a spawned command has a pid");
@@ -151,7 +158,6 @@ async fn a_shell_command_reports_the_shell_that_runs_it() {
     let args = String::from_utf8_lossy(&ps.stdout).trim().to_string();
 
     assert!(args.contains("/bin/sleep 5"), "unexpected process: {args}");
-    assert_ne!(args, "/bin/sleep 5", "expected a shell wrapper");
 
     runner.kill().unwrap();
     let _ = runner.run().await;

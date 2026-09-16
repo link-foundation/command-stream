@@ -58,9 +58,11 @@ const external = $(quiet)`/bin/echo hello`;
 await external;
 console.log(`/bin/echo instead:  ${external.pid}`);
 
-// 4. What the id names. A command string is handed to a shell, so the id is
-//    the shell's, and the command itself runs as its child. The shell leads
-//    its own process group, which is how kill() reaches both of them.
+// 4. What the id names. A command string is handed to a shell, so the id names
+//    the process that shell put there: usually the shell itself, with the
+//    command as its child, but some shells replace themselves with a single
+//    simple command instead. Either way it leads its own process group, which
+//    is how kill() reaches the whole tree.
 console.log('\n=== 4. What the id names ===');
 const shellRun = $(quiet)`${SLEEP} 30`;
 await shellRun.streams.stdout;
@@ -68,8 +70,12 @@ const shellPid = shellRun.pid;
 
 console.log(`pid ${shellPid} is: ${ps('args=', shellPid)}`);
 console.log(`its process group:  ${ps('pgid=', shellPid)} (same as the pid)`);
-for (const childPid of children(shellPid)) {
+const shellChildren = children(shellPid);
+for (const childPid of shellChildren) {
   console.log(`  child ${childPid}: ${ps('args=', childPid)}`);
+}
+if (shellChildren.length === 0) {
+  console.log('  no children — this shell replaced itself with the command');
 }
 
 // Signalling the whole group reaches the command under the shell. This is
