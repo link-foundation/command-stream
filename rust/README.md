@@ -137,6 +137,118 @@ The exact-argv form bypasses `/bin/sh -c` and `cmd.exe /c`, so it does not
 require shell-specific quoting. It also accepts OS-native executable and
 argument values such as `PathBuf` and `OsString`.
 
+## Signals
+
+`kill()` stops a running command. It defaults to `SIGTERM` and works the same way
+for both runners, matching the JavaScript implementation
+([JS signal documentation](../js/README.md#sending-signals-to-a-running-command)).
+
+### What `kill()` actually does
+
+Stopping a process is not a single signal. Every kill runs the same four steps:
+
+1. The requested signal is delivered to the child **and its process group**, so a
+   grandchild behind a shell wrapper is reached too.
+2. The child is given a grace period (`kill_grace_ms`, default `100`) to run its
+   own signal handler and exit on its own terms.
+3. If it is still alive when the grace period expires, `SIGKILL` follows, so a
+   process that ignores the signal is still guaranteed to terminate.
+4. The reported exit code is the conventional `128 + signal` value.
+
+Step 2 is what makes a shutdown _graceful_: without it, a child that traps
+SIGTERM to flush output, release a lock, or stop its own workers is destroyed
+before its handler can run.
+
+### ProcessRunner
+
+`kill()` sends the configured signal; `kill_with(signal)` overrides it for a
+single call:
+
+```rust,no_run
+use command_stream::{ProcessRunner, RunOptions};
+
+#[tokio::main]
+async fn main() -> command_stream::Result<()> {
+    let mut runner = ProcessRunner::new(
+        "sh -c 'trap \"echo cleaning up; exit 0\" TERM; while true; do sleep 1; done'",
+        RunOptions {
+            // The signal an argument-less kill() delivers (default SIGTERM).
+            kill_signal: "SIGTERM".to_string(),
+            // Time the child gets to handle it before SIGKILL (default 100ms).
+            kill_grace_ms: 100,
+            ..Default::default()
+        },
+    );
+
+    runner.start().await?;
+    runner.kill()?; // the trap runs, prints "cleaning up", and exits
+    runner.kill_with("SIGINT")?; // explicit per-call override
+
+    Ok(())
+}
+```
+
+### StreamingRunner
+
+`stream.kill()` and `stream.kill_with(signal)` stop the process from inside the
+loop; dropping the stream (e.g. `break`) stops it too:
+
+```rust,no_run
+use command_stream::{OutputChunk, StreamingRunner};
+
+#[tokio::main]
+async fn main() {
+    let mut stream = StreamingRunner::new("sh -c 'while true; do echo tick; sleep 0.1; done'")
+        .kill_signal("SIGINT") // default for kill() and for dropping the stream
+        .kill_grace_ms(100) // grace before the SIGKILL escalation
+        .stream();
+
+    while let Some(chunk) = stream.next().await {
+        match chunk {
+            OutputChunk::Stdout(_) => stream.kill(), // sends SIGINT
+            OutputChunk::Exit(code) => println!("exit: {code}"), // 130
+            OutputChunk::Stderr(_) => {}
+        }
+    }
+}
+```
+
+### Tuning the grace period
+
+`kill_grace_ms` is the number of milliseconds between the requested signal and
+the SIGKILL escalation. Set it to `0` to escalate immediately, with no chance to
+clean up. `SIGKILL` is never delayed: it cannot be caught, so `kill_with("SIGKILL")`
+skips the grace period regardless of the configured value.
+
+### Signal exit codes
+
+A process stopped by a signal reports `128 + signal`, the same convention POSIX
+shells use. `signal_number` and `signal_exit_code` expose the mapping:
+
+```rust
+use command_stream::{signal_exit_code, signal_number};
+
+assert_eq!(signal_number("SIGINT"), 2);
+assert_eq!(signal_exit_code("SIGINT"), 130); // CTRL+C
+assert_eq!(signal_exit_code("SIGTERM"), 143);
+assert_eq!(signal_exit_code("SIGKILL"), 137);
+```
+
+| Signal    | Number | Exit code | Typical meaning                      |
+| --------- | ------ | --------- | ------------------------------------ |
+| `SIGHUP`  | 1      | `129`     | Terminal closed / reload config      |
+| `SIGINT`  | 2      | `130`     | CTRL+C                               |
+| `SIGQUIT` | 3      | `131`     | Quit from keyboard                   |
+| `SIGKILL` | 9      | `137`     | Forced termination, cannot be caught |
+| `SIGUSR1` | 10     | `138`     | Application-defined                  |
+| `SIGUSR2` | 12     | `140`     | Application-defined                  |
+| `SIGTERM` | 15     | `143`     | Polite request to stop (the default) |
+
+The code reflects the signal **you requested**, even when the SIGKILL escalation
+is what ultimately stopped the process. Unknown signal names fall back to
+`SIGTERM`. Signals are a Unix concept; on Windows the escalation terminates the
+process directly.
+
 ## Multiline Text and Exact Output
 
 The command macros treat an interpolated multiline string as one literal
