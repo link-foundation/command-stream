@@ -334,6 +334,11 @@ pub struct ProcessRunner {
     command: String,
     options: RunOptions,
     child: Option<Child>,
+    /// Process id of the spawned child, recorded at spawn time. `run()` takes
+    /// the child in order to await it, so reading the id from it only works
+    /// between `start()` and `run()`; this copy is what makes `pid()` answer
+    /// after the command has finished too (issue #18).
+    pid: Option<u32>,
     result: Option<CommandResult>,
     started: bool,
     finished: bool,
@@ -361,6 +366,7 @@ impl ProcessRunner {
             command: command.into(),
             options,
             child: None,
+            pid: None,
             result: None,
             started: false,
             finished: false,
@@ -489,6 +495,10 @@ impl ProcessRunner {
 
         // Spawn the process
         let child = cmd.spawn()?;
+        // Record the id while the child is still held. `run()` takes the child
+        // in order to await it, so this copy is what keeps `pid()` readable
+        // afterwards.
+        self.pid = child.id();
         self.child = Some(child);
 
         Ok(())
@@ -720,6 +730,34 @@ impl ProcessRunner {
     /// Get the result if available
     pub fn result(&self) -> Option<&CommandResult> {
         self.result.as_ref()
+    }
+
+    /// Process id of the command, or `None` when there is no operating system
+    /// process to identify.
+    ///
+    /// It is `None` before the command starts, and stays `None` for built-in
+    /// (virtual) commands such as `echo` or `sleep`, which run inside this
+    /// process and never spawn a child. Once a real command has been spawned
+    /// the value is stable: it remains readable after the command finishes,
+    /// unlike the child handle, which [`run`](Self::run) consumes.
+    ///
+    /// Mirrors the JavaScript `runner.pid` property.
+    ///
+    /// ```no_run
+    /// use command_stream::{ProcessRunner, RunOptions};
+    ///
+    /// # #[tokio::main]
+    /// # async fn main() -> command_stream::Result<()> {
+    /// let mut runner = ProcessRunner::new("/bin/sleep 1", RunOptions::default());
+    /// runner.start().await?;
+    /// println!("running as pid {:?}", runner.pid());
+    /// runner.run().await?;
+    /// println!("still readable: {:?}", runner.pid());
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn pid(&self) -> Option<u32> {
+        self.pid
     }
 
     /// Get the command string

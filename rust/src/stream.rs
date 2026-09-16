@@ -61,7 +61,7 @@ use std::process::Stdio;
 use std::time::Duration;
 use tokio::io::BufReader;
 use tokio::process::Command;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, watch};
 use tokio::task::JoinHandle;
 
 use crate::signal::{
@@ -194,6 +194,10 @@ impl StreamingRunner {
         let (tx, rx) = mpsc::channel(1024);
         // Unbounded so a synchronous Drop can request a kill without awaiting.
         let (kill_tx, kill_rx) = mpsc::unbounded_channel::<String>();
+        // The child is spawned inside the task below, so its id is not known
+        // when this returns. The task publishes it here as soon as the spawn
+        // succeeds; `OutputStream::pid` reads the latest value (issue #18).
+        let (pid_tx, pid_rx) = watch::channel(None);
 
         // Spawn the process handling task
         let command = self.command.clone();
@@ -207,8 +211,13 @@ impl StreamingRunner {
         let kill_signal = self.kill_signal.clone();
 
         let task = tokio::spawn(async move {
+            let channels = StreamChannels {
+                output_tx: tx,
+                kill_rx,
+                pid_tx,
+            };
             let result =
-                run_streaming_process(command, cwd, env, stdin_content, grace, tx, kill_rx).await;
+                run_streaming_process(command, cwd, env, stdin_content, grace, channels).await;
             if let Err(error) = &result {
                 trace_lazy("StreamingRunner", || format!("Error: {error}"));
             }
@@ -221,6 +230,7 @@ impl StreamingRunner {
                 kill_tx,
                 kill_signal,
                 killed: false,
+                pid_rx,
             },
             task,
         )
@@ -264,12 +274,40 @@ pub struct OutputStream {
     kill_tx: mpsc::UnboundedSender<String>,
     kill_signal: String,
     killed: bool,
+    pid_rx: watch::Receiver<Option<u32>>,
 }
 
 impl OutputStream {
     /// Receive the next chunk
     pub async fn next(&mut self) -> Option<OutputChunk> {
         self.rx.recv().await
+    }
+
+    /// Process id of the streamed command, as currently known.
+    ///
+    /// The child is spawned by a background task, so this is `None` for the
+    /// short window between [`StreamingRunner::stream`] returning and the spawn
+    /// completing, and stays `None` if the spawn failed. From the first
+    /// delivered chunk onwards it is set, and it remains readable after the
+    /// process has exited. Use [`wait_for_pid`](Self::wait_for_pid) to avoid
+    /// the startup window.
+    pub fn pid(&self) -> Option<u32> {
+        *self.pid_rx.borrow()
+    }
+
+    /// Process id of the streamed command, waiting for the spawn to complete.
+    ///
+    /// Resolves as soon as the child exists, and returns `None` if the process
+    /// could never be spawned. This is the streaming counterpart of awaiting a
+    /// stream before reading `runner.pid` in JavaScript.
+    pub async fn wait_for_pid(&mut self) -> Option<u32> {
+        // `wait_for` checks the current value first, so an already-published id
+        // returns without waiting. An error means the sending task is gone,
+        // which only happens when the spawn failed.
+        match self.pid_rx.wait_for(|pid| pid.is_some()).await {
+            Ok(pid) => *pid,
+            Err(_) => None,
+        }
     }
 
     /// Stop the process using the configured kill signal (default `SIGTERM`).
@@ -337,6 +375,17 @@ impl Drop for OutputStream {
     }
 }
 
+/// The channels `run_streaming_process` communicates over: output chunks out,
+/// kill requests in, and the child's id published once the spawn succeeds.
+struct StreamChannels {
+    /// Carries the output chunks, and finally the `Exit` chunk, to the consumer.
+    output_tx: mpsc::Sender<OutputChunk>,
+    /// Carries kill requests, by signal name, in from the consumer.
+    kill_rx: mpsc::UnboundedReceiver<String>,
+    /// Publishes the child's id, which is only known inside the spawning task.
+    pid_tx: watch::Sender<Option<u32>>,
+}
+
 /// How long the runner waits, in milliseconds, at the two points where it gives
 /// something a chance to finish on its own before forcing the issue.
 #[derive(Debug, Clone, Copy)]
@@ -356,9 +405,13 @@ async fn run_streaming_process(
     env: Option<HashMap<String, String>>,
     stdin_content: Option<String>,
     grace: GraceWindows,
-    tx: mpsc::Sender<OutputChunk>,
-    mut kill_rx: mpsc::UnboundedReceiver<String>,
+    channels: StreamChannels,
 ) -> Result<()> {
+    let StreamChannels {
+        output_tx: tx,
+        mut kill_rx,
+        pid_tx,
+    } = channels;
     trace_lazy("StreamingRunner", || match &command {
         StreamingCommand::Shell(command) => format!("Starting: {command}"),
         StreamingCommand::Argv { program, args } => {
@@ -408,6 +461,9 @@ async fn run_streaming_process(
     }
 
     let mut child = cmd.spawn()?;
+    // Publish the id before any awaiting, so a consumer asking for it as soon
+    // as the first chunk arrives already sees it.
+    let _ = pid_tx.send(child.id());
 
     // Write stdin if needed
     if let Some(content) = stdin_content {

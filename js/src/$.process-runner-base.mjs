@@ -229,6 +229,11 @@ class ProcessRunner extends StreamEmitter {
 
     this.result = null;
     this.child = null;
+    // Process id of the spawned child, recorded at spawn time. `child` is
+    // released by _cleanup() once the command finishes, so reading the pid from
+    // it only works while the process is alive; this copy is what makes the
+    // `pid` getter answer after completion too (issue #18).
+    this._pid = undefined;
     this.started = false;
     this.finished = false;
 
@@ -266,6 +271,22 @@ class ProcessRunner extends StreamEmitter {
     installSignalHandlers();
 
     this.finished = false;
+  }
+
+  /**
+   * Process id of the command, or `undefined` when there is no operating
+   * system process to identify.
+   *
+   * It is `undefined` before the command starts, and stays `undefined` for
+   * built-in (virtual) commands such as `echo` or `sleep`, which run inside
+   * this process and never spawn a child. Once a real command has been
+   * spawned the value is stable: it remains readable after the command
+   * finishes, unlike `child`, which is released during cleanup.
+   *
+   * @returns {number|undefined}
+   */
+  get pid() {
+    return this._pid;
   }
 
   // Stream property getters
