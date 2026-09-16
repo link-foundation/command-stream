@@ -8,7 +8,7 @@
 //!   * [`OutputStream::kill`](crate::OutputStream::kill) /
 //!     [`OutputStream::kill_with`](crate::OutputStream::kill_with)
 //!
-//! The model mirrors the JavaScript implementation exactly:
+//! The model mirrors the JavaScript implementation:
 //!
 //!   1. The requested signal is delivered to the child **and** its process
 //!      group, so grandchildren spawned by a shell are stopped too. The group
@@ -21,6 +21,12 @@
 //!      so a process that ignores the signal still terminates.
 //!   4. The reported exit code is the conventional `128 + signal` value
 //!      ([`signal_exit_code`]).
+//!
+//! A grace period of zero collapses steps 1 to 3 into `SIGKILL` alone: any work
+//! between the requested signal and the escalation is a window the child can be
+//! scheduled in, so delivering it first would make "no grace" a race rather
+//! than a guarantee. The exit code still reflects the signal that was asked
+//! for.
 
 /// Default signal used to stop a process when no explicit signal is given.
 ///
