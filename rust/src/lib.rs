@@ -68,6 +68,7 @@ pub mod events;
 pub mod macros;
 pub mod pipeline;
 pub mod quote;
+pub mod signal;
 pub mod state;
 pub mod stream;
 pub mod terminal;
@@ -98,6 +99,7 @@ pub use quote::{
     is_pre_quoted_passthrough_enabled, is_quote_context_enabled, quote, quote_for_context,
     scan_quote_context, QuoteContext,
 };
+pub use signal::{signal_exit_code, signal_number, DEFAULT_KILL_GRACE_MS, DEFAULT_KILL_SIGNAL};
 pub use state::{
     get_shell_settings, global_state, reset_global_state, set_shell_option, unset_shell_option,
     GlobalState, ShellSettings,
@@ -283,6 +285,18 @@ pub struct RunOptions {
     pub shell_operators: bool,
     /// Enable tracing for this command
     pub trace: bool,
+    /// Signal used to stop the process when it is killed without an explicit
+    /// signal, i.e. [`ProcessRunner::kill`] (default `SIGTERM`).
+    ///
+    /// Mirrors the JavaScript `killSignal` option. An explicit
+    /// [`ProcessRunner::kill_with`] argument always overrides it.
+    pub kill_signal: String,
+    /// Milliseconds the child is given to handle the kill signal before
+    /// `SIGKILL` is sent (default 100).
+    ///
+    /// Mirrors the JavaScript `killGrace` option. This is the window in which a
+    /// child running its own signal handler can shut down on its own terms.
+    pub kill_grace_ms: u64,
 }
 
 impl Default for RunOptions {
@@ -296,6 +310,8 @@ impl Default for RunOptions {
             interactive: false,
             shell_operators: true,
             trace: true,
+            kill_signal: signal::DEFAULT_KILL_SIGNAL.to_string(),
+            kill_grace_ms: signal::DEFAULT_KILL_GRACE_MS,
         }
     }
 }
@@ -322,6 +338,12 @@ pub struct ProcessRunner {
     started: bool,
     finished: bool,
     cancelled: bool,
+    /// Whether the child was spawned into a process group of its own, and so
+    /// can be signalled as a group. Recorded at spawn time because it cannot be
+    /// discovered later: by the time the group is signalled the leader is
+    /// usually a zombie, which macOS refuses to answer `getpgid` for.
+    #[cfg(unix)]
+    own_process_group: bool,
     output_tx: Option<mpsc::Sender<StreamChunk>>,
     // Held, never read: dropping the receiver would close the channel, and
     // streaming virtual commands treat a closed channel as "stop now" (see
@@ -343,9 +365,26 @@ impl ProcessRunner {
             started: false,
             finished: false,
             cancelled: false,
+            #[cfg(unix)]
+            own_process_group: false,
             output_tx: Some(tx),
             output_rx: Some(rx),
         }
+    }
+
+    /// Whether the child will read from the caller's terminal.
+    ///
+    /// Only an *inherited* stdin that is actually a tty counts: a pipe, a null
+    /// stdin, or inherited stdin that has been redirected to a file carries no
+    /// terminal, and neither does output-only inheritance. This is the one case
+    /// where the child must stay in the caller's process group.
+    #[cfg(unix)]
+    fn shares_the_terminal(&self) -> bool {
+        use std::io::IsTerminal;
+
+        self.options.interactive
+            || (matches!(self.options.stdin, StdinOption::Inherit)
+                && std::io::stdin().is_terminal())
     }
 
     /// Start the process
@@ -428,6 +467,23 @@ impl ProcessRunner {
         if let Some(ref env_vars) = self.options.env {
             for (key, value) in env_vars {
                 cmd.env(key, value);
+            }
+        }
+
+        // Run the child in its own process group so that killing it can signal
+        // the whole group (parent + grandchildren), matching `StreamingRunner`
+        // and the JavaScript implementation's `detached` spawn.
+        //
+        // A child that shares the terminal is deliberately left in the caller's
+        // group. The tty delivers CTRL+C to its foreground group only, so
+        // moving such a child out would both hide CTRL+C from it and stop it
+        // with SIGTTIN the moment it read from the terminal. JavaScript draws
+        // the same line, spawning interactive commands without `detached`.
+        #[cfg(unix)]
+        {
+            self.own_process_group = !self.shares_the_terminal();
+            if self.own_process_group {
+                cmd.process_group(0);
             }
         }
 
@@ -556,13 +612,104 @@ impl ProcessRunner {
         }
     }
 
-    /// Kill the process
+    /// Stop the process using the configured kill signal
+    /// ([`RunOptions::kill_signal`], default `SIGTERM`).
+    ///
+    /// Mirrors the JavaScript `kill()` with no argument.
     pub fn kill(&mut self) -> Result<()> {
+        let signal = self.options.kill_signal.clone();
+        self.kill_with(&signal)
+    }
+
+    /// Stop the process using an explicit signal, overriding
+    /// [`RunOptions::kill_signal`] for this call.
+    ///
+    /// Mirrors the JavaScript `kill(signal)`. The signal is delivered to the
+    /// child and its process group, so grandchildren behind a `sh -c` wrapper
+    /// are stopped too - except for a child sharing the caller's terminal,
+    /// which stays in the caller's group so CTRL+C keeps reaching it. The child
+    /// then has [`RunOptions::kill_grace_ms`] to run its own handler before
+    /// `SIGKILL` follows, so a process that ignores the signal still
+    /// terminates.
+    ///
+    /// ```no_run
+    /// use command_stream::{ProcessRunner, RunOptions};
+    ///
+    /// # #[tokio::main]
+    /// # async fn main() -> command_stream::Result<()> {
+    /// let mut runner = ProcessRunner::new("sleep 30", RunOptions::default());
+    /// runner.start().await?;
+    /// runner.kill_with("SIGINT")?; // the CTRL+C signal
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn kill_with(&mut self, signal: &str) -> Result<()> {
         self.cancelled = true;
-        if let Some(ref mut child) = self.child {
+        utils::trace_lazy("ProcessRunner", || format!("kill | signal={signal}"));
+
+        let Some(child) = self.child.as_mut() else {
+            return Ok(());
+        };
+
+        // Windows has no signals to deliver and no handler for the child to
+        // run, so there is nothing to grant a grace period to: the forceful
+        // stop is the only way to end the process.
+        // The `#[cfg(unix)]` block below is stripped on Windows, which leaves
+        // this one as the function's tail expression - hence no `return`.
+        #[cfg(not(unix))]
+        {
+            let _ = signal;
             child.start_kill()?;
+            Ok(())
         }
-        Ok(())
+
+        // Without a pid the process never spawned (or was already reaped);
+        // fall back to the forceful stop so `kill()` still terminates it.
+        #[cfg(unix)]
+        {
+            let Some(pid) = child.id() else {
+                child.start_kill()?;
+                return Ok(());
+            };
+
+            // `SIGKILL` cannot be handled, so there is nothing to wait for.
+            //
+            // A zero grace period means the child is given no opportunity to
+            // handle the signal either, so the requested signal is not
+            // delivered at all. Anything done between it and `SIGKILL` - even a
+            // single syscall - is a window the child can be scheduled in, which
+            // made "no grace" a race the child occasionally won rather than a
+            // guarantee. The reported exit code still comes from the signal
+            // that was requested.
+            let grace = self.options.kill_grace_ms;
+            let delivery = if self.own_process_group {
+                signal::Delivery::ProcessAndGroup
+            } else {
+                signal::Delivery::ProcessOnly
+            };
+            if grace == 0 || signal == "SIGKILL" {
+                signal::send_signal_to_process(pid, "SIGKILL", delivery);
+                let _ = child.start_kill();
+                return Ok(());
+            }
+
+            signal::send_signal_to_process(pid, signal, delivery);
+
+            // Otherwise escalate in the background so the child keeps its grace
+            // period without blocking the caller, which may not be inside an
+            // await point.
+            tokio::spawn(async move {
+                tokio::time::sleep(std::time::Duration::from_millis(grace)).await;
+                // Best effort: if the child already exited on the first signal
+                // this delivery simply fails, and the pid has not been reused
+                // because the `Child` handle above has not reaped it yet. That
+                // unreaped leader is also what keeps the group id alive, so the
+                // group delivery still reaches a grandchild that outlived it.
+                signal::send_signal_to_process(pid, "SIGKILL", delivery);
+            });
+
+            Ok(())
+        }
     }
 
     /// Check if the process is finished

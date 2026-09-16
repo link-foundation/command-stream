@@ -64,6 +64,9 @@ use tokio::process::Command;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 
+use crate::signal::{
+    send_signal_to_process, signal_exit_code, Delivery, DEFAULT_KILL_GRACE_MS, DEFAULT_KILL_SIGNAL,
+};
 use crate::trace::trace_lazy;
 use crate::{CommandResult, Result};
 
@@ -71,9 +74,6 @@ use crate::{CommandResult, Result};
 /// after the process has exited before aborting any lingering readers. Mirrors
 /// the JavaScript `exitPumpGrace` default.
 const DEFAULT_EXIT_PUMP_GRACE_MS: u64 = 100;
-
-/// Default signal used to stop a process when no explicit signal is given.
-const DEFAULT_KILL_SIGNAL: &str = "SIGTERM";
 
 /// A chunk of output from a streaming process
 #[derive(Debug, Clone)]
@@ -93,6 +93,7 @@ pub struct StreamingRunner {
     env: Option<HashMap<String, String>>,
     stdin_content: Option<String>,
     kill_signal: String,
+    kill_grace_ms: u64,
     exit_pump_grace_ms: u64,
 }
 
@@ -136,6 +137,7 @@ impl StreamingRunner {
             env: None,
             stdin_content: None,
             kill_signal: DEFAULT_KILL_SIGNAL.to_string(),
+            kill_grace_ms: DEFAULT_KILL_GRACE_MS,
             exit_pump_grace_ms: DEFAULT_EXIT_PUMP_GRACE_MS,
         }
     }
@@ -169,6 +171,17 @@ impl StreamingRunner {
         self
     }
 
+    /// Configure how long (in milliseconds) the child is given to handle the
+    /// kill signal before `SIGKILL` is sent. Mirrors the JavaScript `killGrace`
+    /// option (default 100ms).
+    ///
+    /// This is the window in which a child running its own `SIGTERM` handler
+    /// can shut down on its own terms. Set it to `0` to escalate immediately.
+    pub fn kill_grace_ms(mut self, ms: u64) -> Self {
+        self.kill_grace_ms = ms;
+        self
+    }
+
     /// Configure the grace period (in milliseconds) to keep draining the stdio
     /// pipes after the process exits before aborting lingering readers. Mirrors
     /// the JavaScript `exitPumpGrace` option (default 100ms).
@@ -187,7 +200,10 @@ impl StreamingRunner {
         let cwd = self.cwd.take();
         let env = self.env.take();
         let stdin_content = self.stdin_content.take();
-        let grace = self.exit_pump_grace_ms;
+        let grace = GraceWindows {
+            exit_pump_ms: self.exit_pump_grace_ms,
+            kill_ms: self.kill_grace_ms,
+        };
         let kill_signal = self.kill_signal.clone();
 
         let task = tokio::spawn(async move {
@@ -321,13 +337,25 @@ impl Drop for OutputStream {
     }
 }
 
+/// How long the runner waits, in milliseconds, at the two points where it gives
+/// something a chance to finish on its own before forcing the issue.
+#[derive(Debug, Clone, Copy)]
+struct GraceWindows {
+    /// Time allowed for the readers to drain buffered output after the child
+    /// exits, before the `Exit` chunk is emitted.
+    exit_pump_ms: u64,
+    /// Time allowed for the child to handle the delivered signal, before the
+    /// escalation to `SIGKILL`.
+    kill_ms: u64,
+}
+
 /// Run a streaming process and send output to the channel
 async fn run_streaming_process(
     command: StreamingCommand,
     cwd: Option<PathBuf>,
     env: Option<HashMap<String, String>>,
     stdin_content: Option<String>,
-    exit_pump_grace_ms: u64,
+    grace: GraceWindows,
     tx: mpsc::Sender<OutputChunk>,
     mut kill_rx: mpsc::UnboundedReceiver<String>,
 ) -> Result<()> {
@@ -457,21 +485,38 @@ async fn run_streaming_process(
             // being dropped). Stop the process group with the requested signal.
             let signal = maybe_signal.unwrap_or_else(|| DEFAULT_KILL_SIGNAL.to_string());
             trace_lazy("StreamingRunner", || format!("Kill requested | signal={}", signal));
-            if let Some(pid) = pid {
-                send_signal_to_process(pid, &signal);
-            }
-            // Give it a brief moment to exit on the requested signal, then
-            // escalate to a forceful kill so it always terminates.
-            if tokio::time::timeout(Duration::from_millis(exit_pump_grace_ms), child.wait())
-                .await
-                .is_err()
-            {
+            // Give the child its grace period to run its own handler and exit
+            // on its own terms, then escalate to a forceful kill so a process
+            // that ignores the signal still terminates.
+            //
+            // A zero grace period means the child is given no opportunity to
+            // handle the signal, so the requested signal is not delivered at
+            // all. Anything done between it and the forceful kill - a syscall,
+            // or awaiting a zero-length timeout, which yields to the runtime -
+            // is a window the child can be scheduled in, which made "no grace"
+            // a race the child occasionally won rather than a guarantee.
+            let survived_grace = if grace.kill_ms == 0 {
+                true
+            } else {
+                if let Some(pid) = pid {
+                    // The child is always spawned with `process_group(0)`
+                    // above, so it leads the group named by its own pid.
+                    send_signal_to_process(pid, &signal, Delivery::ProcessAndGroup);
+                }
+                tokio::time::timeout(Duration::from_millis(grace.kill_ms), child.wait())
+                    .await
+                    .is_err()
+            };
+            if survived_grace {
+                if let Some(pid) = pid {
+                    send_signal_to_process(pid, "SIGKILL", Delivery::ProcessAndGroup);
+                }
                 let _ = child.start_kill();
                 let _ = child.wait().await;
             }
             // Report the conventional 128 + signal code for the requested
             // signal, matching the JavaScript implementation.
-            code = 128 + signal_number(&signal);
+            code = signal_exit_code(&signal);
         }
     }
 
@@ -488,7 +533,7 @@ async fn run_streaming_process(
             let _ = handle.await;
         }
     };
-    if tokio::time::timeout(Duration::from_millis(exit_pump_grace_ms), drain)
+    if tokio::time::timeout(Duration::from_millis(grace.exit_pump_ms), drain)
         .await
         .is_err()
     {
@@ -525,49 +570,6 @@ fn status_to_code(status: std::process::ExitStatus) -> i32 {
     }
     -1
 }
-
-/// Map a signal name to its numeric value for the `128 + signal` exit-code
-/// convention. Unknown names fall back to `SIGTERM`.
-fn signal_number(signal: &str) -> i32 {
-    match signal {
-        "SIGHUP" => 1,
-        "SIGINT" => 2,
-        "SIGQUIT" => 3,
-        "SIGKILL" => 9,
-        "SIGUSR1" => 10,
-        "SIGUSR2" => 12,
-        "SIGTERM" => 15,
-        _ => 15,
-    }
-}
-
-/// Send a signal to a process and its process group (best effort).
-#[cfg(unix)]
-fn send_signal_to_process(pid: u32, signal: &str) {
-    use nix::sys::signal::{kill, Signal};
-    use nix::unistd::Pid;
-
-    let sig = match signal {
-        "SIGHUP" => Signal::SIGHUP,
-        "SIGINT" => Signal::SIGINT,
-        "SIGQUIT" => Signal::SIGQUIT,
-        "SIGKILL" => Signal::SIGKILL,
-        "SIGUSR1" => Signal::SIGUSR1,
-        "SIGUSR2" => Signal::SIGUSR2,
-        "SIGTERM" => Signal::SIGTERM,
-        _ => Signal::SIGTERM,
-    };
-
-    // Signal the process itself.
-    let _ = kill(Pid::from_raw(pid as i32), sig);
-    // Signal the whole process group (negative pid) to reach grandchildren.
-    let _ = kill(Pid::from_raw(-(pid as i32)), sig);
-}
-
-/// On non-Unix platforms there is no signal delivery; the forceful
-/// `start_kill()` escalation in the caller handles termination.
-#[cfg(not(unix))]
-fn send_signal_to_process(_pid: u32, _signal: &str) {}
 
 /// Shell configuration
 #[derive(Debug, Clone)]

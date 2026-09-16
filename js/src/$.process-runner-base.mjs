@@ -216,6 +216,7 @@ class ProcessRunner extends StreamEmitter {
       interactive: false,
       shellOperators: true,
       killSignal: 'SIGTERM',
+      killGrace: 100,
       ...options,
     };
 

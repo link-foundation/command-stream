@@ -926,37 +926,12 @@ for await (const chunk of $`some-endless-stream`.stream()) {
 
 ##### Choosing the stop signal
 
-`kill()` defaults to `SIGTERM`, but you can stop with any signal. Pass it
-explicitly, or configure a default via the `killSignal` option so that an
-argument-less `kill()`, a `break`, or an `AbortSignal` all use it:
-
-```javascript
-// Explicit per-call signal:
-cmd.kill('SIGINT'); // exit code 130
-
-// Configured default — used by kill(), break, and AbortSignal cancellation:
-const cmd = $({ killSignal: 'SIGINT' })`some-endless-stream`;
-for await (const chunk of cmd.stream()) {
-  if (chunk.type === 'stdout' && done(chunk))
-    cmd.kill(); // sends SIGINT
-  else if (chunk.type === 'exit') console.log(chunk.code); // 130
-}
-
-// AbortSignal style also honors killSignal — awaiting resolves promptly when
-// the signal fires (it does not hang) with the configured signal's exit code:
-const ac = new AbortController();
-const running = $({
-  signal: ac.signal,
-  killSignal: 'SIGINT',
-})`some-endless-stream`;
-setTimeout(() => ac.abort(), 1000); // stops with SIGINT
-const result = await running;
-console.log(result.code); // 130
-```
-
-command-stream still escalates to `SIGKILL` after delivering the chosen signal
-so a process that ignores it is guaranteed to terminate; the reported exit code
-reflects the signal you configured.
+`kill()` defaults to `SIGTERM`, but you can stop with any signal, either per
+call (`cmd.kill('SIGINT')`) or by configuring a default with the `killSignal`
+option. The child is given a grace period to handle the signal before SIGKILL
+follows. See
+[Sending Signals to a Running Command](#sending-signals-to-a-running-command)
+for the full model, the `killGrace` option, and the exit-code table.
 
 ### EventEmitter Pattern (Event-driven)
 
@@ -1642,6 +1617,7 @@ As with any shell-enabled process, pass only trusted `file` and `args` values; s
 - `env: object` - Environment variables
 - `exitPumpGrace: number` - Milliseconds to wait for buffered output to drain after the process exits before aborting stdio reads held open by a grandchild (default `100`; see [Async Iteration](#async-iteration-real-time-streaming))
 - `killSignal: string` - Signal used to stop the process when it is killed without an explicit signal — i.e. `kill()` with no argument, `break`ing out of a `stream()` loop, or an external `AbortSignal` firing (default `'SIGTERM'`). An explicit `kill(signal)` argument always overrides this. The reported exit code follows the conventional `128 + signal` mapping (e.g. `SIGTERM` → 143, `SIGINT` → 130, `SIGKILL` → 137)
+- `killGrace: number` - Milliseconds to wait after delivering `killSignal` before escalating to `SIGKILL`, giving the child a chance to run its own signal handler and shut down cleanly (default `100`). Set to `0` to escalate immediately, with no chance to clean up (only `SIGKILL` is delivered). `SIGKILL` itself is never delayed. See [Sending Signals to a Running Command](#sending-signals-to-a-running-command)
 
 **Override defaults:**
 
@@ -1923,8 +1899,150 @@ The library provides **advanced CTRL+C handling** that properly manages signals 
 2. **User Handler Preservation**: When no children are running, your custom SIGINT handlers work normally
 3. **Process Groups**: Child processes use detached spawning for proper signal isolation
 4. **TTY Mode Support**: Raw TTY mode is properly managed and restored on interruption
-5. **Graceful Termination**: Uses SIGTERM → SIGKILL escalation for robust process cleanup
+5. **Graceful Termination**: Sends SIGTERM, waits a grace period so the child can handle it, then escalates to SIGKILL
 6. **Exit Code Standards**: Proper signal exit codes (130 for SIGINT, 143 for SIGTERM)
+
+### Sending Signals to a Running Command
+
+The behavior above is about signals arriving _at your script_. This section is
+the other direction: sending a signal _to the command you launched_.
+
+`kill()` stops a running command. It defaults to `SIGTERM`, and accepts any
+signal name:
+
+```javascript
+const cmd = $`ping 8.8.8.8`;
+cmd.start();
+
+cmd.kill(); // SIGTERM (the default)
+cmd.kill('SIGINT'); // what CTRL+C sends
+cmd.kill('SIGHUP'); // any signal name works
+```
+
+#### What `kill()` actually does
+
+Stopping a process is not a single signal. Every `kill()` runs the same four
+steps:
+
+1. The requested signal is delivered to the child **and its process group**, so
+   a grandchild behind a shell wrapper is reached too (see
+   [Grandchildren and process groups](#grandchildren-and-process-groups)).
+2. The child is given a grace period (`killGrace`, default `100`ms) to run its
+   own signal handler and exit on its own terms.
+3. If it is still alive when the grace period expires, `SIGKILL` follows, so a
+   process that ignores the signal is still guaranteed to terminate.
+4. The reported exit code is the conventional `128 + signal` value.
+
+Step 2 is what makes a shutdown _graceful_: without it, a child that traps
+SIGTERM to flush output, release a lock, or stop its own workers is destroyed
+before its handler can run.
+
+```javascript
+// A child that cleans up when asked to stop:
+const cmd = $`sh -c 'trap "echo cleaning up; exit 0" TERM; while true; do sleep 1; done'`;
+cmd.start();
+cmd.kill(); // the trap runs, prints "cleaning up", and exits
+
+const result = await cmd;
+console.log(result.code); // 143
+```
+
+#### Choosing the stop signal
+
+Pass a signal explicitly, or configure a default with the `killSignal` option so
+that an argument-less `kill()`, a `break` out of a stream loop, and an
+`AbortSignal` all use it:
+
+```javascript
+// Explicit per-call signal — overrides killSignal for this call only:
+cmd.kill('SIGINT'); // exit code 130
+
+// Configured default — used by kill(), break, and AbortSignal cancellation:
+const cmd = $({ killSignal: 'SIGINT' })`some-endless-stream`;
+for await (const chunk of cmd.stream()) {
+  if (chunk.type === 'stdout' && done(chunk))
+    cmd.kill(); // sends SIGINT
+  else if (chunk.type === 'exit') console.log(chunk.code); // 130
+}
+
+// AbortSignal style also honors killSignal — awaiting resolves promptly when
+// the signal fires (it does not hang) with the configured signal's exit code:
+const ac = new AbortController();
+const running = $({
+  signal: ac.signal,
+  killSignal: 'SIGINT',
+})`some-endless-stream`;
+setTimeout(() => ac.abort(), 1000); // stops with SIGINT
+console.log((await running).code); // 130
+```
+
+#### Tuning the grace period
+
+`killGrace` is the number of milliseconds between the requested signal and the
+SIGKILL escalation:
+
+```javascript
+// Give a slow shutdown more room:
+const cmd = $({ killGrace: 5000 })`./server --graceful-shutdown`;
+
+// Opt out entirely — SIGKILL is sent immediately, with no chance to clean up:
+const cmd = $({ killGrace: 0 })`stuck-process`;
+```
+
+With `killGrace: 0` the requested signal is not delivered at all — only
+`SIGKILL` is. Delivering it first and then killing would leave a window the
+child can be scheduled in, which makes "no grace" a race rather than a
+guarantee. The reported exit code still reflects the signal you requested.
+
+`SIGKILL` is never delayed: it cannot be caught, so `kill('SIGKILL')` skips the
+grace period regardless of the `killGrace` value.
+
+#### Signal exit codes
+
+A process stopped by a signal reports `128 + signal`, the same convention POSIX
+shells use:
+
+| Signal    | Number | Exit code | Typical meaning                      |
+| --------- | ------ | --------- | ------------------------------------ |
+| `SIGHUP`  | 1      | `129`     | Terminal closed / reload config      |
+| `SIGINT`  | 2      | `130`     | CTRL+C                               |
+| `SIGQUIT` | 3      | `131`     | Quit from keyboard                   |
+| `SIGKILL` | 9      | `137`     | Forced termination, cannot be caught |
+| `SIGUSR1` | 10     | `138`     | Application-defined                  |
+| `SIGUSR2` | 12     | `140`     | Application-defined                  |
+| `SIGTERM` | 15     | `143`     | Polite request to stop (the default) |
+
+The code reflects the signal **you requested**, even when the SIGKILL escalation
+is what ultimately stopped the process — `kill('SIGTERM')` on a child that
+ignores SIGTERM still reports `143`, not `137`.
+
+#### Grandchildren and process groups
+
+Commands run through a shell, so `$\`sh -c '...'\`` is usually a shell wrapper
+with the real work in a grandchild. Signals are delivered to the whole process
+group rather than just the direct child, so the grandchild is stopped too —
+including the common case where the wrapper dies on the first signal and the
+grandchild is reparented to init.
+
+The one exception is interactive mode, where the command shares your terminal
+and is spawned into the caller's process group so that CTRL+C keeps reaching it.
+There `kill()` signals the direct child alone — but CTRL+C from the terminal
+already reaches the whole group anyway.
+
+There is a limit to this. If the shell itself exits and leaves a background
+worker behind, the command is finished as far as the runner is concerned, and
+Node and Bun have already reaped the shell — which frees its pid, and with it
+the group id, for reuse. A later `kill()` therefore signals nothing rather than
+risk signalling an unrelated process group, and the orphaned worker keeps
+running, exactly as it would if you had started it from your own shell. Keep the
+worker in the foreground (`... & wait`, or no `&` at all) if you want `kill()`
+to reach it.
+
+#### Rust parity
+
+The Rust crate exposes the same model with `kill_signal` / `kill_with(signal)` /
+`kill_grace_ms`, the same 100ms default, and the same exit codes. See
+[the Rust signal documentation](../rust/README.md#signals).
 
 ### Advanced Signal Behavior
 
