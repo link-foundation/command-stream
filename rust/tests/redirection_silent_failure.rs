@@ -199,7 +199,7 @@ fn needs_real_shell_recognises_redirection() {
     assert!(needs_real_shell("cat < in.txt"));
     assert!(needs_real_shell("git push origin main 2>&1"));
     assert!(needs_real_shell("cat <<EOF"));
+    assert!(needs_real_shell("ls | grep foo"));
 
     assert!(!needs_real_shell("echo hello"));
-    assert!(!needs_real_shell("ls | grep foo"));
 }

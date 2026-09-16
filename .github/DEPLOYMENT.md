@@ -44,6 +44,25 @@ The Rust workflow maps both names and runs Rust release scripts from
 Rust PRs that change crate code must add a changelog fragment in
 `rust/changelog.d/`.
 
+## Feature Documentation
+
+The feature catalog in `js/examples/features/catalog.mjs` drives executable
+examples for both language packages and the generated documentation in
+`docs/`. Pull requests run every catalog entry with Node.js, Bun and Rust, then
+verify that the committed guide is current.
+
+Generate and validate the guide locally from the repository root:
+
+```bash
+node scripts/generate-docs.mjs
+node scripts/check-parity.mjs
+node scripts/generate-docs.mjs --check
+```
+
+After changes reach `main`, `.github/workflows/docs.yml` publishes
+`docs/site/` to GitHub Pages. Configure the repository's Pages source as
+**GitHub Actions** before the first deployment.
+
 ## Local Release Checks
 
 JavaScript:

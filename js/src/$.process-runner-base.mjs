@@ -11,6 +11,7 @@ import {
 } from './$.state.mjs';
 import { StreamEmitter } from './$.stream-emitter.mjs';
 import { processOutput } from './$.ansi.mjs';
+import { ensureResultText } from './$.result.mjs';
 
 const isBun = typeof globalThis.Bun !== 'undefined';
 
@@ -442,6 +443,7 @@ class ProcessRunner extends StreamEmitter {
     if (result && result.exitCode === undefined && result.code !== undefined) {
       result.exitCode = result.code;
     }
+    ensureResultText(result);
 
     trace(
       'ProcessRunner',

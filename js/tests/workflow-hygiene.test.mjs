@@ -23,17 +23,19 @@ const workflows = workflowFiles.map((name) => {
 });
 
 /**
- * Jobs that mutate the repository: push a commit or a tag to main, publish a
- * package, or open a release pull request. These are the ones that must never
- * be cancelled halfway.
+ * Jobs that mutate repository state: push a commit or tag, publish a package,
+ * open a release pull request, or deploy GitHub Pages. These are the ones that
+ * must never be cancelled halfway.
  *
- * `contents: write` is the test, not `pull-requests: write`. A job can hold the
- * latter alone and still change nothing that outlives the run -- the security
- * workflow's dependency-review only uses it to leave a review comment -- and
- * putting such a job in the shared non-cancellable group would serialise every
- * pull request behind main's releases for no benefit.
+ * `contents: write` and `pages: write` identify persistent writes. A job can
+ * hold `pull-requests: write` alone and still change no package, tag or site --
+ * the security workflow only uses it to leave a review comment -- so putting
+ * that job in the shared group would serialise every pull request needlessly.
  */
-const isWriterJob = (job) => (job.permissions ?? {})['contents'] === 'write';
+const isWriterJob = (job) => {
+  const permissions = job.permissions ?? {};
+  return permissions.contents === 'write' || permissions.pages === 'write';
+};
 
 const WRITER_GROUP = 'main-writer-${{ github.repository }}-main';
 
@@ -330,6 +332,28 @@ describe('workflow linting is itself wired into CI', () => {
       workflowFiles.length
     );
     expect(workflowFiles.length).toBeGreaterThanOrEqual(4);
+  });
+});
+
+describe('benchmark baselines stay reproducible across package releases', () => {
+  const benchmarks = workflows.find((w) => w.name === 'benchmarks.yml');
+
+  test('the Rust baseline refreshes only its local package before running locked', () => {
+    const baseline = benchmarks.doc.jobs.rust.steps.find(
+      (step) => step.name === 'Benchmark the pull request base'
+    );
+    const refresh =
+      'cargo update --offline --manifest-path benchmarks/Cargo.toml -p command-stream';
+    const runLocked =
+      'cargo run --release --locked --manifest-path benchmarks/Cargo.toml';
+
+    // The base branch can legitimately contain the previous package version in
+    // this nested lockfile. Refreshing just the local path dependency keeps all
+    // third-party versions pinned, after which --locked protects the benchmark.
+    expect(baseline.run).toContain(refresh);
+    expect(baseline.run.indexOf(refresh)).toBeLessThan(
+      baseline.run.indexOf(runLocked)
+    );
   });
 });
 

@@ -25,6 +25,33 @@ export function createResult({ code, stdout = '', stderr = '', stdin = '' }) {
 }
 
 /**
+ * Add the Bun.$-compatible text() helper to results created by execution paths
+ * that return a plain object (notably virtual and built-in commands).
+ *
+ * @param {object} result - Result object to normalize
+ * @returns {object} The same result object
+ */
+export function ensureResultText(result) {
+  if (
+    !result ||
+    typeof result !== 'object' ||
+    typeof result.text === 'function'
+  ) {
+    return result;
+  }
+
+  Object.defineProperty(result, 'text', {
+    value() {
+      return Promise.resolve(result.stdout ?? '');
+    },
+    writable: true,
+    configurable: true,
+    enumerable: false,
+  });
+  return result;
+}
+
+/**
  * Create an Error describing a command that exited with a failing status.
  *
  * The status is exposed under both `code` (command-stream's original name) and

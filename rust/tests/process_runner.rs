@@ -35,10 +35,10 @@ async fn test_command_with_arguments() {
 
 #[tokio::test]
 async fn test_real_shell_preserves_missing_final_newlines() {
-    #[cfg(unix)]
+    // Windows deliberately prefers Git Bash too, keeping the command language
+    // consistent with the JavaScript implementation and the documented
+    // cross-language examples.
     let command = "printf stdout; printf stderr >&2";
-    #[cfg(windows)]
-    let command = "<nul set /p x=stdout&<nul 1>&2 set /p x=stderr&exit /b 0";
 
     let result = exec(
         command,

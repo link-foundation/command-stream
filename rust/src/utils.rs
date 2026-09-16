@@ -60,26 +60,93 @@ pub(crate) fn with_exported_process_context(
     command.to_string()
 }
 
-/// Append a command string using the platform shell's argument convention.
-pub(crate) fn append_shell_command(
-    process: &mut tokio::process::Command,
-    command: &str,
-    env: Option<&HashMap<String, String>>,
-) {
-    let command = with_exported_process_context(command, env);
+#[derive(Debug, Clone)]
+struct ShellConfig {
+    cmd: String,
+    args: Vec<String>,
+    raw_command_arg: bool,
+}
+
+fn find_available_shell() -> ShellConfig {
+    #[cfg(windows)]
+    let shells: &[(&str, &[&str], bool)] = &[
+        (r"C:\Program Files\Git\bin\bash.exe", &["-c"], false),
+        (r"C:\Program Files\Git\usr\bin\bash.exe", &["-c"], false),
+        (r"C:\Program Files (x86)\Git\bin\bash.exe", &["-c"], false),
+        ("bash.exe", &["-c"], false),
+        ("wsl.exe", &["bash", "-c"], false),
+        ("powershell.exe", &["-Command"], false),
+        ("pwsh.exe", &["-Command"], false),
+        ("cmd.exe", &["/c"], true),
+    ];
+
+    #[cfg(not(windows))]
+    let shells: &[(&str, &[&str], bool)] = &[
+        ("/bin/sh", &["-c"], false),
+        ("/usr/bin/sh", &["-c"], false),
+        ("/bin/bash", &["-c"], false),
+        ("sh", &["-c"], false),
+    ];
+
+    for (cmd, args, raw_command_arg) in shells {
+        if Path::new(cmd).exists() || which::which(cmd).is_ok() {
+            return ShellConfig {
+                cmd: (*cmd).to_string(),
+                args: args.iter().map(|arg| (*arg).to_string()).collect(),
+                raw_command_arg: *raw_command_arg,
+            };
+        }
+    }
 
     #[cfg(windows)]
-    {
+    return ShellConfig {
+        cmd: "cmd.exe".to_string(),
+        args: vec!["/c".to_string()],
+        raw_command_arg: true,
+    };
+
+    #[cfg(not(windows))]
+    ShellConfig {
+        cmd: "/bin/sh".to_string(),
+        args: vec!["-c".to_string()],
+        raw_command_arg: false,
+    }
+}
+
+#[cfg(windows)]
+fn append_command_arg(process: &mut tokio::process::Command, command: &str, raw_command_arg: bool) {
+    if raw_command_arg {
         // `cmd.exe /c` does not use the C runtime's argument decoder. Passing
         // the command through `arg` would therefore expose Rust's backslash
         // escapes as literal characters. The extra outer quotes are required
         // to preserve a quoted executable path at the start of the command.
         use std::os::windows::process::CommandExt;
         process.as_std_mut().raw_arg(format!("\"{command}\""));
+    } else {
+        process.arg(command);
     }
+}
 
-    #[cfg(not(windows))]
+#[cfg(not(windows))]
+fn append_command_arg(
+    process: &mut tokio::process::Command,
+    command: &str,
+    _raw_command_arg: bool,
+) {
     process.arg(command);
+}
+
+/// Build a command using the best platform shell and its argument convention.
+pub(crate) fn shell_command(
+    command: &str,
+    env: Option<&HashMap<String, String>>,
+) -> tokio::process::Command {
+    let shell = find_available_shell();
+    let mut process = tokio::process::Command::new(&shell.cmd);
+    process.args(&shell.args);
+    let command = with_exported_process_context(command, env);
+    append_command_arg(&mut process, &command, shell.raw_command_arg);
+    process
 }
 
 /// Result type for virtual command operations

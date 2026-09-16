@@ -119,16 +119,19 @@ async fn test_streaming_exit_code() {
 #[tokio::test]
 async fn test_streaming_runner_cwd() {
     let temp_dir = tempfile::tempdir().unwrap();
-    let command = if cfg!(windows) { "cd" } else { "pwd" };
-    let runner = StreamingRunner::new(command).cwd(temp_dir.path());
+    let marker = "command-stream-cwd-marker.txt";
+    // Check the effect of cwd rather than comparing its printed spelling.
+    // Git Bash maps the Windows temp directory to `/tmp`, so `pwd` and Rust's
+    // native path describe the same directory with unrelated-looking strings.
+    let runner = StreamingRunner::new(format!("echo reached > {marker}")).cwd(temp_dir.path());
     let result = runner.collect().await.unwrap();
 
     assert!(result.is_success());
-    let stdout = result.stdout.trim().replace('\\', "/");
-    let expected = temp_dir.path().to_string_lossy().replace('\\', "/");
-    assert!(
-        stdout.contains(&expected),
-        "expected stdout {stdout:?} to contain cwd {expected:?}"
+    assert_eq!(
+        std::fs::read_to_string(temp_dir.path().join(marker))
+            .unwrap()
+            .trim(),
+        "reached"
     );
 }
 

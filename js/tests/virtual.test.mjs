@@ -10,6 +10,7 @@ import {
   listCommands,
   enableVirtualCommands,
 } from '../src/$.mjs';
+import builtinLs from '../src/commands/$.ls.mjs';
 
 // Helper function to setup shell settings
 function setupShellSettings() {
@@ -184,6 +185,10 @@ describe('Virtual Commands System', () => {
       const systemResult = await $`ls`;
       expect(systemResult.stdout).not.toBe('virtual ls output\n');
       expect(systemResult.code).toBe(0); // System ls should work
+
+      // The registry is process-wide, so put the built-in back. Leaving it
+      // unregistered would silently hand `ls` to the system in every later test.
+      register('ls', builtinLs);
     });
 
     test('should fall back to system commands when virtual not found', async () => {

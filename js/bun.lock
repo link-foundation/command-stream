@@ -12,6 +12,7 @@
       },
       "devDependencies": {
         "@changesets/cli": "^2.31.1",
+        "@eslint/js": "^9.39.5",
         "cross-spawn": "7.0.6",
         "dejavu-fonts-ttf": "^2.37.3",
         "esbuild": "0.28.2",

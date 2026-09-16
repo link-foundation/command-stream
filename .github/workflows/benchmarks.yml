@@ -208,6 +208,11 @@ jobs:
           git worktree add --detach "$base_directory" "origin/$BASE_REF"
           (
             cd "$base_directory/rust"
+            # A release can change the workspace package version while the
+            # nested benchmark lockfile on the base branch still names the
+            # previous one. Refresh only that local path package offline; all
+            # third-party dependencies remain pinned for the locked run.
+            cargo update --offline --manifest-path benchmarks/Cargo.toml -p command-stream
             cargo run --release --locked --manifest-path benchmarks/Cargo.toml -- \
               --smoke \
               --output "$GITHUB_WORKSPACE/rust/benchmarks/baseline"

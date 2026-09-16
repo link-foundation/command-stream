@@ -18,13 +18,21 @@ handling, pipeline support, and cross-platform behavior. Language-specific API
 examples, package-manager instructions, release notes, and best practices live
 with each package.
 
+## Feature Guide
+
+The [generated feature guide](./docs/README.md) runs every documented feature
+in JavaScript and Rust and captures its real output. JavaScript examples are
+also compared across Node.js and Bun. The same catalog powers the searchable
+[feature website](https://link-foundation.github.io/command-stream/), which is
+verified and deployed by GitHub Actions.
+
 ## Repository Layout
 
 | Path       | Purpose                                                    |
 | ---------- | ---------------------------------------------------------- |
 | `js/`      | JavaScript package source, tests, docs, and CI/CD scripts. |
 | `rust/`    | Rust crate source, tests, docs, and CI/CD scripts.         |
-| `docs/`    | Repository-level investigations and case studies.          |
+| `docs/`    | Generated feature guide, website, and case studies.        |
 | `.github/` | GitHub workflow definitions and deployment notes.          |
 
 ## Releases

@@ -420,13 +420,7 @@ async fn run_streaming_process(
     });
 
     let mut cmd = match command {
-        StreamingCommand::Shell(command) => {
-            let shell = find_available_shell();
-            let mut cmd = Command::new(&shell.cmd);
-            cmd.args(&shell.args);
-            crate::utils::append_shell_command(&mut cmd, &command, env.as_ref());
-            cmd
-        }
+        StreamingCommand::Shell(command) => crate::utils::shell_command(&command, env.as_ref()),
         StreamingCommand::Argv { program, args } => {
             let mut cmd = Command::new(program);
             cmd.args(args);
@@ -625,45 +619,6 @@ fn status_to_code(status: std::process::ExitStatus) -> i32 {
         }
     }
     -1
-}
-
-/// Shell configuration
-#[derive(Debug, Clone)]
-struct ShellConfig {
-    cmd: String,
-    args: Vec<String>,
-}
-
-/// Find an available shell
-fn find_available_shell() -> ShellConfig {
-    let is_windows = cfg!(windows);
-
-    if is_windows {
-        ShellConfig {
-            cmd: "cmd.exe".to_string(),
-            args: vec!["/c".to_string()],
-        }
-    } else {
-        let shells = [
-            ("/bin/sh", "-c"),
-            ("/usr/bin/sh", "-c"),
-            ("/bin/bash", "-c"),
-        ];
-
-        for (cmd, arg) in shells {
-            if std::path::Path::new(cmd).exists() {
-                return ShellConfig {
-                    cmd: cmd.to_string(),
-                    args: vec![arg.to_string()],
-                };
-            }
-        }
-
-        ShellConfig {
-            cmd: "/bin/sh".to_string(),
-            args: vec!["-c".to_string()],
-        }
-    }
 }
 
 /// Async iterator trait for output streams

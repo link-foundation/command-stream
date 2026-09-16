@@ -178,20 +178,21 @@ function getStdinString(options) {
 }
 
 /**
- * Handle pipefail check
+ * Compute the status reported by a pipeline. Without pipefail this is the last
+ * stage; with pipefail it is the rightmost failing stage, matching Bash.
+ * pipefail changes the status only. errexit decides whether that status throws.
+ *
  * @param {number[]} exitCodes - Exit codes from pipeline
  * @param {object} shellSettings - Shell settings
+ * @returns {number} Pipeline exit status
  */
-function checkPipefail(exitCodes, shellSettings) {
-  if (shellSettings.pipefail) {
-    const failedIndex = exitCodes.findIndex((code) => code !== 0);
-    if (failedIndex !== -1) {
-      throw createCommandError(
-        `Pipeline command at index ${failedIndex} failed with exit code ${exitCodes[failedIndex]}`,
-        { code: exitCodes[failedIndex] }
-      );
-    }
+function pipelineExitCode(exitCodes, shellSettings) {
+  const codes = exitCodes.map((code) => code ?? 0);
+  const last = codes.at(-1) ?? 0;
+  if (!shellSettings.pipefail) {
+    return last;
   }
+  return codes.findLast((code) => code !== 0) ?? last;
 }
 
 /**
@@ -623,7 +624,7 @@ async function handleVirtualPipelineCommand(
   isLastCommand,
   deps
 ) {
-  const { virtualCommands, globalShellSettings } = deps;
+  const { virtualCommands, globalShellSettings, exitCodes } = deps;
   const handler = virtualCommands.get(command.cmd);
   const argValues = getArgValues(command.args);
   logShellTrace(globalShellSettings, command.cmd, argValues);
@@ -635,29 +636,27 @@ async function handleVirtualPipelineCommand(
     currentInput,
     {
       ...runner.options,
+      options: runner.options,
       cwd: effectiveCwd(runner),
       env: effectiveEnv(runner) ?? process.env,
     }
   );
   applyVirtualProcessContext(runner, result);
+  exitCodes.push(result.code);
 
   if (isLastCommand) {
     emitFinalOutput(runner, result);
     return {
       finalResult: createFinalPipelineResult(
         runner,
-        result,
+        {
+          ...result,
+          code: pipelineExitCode(exitCodes, globalShellSettings),
+        },
         result.stdout,
         globalShellSettings
       ),
     };
-  }
-
-  if (globalShellSettings.errexit && result.code !== 0) {
-    throw createCommandError(
-      `Pipeline command failed with exit code ${result.code}`,
-      { code: result.code, result }
-    );
   }
 
   return { input: result.stdout };
@@ -679,7 +678,7 @@ async function handleShellPipelineCommand(
   isLastCommand,
   deps
 ) {
-  const { globalShellSettings } = deps;
+  const { globalShellSettings, exitCodes } = deps;
   const commandStr = buildCommandParts(command).join(' ');
   logShellTrace(globalShellSettings, commandStr, []);
 
@@ -695,13 +694,7 @@ async function handleShellPipelineCommand(
     stdout: proc.stdout || '',
     stderr: proc.stderr || '',
   };
-
-  if (globalShellSettings.pipefail && result.code !== 0) {
-    throw createCommandError(
-      `Pipeline command '${commandStr}' failed with exit code ${result.code}`,
-      { code: result.code }
-    );
-  }
+  exitCodes.push(result.code);
 
   if (isLastCommand) {
     let allStderr = '';
@@ -712,7 +705,7 @@ async function handleShellPipelineCommand(
       allStderr += result.stderr;
     }
     const finalResult = createResult({
-      code: result.code,
+      code: pipelineExitCode(exitCodes, globalShellSettings),
       stdout: result.stdout,
       stderr: allStderr,
       stdin: getStdinString(runner.options),
@@ -813,10 +806,8 @@ export function attachPipelineMethods(ProcessRunner, deps) {
     }
 
     const exitCodes = await Promise.all(processes.map((p) => p.exited));
-    checkPipefail(exitCodes, globalShellSettings);
-
     const result = createResult({
-      code: exitCodes[exitCodes.length - 1] || 0,
+      code: pipelineExitCode(exitCodes, globalShellSettings),
       stdout: finalOutput,
       stderr: collector.stderr,
       stdin: getStdinString(this.options),
@@ -904,10 +895,8 @@ export function attachPipelineMethods(ProcessRunner, deps) {
     }
 
     const exitCodes = await Promise.all(processes.map((p) => p.exited));
-    checkPipefail(exitCodes, globalShellSettings);
-
     const result = createResult({
-      code: exitCodes[exitCodes.length - 1] || 0,
+      code: pipelineExitCode(exitCodes, globalShellSettings),
       stdout: finalOutput,
       stderr: collector.stderr,
       stdin: getStdinString(this.options),
@@ -929,6 +918,7 @@ export function attachPipelineMethods(ProcessRunner, deps) {
     let currentInputStream = createInitialInputStream(this.options);
     let finalOutput = '';
     const collector = { stderr: '' };
+    const stageCodes = [];
 
     for (let i = 0; i < commands.length; i++) {
       const command = commands[i];
@@ -945,43 +935,55 @@ export function attachPipelineMethods(ProcessRunner, deps) {
         if (handler.constructor.name === 'AsyncGeneratorFunction') {
           const chunks = [];
           const self = this;
+          let generatorDone;
           currentInputStream = new ReadableStream({
-            async start(controller) {
+            start(controller) {
               const { stdin: _, ...opts } = self.options;
-              for await (const chunk of handler({
-                args: argValues,
-                stdin: inputData,
-                ...opts,
-                cwd: effectiveCwd(self),
-                env: effectiveEnv(self) ?? process.env,
-              })) {
-                const data = Buffer.from(chunk);
-                controller.enqueue(data);
-                if (isLastCommand) {
-                  chunks.push(data);
-                  if (self.options.mirror) {
-                    safeWrite(process.stdout, data);
+              generatorDone = (async () => {
+                for await (const chunk of handler({
+                  args: argValues,
+                  stdin: inputData,
+                  ...opts,
+                  options: self.options,
+                  cwd: effectiveCwd(self),
+                  env: effectiveEnv(self) ?? process.env,
+                })) {
+                  const data = Buffer.from(chunk);
+                  controller.enqueue(data);
+                  if (isLastCommand) {
+                    chunks.push(data);
+                    if (self.options.mirror) {
+                      safeWrite(process.stdout, data);
+                    }
+                    self.emit('stdout', data);
+                    self.emit('data', { type: 'stdout', data });
                   }
-                  self.emit('stdout', data);
-                  self.emit('data', { type: 'stdout', data });
                 }
-              }
-              controller.close();
-              if (isLastCommand) {
-                finalOutput = Buffer.concat(chunks).toString('utf8');
-              }
+                controller.close();
+                if (isLastCommand) {
+                  finalOutput = Buffer.concat(chunks).toString('utf8');
+                }
+              })();
+              return generatorDone;
             },
           });
+          // Track completion without awaiting it here. The next process must
+          // start now so it can consume chunks while the generator is still
+          // producing them (and so producer/consumer handshakes cannot
+          // deadlock).
+          stageCodes.push(generatorDone.then(() => 0));
         } else {
           const { stdin: _, ...opts } = this.options;
           const result = await handler({
             args: argValues,
             stdin: inputData,
             ...opts,
+            options: this.options,
             cwd: effectiveCwd(this),
             env: effectiveEnv(this) ?? process.env,
           });
           applyVirtualProcessContext(this, result);
+          stageCodes.push(result.code ?? 0);
           const outputData = result.stdout || '';
           if (isLastCommand) {
             finalOutput = outputData;
@@ -1006,6 +1008,7 @@ export function attachPipelineMethods(ProcessRunner, deps) {
 
         pipeStreamToProcess(currentInputStream, proc);
         currentInputStream = proc.stdout;
+        stageCodes.push(proc.exited);
         collectStderrAsync(this, proc, isLastCommand, collector);
 
         if (isLastCommand) {
@@ -1015,14 +1018,17 @@ export function attachPipelineMethods(ProcessRunner, deps) {
       }
     }
 
+    const exitCodes = await Promise.all(stageCodes);
+
     const result = createResult({
-      code: 0,
+      code: pipelineExitCode(exitCodes, globalShellSettings),
       stdout: finalOutput,
       stderr: collector.stderr,
       stdin: getStdinString(this.options),
     });
 
     this.finish(result);
+    throwErrexitError(result, globalShellSettings);
     return result;
   };
 
@@ -1034,7 +1040,11 @@ export function attachPipelineMethods(ProcessRunner, deps) {
 
     const currentOutput = '';
     let currentInput = getStdinString(this.options);
-    const pipelineDeps = { virtualCommands, globalShellSettings };
+    const pipelineDeps = {
+      virtualCommands,
+      globalShellSettings,
+      exitCodes: [],
+    };
 
     for (let i = 0; i < commands.length; i++) {
       const command = commands[i];
