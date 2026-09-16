@@ -25,6 +25,7 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 - 🎯 **Backward Compatible**: Existing `await $` syntax continues to work + Bun.$ `.text()` method
 - 🛡️ **Type Safe**: Full TypeScript support (coming soon)
 - 🔧 **Built-in Commands**: 22 essential commands work identically across platforms
+- 🆔 **Process Identity**: Read the process id with `command.pid`, before, during and after the run
 
 ## Comparison with Other Libraries
 
@@ -683,6 +684,129 @@ const process = $`long-command`
 // Start whenever you're ready
 process.start();
 ```
+
+### Process ID of a Running Command
+
+`pid` is the id of the operating system process behind a command. It is recorded
+when the process is spawned, so — unlike `child`, which is released during
+cleanup — it stays readable after the command has finished:
+
+```javascript
+const cmd = $`/bin/sleep 5`;
+cmd.pid; // undefined — nothing has been spawned yet
+
+cmd.start();
+await cmd.streams.stdout; // resolves once the child exists
+console.log(cmd.pid); // 51234
+
+cmd.kill();
+await cmd.catch(() => {});
+
+console.log(cmd.pid); // 51234 — still there
+console.log(cmd.child); // null — released by cleanup
+```
+
+The same value is reported on every execution path: `await`, `.sync()`,
+`.stream()`, and the `streams` getters.
+
+```javascript
+const awaited = $`sh -c 'echo done'`;
+await awaited;
+awaited.pid; // the process that just ran
+
+const blocking = $`sh -c 'echo done'`;
+blocking.sync();
+blocking.pid; // sync mode records it too
+```
+
+#### What the id names
+
+A command string is handed to a shell, so the id names **the shell**, and the
+command itself runs as its child:
+
+```console
+$ ps -o args= -p 51234
+/bin/sh -l -c /bin/sleep 5
+```
+
+The shell is spawned as the leader of its own process group, so the group id
+equals the pid. That is what lets `kill()` reach the command underneath the
+wrapper (see
+[Grandchildren and process groups](#grandchildren-and-process-groups)), and it
+means you can signal the group yourself:
+
+```javascript
+process.kill(-cmd.pid, 'SIGTERM'); // the shell and everything under it
+```
+
+A consequence worth knowing: a command that does not exist is reported by the
+shell that looked for it, so there is still a pid even though nothing you asked
+for ran.
+
+```javascript
+const missing = $`no-such-command`;
+await missing.catch(() => {});
+missing.pid; // the shell's pid
+(await missing.catch((error) => error)).code; // 127 — "command not found"
+```
+
+To get the id of the command itself, with no shell in between, use the `exec`
+command specification, which bypasses the shell entirely:
+
+```javascript
+import { ProcessRunner } from 'command-stream';
+
+const cmd = new ProcessRunner({
+  mode: 'exec',
+  file: '/bin/sleep',
+  args: ['5'],
+});
+await cmd.streams.stdout;
+// ps -o args= -p <cmd.pid>  =>  /bin/sleep 5
+```
+
+With no shell to fall back on, a missing executable in `exec` mode is a failed
+spawn, and `pid` stays `undefined`.
+
+#### Built-in commands have no id
+
+[Built-in commands](#built-in-commands--new) such as `echo`, `sleep` and `cat`
+run inside your process and never spawn anything, so there is no operating
+system process to identify and `pid` stays `undefined`:
+
+```javascript
+const builtin = $`echo hello`;
+await builtin;
+builtin.pid; // undefined
+
+const external = $`/bin/echo hello`;
+await external;
+external.pid; // a real pid — the path bypasses the built-in
+```
+
+This is the difference to check for before using the id, rather than assuming
+every command has one:
+
+```javascript
+function isStillRunning(cmd) {
+  if (cmd.pid === undefined) return false; // never spawned, or a built-in
+  try {
+    process.kill(cmd.pid, 0); // signal 0 only performs the existence check
+    return true;
+  } catch {
+    return false;
+  }
+}
+```
+
+A runnable walkthrough of all of the above is in
+[`js/examples/process-pid-access.mjs`](examples/process-pid-access.mjs).
+
+#### Rust parity
+
+The Rust crate exposes the same value as `ProcessRunner::pid()`, plus
+`OutputStream::pid()` and `OutputStream::wait_for_pid()` for streaming commands.
+See [the Rust process id documentation](../rust/README.md#process-id-of-a-running-command).
 
 ### Synchronous Execution
 
@@ -1593,6 +1717,12 @@ As with any shell-enabled process, pass only trusted `file` and `args` values; s
 - `stdout`: Direct access to child process stdout stream
 - `stderr`: Direct access to child process stderr stream
 - `stdin`: Direct access to child process stdin stream
+- `pid`: Process id of the spawned command, or `undefined` before it starts and
+  for built-in commands, which spawn no process. Recorded at spawn time, so it
+  remains readable after the command finishes — see
+  [Process ID of a Running Command](#process-id-of-a-running-command)
+- `child`: The underlying child process object while the command is running,
+  and `null` once it has finished and been cleaned up
 
 ### Default Options
 

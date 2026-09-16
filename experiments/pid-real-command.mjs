@@ -1,7 +1,7 @@
 // Experiment: PID visibility for a real (non-virtual) external command.
 import { $ } from '../js/src/$.mjs';
 
-const a = $`/bin/sleep 0.5`;          // absolute path bypasses the virtual `sleep`
+const a = $`/bin/sleep 0.5`; // absolute path bypasses the virtual `sleep`
 const s = await a.streams.stdout;
 console.log('child ctor   =', a.child?.constructor?.name ?? String(a.child));
 console.log('child.pid    =', a.child?.pid);

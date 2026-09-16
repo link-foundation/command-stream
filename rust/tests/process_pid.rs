@@ -178,3 +178,29 @@ async fn the_reported_id_leads_its_own_process_group() {
     runner.kill().unwrap();
     let _ = runner.run().await;
 }
+
+/// A missing command is reported by the shell that was asked to run it, so the
+/// shell still has an id even though nothing the caller asked for ran.
+#[tokio::test]
+async fn a_missing_command_still_names_the_shell_that_looked_for_it() {
+    let mut runner = ProcessRunner::new("command-stream-no-such-executable --nope", quiet());
+    let result = runner.run().await.unwrap();
+
+    assert_eq!(result.code, 127); // "command not found"
+    assert!(runner.pid().is_some());
+}
+
+/// `wait_for_pid` must not wait forever when the process never comes into
+/// existence: the task drops the publishing end, which ends the wait.
+#[tokio::test]
+async fn streaming_wait_for_pid_gives_up_when_the_spawn_fails() {
+    let mut stream =
+        StreamingRunner::from_argv("command-stream-no-such-executable", ["--nope"]).stream();
+
+    let pid = tokio::time::timeout(std::time::Duration::from_secs(5), stream.wait_for_pid())
+        .await
+        .expect("wait_for_pid returns instead of hanging");
+
+    assert_eq!(pid, None);
+    assert_eq!(stream.pid(), None);
+}

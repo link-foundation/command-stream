@@ -177,7 +177,8 @@ The simplest examples to get started:
 ### 🆔 Process Management
 
 **PID Access:**
-- `process-pid-access.mjs` - Complete guide to accessing Process IDs (PIDs) of started commands
+
+- `process-pid-access.mjs` - Reading `command.pid`: when it becomes available, what it names, and how to use it
 
 ### 🧪 Testing and Debugging
 
@@ -328,10 +329,11 @@ The simplest examples to get started:
 - ✅ **Clean exit** - No hanging processes after iteration stops
 
 ### 🆔 Process Management
-- ✅ **PID access** - Access process IDs via `command.child.pid`
-- ✅ **Process lifecycle** - PID available after process starts, remains after completion
-- ✅ **Multiple startup methods** - Access via streams, start(), or stream()
-- ✅ **Safe PID handling** - Best practices for checking PID availability
+
+- ✅ **PID access** - Read the process id via `command.pid`
+- ✅ **Process lifecycle** - Recorded at spawn time, so it stays readable after the command finishes
+- ✅ **Every execution path** - Same value from `await`, `sync()`, `stream()` and the `streams` getters
+- ✅ **Built-in commands** - `undefined` for commands that run in-process and spawn nothing
 
 ## Usage Examples
 
@@ -340,7 +342,7 @@ The simplest examples to get started:
 bun js/examples/ping-streaming-simple.mjs
 
 # Learn how to get process PIDs
-node examples/process-pid-access.mjs
+node js/examples/process-pid-access.mjs
 
 # Test ANSI color handling
 node js/examples/colors-default-preserved.mjs

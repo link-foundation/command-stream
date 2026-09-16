@@ -9,7 +9,9 @@ const pid = cmd.pid;
 const ps = execSync(`ps -o pid=,ppid=,args= -p ${pid}`).toString().trim();
 console.log('reported pid :', pid);
 console.log('ps           :', ps);
-console.log('children     :',
-  execSync(`pgrep -P ${pid} -a || true`).toString().trim() || '(none)');
+console.log(
+  'children     :',
+  execSync(`pgrep -P ${pid} -a || true`).toString().trim() || '(none)'
+);
 cmd.kill();
 await cmd.catch(() => {});

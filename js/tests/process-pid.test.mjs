@@ -26,7 +26,8 @@ const quiet = { mirror: false, capture: true };
 const runtime = process.execPath;
 const idleFor = (seconds) =>
   $(quiet)`${runtime} -e ${`setTimeout(() => {}, ${seconds * 1000})`}`;
-const printHello = () => $(quiet)`${runtime} -e ${'process.stdout.write("hi")'}`;
+const printHello = () =>
+  $(quiet)`${runtime} -e ${'process.stdout.write("hi")'}`;
 
 describe('issue #18 - process id access', () => {
   test('is undefined before the command starts', async () => {
@@ -98,6 +99,29 @@ describe('issue #18 - process id access', () => {
     const result = await runner;
 
     expect(result.stdout).toBe('hello\n');
+    expect(runner.pid).toBeUndefined();
+  });
+
+  test('names the shell when the command inside it does not exist', async () => {
+    // The shell is spawned successfully and then fails to find the command, so
+    // there is a process to name even though nothing the caller asked for ran.
+    const runner = $(quiet)`command-stream-no-such-executable --nope`;
+    const result = await runner.catch((error) => error);
+
+    expect(result.code).toBe(127); // "command not found"
+    expect(typeof runner.pid).toBe('number');
+  });
+
+  test('stays undefined when the spawn itself fails', async () => {
+    // exec mode has no shell to fall back on, so a missing executable means no
+    // process at all.
+    const runner = new ProcessRunner(
+      { mode: 'exec', file: 'command-stream-no-such-executable', args: [] },
+      quiet
+    );
+    const result = await runner.catch((error) => error);
+
+    expect(result.code).not.toBe(0);
     expect(runner.pid).toBeUndefined();
   });
 
