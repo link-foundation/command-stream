@@ -175,9 +175,34 @@ impl VirtualCommandRegistry {
 
     /// Register all built-in commands
     pub fn register_builtins(&mut self) {
-        // Note: These are placeholder registrations - actual async handlers
-        // would need proper wrapper functions
-        // The actual commands are available as standalone functions
+        macro_rules! register {
+            ($name:literal, $function:path) => {
+                self.register($name, |ctx| Box::pin($function(ctx)));
+            };
+        }
+
+        register!("echo", echo);
+        register!("pwd", pwd);
+        register!("cd", cd);
+        register!("true", r#true);
+        register!("false", r#false);
+        register!("sleep", sleep);
+        register!("cat", cat);
+        register!("ls", ls);
+        register!("mkdir", mkdir);
+        register!("rm", rm);
+        register!("touch", touch);
+        register!("cp", cp);
+        register!("mv", mv);
+        register!("basename", basename);
+        register!("dirname", dirname);
+        register!("env", env);
+        register!("exit", exit);
+        register!("which", which);
+        register!("yes", yes);
+        register!("seq", seq);
+        register!("tee", tee);
+        register!("test", test);
     }
 }
 

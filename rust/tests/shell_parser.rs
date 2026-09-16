@@ -331,6 +331,6 @@ fn test_needs_real_shell_here_document() {
 #[test]
 fn test_needs_real_shell_simple_commands() {
     assert!(!needs_real_shell("echo hello"));
-    assert!(!needs_real_shell("ls | grep foo"));
-    assert!(!needs_real_shell("cmd1 && cmd2"));
+    assert!(needs_real_shell("ls | grep foo"));
+    assert!(needs_real_shell("cmd1 && cmd2"));
 }

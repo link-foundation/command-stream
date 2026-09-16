@@ -6,7 +6,13 @@
 // (`node scripts/check-parity.mjs`) must observe the very same values.
 import { describe, test, expect, afterEach } from 'bun:test';
 import './test-helper.mjs';
-import { $, register, unregister, shell, enableVirtualCommands } from '../src/$.mjs';
+import {
+  $,
+  register,
+  unregister,
+  shell,
+  enableVirtualCommands,
+} from '../src/$.mjs';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -53,7 +59,9 @@ describe('result.text() is available on every execution path', () => {
   });
 
   test('.pipe() method', async () => {
-    const result = await $({ mirror: false })`echo a`.pipe($({ mirror: false })`cat`);
+    const result = await $({ mirror: false })`echo a`.pipe(
+      $({ mirror: false })`cat`
+    );
     expect(typeof result.text).toBe('function');
     expect(await result.text()).toBe('a\n');
   });
@@ -72,7 +80,10 @@ describe('result.text() is available on every execution path', () => {
 
 describe('virtual command stdin', () => {
   test('a standalone virtual command receives empty stdin, never the "inherit" sentinel', async () => {
-    register('parity-stdin', async ({ stdin }) => ({ stdout: JSON.stringify(stdin), code: 0 }));
+    register('parity-stdin', async ({ stdin }) => ({
+      stdout: JSON.stringify(stdin),
+      code: 0,
+    }));
     try {
       const result = await $q`parity-stdin`;
       expect(result.stdout).toBe('""');
@@ -82,7 +93,10 @@ describe('virtual command stdin', () => {
   });
 
   test('a virtual command receives the previous built-in command output', async () => {
-    register('parity-upper', async ({ stdin }) => ({ stdout: String(stdin).toUpperCase(), code: 0 }));
+    register('parity-upper', async ({ stdin }) => ({
+      stdout: String(stdin).toUpperCase(),
+      code: 0,
+    }));
     try {
       expect((await $q`echo abc | parity-upper`).stdout).toBe('ABC\n');
     } finally {
@@ -91,7 +105,10 @@ describe('virtual command stdin', () => {
   });
 
   test('a virtual command receives the previous system command output', async () => {
-    register('parity-upper', async ({ stdin }) => ({ stdout: String(stdin).toUpperCase(), code: 0 }));
+    register('parity-upper', async ({ stdin }) => ({
+      stdout: String(stdin).toUpperCase(),
+      code: 0,
+    }));
     try {
       expect((await $q`sh -c 'echo sys' | parity-upper`).stdout).toBe('SYS\n');
     } finally {
@@ -100,9 +117,16 @@ describe('virtual command stdin', () => {
   });
 
   test('explicit stdin is forwarded to a virtual command', async () => {
-    register('parity-upper', async ({ stdin }) => ({ stdout: String(stdin).toUpperCase(), code: 0 }));
+    register('parity-upper', async ({ stdin }) => ({
+      stdout: String(stdin).toUpperCase(),
+      code: 0,
+    }));
     try {
-      const result = await $({ mirror: false, capture: true, stdin: 'given\n' })`parity-upper`;
+      const result = await $({
+        mirror: false,
+        capture: true,
+        stdin: 'given\n',
+      })`parity-upper`;
       expect(result.stdout).toBe('GIVEN\n');
     } finally {
       unregister('parity-upper');
@@ -116,7 +140,11 @@ describe('virtual command stdin', () => {
       return { stdout: '', code: 0 };
     });
     try {
-      await $({ mirror: false, capture: true, cwd: os.tmpdir() })`parity-ctx one two`;
+      await $({
+        mirror: false,
+        capture: true,
+        cwd: os.tmpdir(),
+      })`parity-ctx one two`;
       expect(seen.args).toEqual(['one', 'two']);
       expect(seen.stdin).toBe('');
       expect(seen.cwd).toBe(os.tmpdir());
@@ -131,7 +159,11 @@ describe('virtual command stdin', () => {
 
 describe('pipeline exit codes', () => {
   test('the exit code of the last virtual command is propagated', async () => {
-    register('parity-fail', async () => ({ stdout: '', stderr: 'boom\n', code: 7 }));
+    register('parity-fail', async () => ({
+      stdout: '',
+      stderr: 'boom\n',
+      code: 7,
+    }));
     try {
       const result = await $q`echo a | parity-fail`;
       expect(result.code).toBe(7);
@@ -152,7 +184,11 @@ describe('pipeline exit codes', () => {
   });
 
   test('a failure in an earlier stage does not mask the final exit code', async () => {
-    register('parity-fail', async () => ({ stdout: '', stderr: 'boom\n', code: 7 }));
+    register('parity-fail', async () => ({
+      stdout: '',
+      stderr: 'boom\n',
+      code: 7,
+    }));
     try {
       const result = await $q`parity-fail | cat`;
       expect(result.code).toBe(0);
@@ -231,17 +267,29 @@ describe('built-in commands behave like their POSIX counterparts', () => {
     // clear it on the success path, so any script using `sleep` hung forever.
     const dir = tempDir();
     const script = path.join(dir, 'sleep-exit.mjs');
-    const entry = path.resolve(import.meta.dirname ?? path.dirname(new URL(import.meta.url).pathname), '../src/$.mjs');
-    fs.writeFileSync(script, [
-      `import { $ } from ${JSON.stringify(entry)};`,
-      'await $({ mirror: false })`sleep 0.05`;',
-      "console.log('finished');"
-    ].join('\n'));
+    const entry = path.resolve(
+      import.meta.dirname ?? path.dirname(new URL(import.meta.url).pathname),
+      '../src/$.mjs'
+    );
+    fs.writeFileSync(
+      script,
+      [
+        `import { $ } from ${JSON.stringify(entry)};`,
+        'await $({ mirror: false })`sleep 0.05`;',
+        "console.log('finished');",
+      ].join('\n')
+    );
 
     const exited = await new Promise((resolve) => {
       const child = spawn(process.execPath, [script], { stdio: 'ignore' });
-      const timer = setTimeout(() => { child.kill('SIGKILL'); resolve('timed out'); }, 10000);
-      child.on('exit', (code) => { clearTimeout(timer); resolve(`exited with ${code}`); });
+      const timer = setTimeout(() => {
+        child.kill('SIGKILL');
+        resolve('timed out');
+      }, 10000);
+      child.on('exit', (code) => {
+        clearTimeout(timer);
+        resolve(`exited with ${code}`);
+      });
     });
     expect(exited).toBe('exited with 0');
   }, 20000);

@@ -63,17 +63,19 @@ async fn test_pipeline_empty() {
 }
 
 #[tokio::test]
-async fn test_pipeline_failure_propagation() {
+async fn test_pipeline_status_comes_from_last_stage_without_pipefail() {
     let result = Pipeline::new()
         .add("echo hello")
         .add("false") // This command always fails
-        .add("echo should not reach here")
+        .add("echo reached last stage")
         .run()
         .await
         .unwrap();
 
-    // Pipeline should fail because 'false' returns non-zero
-    assert!(!result.is_success());
+    // POSIX pipelines report the final stage unless pipefail is enabled. A
+    // failed stage must therefore not stop the rest of the pipeline.
+    assert!(result.is_success());
+    assert!(result.stdout.contains("reached last stage"));
 }
 
 #[tokio::test]

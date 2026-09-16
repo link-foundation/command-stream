@@ -636,6 +636,7 @@ async function handleVirtualPipelineCommand(
     currentInput,
     {
       ...runner.options,
+      options: runner.options,
       cwd: effectiveCwd(runner),
       env: effectiveEnv(runner) ?? process.env,
     }
@@ -943,6 +944,7 @@ export function attachPipelineMethods(ProcessRunner, deps) {
                   args: argValues,
                   stdin: inputData,
                   ...opts,
+                  options: self.options,
                   cwd: effectiveCwd(self),
                   env: effectiveEnv(self) ?? process.env,
                 })) {
@@ -973,6 +975,7 @@ export function attachPipelineMethods(ProcessRunner, deps) {
             args: argValues,
             stdin: inputData,
             ...opts,
+            options: this.options,
             cwd: effectiveCwd(this),
             env: effectiveEnv(this) ?? process.env,
           });

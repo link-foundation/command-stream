@@ -5,15 +5,14 @@
 import { execFileSync } from 'child_process';
 
 const CANDIDATES = [
-  { id: 'node', label: 'Node.js', command: process.execPath.includes('bun') ? 'node' : process.execPath, versionArgs: ['--version'] },
+  {
+    id: 'node',
+    label: 'Node.js',
+    command: process.execPath.includes('bun') ? 'node' : process.execPath,
+    versionArgs: ['--version'],
+  },
   { id: 'bun', label: 'Bun', command: 'bun', versionArgs: ['--version'] },
-  { id: 'deno', label: 'Deno', command: 'deno', versionArgs: ['--version'] },
 ];
-
-// Deno needs to be told that running a script may touch the system.
-const EXTRA_RUN_ARGS = {
-  deno: ['run', '--allow-all'],
-};
 
 function probe(candidate) {
   try {
@@ -23,7 +22,7 @@ function probe(candidate) {
     });
     return {
       ...candidate,
-      runArgs: EXTRA_RUN_ARGS[candidate.id] ?? [],
+      runArgs: [],
       version: version.trim().split('\n')[0].replace(/^v/, ''),
     };
   } catch {
@@ -38,9 +37,11 @@ export function availableRuntimes() {
 
 export function requireRuntimes(ids) {
   const available = availableRuntimes();
-  const missing = ids.filter(id => !available.some(runtime => runtime.id === id));
+  const missing = ids.filter(
+    (id) => !available.some((runtime) => runtime.id === id)
+  );
   if (missing.length > 0) {
     throw new Error(`Required runtime(s) not installed: ${missing.join(', ')}`);
   }
-  return available.filter(runtime => ids.includes(runtime.id));
+  return available.filter((runtime) => ids.includes(runtime.id));
 }

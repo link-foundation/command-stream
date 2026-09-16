@@ -1,6 +1,6 @@
 // Reproduces the `cd` into a path containing quotes and `$1`, which the
 // built-in path has to unquote exactly like a shell would.
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 import { mkdtempSync, rmSync, existsSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
@@ -17,7 +17,11 @@ try {
   const init = await $q`cd ${specialDir} && git init`;
   console.log(`[${runtime}] git init `, init.code, JSON.stringify(init.stderr));
   const status = await $q`cd ${specialDir} && git status`;
-  console.log(`[${runtime}] git statu`, status.code, JSON.stringify(status.stderr));
+  console.log(
+    `[${runtime}] git statu`,
+    status.code,
+    JSON.stringify(status.stderr)
+  );
 } finally {
   rmSync(base, { recursive: true, force: true });
 }

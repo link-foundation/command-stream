@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Runs every feature example under every installed runtime and fails if any two
-// runtimes disagree.
+// Runs every feature example in JavaScript and Rust. JavaScript observations
+// must agree in Node and Bun; every Rust counterpart must compile and run.
 //
 // Each example prints a JSON block under COMMAND_STREAM_PARITY=1 listing what it
 // observed. Comparing those blocks is what "the feature behaves the same
@@ -16,7 +16,12 @@ const report = await runExamples();
 if (asJson) {
   console.log(JSON.stringify(report, null, 2));
 } else {
-  console.log(`Runtimes: ${report.runtimes.map(r => `${r.label} ${r.version}`).join(', ')}`);
+  console.log(
+    `JavaScript runtimes: ${report.runtimes.map((r) => `${r.label} ${r.version}`).join(', ')}`
+  );
+  console.log(
+    `Languages: ${report.languages.map((language) => `${language.name} ${language.version}`).join('; ')}`
+  );
   console.log('');
   for (const feature of report.features) {
     const mark = feature.parity ? '✓' : '✗';
@@ -30,10 +35,14 @@ if (asJson) {
   console.log('');
 }
 
-const broken = report.features.filter(feature => !feature.parity);
+const broken = report.features.filter((feature) => !feature.parity);
 if (broken.length > 0) {
-  console.error(`${broken.length} feature(s) behave differently between runtimes: ${broken.map(f => f.id).join(', ')}`);
+  console.error(
+    `${broken.length} feature(s) failed language/runtime parity: ${broken.map((f) => f.id).join(', ')}`
+  );
   process.exit(1);
 }
 
-console.log(`All ${report.features.length} features behave identically in ${report.runtimes.length} runtime(s).`);
+console.log(
+  `All ${report.features.length} features are executable in JavaScript and Rust; JavaScript observations match in ${report.runtimes.length} runtime(s).`
+);

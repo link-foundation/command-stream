@@ -2,7 +2,7 @@
 // Hypothesis: redirection is only honoured when the *enhanced* shell parser runs,
 // which happens only when the command contains &&, ||, ; or ( ... ).
 // Without one of those, _parseCommand() treats ">" as a literal argument.
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -14,7 +14,9 @@ const $q = $({ mirror: false, capture: true });
 async function probe(label, run, file) {
   const r = await run();
   const exists = fs.existsSync(file);
-  console.log(`[${runtime}] ${label.padEnd(28)} code=${r.code} stdout=${JSON.stringify(r.stdout)} file=${exists ? JSON.stringify(fs.readFileSync(file, 'utf8')) : 'MISSING'}`);
+  console.log(
+    `[${runtime}] ${label.padEnd(28)} code=${r.code} stdout=${JSON.stringify(r.stdout)} file=${exists ? JSON.stringify(fs.readFileSync(file, 'utf8')) : 'MISSING'}`
+  );
 }
 
 const f1 = path.join(dir, 'plain.txt');

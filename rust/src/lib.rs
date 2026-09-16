@@ -412,7 +412,10 @@ impl ProcessRunner {
         // arguments, so `echo hello > out.txt` printed the redirection instead
         // of writing the file, and `git push ... 2>&1` reported success while
         // nothing was pushed (#46).
-        let first_word = if has_shell_escapes(&self.command) || needs_real_shell(&self.command) {
+        let first_word = if matches!(self.options.stdin, StdinOption::Pipe)
+            || has_shell_escapes(&self.command)
+            || needs_real_shell(&self.command)
+        {
             ""
         } else {
             self.command.split_whitespace().next().unwrap_or("")
@@ -501,6 +504,35 @@ impl ProcessRunner {
         self.pid = child.id();
         self.child = Some(child);
 
+        Ok(())
+    }
+
+    /// Write bytes to the stdin pipe of a running command.
+    ///
+    /// Configure the runner with [`StdinOption::Pipe`], call [`start`](Self::start),
+    /// write as many chunks as needed, and finish with [`close_stdin`](Self::close_stdin).
+    pub async fn write_stdin(&mut self, data: impl AsRef<[u8]>) -> Result<()> {
+        self.start().await?;
+        let stdin = self
+            .child
+            .as_mut()
+            .and_then(|child| child.stdin.as_mut())
+            .ok_or_else(|| {
+                Error::Io(std::io::Error::new(
+                    std::io::ErrorKind::BrokenPipe,
+                    "command stdin is not available; use StdinOption::Pipe",
+                ))
+            })?;
+        stdin.write_all(data.as_ref()).await?;
+        Ok(())
+    }
+
+    /// Close a running command's stdin pipe so it can observe end-of-input.
+    pub async fn close_stdin(&mut self) -> Result<()> {
+        self.start().await?;
+        if let Some(mut stdin) = self.child.as_mut().and_then(|child| child.stdin.take()) {
+            stdin.shutdown().await?;
+        }
         Ok(())
     }
 

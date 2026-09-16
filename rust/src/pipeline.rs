@@ -38,6 +38,20 @@ struct VirtualCommandResult {
     cd_context: Option<crate::commands::cd::CdContext>,
 }
 
+fn pipeline_exit_code(exit_codes: &[i32], pipefail: bool) -> i32 {
+    let last = exit_codes.last().copied().unwrap_or(0);
+    if pipefail {
+        exit_codes
+            .iter()
+            .rev()
+            .copied()
+            .find(|code| *code != 0)
+            .unwrap_or(last)
+    } else {
+        last
+    }
+}
+
 /// A pipeline of commands to be executed sequentially
 ///
 /// Each command's stdout is piped to the next command's stdin.
@@ -139,6 +153,8 @@ impl Pipeline {
             code: 0,
         };
         let mut accumulated_stderr = String::new();
+        let mut exit_codes = Vec::with_capacity(self.commands.len());
+        let pipefail = crate::get_shell_settings().await.pipefail;
 
         for (i, cmd_str) in self.commands.iter().enumerate() {
             let is_last = i == self.commands.len() - 1;
@@ -166,23 +182,23 @@ impl Pipeline {
                     .await
                 {
                     let VirtualCommandResult { result, cd_context } = result;
-                    if result.code != 0 {
-                        return Ok(CommandResult {
-                            stdout: result.stdout,
-                            stderr: accumulated_stderr + &result.stderr,
-                            code: result.code,
-                        });
-                    }
+                    exit_codes.push(result.code);
                     current_stdin = Some(result.stdout.clone());
                     accumulated_stderr.push_str(&result.stderr);
-                    if let Some(context) = cd_context {
-                        let env = effective_env.get_or_insert_with(|| std::env::vars().collect());
-                        env.insert(
-                            "OLDPWD".to_string(),
-                            context.oldpwd.to_string_lossy().to_string(),
-                        );
-                        env.insert("PWD".to_string(), context.cwd.to_string_lossy().to_string());
-                        effective_cwd = Some(context.cwd);
+                    if result.code == 0 {
+                        if let Some(context) = cd_context {
+                            let env =
+                                effective_env.get_or_insert_with(|| std::env::vars().collect());
+                            env.insert(
+                                "OLDPWD".to_string(),
+                                context.oldpwd.to_string_lossy().to_string(),
+                            );
+                            env.insert(
+                                "PWD".to_string(),
+                                context.cwd.to_string_lossy().to_string(),
+                            );
+                            effective_cwd = Some(context.cwd);
+                        }
                     }
                     last_result = result;
                     continue;
@@ -256,14 +272,7 @@ impl Pipeline {
             let code = status.code().unwrap_or(-1);
 
             accumulated_stderr.push_str(&stderr_content);
-
-            if code != 0 {
-                return Ok(CommandResult {
-                    stdout: stdout_content,
-                    stderr: accumulated_stderr,
-                    code,
-                });
-            }
+            exit_codes.push(code);
 
             // Set up stdin for next command
             current_stdin = Some(stdout_content.clone());
@@ -277,7 +286,7 @@ impl Pipeline {
         Ok(CommandResult {
             stdout: last_result.stdout,
             stderr: accumulated_stderr,
-            code: last_result.code,
+            code: pipeline_exit_code(&exit_codes, pipefail),
         })
     }
 
@@ -404,19 +413,13 @@ impl PipelineBuilder {
     pub async fn run(mut self) -> Result<CommandResult> {
         // First, run the initial command
         let first_result = self.first.run().await?;
-
-        if first_result.code != 0 {
-            return Ok(first_result);
-        }
+        let pipefail = crate::get_shell_settings().await.pipefail;
+        let mut exit_codes = vec![first_result.code];
 
         // Then run the rest as a pipeline
-        let mut current_stdin = Some(first_result.stdout);
-        let mut accumulated_stderr = first_result.stderr;
-        let mut last_result = CommandResult {
-            stdout: String::new(),
-            stderr: String::new(),
-            code: 0,
-        };
+        let mut current_stdin = Some(first_result.stdout.clone());
+        let mut accumulated_stderr = first_result.stderr.clone();
+        let mut last_result = first_result;
 
         for cmd_str in &self.additional {
             let mut runner = crate::ProcessRunner::new(
@@ -431,14 +434,7 @@ impl PipelineBuilder {
 
             let result = runner.run().await?;
             accumulated_stderr.push_str(&result.stderr);
-
-            if result.code != 0 {
-                return Ok(CommandResult {
-                    stdout: result.stdout,
-                    stderr: accumulated_stderr,
-                    code: result.code,
-                });
-            }
+            exit_codes.push(result.code);
 
             current_stdin = Some(result.stdout.clone());
             last_result = result;
@@ -447,7 +443,22 @@ impl PipelineBuilder {
         Ok(CommandResult {
             stdout: last_result.stdout,
             stderr: accumulated_stderr,
-            code: last_result.code,
+            code: pipeline_exit_code(&exit_codes, pipefail),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::pipeline_exit_code;
+
+    #[test]
+    fn pipeline_status_uses_last_stage_by_default() {
+        assert_eq!(pipeline_exit_code(&[3, 0], false), 0);
+    }
+
+    #[test]
+    fn pipefail_uses_rightmost_failing_stage() {
+        assert_eq!(pipeline_exit_code(&[2, 7, 0], true), 7);
     }
 }

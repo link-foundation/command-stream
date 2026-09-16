@@ -4,12 +4,15 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { $ } from '../src/$.mjs';
+import { $ } from '../js/src/$.mjs';
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ls-order-'));
 for (const name of ['zebra.txt', 'alpha.txt', 'middle.txt']) {
   fs.writeFileSync(path.join(dir, name), '');
 }
 console.log('readdir order:', JSON.stringify(fs.readdirSync(dir)));
-console.log('ls built-in  :', JSON.stringify((await $({ mirror: false })`ls ${dir}`).stdout));
+console.log(
+  'ls built-in  :',
+  JSON.stringify((await $({ mirror: false })`ls ${dir}`).stdout)
+);
 fs.rmSync(dir, { recursive: true, force: true });

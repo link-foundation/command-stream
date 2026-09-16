@@ -533,6 +533,11 @@ pub fn needs_real_shell(command: &str) -> bool {
         '*', // Glob patterns
         '?', // Glob patterns
         '[', // Glob patterns
+        '|', // Pipelines and boolean OR
+        '&', // Boolean AND and backgrounding
+        ';', // Command sequences
+        '(', // Subshells
+        ')', // Subshells
         '>', // Output redirection, in every form (>, >>, 2>, &>, >&)
         '<', // Input redirection, in every form (<, <<, <<<)
     ];
@@ -625,8 +630,8 @@ mod tests {
         assert!(needs_real_shell("echo $(date)"));
         assert!(needs_real_shell("ls *.txt"));
         assert!(needs_real_shell("echo ${HOME}"));
+        assert!(needs_real_shell("ls | grep foo"));
         assert!(!needs_real_shell("echo hello"));
-        assert!(!needs_real_shell("ls | grep foo"));
     }
 
     #[test]
