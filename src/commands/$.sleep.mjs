@@ -13,46 +13,57 @@ export default async function sleep({ args, abortSignal, isCancelled }) {
     return { stderr: `sleep: invalid time interval '${args[0]}'`, code: 1 };
   }
   
-  // Use abort signal if available, otherwise use setTimeout
+  // Every timer and listener created below is cleared on both the success and
+  // the cancellation path. A leftover interval keeps the event loop alive, so
+  // the whole host script would never exit after a successful sleep.
   try {
     await new Promise((resolve, reject) => {
-      const timeoutId = setTimeout(resolve, seconds * 1000);
-      
+      let timeoutId = null;
+      let checkInterval = null;
+      let onAbort = null;
+
+      const cleanup = () => {
+        if (timeoutId !== null) clearTimeout(timeoutId);
+        if (checkInterval !== null) clearInterval(checkInterval);
+        if (onAbort && abortSignal) abortSignal.removeEventListener('abort', onAbort);
+      };
+      const finish = () => { cleanup(); resolve(); };
+      const cancel = () => { cleanup(); reject(new Error('Sleep cancelled')); };
+
+      timeoutId = setTimeout(finish, seconds * 1000);
+
       // Handle cancellation via abort signal
       if (abortSignal) {
         trace('VirtualCommand', () => `sleep: setting up abort signal listener | ${JSON.stringify({
           signalAborted: abortSignal.aborted
         }, null, 2)}`);
-        
-        abortSignal.addEventListener('abort', () => {
+
+        // Check if already aborted
+        if (abortSignal.aborted) {
+          trace('VirtualCommand', () => `sleep: signal already aborted | ${JSON.stringify({ seconds }, null, 2)}`);
+          cancel();
+          return;
+        }
+
+        onAbort = () => {
           trace('VirtualCommand', () => `sleep: abort signal received | ${JSON.stringify({
             seconds,
             signalAborted: abortSignal.aborted
           }, null, 2)}`);
-          clearTimeout(timeoutId);
-          reject(new Error('Sleep cancelled'));
-        });
-        
-        // Check if already aborted
-        if (abortSignal.aborted) {
-          trace('VirtualCommand', () => `sleep: signal already aborted | ${JSON.stringify({ seconds }, null, 2)}`);
-          clearTimeout(timeoutId);
-          reject(new Error('Sleep cancelled'));
-          return;
-        }
+          cancel();
+        };
+        abortSignal.addEventListener('abort', onAbort);
       } else {
         trace('VirtualCommand', () => `sleep: no abort signal provided | ${JSON.stringify({ seconds }, null, 2)}`);
       }
-      
+
       // Also check isCancelled periodically for quicker response
       if (isCancelled) {
         trace('VirtualCommand', () => `sleep: setting up isCancelled polling | ${JSON.stringify({ seconds }, null, 2)}`);
-        const checkInterval = setInterval(() => {
+        checkInterval = setInterval(() => {
           if (isCancelled()) {
             trace('VirtualCommand', () => `sleep: isCancelled returned true | ${JSON.stringify({ seconds }, null, 2)}`);
-            clearTimeout(timeoutId);
-            clearInterval(checkInterval);
-            reject(new Error('Sleep cancelled'));
+            cancel();
           }
         }, 100);
       }

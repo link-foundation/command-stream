@@ -8,7 +8,7 @@
 import cp from 'child_process';
 import path from 'path';
 import fs from 'fs';
-import { parseShellCommand, needsRealShell } from './shell-parser.mjs';
+import { parseShellCommand, needsRealShell, scanWord, formatArgForShell } from './shell-parser.mjs';
 
 const isBun = typeof globalThis.Bun !== 'undefined';
 
@@ -658,6 +658,49 @@ function resolveStdinData(stdin) {
   }
   if (Buffer.isBuffer(stdin)) return stdin.toString('utf8');
   return '';
+}
+
+// Splits a command line into words and pipes. The heavy lifting - quotes,
+// escapes and adjacent pieces forming one word - is done by `scanWord`, which
+// the enhanced parser uses too, so both parsers read a command line the same way.
+function tokenizeCommandLine(command) {
+  const tokens = [];
+  let i = 0;
+
+  while (i < command.length) {
+    while (i < command.length && /\s/.test(command[i])) i++;
+    if (i >= command.length) break;
+
+    if (command[i] === '|') {
+      tokens.push({ type: 'pipe', value: '|' });
+      i++;
+      continue;
+    }
+
+    const word = scanWord(command, i, '|');
+    if (word.end === i) {
+      i++;
+      continue;
+    }
+    i = word.end;
+    tokens.push({ type: 'word', value: word.value, raw: word.raw, quoted: word.quoted, quoteChar: word.quoteChar });
+  }
+
+  return tokens;
+}
+
+// Computes the exit code a pipeline reports. A shell uses the code of the last
+// stage; with `set -o pipefail` the rightmost failing stage wins instead, which
+// is what bash does. Reporting a code is all pipefail does - aborting is the job
+// of `set -e`, which is checked separately by every caller.
+function pipelineExitCode(exitCodes) {
+  const codes = exitCodes.map(code => code || 0);
+  const last = codes.length > 0 ? codes[codes.length - 1] : 0;
+  if (!globalShellSettings.pipefail) return last;
+  for (let i = codes.length - 1; i >= 0; i--) {
+    if (codes[i] !== 0) return codes[i];
+  }
+  return last;
 }
 
 // Applies `>` and `>>` redirects the way a POSIX shell does: every target file is
@@ -2263,85 +2306,45 @@ class ProcessRunner extends StreamEmitter {
       commandLength: command?.length || 0,
       preview: command?.slice(0, 50)
     }, null, 2)}`);
-    
+
     const trimmed = command.trim();
     if (!trimmed) {
       trace('ProcessRunner', () => 'Empty command after trimming');
       return null;
     }
 
-    if (trimmed.includes('|')) {
-      return this._parsePipeline(trimmed);
+    const tokens = tokenizeCommandLine(trimmed);
+    // A pipe inside quotes is a plain character, so ask the tokenizer rather
+    // than looking for a `|` in the command string.
+    if (tokens.some(token => token.type === 'pipe')) {
+      return this._parsePipeline(trimmed, tokens);
     }
 
-    // Simple command parsing
-    const parts = trimmed.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) || [];
-    if (parts.length === 0) return null;
+    const words = tokens.filter(token => token.type === 'word');
+    if (words.length === 0) return null;
 
-    const cmd = parts[0];
-    const args = parts.slice(1).map(arg => {
-      // Keep track of whether the arg was quoted
-      if ((arg.startsWith('"') && arg.endsWith('"')) ||
-        (arg.startsWith("'") && arg.endsWith("'"))) {
-        return { value: arg.slice(1, -1), quoted: true, quoteChar: arg[0] };
-      }
-      return { value: arg, quoted: false };
-    });
-
-    return { cmd, args, type: 'simple' };
+    return { cmd: words[0].value, args: words.slice(1), type: 'simple' };
   }
 
-  _parsePipeline(command) {
+  _parsePipeline(command, tokens = null) {
     trace('ProcessRunner', () => `_parsePipeline ENTER | ${JSON.stringify({
       commandLength: command?.length || 0,
       hasPipe: command?.includes('|')
     }, null, 2)}`);
-    
-    // Split by pipe, respecting quotes
-    const segments = [];
-    let current = '';
-    let inQuotes = false;
-    let quoteChar = '';
 
-    for (let i = 0; i < command.length; i++) {
-      const char = command[i];
-
-      if (!inQuotes && (char === '"' || char === "'")) {
-        inQuotes = true;
-        quoteChar = char;
-        current += char;
-      } else if (inQuotes && char === quoteChar) {
-        inQuotes = false;
-        quoteChar = '';
-        current += char;
-      } else if (!inQuotes && char === '|') {
-        segments.push(current.trim());
-        current = '';
+    const allTokens = tokens ?? tokenizeCommandLine(command);
+    const segments = [[]];
+    for (const token of allTokens) {
+      if (token.type === 'pipe') {
+        segments.push([]);
       } else {
-        current += char;
+        segments[segments.length - 1].push(token);
       }
     }
 
-    if (current.trim()) {
-      segments.push(current.trim());
-    }
-
-    const commands = segments.map(segment => {
-      const parts = segment.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) || [];
-      if (parts.length === 0) return null;
-
-      const cmd = parts[0];
-      const args = parts.slice(1).map(arg => {
-        // Keep track of whether the arg was quoted
-        if ((arg.startsWith('"') && arg.endsWith('"')) ||
-          (arg.startsWith("'") && arg.endsWith("'"))) {
-          return { value: arg.slice(1, -1), quoted: true, quoteChar: arg[0] };
-        }
-        return { value: arg, quoted: false };
-      });
-
-      return { cmd, args };
-    }).filter(Boolean);
+    const commands = segments
+      .map(words => (words.length === 0 ? null : { cmd: words[0].value, args: words.slice(1) }))
+      .filter(Boolean);
 
     return { type: 'pipeline', commands };
   }
@@ -2678,21 +2681,7 @@ class ProcessRunner extends StreamEmitter {
       // Build command string
       const commandParts = [cmd];
       for (const arg of args) {
-        if (arg.value !== undefined) {
-          if (arg.quoted) {
-            commandParts.push(`${arg.quoteChar}${arg.value}${arg.quoteChar}`);
-          } else if (arg.value.includes(' ')) {
-            commandParts.push(`"${arg.value}"`);
-          } else {
-            commandParts.push(arg.value);
-          }
-        } else {
-          if (typeof arg === 'string' && arg.includes(' ') && !arg.startsWith('"') && !arg.startsWith("'")) {
-            commandParts.push(`"${arg}"`);
-          } else {
-            commandParts.push(arg);
-          }
-        }
+        commandParts.push(formatArgForShell(arg));
       }
       const commandStr = commandParts.join(' ');
 
@@ -2791,19 +2780,9 @@ class ProcessRunner extends StreamEmitter {
 
     // Wait for all processes to complete
     const exitCodes = await Promise.all(processes.map(p => p.exited));
-    const lastExitCode = exitCodes[exitCodes.length - 1];
-
-    if (globalShellSettings.pipefail) {
-      const failedIndex = exitCodes.findIndex(code => code !== 0);
-      if (failedIndex !== -1) {
-        const error = new Error(`Pipeline command at index ${failedIndex} failed with exit code ${exitCodes[failedIndex]}`);
-        error.code = exitCodes[failedIndex];
-        throw error;
-      }
-    }
 
     const result = createResult({
-      code: lastExitCode || 0,
+      code: pipelineExitCode(exitCodes),
       stdout: finalOutput,
       stderr: allStderr,
       stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin :
@@ -2844,21 +2823,7 @@ class ProcessRunner extends StreamEmitter {
       // Build command string
       const commandParts = [cmd];
       for (const arg of args) {
-        if (arg.value !== undefined) {
-          if (arg.quoted) {
-            commandParts.push(`${arg.quoteChar}${arg.value}${arg.quoteChar}`);
-          } else if (arg.value.includes(' ')) {
-            commandParts.push(`"${arg.value}"`);
-          } else {
-            commandParts.push(arg.value);
-          }
-        } else {
-          if (typeof arg === 'string' && arg.includes(' ') && !arg.startsWith('"') && !arg.startsWith("'")) {
-            commandParts.push(`"${arg}"`);
-          } else {
-            commandParts.push(arg);
-          }
-        }
+        commandParts.push(formatArgForShell(arg));
       }
       const commandStr = commandParts.join(' ');
 
@@ -2967,19 +2932,9 @@ class ProcessRunner extends StreamEmitter {
 
     // Wait for all processes to complete
     const exitCodes = await Promise.all(processes.map(p => p.exited));
-    const lastExitCode = exitCodes[exitCodes.length - 1];
-
-    if (globalShellSettings.pipefail) {
-      const failedIndex = exitCodes.findIndex(code => code !== 0);
-      if (failedIndex !== -1) {
-        const error = new Error(`Pipeline command at index ${failedIndex} failed with exit code ${exitCodes[failedIndex]}`);
-        error.code = exitCodes[failedIndex];
-        throw error;
-      }
-    }
 
     const result = createResult({
-      code: lastExitCode || 0,
+      code: pipelineExitCode(exitCodes),
       stdout: finalOutput,
       stderr: allStderr,
       stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin :
@@ -3120,21 +3075,7 @@ class ProcessRunner extends StreamEmitter {
       } else {
         const commandParts = [cmd];
         for (const arg of args) {
-          if (arg.value !== undefined) {
-            if (arg.quoted) {
-              commandParts.push(`${arg.quoteChar}${arg.value}${arg.quoteChar}`);
-            } else if (arg.value.includes(' ')) {
-              commandParts.push(`"${arg.value}"`);
-            } else {
-              commandParts.push(arg.value);
-            }
-          } else {
-            if (typeof arg === 'string' && arg.includes(' ') && !arg.startsWith('"') && !arg.startsWith("'")) {
-              commandParts.push(`"${arg}"`);
-            } else {
-              commandParts.push(arg);
-            }
-          }
+          commandParts.push(formatArgForShell(arg));
         }
         const commandStr = commandParts.join(' ');
 
@@ -3216,21 +3157,10 @@ class ProcessRunner extends StreamEmitter {
       }
     }
 
-    // A shell reports the exit code of the *last* stage, unless pipefail is set.
     const exitCodes = await Promise.all(stageCodes);
-    const lastExitCode = exitCodes.length > 0 ? (exitCodes[exitCodes.length - 1] || 0) : 0;
-
-    if (globalShellSettings.pipefail) {
-      const failedIndex = exitCodes.findIndex(code => code !== 0);
-      if (failedIndex !== -1) {
-        const error = new Error(`Pipeline command at index ${failedIndex} failed with exit code ${exitCodes[failedIndex]}`);
-        error.code = exitCodes[failedIndex];
-        throw error;
-      }
-    }
 
     const result = createResult({
-      code: lastExitCode,
+      code: pipelineExitCode(exitCodes),
       stdout: finalOutput,
       stderr: allStderr,
       stdin: resolveStdinData(this.options.stdin)
@@ -3258,6 +3188,8 @@ class ProcessRunner extends StreamEmitter {
 
     let currentOutput = '';
     let currentInput = resolveStdinData(this.options.stdin);
+    // Exit code of every stage, so pipefail can report the right one at the end.
+    const stageCodes = [];
 
     // Execute each command in the pipeline
     for (let i = 0; i < commands.length; i++) {
@@ -3311,6 +3243,8 @@ class ProcessRunner extends StreamEmitter {
             };
           }
 
+          stageCodes.push(result.code ?? 0);
+
           // If this isn't the last command, pass stdout as stdin to next command
           if (i < commands.length - 1) {
             currentInput = result.stdout;
@@ -3350,7 +3284,7 @@ class ProcessRunner extends StreamEmitter {
             }
 
             const finalResult = createResult({
-              code: result.code,
+              code: pipelineExitCode(stageCodes),
               stdout: currentOutput,
               stderr: allStderr,
               stdin: resolveStdinData(this.options.stdin)
@@ -3410,23 +3344,7 @@ class ProcessRunner extends StreamEmitter {
           // Build command string for this part of the pipeline
           const commandParts = [cmd];
           for (const arg of args) {
-            if (arg.value !== undefined) {
-              if (arg.quoted) {
-                // Preserve original quotes
-                commandParts.push(`${arg.quoteChar}${arg.value}${arg.quoteChar}`);
-              } else if (arg.value.includes(' ')) {
-                // Quote if contains spaces
-                commandParts.push(`"${arg.value}"`);
-              } else {
-                commandParts.push(arg.value);
-              }
-            } else {
-              if (typeof arg === 'string' && arg.includes(' ') && !arg.startsWith('"') && !arg.startsWith("'")) {
-                commandParts.push(`"${arg}"`);
-              } else {
-                commandParts.push(arg);
-              }
-            }
+            commandParts.push(formatArgForShell(arg));
           }
           const commandStr = commandParts.join(' ');
 
@@ -3568,13 +3486,7 @@ class ProcessRunner extends StreamEmitter {
             stdin: currentInput
           };
 
-          if (globalShellSettings.pipefail && result.code !== 0) {
-            const error = new Error(`Pipeline command '${commandStr}' failed with exit code ${result.code}`);
-            error.code = result.code;
-            error.stdout = result.stdout;
-            error.stderr = result.stderr;
-            throw error;
-          }
+          stageCodes.push(result.code ?? 0);
 
           // If this isn't the last command, pass stdout as stdin to next command
           if (i < commands.length - 1) {
@@ -3598,7 +3510,7 @@ class ProcessRunner extends StreamEmitter {
             }
 
             const finalResult = createResult({
-              code: result.code,
+              code: pipelineExitCode(stageCodes),
               stdout: currentOutput,
               stderr: allStderr,
               stdin: this.options.stdin && typeof this.options.stdin === 'string' ? this.options.stdin :
@@ -3998,13 +3910,7 @@ class ProcessRunner extends StreamEmitter {
     // Build command string for real execution
     let commandStr = cmd;
     for (const arg of args) {
-      if (arg.quoted && arg.quoteChar) {
-        commandStr += ` ${arg.quoteChar}${arg.value}${arg.quoteChar}`;
-      } else if (arg.value !== undefined) {
-        commandStr += ` ${arg.value}`;
-      } else {
-        commandStr += ` ${arg}`;
-      }
+      commandStr += ` ${formatArgForShell(arg)}`;
     }
     
     // Add redirections

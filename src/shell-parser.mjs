@@ -6,6 +6,86 @@
 import { trace } from './$.utils.mjs';
 
 /**
+ * Scans one shell word starting at `start`.
+ *
+ * A word ends at whitespace or at one of `breakChars`, but only outside quotes:
+ * `'a|b'` is a single word. Single quotes are literal, double quotes understand
+ * the `\"` `\\` `\$` `` \` `` escapes, and outside quotes a backslash escapes the
+ * next character. Adjacent pieces concatenate, so `'it'\''s` is the one word
+ * `it's` - exactly the way a POSIX shell reads it.
+ *
+ * Both forms of the word are returned: `raw` is the text as written, which is
+ * what a command line rebuilt for a real shell needs, and `value` is what the
+ * command itself should receive.
+ */
+export function scanWord(command, start, breakChars) {
+  let raw = '';
+  let value = '';
+  let quoted = false;
+  let quoteChar = '';
+  let i = start;
+
+  while (i < command.length) {
+    const char = command[i];
+
+    if (char === "'" || char === '"') {
+      quoted = true;
+      if (!quoteChar) quoteChar = char;
+      raw += char;
+      i++;
+      while (i < command.length && command[i] !== char) {
+        // Only double quotes have escapes; inside single quotes everything is literal.
+        if (char === '"' && command[i] === '\\' && i + 1 < command.length && '"\\$`'.includes(command[i + 1])) {
+          raw += command[i] + command[i + 1];
+          value += command[i + 1];
+          i += 2;
+          continue;
+        }
+        raw += command[i];
+        value += command[i];
+        i++;
+      }
+      if (i < command.length) {
+        raw += command[i];
+        i++;
+      }
+      continue;
+    }
+
+    if (char === '\\' && i + 1 < command.length) {
+      raw += char + command[i + 1];
+      value += command[i + 1];
+      i += 2;
+      continue;
+    }
+
+    if (/\s/.test(char) || breakChars.includes(char)) break;
+
+    raw += char;
+    value += char;
+    i++;
+  }
+
+  return { raw, value, quoted, quoteChar, end: i };
+}
+
+/**
+ * Renders a parsed argument back into a command line for a real shell. The raw
+ * text is used whenever it is known, so quoting and expansions survive the round
+ * trip exactly as they were written.
+ */
+export function formatArgForShell(arg) {
+  if (arg === null || arg === undefined) return '';
+  if (typeof arg === 'string') {
+    return arg.includes(' ') && !arg.startsWith('"') && !arg.startsWith("'") ? `"${arg}"` : arg;
+  }
+  if (arg.raw !== undefined) return arg.raw;
+  if (arg.quoted && arg.quoteChar) return `${arg.quoteChar}${arg.value}${arg.quoteChar}`;
+  if (arg.value === undefined) return String(arg);
+  return arg.value.includes(' ') ? `"${arg.value}"` : arg.value;
+}
+
+/**
  * Token types for the parser
  */
 const TokenType = {
@@ -67,58 +147,23 @@ function tokenize(command) {
       i++;
     } else {
       // Parse word (respecting quotes)
-      let word = '';
-      let inQuote = false;
-      let quoteChar = '';
-      
-      while (i < command.length) {
-        const char = command[i];
-        
-        if (!inQuote) {
-          if (char === '"' || char === "'") {
-            inQuote = true;
-            quoteChar = char;
-            word += char;
-            i++;
-          } else if (/\s/.test(char) || 
-                     '&|;()<>'.includes(char)) {
-            break;
-          } else if (char === '\\' && i + 1 < command.length) {
-            // Handle escape sequences
-            word += char;
-            i++;
-            if (i < command.length) {
-              word += command[i];
-              i++;
-            }
-          } else {
-            word += char;
-            i++;
-          }
-        } else {
-          if (char === quoteChar && command[i - 1] !== '\\') {
-            inQuote = false;
-            quoteChar = '';
-            word += char;
-            i++;
-          } else if (char === '\\' && i + 1 < command.length && 
-                     (command[i + 1] === quoteChar || command[i + 1] === '\\')) {
-            // Handle escaped quotes and backslashes inside quotes
-            word += char;
-            i++;
-            if (i < command.length) {
-              word += command[i];
-              i++;
-            }
-          } else {
-            word += char;
-            i++;
-          }
-        }
+      const word = scanWord(command, i, '&|;()<>');
+      if (word.end === i) {
+        // A lone `&` reaches this branch without matching any operator. Consume
+        // it rather than looping forever on the same character.
+        i++;
+        continue;
       }
-      
-      if (word) {
-        tokens.push({ type: TokenType.WORD, value: word });
+      i = word.end;
+
+      if (word.raw) {
+        tokens.push({
+          type: TokenType.WORD,
+          value: word.raw,
+          unquoted: word.value,
+          quoted: word.quoted,
+          quoteChar: word.quoteChar
+        });
       }
     }
   }
@@ -264,7 +309,7 @@ class ShellParser {
       const token = this.current();
       
       if (token.type === TokenType.WORD) {
-        words.push(token.value);
+        words.push(token);
         this.consume();
       } else if (token.type === TokenType.REDIRECT_OUT || 
                  token.type === TokenType.REDIRECT_APPEND ||
@@ -274,7 +319,7 @@ class ShellParser {
         if (target.type === TokenType.WORD) {
           redirects.push({
             type: token.type,
-            target: target.value
+            target: target.unquoted
           });
           this.consume();
         }
@@ -287,22 +332,15 @@ class ShellParser {
       return null;
     }
     
-    const cmd = words[0];
-    const args = words.slice(1).map(word => {
-      // Remove quotes if present
-      if ((word.startsWith('"') && word.endsWith('"')) ||
-          (word.startsWith("'") && word.endsWith("'"))) {
-        return {
-          value: word.slice(1, -1),
-          quoted: true,
-          quoteChar: word[0]
-        };
-      }
-      return {
-        value: word,
-        quoted: false
-      };
-    });
+    // The tokenizer already did the unquoting, and kept the raw text so a
+    // command line can be rebuilt for a real shell without losing anything.
+    const cmd = words[0].unquoted;
+    const args = words.slice(1).map(word => ({
+      value: word.unquoted,
+      raw: word.value,
+      quoted: word.quoted,
+      quoteChar: word.quoteChar
+    }));
     
     const result = {
       type: 'simple',
@@ -372,4 +410,4 @@ export function needsRealShell(command) {
   return false;
 }
 
-export default { parseShellCommand, needsRealShell };
+export default { parseShellCommand, needsRealShell, scanWord, formatArgForShell };

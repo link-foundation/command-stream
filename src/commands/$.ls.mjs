@@ -35,7 +35,10 @@ export default async function ls({ args, stdin, cwd }) {
       const stats = fs.statSync(resolvedPath);
       
       if (stats.isDirectory()) {
-        let entries = fs.readdirSync(resolvedPath);
+        // readdir returns entries in directory order, which differs between
+        // file systems and between Node.js and Bun. Real `ls` sorts by name,
+        // so sort here to keep the output stable everywhere.
+        let entries = fs.readdirSync(resolvedPath).sort();
         
         if (!showAll) {
           entries = entries.filter(e => !e.startsWith('.'));

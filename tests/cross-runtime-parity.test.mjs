@@ -6,10 +6,11 @@
 // (`node scripts/check-parity.mjs`) must observe the very same values.
 import { describe, test, expect, afterEach } from 'bun:test';
 import './test-helper.mjs';
-import { $, register, unregister } from '../src/$.mjs';
+import { $, register, unregister, shell, enableVirtualCommands } from '../src/$.mjs';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { spawn } from 'child_process';
 
 const $q = $({ mirror: false, capture: true });
 
@@ -197,5 +198,163 @@ describe('output redirection with built-in and virtual commands', () => {
     const result = await $q`cat < ${file}`;
     expect(result.code).toBe(0);
     expect(result.stdout).toBe('from-file\n');
+  });
+});
+
+describe('built-in commands behave like their POSIX counterparts', () => {
+  test('ls sorts entries by name, like real ls', async () => {
+    // Other test files switch the built-ins off, so be explicit about needing
+    // the built-in `ls` rather than the system one.
+    enableVirtualCommands();
+    const dir = tempDir();
+    // Written in an order that is neither sorted nor reverse sorted, so a
+    // readdir that happens to be ordered cannot make this pass by accident.
+    for (const name of ['zebra.txt', 'alpha.txt', 'middle.txt']) {
+      fs.writeFileSync(path.join(dir, name), '');
+    }
+    const result = await $q`ls ${dir}`;
+    expect(result.stdout).toBe('alpha.txt\nmiddle.txt\nzebra.txt\n');
+  });
+
+  test('ls -a sorts the dot entries in too', async () => {
+    enableVirtualCommands();
+    const dir = tempDir();
+    for (const name of ['visible.txt', '.hidden']) {
+      fs.writeFileSync(path.join(dir, name), '');
+    }
+    const result = await $q`ls -a ${dir}`;
+    expect(result.stdout).toBe('.hidden\nvisible.txt\n');
+  });
+
+  test('sleep does not keep the process alive after it finishes', async () => {
+    // The built-in used to start an interval to poll for cancellation and never
+    // clear it on the success path, so any script using `sleep` hung forever.
+    const dir = tempDir();
+    const script = path.join(dir, 'sleep-exit.mjs');
+    const entry = path.resolve(import.meta.dirname ?? path.dirname(new URL(import.meta.url).pathname), '../src/$.mjs');
+    fs.writeFileSync(script, [
+      `import { $ } from ${JSON.stringify(entry)};`,
+      'await $({ mirror: false })`sleep 0.05`;',
+      "console.log('finished');"
+    ].join('\n'));
+
+    const exited = await new Promise((resolve) => {
+      const child = spawn(process.execPath, [script], { stdio: 'ignore' });
+      const timer = setTimeout(() => { child.kill('SIGKILL'); resolve('timed out'); }, 10000);
+      child.on('exit', (code) => { clearTimeout(timer); resolve(`exited with ${code}`); });
+    });
+    expect(exited).toBe('exited with 0');
+  }, 20000);
+});
+
+describe('pipefail reports an exit code instead of throwing', () => {
+  afterEach(() => {
+    shell.pipefail(false);
+    shell.errexit(false);
+  });
+
+  test('without pipefail the last stage decides', async () => {
+    const result = await $q`sh -c 'echo x; exit 3' | cat`;
+    expect(result.code).toBe(0);
+    expect(result.stdout).toBe('x\n');
+  });
+
+  test('with pipefail the rightmost failing stage decides', async () => {
+    shell.pipefail(true);
+    const result = await $q`sh -c 'echo x; exit 3' | cat`;
+    expect(result.code).toBe(3);
+    // bash keeps the output of a pipeline that pipefail marked as failed.
+    expect(result.stdout).toBe('x\n');
+  });
+
+  test('with pipefail a failing built-in stage decides', async () => {
+    shell.pipefail(true);
+    enableVirtualCommands();
+    const result = await $q`false | cat`;
+    expect(result.code).toBe(1);
+  });
+
+  test('with pipefail the rightmost failure wins over an earlier one', async () => {
+    shell.pipefail(true);
+    const result = await $q`sh -c 'exit 3' | sh -c 'exit 4' | cat`;
+    expect(result.code).toBe(4);
+  });
+
+  test('pipefail alone does not throw, errexit does', async () => {
+    shell.pipefail(true);
+    shell.errexit(true);
+    let thrown = null;
+    try {
+      await $q`sh -c 'exit 3' | cat`;
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).not.toBe(null);
+    expect(thrown.code).toBe(3);
+  });
+});
+
+describe('quoting survives the trip to a command', () => {
+  // The built-in path parses the command line itself instead of handing it to a
+  // shell, so it has to understand the same quoting the shell would. Each case
+  // below asserts that a built-in and the system command agree.
+  const cases = [
+    ["it's a name", 'an apostrophe inside the value'],
+    ['two  spaces', 'repeated spaces'],
+    ['say "hi"', 'double quotes inside the value'],
+    ['back\\slash', 'a backslash'],
+    ['a|b', 'a pipe character'],
+    ['$HOME', 'something that looks like a variable'],
+  ];
+
+  for (const [value, description] of cases) {
+    test(`echo passes through ${description}`, async () => {
+      enableVirtualCommands();
+      const builtin = await $q`echo ${value}`;
+      expect(builtin.stdout).toBe(`${value}\n`);
+    });
+  }
+
+  test('an interpolated apostrophe does not split the pipeline', async () => {
+    enableVirtualCommands();
+    const result = await $q`echo ${"it's a name"} | cat`;
+    expect(result.stdout).toBe("it's a name\n");
+  });
+
+  test('a pipe inside a quoted argument is not a pipeline separator', async () => {
+    enableVirtualCommands();
+    const result = await $q`echo "a | b"`;
+    expect(result.stdout).toBe('a | b\n');
+  });
+
+  test('adjacent quoted and unquoted pieces form one argument', async () => {
+    enableVirtualCommands();
+    const result = await $q`echo pre"in quotes"post`;
+    expect(result.stdout).toBe('prein quotespost\n');
+  });
+
+  test('a system command still sees the shell expansion it was given', async () => {
+    // `printf` has no built-in, so this goes to a real shell. Rebuilding the
+    // command line must keep `$HOME` unexpanded for the shell to expand.
+    const result = await $q`printf '%s' $HOME`;
+    expect(result.stdout).toBe(process.env.HOME);
+  });
+
+  test('a system command keeps a quoted expansion literal', async () => {
+    const result = await $q`printf '%s' '$HOME'`;
+    expect(result.stdout).toBe('$HOME');
+  });
+
+  test('the enhanced parser unquotes a path the same way', async () => {
+    // A command line containing `&&` takes the enhanced parser instead of the
+    // simple one. Both have to agree, or a directory created by one is
+    // unreachable by the other.
+    enableVirtualCommands();
+    const dir = path.join(tempDir(), "odd-'name'-$1");
+    await $q`mkdir -p ${dir}`;
+    expect(fs.existsSync(dir)).toBe(true);
+    const result = await $q`cd ${dir} && pwd`;
+    expect(result.code).toBe(0);
+    expect(result.stdout.trim()).toBe(dir);
   });
 });
