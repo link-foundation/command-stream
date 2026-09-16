@@ -74,18 +74,41 @@ pub fn signal_exit_code(signal: &str) -> i32 {
     128 + signal_number(signal)
 }
 
-/// Send a signal to a process and, when we own it, its process group.
+/// Who a signal is delivered to.
+///
+/// Only the runner that spawned the child knows which of these applies, so it
+/// is stated rather than discovered: a child spawned with `process_group(0)`
+/// leads its own group, and a child left in the caller's group does not.
+// Windows has neither signals nor process groups, so the distinction only ever
+// narrows to `ProcessAndGroup` there and the other variant is genuinely unused.
+#[cfg_attr(not(unix), allow(dead_code))]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) enum Delivery {
+    /// The process alone, for a child sharing the caller's process group.
+    ProcessOnly,
+    /// The process and the group it leads, which is what reaches grandchildren.
+    ProcessAndGroup,
+}
+
+/// Send a signal to a process and, when it leads one, its process group.
 ///
 /// Delivery to the group (negative pid) is what reaches grandchildren, e.g. the
-/// real command behind a `sh -c` wrapper. It is only attempted when the child
-/// leads its own group: a child that was left in the caller's group would make
-/// `-pid` refer to a group we do not own - at best a non-existent one, at worst
-/// an unrelated group that reused the number. See [`send_to_group`].
+/// real command behind a `sh -c` wrapper. It must not be attempted for a child
+/// left in the caller's group, where `-pid` would name a group we do not own -
+/// at best a non-existent one, at worst an unrelated group that reused the
+/// number.
+///
+/// Group leadership is passed in rather than looked up with `getpgid` because
+/// the leader is usually dead by the time the group is signalled: the first
+/// signal kills the `sh` wrapper, and the escalation follows a grace period
+/// later. Linux answers `getpgid` for a zombie, but macOS does not - its
+/// `proc_find` skips zombies, so the lookup failed with `ESRCH` and the group,
+/// including the still-running grandchild, was never signalled at all.
 ///
 /// Both deliveries are best effort: the process may already have exited, which
 /// is not an error for a caller that only wants it stopped.
 #[cfg(unix)]
-pub(crate) fn send_signal_to_process(pid: u32, signal: &str) {
+pub(crate) fn send_signal_to_process(pid: u32, signal: &str, delivery: Delivery) {
     use nix::sys::signal::{kill, Signal};
     use nix::unistd::Pid;
 
@@ -100,28 +123,17 @@ pub(crate) fn send_signal_to_process(pid: u32, signal: &str) {
         _ => Signal::SIGTERM,
     };
 
-    // Signal the process itself.
-    let _ = kill(Pid::from_raw(pid as i32), sig);
-    // Signal the whole process group (negative pid) to reach grandchildren.
-    if send_to_group(pid) {
+    // Signal the whole process group (negative pid) first, so grandchildren are
+    // reached even if the group leader dies on the signal we send it next.
+    if delivery == Delivery::ProcessAndGroup {
         let _ = kill(Pid::from_raw(-(pid as i32)), sig);
     }
+    // Signal the process itself.
+    let _ = kill(Pid::from_raw(pid as i32), sig);
 }
 
-/// Whether `pid` leads its own process group, and so may be signalled as one.
-///
-/// Runners spawn children with `process_group(0)`, which makes the child its
-/// own group leader and its pid the group id. The exception is a child that
-/// inherits the terminal: it stays in the caller's group so that CTRL+C keeps
-/// reaching it, and there `-pid` would name a group belonging to someone else.
-#[cfg(unix)]
-fn send_to_group(pid: u32) -> bool {
-    use nix::unistd::{getpgid, Pid};
-
-    matches!(getpgid(Some(Pid::from_raw(pid as i32))), Ok(pgid) if pgid.as_raw() == pid as i32)
-}
-
-/// On non-Unix platforms there is no signal delivery; the forceful
-/// `start_kill()` escalation in the caller handles termination.
+/// On non-Unix platforms there is no signal delivery, and no process groups to
+/// deliver to; the forceful `start_kill()` escalation in the caller handles
+/// termination.
 #[cfg(not(unix))]
-pub(crate) fn send_signal_to_process(_pid: u32, _signal: &str) {}
+pub(crate) fn send_signal_to_process(_pid: u32, _signal: &str, _delivery: Delivery) {}

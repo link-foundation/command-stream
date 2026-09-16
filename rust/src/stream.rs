@@ -65,7 +65,7 @@ use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 
 use crate::signal::{
-    send_signal_to_process, signal_exit_code, DEFAULT_KILL_GRACE_MS, DEFAULT_KILL_SIGNAL,
+    send_signal_to_process, signal_exit_code, Delivery, DEFAULT_KILL_GRACE_MS, DEFAULT_KILL_SIGNAL,
 };
 use crate::trace::trace_lazy;
 use crate::{CommandResult, Result};
@@ -499,7 +499,9 @@ async fn run_streaming_process(
                 true
             } else {
                 if let Some(pid) = pid {
-                    send_signal_to_process(pid, &signal);
+                    // The child is always spawned with `process_group(0)`
+                    // above, so it leads the group named by its own pid.
+                    send_signal_to_process(pid, &signal, Delivery::ProcessAndGroup);
                 }
                 tokio::time::timeout(Duration::from_millis(grace.kill_ms), child.wait())
                     .await
@@ -507,7 +509,7 @@ async fn run_streaming_process(
             };
             if survived_grace {
                 if let Some(pid) = pid {
-                    send_signal_to_process(pid, "SIGKILL");
+                    send_signal_to_process(pid, "SIGKILL", Delivery::ProcessAndGroup);
                 }
                 let _ = child.start_kill();
                 let _ = child.wait().await;

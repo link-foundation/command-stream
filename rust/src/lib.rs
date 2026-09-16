@@ -338,6 +338,12 @@ pub struct ProcessRunner {
     started: bool,
     finished: bool,
     cancelled: bool,
+    /// Whether the child was spawned into a process group of its own, and so
+    /// can be signalled as a group. Recorded at spawn time because it cannot be
+    /// discovered later: by the time the group is signalled the leader is
+    /// usually a zombie, which macOS refuses to answer `getpgid` for.
+    #[cfg(unix)]
+    own_process_group: bool,
     output_tx: Option<mpsc::Sender<StreamChunk>>,
     // Held, never read: dropping the receiver would close the channel, and
     // streaming virtual commands treat a closed channel as "stop now" (see
@@ -359,6 +365,8 @@ impl ProcessRunner {
             started: false,
             finished: false,
             cancelled: false,
+            #[cfg(unix)]
+            own_process_group: false,
             output_tx: Some(tx),
             output_rx: Some(rx),
         }
@@ -472,8 +480,11 @@ impl ProcessRunner {
         // with SIGTTIN the moment it read from the terminal. JavaScript draws
         // the same line, spawning interactive commands without `detached`.
         #[cfg(unix)]
-        if !self.shares_the_terminal() {
-            cmd.process_group(0);
+        {
+            self.own_process_group = !self.shares_the_terminal();
+            if self.own_process_group {
+                cmd.process_group(0);
+            }
         }
 
         // Spawn the process
@@ -643,11 +654,13 @@ impl ProcessRunner {
         // Windows has no signals to deliver and no handler for the child to
         // run, so there is nothing to grant a grace period to: the forceful
         // stop is the only way to end the process.
+        // The `#[cfg(unix)]` block below is stripped on Windows, which leaves
+        // this one as the function's tail expression - hence no `return`.
         #[cfg(not(unix))]
         {
             let _ = signal;
             child.start_kill()?;
-            return Ok(());
+            Ok(())
         }
 
         // Without a pid the process never spawned (or was already reaped);
@@ -669,13 +682,18 @@ impl ProcessRunner {
             // guarantee. The reported exit code still comes from the signal
             // that was requested.
             let grace = self.options.kill_grace_ms;
+            let delivery = if self.own_process_group {
+                signal::Delivery::ProcessAndGroup
+            } else {
+                signal::Delivery::ProcessOnly
+            };
             if grace == 0 || signal == "SIGKILL" {
-                signal::send_signal_to_process(pid, "SIGKILL");
+                signal::send_signal_to_process(pid, "SIGKILL", delivery);
                 let _ = child.start_kill();
                 return Ok(());
             }
 
-            signal::send_signal_to_process(pid, signal);
+            signal::send_signal_to_process(pid, signal, delivery);
 
             // Otherwise escalate in the background so the child keeps its grace
             // period without blocking the caller, which may not be inside an
@@ -684,8 +702,10 @@ impl ProcessRunner {
                 tokio::time::sleep(std::time::Duration::from_millis(grace)).await;
                 // Best effort: if the child already exited on the first signal
                 // this delivery simply fails, and the pid has not been reused
-                // because the `Child` handle above has not reaped it yet.
-                signal::send_signal_to_process(pid, "SIGKILL");
+                // because the `Child` handle above has not reaped it yet. That
+                // unreaped leader is also what keeps the group id alive, so the
+                // group delivery still reaches a grandchild that outlived it.
+                signal::send_signal_to_process(pid, "SIGKILL", delivery);
             });
 
             Ok(())

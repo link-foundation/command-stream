@@ -2029,6 +2029,15 @@ and is spawned into the caller's process group so that CTRL+C keeps reaching it.
 There `kill()` signals the direct child alone — but CTRL+C from the terminal
 already reaches the whole group anyway.
 
+There is a limit to this. If the shell itself exits and leaves a background
+worker behind, the command is finished as far as the runner is concerned, and
+Node and Bun have already reaped the shell — which frees its pid, and with it
+the group id, for reuse. A later `kill()` therefore signals nothing rather than
+risk signalling an unrelated process group, and the orphaned worker keeps
+running, exactly as it would if you had started it from your own shell. Keep the
+worker in the foreground (`... & wait`, or no `&` at all) if you want `kill()`
+to reach it.
+
 #### Rust parity
 
 The Rust crate exposes the same model with `kill_signal` / `kill_with(signal)` /

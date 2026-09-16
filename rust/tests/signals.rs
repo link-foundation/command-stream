@@ -7,7 +7,11 @@
 //! The JavaScript counterpart is `js/tests/signal-handling.test.mjs`; both
 //! suites assert the same behavior so the two implementations stay in parity.
 use command_stream::signal::{signal_exit_code, signal_number};
+// Only the exit-code mapping is portable; everything that actually delivers a
+// signal is Unix-only, and so are the imports it needs.
+#[cfg(unix)]
 use command_stream::{OutputChunk, ProcessRunner, RunOptions, StdinOption, StreamingRunner};
+#[cfg(unix)]
 use std::time::Duration;
 
 /// A command that traps a signal, records that its handler ran, and exits.
@@ -59,6 +63,22 @@ fn grandchild_heartbeat_command(heartbeat: &std::path::Path) -> String {
         "sh -c 'while true; do echo tick >> {beat}; sleep 0.05; done' & \
          echo ready; \
          wait",
+        beat = heartbeat.display()
+    )
+}
+
+/// The same, but the shell exits immediately instead of waiting.
+///
+/// By the time the command is killed the direct child is long gone - a zombie,
+/// because the runner holds its handle and has not reaped it. Only the group is
+/// left to signal, and its leader being dead must not stand in the way: looking
+/// the group up with `getpgid` at that point fails with `ESRCH` on macOS, which
+/// silently skipped the delivery and left the grandchild running.
+#[cfg(unix)]
+fn orphaned_grandchild_heartbeat_command(heartbeat: &std::path::Path) -> String {
+    format!(
+        "sh -c 'while true; do echo tick >> {beat}; sleep 0.05; done' & \
+         echo ready",
         beat = heartbeat.display()
     )
 }
@@ -283,6 +303,55 @@ async fn process_runner_kill_reaches_grandchildren() {
         heartbeat_len(&heartbeat),
         after_kill,
         "the grandchild survived the kill and kept writing its heartbeat"
+    );
+}
+
+/// The group is still reached when its leader has already exited.
+///
+/// The shell that started the worker exits straight away, so at kill time the
+/// direct child is a zombie and the grandchild is all that is left to stop.
+/// Asking the operating system which group the child leads is not an option
+/// then: Linux answers for a zombie, macOS does not, and there the grandchild
+/// was never signalled. Group leadership is therefore recorded when the child
+/// is spawned.
+///
+/// This one guarantee has no JavaScript counterpart: Node and Bun reap the
+/// shell as soon as it exits, which frees its pid - and with it the group id -
+/// for reuse, so the group can no longer be signalled safely. Here the runner
+/// still holds the unreaped child, which keeps the group id reserved.
+#[cfg(unix)]
+#[tokio::test]
+async fn process_runner_kill_reaches_a_grandchild_whose_parent_already_exited() {
+    let dir = tempfile::tempdir().unwrap();
+    let heartbeat = dir.path().join("heartbeat");
+
+    let mut runner = ProcessRunner::new(
+        orphaned_grandchild_heartbeat_command(&heartbeat),
+        RunOptions {
+            mirror: false,
+            kill_grace_ms: 50,
+            stdin: StdinOption::Null,
+            ..Default::default()
+        },
+    );
+    runner.start().await.unwrap();
+    // Long enough for the shell to have exited and the worker to be ticking.
+    tokio::time::sleep(Duration::from_millis(400)).await;
+    assert!(
+        heartbeat_len(&heartbeat) > 0,
+        "the grandchild never started: no heartbeat was written"
+    );
+
+    runner.kill().unwrap();
+    // Past the grace period, so the escalation has been delivered too.
+    tokio::time::sleep(Duration::from_millis(400)).await;
+    let after_kill = heartbeat_len(&heartbeat);
+    tokio::time::sleep(Duration::from_millis(400)).await;
+
+    assert_eq!(
+        heartbeat_len(&heartbeat),
+        after_kill,
+        "the orphaned grandchild survived the kill and kept writing its heartbeat"
     );
 }
 

@@ -179,6 +179,14 @@ describe.skipIf(isWindows)('Signal handling', () => {
 
       expect(fileSize(heartbeat)).toBe(afterKill);
     });
+
+    // There is deliberately no counterpart to the Rust
+    // `process_runner_kill_reaches_a_grandchild_whose_parent_already_exited`
+    // test here: once the shell exits, Node and Bun reap it and the runner is
+    // finished, so its pid - and with it the group id - can be reused by an
+    // unrelated process. Signalling that group would be worse than leaving the
+    // grandchild running. Rust can make the guarantee because its runner keeps
+    // the unreaped child, which holds the group id reserved.
   });
 
   describe('exit codes', () => {

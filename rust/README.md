@@ -176,6 +176,18 @@ child alone — and CTRL+C from the terminal already reaches the whole group
 anyway. Set `stdin` to `StdinOption::Null` or `StdinOption::Pipe` if you need
 group delivery from `kill()`.
 
+Group membership is recorded when the child is spawned rather than looked up
+when it is signalled, because by then the group leader is usually dead: the
+first signal kills the `sh` wrapper, and the escalation follows a grace period
+later. macOS refuses to answer `getpgid` for a process in that state, which
+would silently skip the delivery and leave the grandchild running.
+
+This is one place where `ProcessRunner` can promise slightly more than the
+JavaScript implementation. Because it holds the child until you await it, the
+group id stays reserved even after the shell exits, so `kill()` still reaches a
+worker the shell left behind. Node and Bun reap the shell immediately, so
+JavaScript cannot address that group safely and leaves such a worker running.
+
 ### ProcessRunner
 
 `kill()` sends the configured signal; `kill_with(signal)` overrides it for a
