@@ -166,6 +166,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [0.22.1] - 2026-09-16
+
+### Added
+
+- Tests covering parallel execution of sleeping commands (issue #22). Two and
+  three commands started together — through the built-in `sleep`, through real
+  `/bin/sleep` processes, and through `sh -c` scripts that sleep between writes
+  — must all finish, keep their own output and environment, and overlap in time
+  instead of running one after another.
+
 ## [0.22.0] - 2026-09-16
 
 ### Added
