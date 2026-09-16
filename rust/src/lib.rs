@@ -83,7 +83,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::Stdio;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};
-use tokio::process::{Child, Command};
+use tokio::process::Child;
 use tokio::sync::mpsc;
 
 pub use commands::{CommandContext, StreamChunk};
@@ -433,13 +433,7 @@ impl ProcessRunner {
         };
 
         // Execute via real shell if needed
-        let shell = find_available_shell();
-
-        let mut cmd = Command::new(&shell.cmd);
-        for arg in &shell.args {
-            cmd.arg(arg);
-        }
-        utils::append_shell_command(&mut cmd, &self.command, self.options.env.as_ref());
+        let mut cmd = utils::shell_command(&self.command, self.options.env.as_ref());
 
         // Configure stdin
         match &self.options.stdin {
@@ -800,62 +794,6 @@ impl ProcessRunner {
     /// Get the options
     pub fn options(&self) -> &RunOptions {
         &self.options
-    }
-}
-
-/// Shell configuration
-#[derive(Debug, Clone)]
-struct ShellConfig {
-    cmd: String,
-    args: Vec<String>,
-}
-
-/// Find an available shell
-fn find_available_shell() -> ShellConfig {
-    let is_windows = cfg!(windows);
-
-    if is_windows {
-        // Windows shells
-        let shells = [
-            ("cmd.exe", vec!["/c"]),
-            ("powershell.exe", vec!["-Command"]),
-        ];
-
-        for (cmd, args) in shells {
-            if which::which(cmd).is_ok() {
-                return ShellConfig {
-                    cmd: cmd.to_string(),
-                    args: args.into_iter().map(String::from).collect(),
-                };
-            }
-        }
-
-        ShellConfig {
-            cmd: "cmd.exe".to_string(),
-            args: vec!["/c".to_string()],
-        }
-    } else {
-        // Unix shells
-        let shells = [
-            ("/bin/sh", vec!["-c"]),
-            ("/usr/bin/sh", vec!["-c"]),
-            ("/bin/bash", vec!["-c"]),
-            ("sh", vec!["-c"]),
-        ];
-
-        for (cmd, args) in shells {
-            if std::path::Path::new(cmd).exists() || which::which(cmd).is_ok() {
-                return ShellConfig {
-                    cmd: cmd.to_string(),
-                    args: args.into_iter().map(String::from).collect(),
-                };
-            }
-        }
-
-        ShellConfig {
-            cmd: "/bin/sh".to_string(),
-            args: vec!["-c".to_string()],
-        }
     }
 }
 

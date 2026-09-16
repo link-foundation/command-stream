@@ -28,7 +28,6 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::Stdio;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::process::Command;
 
 use crate::trace::trace_lazy;
 use crate::{CommandResult, Result, RunOptions, StdinOption};
@@ -206,12 +205,7 @@ impl Pipeline {
             }
 
             // Execute via shell
-            let shell = find_available_shell();
-            let mut cmd = Command::new(&shell.cmd);
-            for arg in &shell.args {
-                cmd.arg(arg);
-            }
-            crate::utils::append_shell_command(&mut cmd, cmd_str, effective_env.as_ref());
+            let mut cmd = crate::utils::shell_command(cmd_str, effective_env.as_ref());
 
             // Configure stdio
             cmd.stdin(Stdio::piped());
@@ -339,45 +333,6 @@ impl Pipeline {
             _ => return None,
         };
         Some(VirtualCommandResult { result, cd_context })
-    }
-}
-
-/// Shell configuration
-#[derive(Debug, Clone)]
-struct ShellConfig {
-    cmd: String,
-    args: Vec<String>,
-}
-
-/// Find an available shell
-fn find_available_shell() -> ShellConfig {
-    let is_windows = cfg!(windows);
-
-    if is_windows {
-        ShellConfig {
-            cmd: "cmd.exe".to_string(),
-            args: vec!["/c".to_string()],
-        }
-    } else {
-        let shells = [
-            ("/bin/sh", "-c"),
-            ("/usr/bin/sh", "-c"),
-            ("/bin/bash", "-c"),
-        ];
-
-        for (cmd, arg) in shells {
-            if std::path::Path::new(cmd).exists() {
-                return ShellConfig {
-                    cmd: cmd.to_string(),
-                    args: vec![arg.to_string()],
-                };
-            }
-        }
-
-        ShellConfig {
-            cmd: "/bin/sh".to_string(),
-            args: vec!["-c".to_string()],
-        }
     }
 }
 
