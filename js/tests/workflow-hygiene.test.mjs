@@ -335,6 +335,28 @@ describe('workflow linting is itself wired into CI', () => {
   });
 });
 
+describe('benchmark baselines stay reproducible across package releases', () => {
+  const benchmarks = workflows.find((w) => w.name === 'benchmarks.yml');
+
+  test('the Rust baseline refreshes only its local package before running locked', () => {
+    const baseline = benchmarks.doc.jobs.rust.steps.find(
+      (step) => step.name === 'Benchmark the pull request base'
+    );
+    const refresh =
+      'cargo update --offline --manifest-path benchmarks/Cargo.toml -p command-stream';
+    const runLocked =
+      'cargo run --release --locked --manifest-path benchmarks/Cargo.toml';
+
+    // The base branch can legitimately contain the previous package version in
+    // this nested lockfile. Refreshing just the local path dependency keeps all
+    // third-party versions pinned, after which --locked protects the benchmark.
+    expect(baseline.run).toContain(refresh);
+    expect(baseline.run.indexOf(refresh)).toBeLessThan(
+      baseline.run.indexOf(runLocked)
+    );
+  });
+});
+
 describe('every shipped ecosystem is audited', () => {
   const security = workflows.find((w) => w.name === 'security.yml');
   const runs = Object.values(security.doc.jobs)
