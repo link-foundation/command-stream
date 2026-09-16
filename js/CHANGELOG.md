@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.24.1
+
+### Patch Changes
+
+- e223318: Keep built-in and streaming pipeline results consistent across Node.js and Bun, and publish executable cross-language feature documentation.
+
 ## 0.24.0
 
 ### Minor Changes
