@@ -755,6 +755,9 @@ missing.pid; // the shell's pid
 (await missing.catch((error) => error)).code; // 127 — "command not found"
 ```
 
+The code is the shell's convention rather than the library's: POSIX shells and
+Git Bash use `127`, while `cmd.exe` exits with `1`.
+
 To get the id of the command itself, with no shell in between, use the `exec`
 command specification, which bypasses the shell entirely:
 

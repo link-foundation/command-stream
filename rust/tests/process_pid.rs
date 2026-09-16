@@ -187,11 +187,21 @@ async fn the_reported_id_leads_its_own_process_group() {
 
 /// A missing command is reported by the shell that was asked to run it, so the
 /// shell still has an id even though nothing the caller asked for ran.
+///
+/// Which failure code it reports is the shell's own convention: POSIX shells
+/// use 127 for "command not found", while `cmd.exe` exits with 1 (Windows CI
+/// caught the test demanding 127 there). What holds everywhere is that the
+/// command fails and the id is still there.
 #[tokio::test]
 async fn a_missing_command_still_names_the_shell_that_looked_for_it() {
     let mut runner = ProcessRunner::new("command-stream-no-such-executable --nope", quiet());
     let result = runner.run().await.unwrap();
 
+    assert_ne!(
+        result.code, 0,
+        "a command that does not exist cannot succeed"
+    );
+    #[cfg(unix)]
     assert_eq!(result.code, 127); // "command not found"
     assert!(runner.pid().is_some());
 }

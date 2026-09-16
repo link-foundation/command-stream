@@ -105,10 +105,16 @@ describe('issue #18 - process id access', () => {
   test('names the shell when the command inside it does not exist', async () => {
     // The shell is spawned successfully and then fails to find the command, so
     // there is a process to name even though nothing the caller asked for ran.
+    // Which failure code comes back is the shell's own convention: POSIX shells
+    // use 127 for "command not found", while `cmd.exe` exits with 1. Only the
+    // failure and the pid are common to both.
     const runner = $(quiet)`command-stream-no-such-executable --nope`;
     const result = await runner.catch((error) => error);
 
-    expect(result.code).toBe(127); // "command not found"
+    expect(result.code).not.toBe(0);
+    if (!isWindows) {
+      expect(result.code).toBe(127); // "command not found"
+    }
     expect(typeof runner.pid).toBe('number');
   });
 

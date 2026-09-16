@@ -213,7 +213,8 @@ wrapper (see [Grandchildren and process groups](#grandchildren-and-process-group
 
 A consequence worth knowing: a command that does not exist is reported by the
 shell that looked for it, so there is still an id even though nothing you asked
-for ran — the result carries code `127`, "command not found".
+for ran. The failure code is the shell's convention rather than the library's:
+POSIX shells use `127`, "command not found", while `cmd.exe` exits with `1`.
 
 To get the id of the command itself, with no shell in between, use
 [`StreamingRunner::from_argv`](#streaming), which bypasses `/bin/sh -c` and
