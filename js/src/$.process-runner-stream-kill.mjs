@@ -319,11 +319,11 @@ function killRunner(runner, signal) {
   abortController(runner._abortController);
   cleanupVirtualGenerator(runner._virtualGenerator, signal);
 
-  if (runner.child && !runner.finished) {
-    trace('ProcessRunner', () => `Killing child process ${runner.child.pid}`);
+  if (runner._child && !runner.finished) {
+    trace('ProcessRunner', () => `Killing child process ${runner._child.pid}`);
     try {
-      killChildProcess(runner.child, signal, runner.options?.killGrace);
-      runner.child = null;
+      killChildProcess(runner._child, signal, runner.options?.killGrace);
+      runner._child = null;
     } catch (err) {
       trace('ProcessRunner', () => `Error killing process: ${err.message}`);
       console.error('Error killing process:', err.message);

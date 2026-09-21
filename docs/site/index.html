@@ -372,7 +372,12 @@
             "category": "Running commands",
             "summary": "A running command can be killed, and cancelling one leaves the rest of the script running.",
             "file": "js/examples/features/cancellation.mjs",
-            "api": ["$", "ProcessRunner#kill", "forceCleanupAll"],
+            "api": [
+              "$",
+              "ProcessRunner#child",
+              "ProcessRunner#kill",
+              "forceCleanupAll"
+            ],
             "alternatives": {
               "bun-shell": {
                 "unsupported": "a ShellPromise has no kill method; the command runs to completion"
@@ -382,14 +387,18 @@
               "shelljs": "const child = shell.exec('sleep 5', { async: true }); child.kill();",
               "child_process": "const child = spawn('sleep', ['5']); child.kill();"
             },
-            "source": "// Running commands can be killed, and virtual commands are told about it\n// through abortSignal / isCancelled().\nimport { $, register, unregister } from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\n\nconst $q = $({ mirror: false });\n\nawait example(\n  { id: 'cancellation', title: 'Killing and cancelling commands' },\n  async ({ record }) => {\n    const runner = $q`sleep 30`;\n    runner.start();\n    setTimeout(() => runner.kill(), 100);\n    const killed = await runner;\n    record('exit code after kill()', killed.code);\n\n    // The handler reports back as soon as it notices the cancellation, so the\n    // example does not depend on timing.\n    let noticed;\n    const noticedCancellation = new Promise((resolve) => {\n      noticed = resolve;\n    });\n\n    register('cancellable', async ({ abortSignal, isCancelled }) => {\n      for (let i = 0; i \u003c 200; i++) {\n        if (abortSignal?.aborted || isCancelled()) {\n          noticed({\n            aborted: abortSignal?.aborted === true,\n            cancelled: isCancelled(),\n          });\n          break;\n        }\n        await new Promise((resolve) => setTimeout(resolve, 5));\n      }\n      return { stdout: '', code: 0 };\n    });\n\n    const virtualRunner = $q`cancellable`;\n    virtualRunner.start();\n    setTimeout(() => virtualRunner.kill(), 50);\n    await virtualRunner;\n    record('what the virtual command observed', await noticedCancellation);\n    unregister('cancellable');\n  }\n);",
-            "rustApi": ["ProcessRunner::kill", "OutputStream::kill"],
-            "rustSource": "async fn cancellation() -> ExampleResult {\n    let mut stream = StreamingRunner::new(\"sleep 30\").stream();\n    let started = stream.wait_for_pid().await.is_some();\n    stream.kill();\n    let mut exit_code = 0;\n    while let Some(chunk) = stream.next().await {\n        if let OutputChunk::Exit(code) = chunk {\n            exit_code = code;\n        }\n    }\n    Ok(vec![\n        observation(\"process started\", started),\n        observation(\"cancelled exit is non-zero\", exit_code != 0),\n    ])\n}",
-            "rustOutput": "# cancellation — Rust\nprocess started: true\ncancelled exit is non-zero: true",
+            "source": "// Running commands can be killed, and virtual commands are told about it\n// through abortSignal / isCancelled().\nimport { $, register, unregister } from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\n\nconst $q = $({ mirror: false });\n\nawait example(\n  { id: 'cancellation', title: 'Killing and cancelling commands' },\n  async ({ record }) => {\n    const runner = $q`${process.execPath} -e ${'setTimeout(() => {}, 30_000)'}`;\n    const childAvailableImmediately =\n      typeof runner.child?.kill === 'function' && runner.started;\n    runner.child.kill('SIGTERM');\n    const killed = await runner;\n    record('child handle available immediately', childAvailableImmediately);\n    record('exit code after child.kill()', killed.code);\n\n    // The handler reports back as soon as it notices the cancellation, so the\n    // example does not depend on timing.\n    let noticed;\n    const noticedCancellation = new Promise((resolve) => {\n      noticed = resolve;\n    });\n\n    register('cancellable', async ({ abortSignal, isCancelled }) => {\n      for (let i = 0; i \u003c 200; i++) {\n        if (abortSignal?.aborted || isCancelled()) {\n          noticed({\n            aborted: abortSignal?.aborted === true,\n            cancelled: isCancelled(),\n          });\n          break;\n        }\n        await new Promise((resolve) => setTimeout(resolve, 5));\n      }\n      return { stdout: '', code: 0 };\n    });\n\n    const virtualRunner = $q`cancellable`;\n    virtualRunner.start();\n    setTimeout(() => virtualRunner.kill(), 50);\n    await virtualRunner;\n    record('what the virtual command observed', await noticedCancellation);\n    unregister('cancellable');\n  }\n);",
+            "rustApi": [
+              "ProcessRunner::child",
+              "ProcessChild::kill",
+              "OutputStream::kill"
+            ],
+            "rustSource": "async fn cancellation() -> ExampleResult {\n    let child_command = if cfg!(windows) {\n        \"ping -n 31 127.0.0.1\"\n    } else {\n        \"/bin/sleep 30\"\n    };\n    let mut runner = ProcessRunner::new(child_command, quiet_options());\n    runner.start().await?;\n    let (child_available, child_pid_available) = match runner.child() {\n        Some(mut child) => {\n            let pid_available = child.pid().is_some();\n            child.kill_with(\"SIGTERM\")?;\n            (true, pid_available)\n        }\n        None => (false, false),\n    };\n    let _ = runner.run().await?;\n\n    let mut stream = StreamingRunner::new(\"sleep 30\").stream();\n    let started = stream.wait_for_pid().await.is_some();\n    stream.kill();\n    let mut exit_code = 0;\n    while let Some(chunk) = stream.next().await {\n        if let OutputChunk::Exit(code) = chunk {\n            exit_code = code;\n        }\n    }\n    Ok(vec![\n        observation(\"child handle available after start\", child_available),\n        observation(\"child pid available\", child_pid_available),\n        observation(\"stream started\", started),\n        observation(\"cancelled stream exit is non-zero\", exit_code != 0),\n    ])\n}",
+            "rustOutput": "# cancellation — Rust\nchild handle available after start: true\nchild pid available: true\nstream started: true\ncancelled stream exit is non-zero: true",
             "identicalOutput": true,
             "output": {
-              "node": "# cancellation — Killing and cancelling commands\nexit code after kill(): 143\nwhat the virtual command observed: {\"aborted\":true,\"cancelled\":true}",
-              "bun": "# cancellation — Killing and cancelling commands\nexit code after kill(): 143\nwhat the virtual command observed: {\"aborted\":true,\"cancelled\":true}"
+              "node": "# cancellation — Killing and cancelling commands\nchild handle available immediately: true\nexit code after child.kill(): 143\nwhat the virtual command observed: {\"aborted\":true,\"cancelled\":true}",
+              "bun": "# cancellation — Killing and cancelling commands\nchild handle available immediately: true\nexit code after child.kill(): 143\nwhat the virtual command observed: {\"aborted\":true,\"cancelled\":true}"
             }
           },
           {

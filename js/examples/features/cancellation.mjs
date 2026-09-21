@@ -8,11 +8,13 @@ const $q = $({ mirror: false });
 await example(
   { id: 'cancellation', title: 'Killing and cancelling commands' },
   async ({ record }) => {
-    const runner = $q`sleep 30`;
-    runner.start();
-    setTimeout(() => runner.kill(), 100);
+    const runner = $q`${process.execPath} -e ${'setTimeout(() => {}, 30_000)'}`;
+    const childAvailableImmediately =
+      typeof runner.child?.kill === 'function' && runner.started;
+    runner.child.kill('SIGTERM');
     const killed = await runner;
-    record('exit code after kill()', killed.code);
+    record('child handle available immediately', childAvailableImmediately);
+    record('exit code after child.kill()', killed.code);
 
     // The handler reports back as soon as it notices the cancellation, so the
     // example does not depend on timing.

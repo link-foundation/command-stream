@@ -24,8 +24,8 @@ const isBun = typeof globalThis.Bun !== 'undefined';
 function waitForChildStream(self, streamName) {
   return new Promise((resolve) => {
     const checkForChild = () => {
-      if (self.child && self.child[streamName]) {
-        resolve(self.child[streamName]);
+      if (self._child && self._child[streamName]) {
+        resolve(self._child[streamName]);
       } else if (self.finished || self._virtualGenerator) {
         resolve(null);
       } else {
@@ -51,6 +51,53 @@ function isVirtualCommand(self) {
 }
 
 /**
+ * Create the stable handle returned while command startup is still pending.
+ *
+ * Starting a shell command crosses an async boundary before its native child
+ * exists. Keeping this handle stable lets callers retain `runner.child` and
+ * stop the command immediately, while its properties begin reflecting the
+ * native child as soon as it is spawned.
+ *
+ * @param {ProcessRunner} runner - Owning runner
+ * @returns {object} Pending child handle
+ */
+function createPendingChildHandle(runner) {
+  return {
+    get native() {
+      return runner._child;
+    },
+    get pid() {
+      return runner._child?.pid;
+    },
+    get stdin() {
+      return runner._child?.stdin ?? null;
+    },
+    get stdout() {
+      return runner._child?.stdout ?? null;
+    },
+    get stderr() {
+      return runner._child?.stderr ?? null;
+    },
+    get killed() {
+      return runner._cancelled || Boolean(runner._child?.killed);
+    },
+    get exitCode() {
+      return runner._child?.exitCode ?? runner.result?.code ?? null;
+    },
+    get signalCode() {
+      return runner._child?.signalCode ?? runner._cancellationSignal ?? null;
+    },
+    kill(signal) {
+      if (runner.finished) {
+        return false;
+      }
+      runner.kill(signal);
+      return true;
+    },
+  };
+}
+
+/**
  * Get stream from child or wait for it
  * @param {object} self - ProcessRunner instance
  * @param {string} streamName - Name of stream
@@ -60,8 +107,8 @@ function isVirtualCommand(self) {
 function getOrWaitForStream(self, streamName, checkVirtual = true) {
   self._autoStartIfNeeded(`streams.${streamName} access`);
 
-  if (self.child && self.child[streamName]) {
-    return self.child[streamName];
+  if (self._child && self._child[streamName]) {
+    return self._child[streamName];
   }
   if (self.finished) {
     return null;
@@ -73,7 +120,7 @@ function getOrWaitForStream(self, streamName, checkVirtual = true) {
     self._startAsync();
     return waitForChildStream(self, streamName);
   }
-  if (self.promise && !self.child) {
+  if (self.promise && !self._child) {
     return waitForChildStream(self, streamName);
   }
   return null;
@@ -87,8 +134,8 @@ function getOrWaitForStream(self, streamName, checkVirtual = true) {
 function getStdinStream(self) {
   self._autoStartIfNeeded('streams.stdin access');
 
-  if (self.child && self.child.stdin) {
-    return self.child.stdin;
+  if (self._child && self._child.stdin) {
+    return self._child.stdin;
   }
   if (self.finished) {
     return null;
@@ -104,7 +151,7 @@ function getStdinStream(self) {
     self._startAsync();
     return waitForChildStream(self, 'stdin');
   }
-  if (self.promise && !self.child) {
+  if (self.promise && !self._child) {
     return waitForChildStream(self, 'stdin');
   }
   return null;
@@ -132,16 +179,19 @@ function cleanupAbortController(runner) {
  * @param {object} runner - ProcessRunner instance
  */
 function cleanupChildProcess(runner) {
-  if (!runner.child) {
+  if (!runner._child) {
     return;
   }
-  trace('ProcessRunner', () => `Cleaning up child process ${runner.child.pid}`);
+  trace(
+    'ProcessRunner',
+    () => `Cleaning up child process ${runner._child.pid}`
+  );
   try {
-    runner.child.removeAllListeners?.();
+    runner._child.removeAllListeners?.();
   } catch (e) {
     trace('ProcessRunner', () => `Error removing listeners: ${e.message}`);
   }
-  runner.child = null;
+  runner._child = null;
 }
 
 /**
@@ -229,7 +279,8 @@ class ProcessRunner extends StreamEmitter {
     this.inChunks = [];
 
     this.result = null;
-    this.child = null;
+    this._child = null;
+    this._pendingChild = createPendingChildHandle(this);
     // Process id of the spawned child, recorded at spawn time. `child` is
     // released by _cleanup() once the command finishes, so reading the pid from
     // it only works while the process is alive; this copy is what makes the
@@ -290,6 +341,30 @@ class ProcessRunner extends StreamEmitter {
     return this._pid;
   }
 
+  /**
+   * Child process handle for the command.
+   *
+   * Reading this property starts a lazy command. During asynchronous startup
+   * it returns a stable pending handle whose `kill(signal)` method can cancel
+   * the command before an operating-system process exists. Once a real child
+   * has spawned, later reads return the runtime-native child object; the early
+   * handle's properties continue to reflect that object through `native`.
+   * Built-in commands never spawn a native process but can still be stopped
+   * through the pending handle. Cleanup releases the handle and returns `null`
+   * after completion.
+   *
+   * @returns {object|null}
+   */
+  get child() {
+    if (this.finished) {
+      return null;
+    }
+    if (!this.started) {
+      this._startAsync();
+    }
+    return this._child ?? this._pendingChild;
+  }
+
   // Stream property getters
   get stdout() {
     trace(
@@ -297,14 +372,14 @@ class ProcessRunner extends StreamEmitter {
       () =>
         `stdout getter accessed | ${JSON.stringify(
           {
-            hasChild: !!this.child,
-            hasStdout: !!(this.child && this.child.stdout),
+            hasChild: !!this._child,
+            hasStdout: !!(this._child && this._child.stdout),
           },
           null,
           2
         )}`
     );
-    return this.child ? this.child.stdout : null;
+    return this._child ? this._child.stdout : null;
   }
 
   get stderr() {
@@ -313,14 +388,14 @@ class ProcessRunner extends StreamEmitter {
       () =>
         `stderr getter accessed | ${JSON.stringify(
           {
-            hasChild: !!this.child,
-            hasStderr: !!(this.child && this.child.stderr),
+            hasChild: !!this._child,
+            hasStderr: !!(this._child && this._child.stderr),
           },
           null,
           2
         )}`
     );
-    return this.child ? this.child.stderr : null;
+    return this._child ? this._child.stderr : null;
   }
 
   get stdin() {
@@ -329,14 +404,14 @@ class ProcessRunner extends StreamEmitter {
       () =>
         `stdin getter accessed | ${JSON.stringify(
           {
-            hasChild: !!this.child,
-            hasStdin: !!(this.child && this.child.stdin),
+            hasChild: !!this._child,
+            hasStdin: !!(this._child && this._child.stdin),
           },
           null,
           2
         )}`
     );
-    return this.child ? this.child.stdin : null;
+    return this._child ? this._child.stdin : null;
   }
 
   _autoStartIfNeeded(reason) {
@@ -542,7 +617,7 @@ class ProcessRunner extends StreamEmitter {
         `Handling parent stream closure | ${JSON.stringify(
           {
             started: this.started,
-            hasChild: !!this.child,
+            hasChild: !!this._child,
             command: this.spec.command?.slice(0, 50) || this.spec.file,
           },
           null,
@@ -556,27 +631,27 @@ class ProcessRunner extends StreamEmitter {
       this._abortController.abort();
     }
 
-    if (this.child) {
+    if (this._child) {
       try {
-        if (this.child.stdin && typeof this.child.stdin.end === 'function') {
-          this.child.stdin.end();
+        if (this._child.stdin && typeof this._child.stdin.end === 'function') {
+          this._child.stdin.end();
         } else if (
           isBun &&
-          this.child.stdin &&
-          typeof this.child.stdin.getWriter === 'function'
+          this._child.stdin &&
+          typeof this._child.stdin.getWriter === 'function'
         ) {
-          const writer = this.child.stdin.getWriter();
+          const writer = this._child.stdin.getWriter();
           writer.close().catch(() => {});
         }
 
         setImmediate(() => {
-          if (this.child && !this.finished) {
+          if (this._child && !this.finished) {
             trace(
               'ProcessRunner',
               () => 'Terminating child process after parent stream closure'
             );
-            if (typeof this.child.kill === 'function') {
-              this.child.kill('SIGTERM');
+            if (typeof this._child.kill === 'function') {
+              this._child.kill('SIGTERM');
             }
           }
         });

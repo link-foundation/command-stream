@@ -8,7 +8,7 @@ A running command can be killed, and cancelling one leaves the rest of the scrip
 
 ## JavaScript
 
-**API:** `$`, `ProcessRunner#kill`, `forceCleanupAll`
+**API:** `$`, `ProcessRunner#child`, `ProcessRunner#kill`, `forceCleanupAll`
 
 **Verified in:** Node.js, Bun
 
@@ -27,11 +27,13 @@ const $q = $({ mirror: false });
 await example(
   { id: 'cancellation', title: 'Killing and cancelling commands' },
   async ({ record }) => {
-    const runner = $q`sleep 30`;
-    runner.start();
-    setTimeout(() => runner.kill(), 100);
+    const runner = $q`${process.execPath} -e ${'setTimeout(() => {}, 30_000)'}`;
+    const childAvailableImmediately =
+      typeof runner.child?.kill === 'function' && runner.started;
+    runner.child.kill('SIGTERM');
     const killed = await runner;
-    record('exit code after kill()', killed.code);
+    record('child handle available immediately', childAvailableImmediately);
+    record('exit code after child.kill()', killed.code);
 
     // The handler reports back as soon as it notices the cancellation, so the
     // example does not depend on timing.
@@ -70,13 +72,14 @@ Identical in Node.js and Bun:
 
 ```
 # cancellation — Killing and cancelling commands
-exit code after kill(): 143
+child handle available immediately: true
+exit code after child.kill(): 143
 what the virtual command observed: {"aborted":true,"cancelled":true}
 ```
 
 ## Rust
 
-**API:** `ProcessRunner::kill`, `OutputStream::kill`
+**API:** `ProcessRunner::child`, `ProcessChild::kill`, `OutputStream::kill`
 
 ### Example
 
@@ -84,6 +87,23 @@ what the virtual command observed: {"aborted":true,"cancelled":true}
 
 ```rust
 async fn cancellation() -> ExampleResult {
+    let child_command = if cfg!(windows) {
+        "ping -n 31 127.0.0.1"
+    } else {
+        "/bin/sleep 30"
+    };
+    let mut runner = ProcessRunner::new(child_command, quiet_options());
+    runner.start().await?;
+    let (child_available, child_pid_available) = match runner.child() {
+        Some(mut child) => {
+            let pid_available = child.pid().is_some();
+            child.kill_with("SIGTERM")?;
+            (true, pid_available)
+        }
+        None => (false, false),
+    };
+    let _ = runner.run().await?;
+
     let mut stream = StreamingRunner::new("sleep 30").stream();
     let started = stream.wait_for_pid().await.is_some();
     stream.kill();
@@ -94,8 +114,10 @@ async fn cancellation() -> ExampleResult {
         }
     }
     Ok(vec![
-        observation("process started", started),
-        observation("cancelled exit is non-zero", exit_code != 0),
+        observation("child handle available after start", child_available),
+        observation("child pid available", child_pid_available),
+        observation("stream started", started),
+        observation("cancelled stream exit is non-zero", exit_code != 0),
     ])
 }
 ```
@@ -104,8 +126,10 @@ async fn cancellation() -> ExampleResult {
 
 ```
 # cancellation — Rust
-process started: true
-cancelled exit is non-zero: true
+child handle available after start: true
+child pid available: true
+stream started: true
+cancelled stream exit is non-zero: true
 ```
 
 ## The same thing in other libraries

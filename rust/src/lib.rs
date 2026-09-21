@@ -358,6 +358,50 @@ pub struct ProcessRunner {
     output_rx: Option<mpsc::Receiver<StreamChunk>>,
 }
 
+/// Borrowed access to the operating-system child owned by a [`ProcessRunner`].
+///
+/// The wrapper keeps process termination on the runner's signal-aware path:
+/// [`kill`](Self::kill) and [`kill_with`](Self::kill_with) signal the child and
+/// its process group, honor the configured grace period, and then escalate if
+/// necessary. Use [`native`](Self::native) or [`native_mut`](Self::native_mut)
+/// when direct access to Tokio's child object is required.
+pub struct ProcessChild<'a> {
+    runner: &'a mut ProcessRunner,
+}
+
+impl ProcessChild<'_> {
+    /// Process id of the active child.
+    pub fn pid(&self) -> Option<u32> {
+        self.native().id()
+    }
+
+    /// Borrow Tokio's native child process object.
+    pub fn native(&self) -> &Child {
+        self.runner
+            .child
+            .as_ref()
+            .expect("ProcessChild exists only while its native child is present")
+    }
+
+    /// Mutably borrow Tokio's native child process object.
+    pub fn native_mut(&mut self) -> &mut Child {
+        self.runner
+            .child
+            .as_mut()
+            .expect("ProcessChild exists only while its native child is present")
+    }
+
+    /// Stop the child using the runner's configured signal and grace period.
+    pub fn kill(&mut self) -> Result<()> {
+        self.runner.kill()
+    }
+
+    /// Stop the child using an explicit signal and the configured grace period.
+    pub fn kill_with(&mut self, signal: &str) -> Result<()> {
+        self.runner.kill_with(signal)
+    }
+}
+
 impl ProcessRunner {
     /// Create a new process runner
     pub fn new(command: impl Into<String>, options: RunOptions) -> Self {
@@ -499,6 +543,33 @@ impl ProcessRunner {
         self.child = Some(child);
 
         Ok(())
+    }
+
+    /// Borrow the active operating-system child.
+    ///
+    /// Call [`start`](Self::start) first. The result is `None` before startup,
+    /// for built-in commands (which run in-process), and after [`run`](Self::run)
+    /// consumes and reaps the child. Killing through the returned handle keeps
+    /// the runner's process-group and graceful-escalation behavior.
+    ///
+    /// ```no_run
+    /// use command_stream::{ProcessRunner, RunOptions};
+    ///
+    /// # #[tokio::main]
+    /// # async fn main() -> command_stream::Result<()> {
+    /// let mut runner = ProcessRunner::new("sleep 30", RunOptions::default());
+    /// runner.start().await?;
+    /// if let Some(mut child) = runner.child() {
+    ///     println!("child pid: {:?}", child.pid());
+    ///     child.kill_with("SIGTERM")?;
+    /// }
+    /// let _ = runner.run().await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn child(&mut self) -> Option<ProcessChild<'_>> {
+        self.child.as_ref()?;
+        Some(ProcessChild { runner: self })
     }
 
     /// Write bytes to the stdin pipe of a running command.

@@ -107,9 +107,9 @@ function findActiveRunners() {
   const activeChildren = [];
   for (const runner of activeProcessRunners) {
     if (!runner.finished) {
-      if (runner.child && runner.child.pid) {
+      if (runner._child && runner._child.pid) {
         activeChildren.push(runner);
-      } else if (!runner.child) {
+      } else if (!runner._child) {
         activeChildren.push(runner);
       }
     }
@@ -122,14 +122,14 @@ function findActiveRunners() {
  * @param {object} runner - ProcessRunner instance
  */
 function sendSigintToChild(runner) {
-  trace('ProcessRunner', () => `Sending SIGINT to child ${runner.child.pid}`);
+  trace('ProcessRunner', () => `Sending SIGINT to child ${runner._child.pid}`);
   if (isBun) {
-    runner.child.kill('SIGINT');
+    runner._child.kill('SIGINT');
   } else {
     try {
-      process.kill(-runner.child.pid, 'SIGINT');
+      process.kill(-runner._child.pid, 'SIGINT');
     } catch (_err) {
-      process.kill(runner.child.pid, 'SIGINT');
+      process.kill(runner._child.pid, 'SIGINT');
     }
   }
 }
@@ -141,7 +141,7 @@ function sendSigintToChild(runner) {
 function forwardSigintToRunners(activeChildren) {
   for (const runner of activeChildren) {
     try {
-      if (runner.child && runner.child.pid) {
+      if (runner._child && runner._child.pid) {
         sendSigintToChild(runner);
       } else {
         trace('ProcessRunner', () => 'Cancelling virtual command');

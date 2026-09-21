@@ -187,7 +187,7 @@ export const features = [
     summary:
       'A running command can be killed, and cancelling one leaves the rest of the script running.',
     file: 'js/examples/features/cancellation.mjs',
-    api: ['$', 'ProcessRunner#kill', 'forceCleanupAll'],
+    api: ['$', 'ProcessRunner#child', 'ProcessRunner#kill', 'forceCleanupAll'],
     alternatives: {
       'bun-shell': {
         unsupported:
@@ -572,7 +572,11 @@ export const rustApiByFeature = new Map(
     'exit-codes': ['CommandResult::code', 'CommandResult::error_for_status'],
     options: ['exec', 'RunOptions'],
     'function-api': ['run', 'exec', 'create'],
-    cancellation: ['ProcessRunner::kill', 'OutputStream::kill'],
+    cancellation: [
+      'ProcessRunner::child',
+      'ProcessChild::kill',
+      'OutputStream::kill',
+    ],
     'async-iteration': ['StreamingRunner', 'OutputStream::next'],
     events: ['StreamEmitter', 'EventType', 'EventData'],
     'stdin-streaming': [

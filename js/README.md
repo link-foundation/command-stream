@@ -685,6 +685,26 @@ const process = $`long-command`
 process.start();
 ```
 
+### Child Handle and Immediate Cancellation
+
+Reading `child` starts a lazy command and immediately returns a handle. It can
+stop the command without awaiting `start()` or waiting for a stream:
+
+```javascript
+const process = $`long-running-command`;
+const earlyChild = process.child;
+earlyChild.kill('SIGTERM');
+const result = await process;
+console.log(result.code); // 143
+```
+
+During asynchronous startup, the early handle's `kill(signal)` cancels pending
+startup. Its `pid`, standard streams, status properties, and `native` reference
+follow the runtime child after spawn; later `process.child` reads return that
+native Node.js or Bun object. Built-ins have no native child, but the handle can
+still cancel them. After completion `process.child` is `null`; use `process.pid`
+when the process id must survive cleanup.
+
 ### Process ID of a Running Command
 
 `pid` is the id of the operating system process behind a command. It is recorded
@@ -1729,8 +1749,10 @@ As with any shell-enabled process, pass only trusted `file` and `args` values; s
   for built-in commands, which spawn no process. Recorded at spawn time, so it
   remains readable after the command finishes — see
   [Process ID of a Running Command](#process-id-of-a-running-command)
-- `child`: The underlying child process object while the command is running,
-  and `null` once it has finished and been cleaned up
+- `child`: Starts a lazy command and immediately returns a cancellable child
+  handle. During startup and for built-ins it is a pending handle; once an OS
+  child exists, later reads return the runtime-native object. It is `null` after
+  cleanup — see [Child Handle and Immediate Cancellation](#child-handle-and-immediate-cancellation)
 
 ### Default Options
 
