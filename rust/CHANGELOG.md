@@ -169,6 +169,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [0.25.0] - 2026-09-21
+
+### Added
+
+- `ProcessRunner::child()` and the borrowed `ProcessChild` handle, with access
+  to Tokio's native child and signal-aware `kill()` / `kill_with()` methods that
+  preserve the runner's process-group, grace-period, and escalation behavior.
+- Cross-language tests and executable documentation for child-handle access and
+  cancellation (issue #20).
+
 ## [0.24.0] - 2026-09-16
 
 ### Added
