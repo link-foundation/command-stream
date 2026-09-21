@@ -249,6 +249,38 @@ A runnable walkthrough of all of the above is in
 [`rust/examples/process_pid_access.rs`](examples/process_pid_access.rs), which
 can be run with `cargo run --example process_pid_access`.
 
+## Child Handle of a Running Command
+
+After `start().await`, `child()` borrows the active operating-system child. Its
+`kill()` and `kill_with(signal)` methods use the same process-group delivery,
+grace period, and forceful escalation as the runner itself:
+
+```rust,no_run
+use command_stream::{ProcessRunner, RunOptions};
+
+#[tokio::main]
+async fn main() -> command_stream::Result<()> {
+    let mut runner = ProcessRunner::new("/bin/sleep 30", RunOptions::default());
+    runner.start().await?;
+
+    if let Some(mut child) = runner.child() {
+        println!("child pid: {:?}", child.pid());
+        child.kill_with("SIGTERM")?;
+    }
+
+    let _ = runner.run().await?;
+    assert!(runner.child().is_none()); // run() consumed and reaped it
+    Ok(())
+}
+```
+
+`ProcessChild::native()` and `native_mut()` expose Tokio's child object when a
+caller needs a lower-level operation. `child()` returns `None` before startup,
+after `run()`, and for built-in commands, which execute in-process. Rust keeps
+startup explicit because borrowing a child cannot perform asynchronous work;
+for an immediately returned, independently controllable handle, use
+`StreamingRunner::stream()` and call `kill()` on its `OutputStream`.
+
 ## Signals
 
 `kill()` stops a running command. It defaults to `SIGTERM` and works the same way

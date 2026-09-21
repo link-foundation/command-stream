@@ -125,6 +125,23 @@ async fn function_api() -> ExampleResult {
 
 // feature:cancellation
 async fn cancellation() -> ExampleResult {
+    let child_command = if cfg!(windows) {
+        "ping -n 31 127.0.0.1"
+    } else {
+        "/bin/sleep 30"
+    };
+    let mut runner = ProcessRunner::new(child_command, quiet_options());
+    runner.start().await?;
+    let (child_available, child_pid_available) = match runner.child() {
+        Some(mut child) => {
+            let pid_available = child.pid().is_some();
+            child.kill_with("SIGTERM")?;
+            (true, pid_available)
+        }
+        None => (false, false),
+    };
+    let _ = runner.run().await?;
+
     let mut stream = StreamingRunner::new("sleep 30").stream();
     let started = stream.wait_for_pid().await.is_some();
     stream.kill();
@@ -135,8 +152,10 @@ async fn cancellation() -> ExampleResult {
         }
     }
     Ok(vec![
-        observation("process started", started),
-        observation("cancelled exit is non-zero", exit_code != 0),
+        observation("child handle available after start", child_available),
+        observation("child pid available", child_pid_available),
+        observation("stream started", started),
+        observation("cancelled stream exit is non-zero", exit_code != 0),
     ])
 }
 // endfeature:cancellation

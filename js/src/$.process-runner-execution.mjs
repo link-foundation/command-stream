@@ -218,28 +218,28 @@ function spawnChild(argv, config) {
  * @param {object} runner - ProcessRunner instance
  */
 function setupChildEventListeners(runner) {
-  if (!runner.child || typeof runner.child.on !== 'function') {
+  if (!runner._child || typeof runner._child.on !== 'function') {
     return;
   }
 
-  runner.child.on('spawn', () => {
+  runner._child.on('spawn', () => {
     trace(
       'ProcessRunner',
       () =>
         `Child process spawned successfully | ${JSON.stringify({
-          pid: runner.child.pid,
+          pid: runner._child.pid,
           command: runner.spec?.command?.slice(0, 50),
         })}`
     );
   });
 
-  runner.child.on('error', (error) => {
+  runner._child.on('error', (error) => {
     runner._spawnError = error;
     trace(
       'ProcessRunner',
       () =>
         `Child process error event | ${JSON.stringify({
-          pid: runner.child?.pid,
+          pid: runner._child?.pid,
           error: error.message,
           code: error.code,
           errno: error.errno,
@@ -257,12 +257,12 @@ function setupChildEventListeners(runner) {
  * @returns {Promise}
  */
 function createStdoutPump(runner, childPid, signal) {
-  if (!runner.child.stdout) {
+  if (!runner._child.stdout) {
     return Promise.resolve();
   }
 
   return pumpReadable(
-    runner.child.stdout,
+    runner._child.stdout,
     (buf) => {
       trace(
         'ProcessRunner',
@@ -296,12 +296,12 @@ function createStdoutPump(runner, childPid, signal) {
  * @returns {Promise}
  */
 function createStderrPump(runner, childPid, signal) {
-  if (!runner.child.stderr) {
+  if (!runner._child.stderr) {
     return Promise.resolve();
   }
 
   return pumpReadable(
-    runner.child.stderr,
+    runner._child.stderr,
     (buf) => {
       trace(
         'ProcessRunner',
@@ -356,7 +356,7 @@ function handleInheritStdin(runner, isInteractive) {
   if (isPipedIn) {
     trace('ProcessRunner', () => `stdin: Pumping piped input to child process`);
     return runner._pumpStdinTo(
-      runner.child,
+      runner._child,
       runner.options.capture ? runner.inChunks : null
     );
   }
@@ -390,7 +390,7 @@ function handleStdin(runner, stdin, isInteractive) {
                 ? `string(${stdin.length})`
                 : 'other',
         isInteractive,
-        hasChildStdin: !!runner.child?.stdin,
+        hasChildStdin: !!runner._child?.stdin,
         processTTY: process.stdin.isTTY,
       })}`
   );
@@ -401,8 +401,8 @@ function handleStdin(runner, stdin, isInteractive) {
 
   if (stdin === 'ignore') {
     trace('ProcessRunner', () => `stdin: Ignoring and closing stdin`);
-    if (runner.child.stdin && typeof runner.child.stdin.end === 'function') {
-      runner.child.stdin.end();
+    if (runner._child.stdin && typeof runner._child.stdin.end === 'function') {
+      runner._child.stdin.end();
     }
     return Promise.resolve();
   }
@@ -491,7 +491,7 @@ function buildResultData(runner, exitCode) {
       runner.options.capture && runner.inChunks
         ? Buffer.concat(runner.inChunks).toString('utf8')
         : undefined,
-    child: runner.child,
+    child: runner._child,
   };
 }
 
@@ -925,20 +925,20 @@ async function handleShellMode(runner, deps) {
 async function executeChildProcess(runner, argv, config) {
   const { stdin, isInteractive } = config;
 
-  runner.child = spawnChild(argv, config);
-  runner._pid = runner.child?.pid; // recorded before _cleanup() drops `child`
+  runner._child = spawnChild(argv, config);
+  runner._pid = runner._child?.pid; // recorded before _cleanup() drops `child`
 
-  if (runner.child) {
+  if (runner._child) {
     trace(
       'ProcessRunner',
       () =>
         `Child process created | ${JSON.stringify({
-          pid: runner.child.pid,
-          detached: runner.child.options?.detached,
-          killed: runner.child.killed,
-          hasStdout: !!runner.child.stdout,
-          hasStderr: !!runner.child.stderr,
-          hasStdin: !!runner.child.stdin,
+          pid: runner._child.pid,
+          detached: runner._child.options?.detached,
+          killed: runner._child.killed,
+          hasStdout: !!runner._child.stdout,
+          hasStderr: !!runner._child.stderr,
+          hasStdin: !!runner._child.stdin,
           platform: process.platform,
           command: runner.spec?.command?.slice(0, 100),
         })}`
@@ -946,12 +946,12 @@ async function executeChildProcess(runner, argv, config) {
     setupChildEventListeners(runner);
   }
 
-  const childPid = runner.child?.pid;
+  const childPid = runner._child?.pid;
   const pumpAbort = new AbortController();
   const outPump = createStdoutPump(runner, childPid, pumpAbort.signal);
   const errPump = createStderrPump(runner, childPid, pumpAbort.signal);
   const stdinPumpPromise = handleStdin(runner, stdin, isInteractive);
-  const exited = createExitPromise(runner.child, runner);
+  const exited = createExitPromise(runner._child, runner);
 
   const code = await exited;
   await drainPumpsAfterExit(
@@ -978,7 +978,7 @@ async function executeChildProcess(runner, argv, config) {
         stderrLength: resultData.stderr?.length || 0,
         stdoutPreview: resultData.stdout?.slice(0, 100),
         stderrPreview: resultData.stderr?.slice(0, 100),
-        childPid: runner.child?.pid,
+        childPid: runner._child?.pid,
         cancelled: runner._cancelled,
         cancellationSignal: runner._cancellationSignal,
         platform: process.platform,
@@ -1014,7 +1014,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
           options,
           started: this.started,
           hasPromise: !!this.promise,
-          hasChild: !!this.child,
+          hasChild: !!this._child,
           command: this.spec?.command?.slice(0, 50),
         })}`
     );
@@ -1128,11 +1128,12 @@ export function attachExecutionMethods(ProcessRunner, deps) {
           this.spec.destination
         );
       }
-
-      // Handle shell mode special cases
       const shellArgv = isShellArgvSpec(this.spec);
       if (isShellCommandSpec(this.spec)) {
         const shellResult = await handleShellMode(this, deps);
+        if (this._cancelled) {
+          return this.result;
+        }
         if (shellResult) {
           return this.finish(shellResult);
         }
@@ -1268,24 +1269,24 @@ export function attachExecutionMethods(ProcessRunner, deps) {
         ? buf
         : new Uint8Array(buf.buffer, buf.byteOffset ?? 0, buf.byteLength);
 
-    if (await StreamUtils.writeToStream(this.child.stdin, bytes, 'stdin')) {
-      if (StreamUtils.isBunStream(this.child.stdin)) {
+    if (await StreamUtils.writeToStream(this._child.stdin, bytes, 'stdin')) {
+      if (StreamUtils.isBunStream(this._child.stdin)) {
         // Stream was already closed by writeToStream utility - no action needed
-      } else if (StreamUtils.isNodeStream(this.child.stdin)) {
+      } else if (StreamUtils.isNodeStream(this._child.stdin)) {
         try {
-          this.child.stdin.end();
+          this._child.stdin.end();
         } catch (_endError) {
           /* Expected when stream is already closed */
         }
       }
     } else if (isBun && typeof Bun.write === 'function') {
-      await Bun.write(this.child.stdin, buf);
+      await Bun.write(this._child.stdin, buf);
     }
   };
 
   ProcessRunner.prototype._forwardTTYStdin = function () {
     trace('ProcessRunner', () => `_forwardTTYStdin ENTER`);
-    if (!process.stdin.isTTY || !this.child.stdin) {
+    if (!process.stdin.isTTY || !this._child.stdin) {
       return;
     }
 
@@ -1300,8 +1301,8 @@ export function attachExecutionMethods(ProcessRunner, deps) {
           this._sendSigintToChild();
           return;
         }
-        if (this.child.stdin?.write) {
-          this.child.stdin.write(chunk);
+        if (this._child.stdin?.write) {
+          this._child.stdin.write(chunk);
         }
       };
 
@@ -1316,10 +1317,10 @@ export function attachExecutionMethods(ProcessRunner, deps) {
       process.stdin.on('data', onData);
 
       const childExit = isBun
-        ? this.child.exited
+        ? this._child.exited
         : new Promise((resolve) => {
-            this.child.once('close', resolve);
-            this.child.once('exit', resolve);
+            this._child.once('close', resolve);
+            this._child.once('exit', resolve);
           });
 
       childExit.then(cleanup).catch(cleanup);
@@ -1331,17 +1332,17 @@ export function attachExecutionMethods(ProcessRunner, deps) {
   };
 
   ProcessRunner.prototype._sendSigintToChild = function () {
-    if (!this.child?.pid) {
+    if (!this._child?.pid) {
       return;
     }
     try {
       if (isBun) {
-        this.child.kill('SIGINT');
+        this._child.kill('SIGINT');
       } else {
         try {
-          process.kill(-this.child.pid, 'SIGINT');
+          process.kill(-this._child.pid, 'SIGINT');
         } catch (_e) {
-          process.kill(this.child.pid, 'SIGINT');
+          process.kill(this._child.pid, 'SIGINT');
         }
       }
     } catch (_err) {
