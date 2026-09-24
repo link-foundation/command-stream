@@ -170,6 +170,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [1.0.0] - 2026-09-24
+
+### Changed
+
+- Expose readable stdout and stderr snapshots and a writable stdin record on completed command results.
+
 ## [0.25.0] - 2026-09-21
 
 ### Added
