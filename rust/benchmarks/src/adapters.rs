@@ -1,5 +1,6 @@
 use crate::model::AdapterMetadata;
 use crate::BenchmarkResult;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::Output;
 
@@ -84,13 +85,17 @@ impl Adapter {
         let arguments = arguments.to_vec();
         match self {
             Self::CommandStream => {
-                let result = command_stream::StreamingRunner::from_argv(program, arguments)
+                let mut result = command_stream::StreamingRunner::from_argv(program, arguments)
                     .collect()
                     .await?;
+                let mut stdout = Vec::new();
+                let mut stderr = Vec::new();
+                result.stdout.read_to_end(&mut stdout)?;
+                result.stderr.read_to_end(&mut stderr)?;
                 Ok(Execution {
                     exit_code: result.code,
-                    stdout: result.stdout.into_bytes(),
-                    stderr: result.stderr.into_bytes(),
+                    stdout,
+                    stderr,
                 })
             }
             Self::TokioProcess => {
