@@ -1,0 +1,1129 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>command-stream — feature comparison</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --line: #8883;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font:
+          15px/1.55 system-ui,
+          sans-serif;
+      }
+      header {
+        padding: 2rem 1.5rem 1rem;
+        border-bottom: 1px solid var(--line);
+      }
+      h1 {
+        margin: 0 0 0.25rem;
+        font-size: 1.5rem;
+      }
+      p.lede {
+        margin: 0;
+        opacity: 0.75;
+      }
+      main {
+        display: grid;
+        grid-template-columns: 17rem 1fr;
+        min-height: 60vh;
+      }
+      nav {
+        border-right: 1px solid var(--line);
+        padding: 1rem;
+      }
+      nav input {
+        width: 100%;
+        padding: 0.45rem 0.6rem;
+        margin-bottom: 0.75rem;
+        border: 1px solid var(--line);
+        border-radius: 0.35rem;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+      }
+      nav h2 {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        opacity: 0.6;
+        margin: 1rem 0 0.35rem;
+      }
+      nav a {
+        display: block;
+        padding: 0.2rem 0.35rem;
+        border-radius: 0.25rem;
+        text-decoration: none;
+        color: inherit;
+      }
+      nav a:hover,
+      nav a.active {
+        background: #8882;
+      }
+      section {
+        padding: 1.5rem;
+        max-width: 60rem;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 0.5rem 0 1.5rem;
+      }
+      th,
+      td {
+        border: 1px solid var(--line);
+        padding: 0.35rem 0.5rem;
+        text-align: left;
+      }
+      pre {
+        background: #8881;
+        padding: 0.75rem;
+        border-radius: 0.4rem;
+        overflow-x: auto;
+      }
+      code {
+        font-family: ui-monospace, monospace;
+        font-size: 0.86em;
+      }
+      .badge {
+        display: inline-block;
+        padding: 0.1rem 0.45rem;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        font-size: 0.75rem;
+      }
+      .unsupported {
+        opacity: 0.7;
+        font-style: italic;
+      }
+      footer {
+        padding: 1rem 1.5rem 3rem;
+        opacity: 0.7;
+        font-size: 0.85rem;
+      }
+      @media (max-width: 720px) {
+        main {
+          grid-template-columns: 1fr;
+        }
+        nav {
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>command-stream — feature comparison</h1>
+      <p class="lede">
+        Every feature in JavaScript and Rust, plus equivalent code in other
+        shell libraries.
+      </p>
+    </header>
+    <main>
+      <nav>
+        <input
+          id="filter"
+          type="search"
+          placeholder="Filter features"
+          aria-label="Filter features"
+        />
+        <a href="#overview">Overview</a>
+        <div id="nav-links"></div>
+      </nav>
+      <section id="content"></section>
+    </main>
+    <footer>
+      Generated from executable examples in
+      <code>js/examples/features/</code> and
+      <code>rust/examples/language_features.rs</code>.
+    </footer>
+    <script id="data" type="application/json">
+      {
+        "runtimes": [
+          { "id": "node", "label": "Node.js" },
+          { "id": "bun", "label": "Bun" }
+        ],
+        "languages": [
+          {
+            "id": "javascript",
+            "name": "JavaScript",
+            "source": "js/examples/features/"
+          },
+          {
+            "id": "rust",
+            "name": "Rust",
+            "source": "rust/examples/language_features.rs"
+          }
+        ],
+        "libraries": [
+          {
+            "id": "command-stream",
+            "name": "command-stream",
+            "url": "https://github.com/link-foundation/command-stream",
+            "runtimes": ["Node.js", "Bun"]
+          },
+          {
+            "id": "bun-shell",
+            "name": "Bun.$",
+            "version": "1.4",
+            "url": "https://bun.com/docs/runtime/shell",
+            "runtimes": ["Bun"]
+          },
+          {
+            "id": "zx",
+            "name": "zx",
+            "version": "8",
+            "url": "https://github.com/google/zx",
+            "runtimes": ["Node.js", "Bun", "Deno"]
+          },
+          {
+            "id": "execa",
+            "name": "execa",
+            "version": "9.6",
+            "url": "https://github.com/sindresorhus/execa",
+            "runtimes": ["Node.js", "Bun", "Deno"]
+          },
+          {
+            "id": "shelljs",
+            "name": "ShellJS",
+            "version": "0.10",
+            "url": "https://github.com/shelljs/shelljs",
+            "runtimes": ["Node.js", "Bun"]
+          },
+          {
+            "id": "child_process",
+            "name": "node:child_process",
+            "url": "https://nodejs.org/api/child_process.html",
+            "runtimes": ["Node.js", "Bun", "Deno"]
+          }
+        ],
+        "categories": [
+          "Running commands",
+          "Reading output",
+          "Streaming",
+          "Built-in commands",
+          "Your own commands",
+          "Shell syntax",
+          "Utilities"
+        ],
+        "features": [
+          {
+            "id": "await-result",
+            "title": "Await a command",
+            "category": "Running commands",
+            "summary": "Awaiting a command returns an object with stdout, stderr and the exit code.",
+            "file": "js/examples/features/await-result.mjs",
+            "api": ["$"],
+            "alternatives": {
+              "bun-shell": "const { stdout, stderr, exitCode } = await $`echo hi`.quiet();\n// stdout and stderr are Buffers, not strings",
+              "zx": "const { stdout, stderr, exitCode } = await $`echo hi`;",
+              "execa": "const { stdout, stderr, exitCode } = await execa`echo hi`;\n// no shell is involved, so `echo hi` is the binary `echo` with one argument",
+              "shelljs": "const result = shell.exec('echo hi', { silent: true });\n// result.stdout, result.stderr, result.code",
+              "child_process": "const { stdout, stderr } = await promisify(execFile)('echo', ['hi']);"
+            },
+            "source": "// Awaiting a command returns a result object with stdout, stderr and the exit code.\nimport { $ } from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\n\nconst $q = $({ mirror: false });\n\nawait example(\n  { id: 'await-result', title: 'Await a command' },\n  async ({ record }) => {\n    const result = await $q`echo \"hello world\"`;\n    record('stdout', result.stdout);\n    record('stderr', result.stderr);\n    record('code', result.code);\n\n    const system = await $q`sh -c 'printf out; printf err >&2'`;\n    record('stdout of a system binary', system.stdout);\n    record('stderr of a system binary', system.stderr);\n\n    record('interpolated value', (await $q`echo ${'a value'}`).stdout);\n  }\n);",
+            "rustApi": ["run", "CommandResult"],
+            "rustSource": "async fn await_result() -> ExampleResult {\n    let result = quiet(\"echo hello\").await?;\n    Ok(vec![\n        observation(\"stdout\", result.stdout),\n        observation(\"stderr\", result.stderr),\n        observation(\"exit code\", result.code),\n    ])\n}",
+            "rustOutput": "# await-result — Rust\nstdout: \"hello\\n\"\nstderr: \"\"\nexit code: 0",
+            "identicalOutput": true,
+            "output": {
+              "node": "# await-result — Await a command\nstdout: \"hello world\\n\"\nstderr: \"\"\ncode: 0\nstdout of a system binary: \"out\"\nstderr of a system binary: \"err\"\ninterpolated value: \"a value\\n\"",
+              "bun": "# await-result — Await a command\nstdout: \"hello world\\n\"\nstderr: \"\"\ncode: 0\nstdout of a system binary: \"out\"\nstderr of a system binary: \"err\"\ninterpolated value: \"a value\\n\""
+            }
+          },
+          {
+            "id": "result-text",
+            "title": "Read the output with text()",
+            "category": "Reading output",
+            "summary": "Captured stdout is available as text through each language’s result API.",
+            "file": "js/examples/features/result-text.mjs",
+            "api": ["$", "ProcessRunner#text"],
+            "alternatives": {
+              "bun-shell": "const text = await $`echo hi`.text();",
+              "zx": "const text = (await $`echo hi`).toString();",
+              "execa": "const text = (await execa`echo hi`).stdout;",
+              "shelljs": "const text = shell.exec('echo hi', { silent: true }).stdout;",
+              "child_process": "const text = (await promisify(execFile)('echo', ['hi'])).stdout;"
+            },
+            "source": "// Every result exposes an async text() method, like Bun's built-in $.\nimport { $, register, unregister } from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\n\nconst $q = $({ mirror: false });\n\nawait example(\n  { id: 'result-text', title: 'Read the output with text()' },\n  async ({ record }) => {\n    record('system command', await (await $q`sh -c 'echo system'`).text());\n    record('built-in command', await (await $q`echo built-in`).text());\n    record('synchronous command', await $q`echo sync`.sync().text());\n    record('pipeline', await (await $q`echo piped | cat`).text());\n\n    register('text-demo', async () => ({ stdout: 'virtual\\n', code: 0 }));\n    record('virtual command', await (await $q`text-demo`).text());\n    unregister('text-demo');\n  }\n);",
+            "rustApi": ["CommandResult::stdout"],
+            "rustSource": "async fn result_text() -> ExampleResult {\n    let result = quiet(\"echo hello\").await?;\n    Ok(vec![observation(\"text output\", result.stdout)])\n}",
+            "rustOutput": "# result-text — Rust\ntext output: \"hello\\n\"",
+            "identicalOutput": true,
+            "output": {
+              "node": "# result-text — Read the output with text()\nsystem command: \"system\\n\"\nbuilt-in command: \"built-in\\n\"\nsynchronous command: \"sync\\n\"\npipeline: \"piped\\n\"\nvirtual command: \"virtual\\n\"",
+              "bun": "# result-text — Read the output with text()\nsystem command: \"system\\n\"\nbuilt-in command: \"built-in\\n\"\nsynchronous command: \"sync\\n\"\npipeline: \"piped\\n\"\nvirtual command: \"virtual\\n\""
+            }
+          },
+          {
+            "id": "sync-execution",
+            "title": "Synchronous execution",
+            "category": "Running commands",
+            "summary": "The same command can be run without awaiting, blocking until it finishes.",
+            "file": "js/examples/features/sync-execution.mjs",
+            "api": ["$", "ProcessRunner#sync"],
+            "alternatives": {
+              "bun-shell": {
+                "unsupported": "Bun.$ is always asynchronous; Bun.spawnSync is the synchronous escape hatch, and it takes an argument array rather than a command line"
+              },
+              "zx": "const { stdout } = $.sync`echo hi`;",
+              "execa": "const { stdout } = execaSync`echo hi`;",
+              "shelljs": "const stdout = shell.exec('echo hi', { silent: true }).stdout; // synchronous by default",
+              "child_process": "const stdout = execFileSync('echo', ['hi'], { encoding: 'utf8' });"
+            },
+            "source": "// .sync() runs a command synchronously and returns the finished result.\nimport { $ } from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\n\nconst $q = $({ mirror: false });\n\nawait example(\n  { id: 'sync-execution', title: 'Synchronous execution' },\n  async ({ record }) => {\n    const result = $q`echo synchronous`.sync();\n    record('stdout', result.stdout);\n    record('code', result.code);\n    record(\n      'result is available without await',\n      typeof result.stdout === 'string'\n    );\n\n    const failed = $q`sh -c 'exit 3'`.sync();\n    record('exit code of a failing command', failed.code);\n\n    record(\n      'order of execution',\n      (() => {\n        const order = [];\n        order.push('before');\n        $q`echo ignored`.sync();\n        order.push('after');\n        return order;\n      })()\n    );\n  }\n);",
+            "rustApi": ["run_sync"],
+            "rustSource": "async fn sync_execution() -> ExampleResult {\n    let result = tokio::task::spawn_blocking(|| run_sync(\"echo synchronous\")).await??;\n    Ok(vec![observation(\"stdout\", result.stdout)])\n}",
+            "rustOutput": "# sync-execution — Rust\nstdout: \"synchronous\\n\"",
+            "identicalOutput": true,
+            "output": {
+              "node": "# sync-execution — Synchronous execution\nstdout: \"synchronous\\n\"\ncode: 0\nresult is available without await: true\nexit code of a failing command: 3\norder of execution: [\"before\",\"after\"]",
+              "bun": "# sync-execution — Synchronous execution\nstdout: \"synchronous\\n\"\ncode: 0\nresult is available without await: true\nexit code of a failing command: 3\norder of execution: [\"before\",\"after\"]"
+            }
+          },
+          {
+            "id": "exit-codes",
+            "title": "Exit codes and errors",
+            "category": "Running commands",
+            "summary": "A non-zero exit code is reported on the result instead of thrown, unless errexit is set.",
+            "file": "js/examples/features/exit-codes.mjs",
+            "api": ["$", "shell.errexit"],
+            "alternatives": {
+              "bun-shell": "const { exitCode } = await $`exit 3`.nothrow(); // throws without .nothrow()",
+              "zx": "const { exitCode } = await $({ nothrow: true })`exit 3`; // throws without nothrow",
+              "execa": "const { exitCode } = await execa({ reject: false })`sh -c 'exit 3'`; // throws without reject: false",
+              "shelljs": "const code = shell.exec('exit 3', { silent: true }).code; // never throws",
+              "child_process": "// execFile rejects on a non-zero exit; the code is on error.code"
+            },
+            "source": "// Exit codes are reported on the result; errors are thrown only when asked for.\nimport { $, shell } from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\n\nconst $q = $({ mirror: false });\n\nawait example(\n  { id: 'exit-codes', title: 'Exit codes and errors' },\n  async ({ record }) => {\n    record('successful command', (await $q`sh -c 'exit 0'`).code);\n    record('failing command', (await $q`sh -c 'exit 42'`).code);\n    record(\n      'stderr of a failing command',\n      (await $q`sh -c 'echo nope >&2; exit 1'`).stderr\n    );\n\n    // With errexit (set -e) a non-zero exit code becomes an exception.\n    shell.errexit(true);\n    try {\n      await $q`sh -c 'exit 42'`;\n      record('errexit', 'no error thrown');\n    } catch (error) {\n      record('errexit throws', { code: error.code, hasResult: !!error.result });\n    } finally {\n      shell.errexit(false);\n    }\n\n    record('after disabling errexit', (await $q`sh -c 'exit 42'`).code);\n  }\n);",
+            "rustApi": [
+              "CommandResult::code",
+              "CommandResult::error_for_status"
+            ],
+            "rustSource": "async fn exit_codes() -> ExampleResult {\n    let result = quiet(\"false\").await?;\n    let checked = result.clone().error_for_status().unwrap_err();\n    Ok(vec![\n        observation(\"result code\", result.code),\n        observation(\"checked error code\", checked.code()),\n    ])\n}",
+            "rustOutput": "# exit-codes — Rust\nresult code: 1\nchecked error code: 1",
+            "identicalOutput": true,
+            "output": {
+              "node": "# exit-codes — Exit codes and errors\nsuccessful command: 0\nfailing command: 42\nstderr of a failing command: \"nope\\n\"\nerrexit throws: {\"code\":42,\"hasResult\":true}\nafter disabling errexit: 42",
+              "bun": "# exit-codes — Exit codes and errors\nsuccessful command: 0\nfailing command: 42\nstderr of a failing command: \"nope\\n\"\nerrexit throws: {\"code\":42,\"hasResult\":true}\nafter disabling errexit: 42"
+            }
+          },
+          {
+            "id": "options",
+            "title": "Options: capture, cwd, env, stdin",
+            "category": "Running commands",
+            "summary": "Execution options control capture, cwd, environment and stdin for a command or reusable runner.",
+            "file": "js/examples/features/options.mjs",
+            "api": ["$", "create"],
+            "alternatives": {
+              "bun-shell": "await $`pwd`.cwd('/tmp').env({ KEY: 'value' }).quiet();",
+              "zx": "const $$ = $({ cwd: '/tmp', env: { KEY: 'value' } });",
+              "execa": "const run = execa({ cwd: '/tmp', env: { KEY: 'value' } });",
+              "shelljs": "shell.cd('/tmp'); shell.env.KEY = 'value'; // process-wide, not per command",
+              "child_process": "execFile('pwd', [], { cwd: '/tmp', env: { KEY: 'value' } });"
+            },
+            "source": "// $({ ... }) configures capture, mirroring, cwd, env and stdin.\nimport { $ } from '../../src/$.mjs';\nimport { example, makeTempDir } from './_harness.mjs';\nimport path from 'path';\nimport fs from 'fs';\n\nawait example(\n  { id: 'options', title: 'Options: capture, cwd, env, stdin' },\n  async ({ record }) => {\n    const dir = makeTempDir('options');\n    fs.writeFileSync(path.join(dir, 'marker.txt'), 'here\\n');\n\n    record(\n      'captured output',\n      (await $({ mirror: false, capture: true })`echo captured`).stdout\n    );\n    record(\n      'capture disabled',\n      (await $({ mirror: false, capture: false })`echo dropped`).stdout\n    );\n\n    const inDir = await $({ mirror: false, cwd: dir })`ls`;\n    record('cwd option', inDir.stdout);\n\n    const withEnv = await $({\n      mirror: false,\n      env: { ...process.env, DEMO_VALUE: 'from-env' },\n    })`printenv DEMO_VALUE`;\n    record('env option', withEnv.stdout);\n\n    const withStdin = await $({ mirror: false, stdin: 'piped in\\n' })`cat`;\n    record('stdin option', withStdin.stdout);\n  }\n);",
+            "rustApi": ["exec", "RunOptions"],
+            "rustSource": "async fn options() -> ExampleResult {\n    let directory = tempfile::tempdir()?;\n    let mut env = HashMap::new();\n    env.insert(\n        \"COMMAND_STREAM_DEMO\".to_string(),\n        \"from-options\".to_string(),\n    );\n    let result = exec(\n        \"cat\",\n        RunOptions {\n            mirror: false,\n            cwd: Some(directory.path().to_path_buf()),\n            env: Some(env),\n            stdin: StdinOption::Content(\"from-stdin\\n\".to_string()),\n            ..RunOptions::default()\n        },\n    )\n    .await?;\n    Ok(vec![observation(\"stdin and cwd options\", result.stdout)])\n}",
+            "rustOutput": "# options — Rust\nstdin and cwd options: \"from-stdin\\n\"",
+            "identicalOutput": true,
+            "output": {
+              "node": "# options — Options: capture, cwd, env, stdin\ncaptured output: \"captured\\n\"\ncapture disabled: undefined\ncwd option: \"marker.txt\\n\"\nenv option: \"from-env\\n\"\nstdin option: \"piped in\\n\"",
+              "bun": "# options — Options: capture, cwd, env, stdin\ncaptured output: \"captured\\n\"\ncapture disabled: undefined\ncwd option: \"marker.txt\\n\"\nenv option: \"from-env\\n\"\nstdin option: \"piped in\\n\""
+            }
+          },
+          {
+            "id": "function-api",
+            "title": "Function and builder APIs",
+            "category": "Running commands",
+            "summary": "Commands can also be built from plain strings instead of template literals.",
+            "file": "js/examples/features/function-api.mjs",
+            "api": ["sh", "exec", "run", "create", "shell"],
+            "alternatives": {
+              "bun-shell": {
+                "unsupported": "Bun.$ only accepts a tagged template; a string has to be turned back into one by hand"
+              },
+              "zx": "await $({ input: '' })`sh -c ${'echo hi'}`; // or build a template array manually",
+              "execa": "await execa('echo', ['hi']); // the classic function form",
+              "shelljs": "shell.exec('echo hi'); // strings are the only form",
+              "child_process": "execFile('echo', ['hi']);"
+            },
+            "source": "// Besides the template tag there are plain functions: sh, exec, run and create.\nimport { $, sh, exec, run, create } from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\n\nawait example(\n  { id: 'function-api', title: 'sh(), exec(), run() and create()' },\n  async ({ record }) => {\n    record('sh(command)', (await sh('echo from-sh', { mirror: false })).stdout);\n    record(\n      'exec(file, args)',\n      (await exec('echo', ['from-exec'], { mirror: false })).stdout\n    );\n    record('run(command)', (await run('echo from-run')).stdout);\n\n    // create() returns a $ with preset options.\n    const $quiet = create({ mirror: false, capture: true });\n    record('create(options)', (await $quiet`echo from-create`).stdout);\n\n    // $ itself can be called with options for the same effect.\n    record('$(options)', (await $({ mirror: false })`echo from-dollar`).stdout);\n  }\n);",
+            "rustApi": ["run", "exec", "create"],
+            "rustSource": "async fn function_api() -> ExampleResult {\n    let simple = run(\"echo run\").await?;\n    let configured = exec(\"echo exec\", quiet_options()).await?;\n    let mut runner = create(\"echo create\", quiet_options());\n    let created = runner.run().await?;\n    Ok(vec![observation(\n        \"run, exec and create\",\n        [\n            simple.stdout.trim(),\n            configured.stdout.trim(),\n            created.stdout.trim(),\n        ],\n    )])\n}",
+            "rustOutput": "# function-api — Rust\nrun, exec and create: [\"run\",\"exec\",\"create\"]",
+            "identicalOutput": true,
+            "output": {
+              "node": "# function-api — sh(), exec(), run() and create()\nsh(command): \"from-sh\\n\"\nexec(file, args): \"from-exec\\n\"\nrun(command): \"from-run\\n\"\ncreate(options): \"from-create\\n\"\n$(options): \"from-dollar\\n\"",
+              "bun": "# function-api — sh(), exec(), run() and create()\nsh(command): \"from-sh\\n\"\nexec(file, args): \"from-exec\\n\"\nrun(command): \"from-run\\n\"\ncreate(options): \"from-create\\n\"\n$(options): \"from-dollar\\n\""
+            }
+          },
+          {
+            "id": "cancellation",
+            "title": "Killing and cancelling commands",
+            "category": "Running commands",
+            "summary": "A running command can be killed, and cancelling one leaves the rest of the script running.",
+            "file": "js/examples/features/cancellation.mjs",
+            "api": [
+              "$",
+              "ProcessRunner#child",
+              "ProcessRunner#kill",
+              "forceCleanupAll"
+            ],
+            "alternatives": {
+              "bun-shell": {
+                "unsupported": "a ShellPromise has no kill method; the command runs to completion"
+              },
+              "zx": "const p = $({ nothrow: true })`sleep 5`; p.kill();",
+              "execa": "const p = execa({ reject: false })`sleep 5`; p.kill();",
+              "shelljs": "const child = shell.exec('sleep 5', { async: true }); child.kill();",
+              "child_process": "const child = spawn('sleep', ['5']); child.kill();"
+            },
+            "source": "// Running commands can be killed, and virtual commands are told about it\n// through abortSignal / isCancelled().\nimport { $, register, unregister } from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\n\nconst $q = $({ mirror: false });\n\nawait example(\n  { id: 'cancellation', title: 'Killing and cancelling commands' },\n  async ({ record }) => {\n    const runner = $q`${process.execPath} -e ${'setTimeout(() => {}, 30_000)'}`;\n    const childAvailableImmediately =\n      typeof runner.child?.kill === 'function' && runner.started;\n    runner.child.kill('SIGTERM');\n    const killed = await runner;\n    record('child handle available immediately', childAvailableImmediately);\n    record('exit code after child.kill()', killed.code);\n\n    // The handler reports back as soon as it notices the cancellation, so the\n    // example does not depend on timing.\n    let noticed;\n    const noticedCancellation = new Promise((resolve) => {\n      noticed = resolve;\n    });\n\n    register('cancellable', async ({ abortSignal, isCancelled }) => {\n      for (let i = 0; i \u003c 200; i++) {\n        if (abortSignal?.aborted || isCancelled()) {\n          noticed({\n            aborted: abortSignal?.aborted === true,\n            cancelled: isCancelled(),\n          });\n          break;\n        }\n        await new Promise((resolve) => setTimeout(resolve, 5));\n      }\n      return { stdout: '', code: 0 };\n    });\n\n    const virtualRunner = $q`cancellable`;\n    virtualRunner.start();\n    setTimeout(() => virtualRunner.kill(), 50);\n    await virtualRunner;\n    record('what the virtual command observed', await noticedCancellation);\n    unregister('cancellable');\n  }\n);",
+            "rustApi": [
+              "ProcessRunner::child",
+              "ProcessChild::kill",
+              "OutputStream::kill"
+            ],
+            "rustSource": "async fn cancellation() -> ExampleResult {\n    let child_command = if cfg!(windows) {\n        \"ping -n 31 127.0.0.1\"\n    } else {\n        \"/bin/sleep 30\"\n    };\n    let mut runner = ProcessRunner::new(child_command, quiet_options());\n    runner.start().await?;\n    let (child_available, child_pid_available) = match runner.child() {\n        Some(mut child) => {\n            let pid_available = child.pid().is_some();\n            child.kill_with(\"SIGTERM\")?;\n            (true, pid_available)\n        }\n        None => (false, false),\n    };\n    let _ = runner.run().await?;\n\n    let mut stream = StreamingRunner::new(\"sleep 30\").stream();\n    let started = stream.wait_for_pid().await.is_some();\n    stream.kill();\n    let mut exit_code = 0;\n    while let Some(chunk) = stream.next().await {\n        if let OutputChunk::Exit(code) = chunk {\n            exit_code = code;\n        }\n    }\n    Ok(vec![\n        observation(\"child handle available after start\", child_available),\n        observation(\"child pid available\", child_pid_available),\n        observation(\"stream started\", started),\n        observation(\"cancelled stream exit is non-zero\", exit_code != 0),\n    ])\n}",
+            "rustOutput": "# cancellation — Rust\nchild handle available after start: true\nchild pid available: true\nstream started: true\ncancelled stream exit is non-zero: true",
+            "identicalOutput": true,
+            "output": {
+              "node": "# cancellation — Killing and cancelling commands\nchild handle available immediately: true\nexit code after child.kill(): 143\nwhat the virtual command observed: {\"aborted\":true,\"cancelled\":true}",
+              "bun": "# cancellation — Killing and cancelling commands\nchild handle available immediately: true\nexit code after child.kill(): 143\nwhat the virtual command observed: {\"aborted\":true,\"cancelled\":true}"
+            }
+          },
+          {
+            "id": "async-iteration",
+            "title": "Async iteration over output",
+            "category": "Streaming",
+            "summary": "A command is an async iterable of chunks, so output can be handled as it arrives.",
+            "file": "js/examples/features/async-iteration.mjs",
+            "api": [
+              "$",
+              "ProcessRunner#[Symbol.asyncIterator]",
+              "ProcessRunner#stream"
+            ],
+            "alternatives": {
+              "bun-shell": "for await (const line of $`printf 'a\\nb\\n'`.lines()) { /* line by line only */ }",
+              "zx": "for await (const line of $`printf 'a\\nb\\n'`) { /* lines */ }",
+              "execa": "for await (const line of execa`printf 'a\\nb\\n'`) { /* lines */ }",
+              "shelljs": {
+                "unsupported": "output is only delivered as a whole string, or through the raw child process in async mode"
+              },
+              "child_process": "for await (const chunk of spawn('printf', ['a\\nb\\n']).stdout) { /* Buffers */ }"
+            },
+            "source": "// A command is an async iterable of output chunks, so output can be processed\n// while the command is still running.\nimport { $ } from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\n\nconst $q = $({ mirror: false });\n\nawait example(\n  { id: 'async-iteration', title: 'Async iteration over output' },\n  async ({ record }) => {\n    const lines = [];\n    for await (const chunk of $q`seq 1 5`.stream()) {\n      if (chunk.type === 'exit') {\n        continue;\n      }\n      lines.push({ type: chunk.type, data: chunk.data.toString() });\n    }\n    record('chunk types', [...new Set(lines.map((l) => l.type))]);\n    record('collected output', lines.map((l) => l.data).join(''));\n\n    // stdout and stderr are tagged, so both can be consumed from one loop.\n    const tagged = [];\n    for await (const chunk of $q`sh -c 'echo to-stdout; echo to-stderr >&2'`.stream()) {\n      if (chunk.type === 'exit') {\n        continue;\n      }\n      tagged.push([chunk.type, chunk.data.toString().trim()]);\n    }\n    record('tagged chunks', tagged.sort());\n\n    // Leaving the loop early terminates the command.\n    let seen = 0;\n    for await (const _chunk of $q`seq 1 1000`.stream()) {\n      seen++;\n      break;\n    }\n    record('iteration can stop early', seen === 1);\n  }\n);",
+            "rustApi": ["StreamingRunner", "OutputStream::next"],
+            "rustSource": "async fn async_iteration() -> ExampleResult {\n    let mut stream = StreamingRunner::new(\"printf 'one\\\\ntwo\\\\n'\").stream();\n    let mut stdout = Vec::new();\n    let mut exit_code = None;\n    while let Some(chunk) = stream.next().await {\n        match chunk {\n            OutputChunk::Stdout(data) => stdout.extend(data),\n            OutputChunk::Stderr(_) => {}\n            OutputChunk::Exit(code) => exit_code = Some(code),\n        }\n    }\n    Ok(vec![\n        observation(\"collected chunks\", String::from_utf8(stdout)?),\n        observation(\"exit code\", exit_code),\n    ])\n}",
+            "rustOutput": "# async-iteration — Rust\ncollected chunks: \"one\\ntwo\\n\"\nexit code: 0",
+            "identicalOutput": true,
+            "output": {
+              "node": "# async-iteration — Async iteration over output\nchunk types: [\"stdout\"]\ncollected output: \"1\\n2\\n3\\n4\\n5\\n\"\ntagged chunks: [[\"stderr\",\"to-stderr\"],[\"stdout\",\"to-stdout\"]]\niteration can stop early: true",
+              "bun": "# async-iteration — Async iteration over output\nchunk types: [\"stdout\"]\ncollected output: \"1\\n2\\n3\\n4\\n5\\n\"\ntagged chunks: [[\"stderr\",\"to-stderr\"],[\"stdout\",\"to-stdout\"]]\niteration can stop early: true"
+            }
+          },
+          {
+            "id": "events",
+            "title": "Event-driven output",
+            "category": "Streaming",
+            "summary": "Event APIs report output and lifecycle signals as work progresses.",
+            "file": "js/examples/features/events.mjs",
+            "api": ["$", "ProcessRunner#on", "ProcessRunner#off"],
+            "alternatives": {
+              "bun-shell": {
+                "unsupported": "a ShellPromise is not an EventEmitter and exposes no streams"
+              },
+              "zx": "$`echo hi`.stdout.on('data', chunk => { /* Node stream events */ });",
+              "execa": "execa`echo hi`.stdout.on('data', chunk => { /* Node stream events */ });",
+              "shelljs": "shell.exec('echo hi', { async: true }).stdout.on('data', chunk => {});",
+              "child_process": "spawn('echo', ['hi']).stdout.on('data', chunk => {});"
+            },
+            "source": "// Commands are EventEmitters: 'stdout', 'stderr', 'data' and 'end'.\nimport { $ } from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\n\nconst $q = $({ mirror: false });\n\nawait example(\n  { id: 'events', title: 'EventEmitter interface' },\n  async ({ record }) => {\n    const events = [];\n\n    await new Promise((resolve, reject) => {\n      $q`sh -c 'echo out; echo err >&2'`\n        .on('stdout', (data) => events.push(['stdout', data.toString().trim()]))\n        .on('stderr', (data) => events.push(['stderr', data.toString().trim()]))\n        .on('end', (result) => {\n          events.push(['end', result.code]);\n          resolve();\n        })\n        .on('error', reject)\n        .start();\n    });\n\n    record(\n      'events (sorted: stdout/stderr order is up to the OS)',\n      events.sort()\n    );\n\n    // The 'data' event receives both streams with a type tag.\n    const tagged = [];\n    await new Promise((resolve) => {\n      $q`echo tagged`\n        .on('data', (chunk) =>\n          tagged.push([chunk.type, chunk.data.toString().trim()])\n        )\n        .on('end', () => resolve())\n        .start();\n    });\n    record('data events', tagged);\n  }\n);",
+            "rustApi": ["StreamEmitter", "EventType", "EventData"],
+            "rustSource": "async fn events() -> ExampleResult {\n    let emitter = StreamEmitter::new();\n    let count = Arc::new(AtomicUsize::new(0));\n    let listener_count = Arc::clone(&count);\n    emitter\n        .on(EventType::Stdout, move |_| {\n            listener_count.fetch_add(1, Ordering::SeqCst);\n        })\n        .await;\n    emitter\n        .emit(EventType::Stdout, EventData::String(\"hello\".to_string()))\n        .await;\n    Ok(vec![observation(\n        \"stdout events\",\n        count.load(Ordering::SeqCst),\n    )])\n}",
+            "rustOutput": "# events — Rust\nstdout events: 1",
+            "identicalOutput": true,
+            "output": {
+              "node": "# events — EventEmitter interface\nevents (sorted: stdout/stderr order is up to the OS): [[\"end\",0],[\"stderr\",\"err\"],[\"stdout\",\"out\"]]\ndata events: [[\"stdout\",\"tagged\"]]",
+              "bun": "# events — EventEmitter interface\nevents (sorted: stdout/stderr order is up to the OS): [[\"end\",0],[\"stderr\",\"err\"],[\"stdout\",\"out\"]]\ndata events: [[\"stdout\",\"tagged\"]]"
+            }
+          },
+          {
+            "id": "stdin-streaming",
+            "title": "Writing to stdin while a command runs",
+            "category": "Streaming",
+            "summary": "Input can be supplied up front or written to a running command.",
+            "file": "js/examples/features/stdin-streaming.mjs",
+            "api": ["$", "ProcessRunner#stdin"],
+            "alternatives": {
+              "bun-shell": "await $`cat \u003c ${new Response('x')}`.quiet(); // a value, not a live stream",
+              "zx": "const p = $`cat`; p.stdin.write('x'); p.stdin.end();",
+              "execa": "const p = execa`cat`; p.stdin.write('x'); p.stdin.end();",
+              "shelljs": "shell.ShellString('x').exec('cat'); // value only",
+              "child_process": "const p = spawn('cat'); p.stdin.write('x'); p.stdin.end();"
+            },
+            "source": "// .streams.stdin gives write access to a running command.\nimport { $ } from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\n\nconst $q = $({ mirror: false });\n\nawait example(\n  { id: 'stdin-streaming', title: 'Writing to stdin while a command runs' },\n  async ({ record }) => {\n    const runner = $q`cat`;\n    const stdin = await runner.streams.stdin;\n    stdin.write('first line\\n');\n    stdin.write('second line\\n');\n    stdin.end();\n    record('what cat echoed back', (await runner).stdout);\n\n    // A whole string can also be handed over up front.\n    record(\n      'stdin option',\n      (await $({ mirror: false, stdin: 'up front\\n' })`cat`).stdout\n    );\n  }\n);",
+            "rustApi": [
+              "ProcessRunner::write_stdin",
+              "ProcessRunner::close_stdin"
+            ],
+            "rustSource": "async fn stdin_streaming() -> ExampleResult {\n    let mut runner = ProcessRunner::new(\n        \"cat\",\n        RunOptions {\n            mirror: false,\n            stdin: StdinOption::Pipe,\n            ..RunOptions::default()\n        },\n    );\n    runner.start().await?;\n    runner.write_stdin(\"first line\\n\").await?;\n    runner.write_stdin(\"second line\\n\").await?;\n    runner.close_stdin().await?;\n    let result = runner.run().await?;\n    Ok(vec![observation(\"what cat echoed back\", result.stdout)])\n}",
+            "rustOutput": "# stdin-streaming — Rust\nwhat cat echoed back: \"first line\\nsecond line\\n\"",
+            "identicalOutput": true,
+            "output": {
+              "node": "# stdin-streaming — Writing to stdin while a command runs\nwhat cat echoed back: \"first line\\nsecond line\\n\"\nstdin option: \"up front\\n\"",
+              "bun": "# stdin-streaming — Writing to stdin while a command runs\nwhat cat echoed back: \"first line\\nsecond line\\n\"\nstdin option: \"up front\\n\""
+            }
+          },
+          {
+            "id": "buffers-strings",
+            "title": "Buffer and string interfaces",
+            "category": "Reading output",
+            "summary": "Output is available as a string and as raw bytes, without running the command twice.",
+            "file": "js/examples/features/buffers-strings.mjs",
+            "api": ["$", "ProcessRunner#text", "ProcessRunner#buffers"],
+            "alternatives": {
+              "bun-shell": "const result = await $`echo hi`.quiet(); result.stdout; // Buffer\nawait $`echo hi`.text();      // string, but runs the command again",
+              "zx": "const p = await $`echo hi`; p.stdout; // string\nBuffer.from(p.stdout);               // bytes by conversion",
+              "execa": "const { stdout } = await execa({ encoding: 'buffer' })`echo hi`; // choose one up front",
+              "shelljs": {
+                "unsupported": "output is decoded to a string; raw bytes are not available"
+              },
+              "child_process": "const { stdout } = await promisify(execFile)('echo', ['hi'], { encoding: 'buffer' });"
+            },
+            "source": "// .buffers and .strings expose the output as Buffers or as decoded strings.\nimport { $ } from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\n\nconst $q = $({ mirror: false });\n\nawait example(\n  { id: 'buffers-strings', title: 'Buffer and string interfaces' },\n  async ({ record }) => {\n    const asBuffer = await $q`echo buffered`.buffers.stdout;\n    record('buffers.stdout is a Buffer', Buffer.isBuffer(asBuffer));\n    record('buffers.stdout content', asBuffer.toString());\n\n    const asString = await $q`echo stringified`.strings.stdout;\n    record('strings.stdout', asString);\n\n    const stderrBuffer = await $q`sh -c 'echo problem >&2'`.buffers.stderr;\n    record('buffers.stderr content', stderrBuffer.toString());\n\n    // Binary-safe: bytes survive the round trip unchanged.\n    const bytes = await $q`printf 'a\\\\tb'`.buffers.stdout;\n    record('raw bytes', Array.from(bytes));\n  }\n);",
+            "rustApi": ["CommandResult::stdout", "OutputChunk"],
+            "rustSource": "async fn buffers_strings() -> ExampleResult {\n    let result = quiet(\"printf bytes\").await?;\n    Ok(vec![\n        observation(\"string\", &result.stdout),\n        observation(\"bytes\", result.stdout.as_bytes()),\n    ])\n}",
+            "rustOutput": "# buffers-strings — Rust\nstring: \"bytes\"\nbytes: [98,121,116,101,115]",
+            "identicalOutput": true,
+            "output": {
+              "node": "# buffers-strings — Buffer and string interfaces\nbuffers.stdout is a Buffer: true\nbuffers.stdout content: \"buffered\\n\"\nstrings.stdout: \"stringified\\n\"\nbuffers.stderr content: \"problem\\n\"\nraw bytes: [97,9,98]",
+              "bun": "# buffers-strings — Buffer and string interfaces\nbuffers.stdout is a Buffer: true\nbuffers.stdout content: \"buffered\\n\"\nstrings.stdout: \"stringified\\n\"\nbuffers.stderr content: \"problem\\n\"\nraw bytes: [97,9,98]"
+            }
+          },
+          {
+            "id": "mirror-capture",
+            "title": "Mirroring and capturing output",
+            "category": "Reading output",
+            "summary": "Output can be shown, captured, both or neither, chosen independently.",
+            "file": "js/examples/features/mirror-capture.mjs",
+            "api": ["$", "create"],
+            "alternatives": {
+              "bun-shell": "await $`echo hi`;          // shown and captured\nawait $`echo hi`.quiet();   // captured only",
+              "zx": "$.verbose = true;           // shown and captured\nawait $({ quiet: true })`echo hi`;",
+              "execa": "await execa({ stdout: ['pipe', 'inherit'] })`echo hi`; // both, by listing destinations",
+              "shelljs": "shell.exec('echo hi');                  // shown and captured\nshell.exec('echo hi', { silent: true }); // captured only",
+              "child_process": "spawn('echo', ['hi'], { stdio: 'inherit' }); // shown, but then not captured"
+            },
+            "source": "// mirror controls whether output is shown, capture whether it is kept.\nimport { $ } from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\n\nawait example(\n  { id: 'mirror-capture', title: 'Mirroring and capturing output' },\n  async ({ record }) => {\n    // The default: output is shown and captured.\n    const both = await $`echo shown and captured`;\n    record('default mirror', true);\n    record('default capture', both.stdout);\n\n    const quiet = await $({ mirror: false })`echo only captured`;\n    record('mirror: false still captures', quiet.stdout);\n\n    const dropped = await $({ mirror: false, capture: false })`echo neither`;\n    record('capture: false returns no stdout', dropped.stdout);\n  }\n);",
+            "rustApi": ["RunOptions::mirror", "RunOptions::capture"],
+            "rustSource": "async fn mirror_capture() -> ExampleResult {\n    let captured = quiet(\"echo captured\").await?;\n    let uncaptured = exec(\n        \"true\",\n        RunOptions {\n            mirror: false,\n            capture: false,\n            ..RunOptions::default()\n        },\n    )\n    .await?;\n    Ok(vec![\n        observation(\"captured output\", captured.stdout),\n        observation(\"capture can be disabled\", uncaptured.stdout.is_empty()),\n    ])\n}",
+            "rustOutput": "# mirror-capture — Rust\ncaptured output: \"captured\\n\"\ncapture can be disabled: true",
+            "identicalOutput": true,
+            "output": {
+              "node": "shown and captured\n# mirror-capture — Mirroring and capturing output\ndefault mirror: true\ndefault capture: \"shown and captured\\n\"\nmirror: false still captures: \"only captured\\n\"\ncapture: false returns no stdout: undefined",
+              "bun": "shown and captured\n# mirror-capture — Mirroring and capturing output\ndefault mirror: true\ndefault capture: \"shown and captured\\n\"\nmirror: false still captures: \"only captured\\n\"\ncapture: false returns no stdout: undefined"
+            }
+          },
+          {
+            "id": "builtin-catalog",
+            "title": "The built-in command catalog",
+            "category": "Built-in commands",
+            "summary": "Common commands are implemented in-process in both languages for portable behavior.",
+            "file": "js/examples/features/builtin-catalog.mjs",
+            "api": [
+              "listCommands",
+              "enableVirtualCommands",
+              "disableVirtualCommands"
+            ],
+            "alternatives": {
+              "bun-shell": "// a fixed set of built-ins (cd, echo, ls, rm, ...) that cannot be listed or turned off",
+              "zx": {
+                "unsupported": "every command is handed to the system shell; the fs and glob helpers are separate APIs, not commands"
+              },
+              "execa": { "unsupported": "every command is a real binary" },
+              "shelljs": "shell.ls(); shell.cat(); shell.mkdir(); // built-ins, but as functions rather than commands",
+              "child_process": {
+                "unsupported": "every command is a real binary"
+              }
+            },
+            "source": "// command-stream ships built-in implementations of common shell commands, so\n// scripts behave the same even where those binaries are missing.\nimport {\n  $,\n  listCommands,\n  enableVirtualCommands,\n  disableVirtualCommands,\n} from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\n\nconst $q = $({ mirror: false });\n\nawait example(\n  { id: 'builtin-catalog', title: 'The built-in command catalog' },\n  async ({ record }) => {\n    record('available built-ins', listCommands().sort());\n    record('number of built-ins', listCommands().length);\n\n    // Built-ins can be switched off, which falls back to the real binaries.\n    record('with built-ins', (await $q`echo built-in`).stdout);\n    disableVirtualCommands();\n    record('with built-ins disabled', (await $q`echo real binary`).stdout);\n    enableVirtualCommands();\n    record('built-ins enabled again', listCommands().length > 0);\n  }\n);",
+            "rustApi": ["VirtualCommandRegistry::with_builtins"],
+            "rustSource": "async fn builtin_catalog() -> ExampleResult {\n    let registry = VirtualCommandRegistry::with_builtins();\n    let mut commands = registry.list();\n    commands.sort_unstable();\n    Ok(vec![\n        observation(\"available built-ins\", &commands),\n        observation(\"number of built-ins\", commands.len()),\n    ])\n}",
+            "rustOutput": "# builtin-catalog — Rust\navailable built-ins: [\"basename\",\"cat\",\"cd\",\"cp\",\"dirname\",\"echo\",\"env\",\"exit\",\"false\",\"ls\",\"mkdir\",\"mv\",\"pwd\",\"rm\",\"seq\",\"sleep\",\"tee\",\"test\",\"touch\",\"true\",\"which\",\"yes\"]\nnumber of built-ins: 22",
+            "identicalOutput": true,
+            "output": {
+              "node": "# builtin-catalog — The built-in command catalog\navailable built-ins: [\"basename\",\"cat\",\"cd\",\"cp\",\"dirname\",\"echo\",\"env\",\"exit\",\"false\",\"ls\",\"mkdir\",\"mv\",\"pwd\",\"rm\",\"seq\",\"sleep\",\"tee\",\"test\",\"touch\",\"true\",\"which\",\"yes\"]\nnumber of built-ins: 22\nwith built-ins: \"built-in\\n\"\nwith built-ins disabled: \"real binary\\n\"\nbuilt-ins enabled again: true",
+              "bun": "# builtin-catalog — The built-in command catalog\navailable built-ins: [\"basename\",\"cat\",\"cd\",\"cp\",\"dirname\",\"echo\",\"env\",\"exit\",\"false\",\"ls\",\"mkdir\",\"mv\",\"pwd\",\"rm\",\"seq\",\"sleep\",\"tee\",\"test\",\"touch\",\"true\",\"which\",\"yes\"]\nnumber of built-ins: 22\nwith built-ins: \"built-in\\n\"\nwith built-ins disabled: \"real binary\\n\"\nbuilt-ins enabled again: true"
+            }
+          },
+          {
+            "id": "builtin-filesystem",
+            "title": "File system built-ins",
+            "category": "Built-in commands",
+            "summary": "ls, cat, mkdir, touch, cp, mv, rm and test run in-process.",
+            "file": "js/examples/features/builtin-filesystem.mjs",
+            "api": ["$"],
+            "alternatives": {
+              "bun-shell": "await $`mkdir -p dir`; await $`ls dir`.text(); // built-in, same idea",
+              "zx": "await fs.mkdirp('dir'); // zx re-exports fs-extra instead of implementing commands",
+              "execa": { "unsupported": "use node:fs" },
+              "shelljs": "shell.mkdir('-p', 'dir'); shell.ls('dir');",
+              "child_process": { "unsupported": "use node:fs" }
+            },
+            "source": "// File system built-ins: mkdir, touch, ls, cp, mv, rm.\nimport { $ } from '../../src/$.mjs';\nimport { example, makeTempDir } from './_harness.mjs';\nimport fs from 'fs';\nimport path from 'path';\n\nawait example(\n  { id: 'builtin-filesystem', title: 'File system built-ins' },\n  async ({ record }) => {\n    const dir = makeTempDir('fs');\n    const $q = $({ mirror: false, cwd: dir });\n\n    await $q`mkdir -p project/src`;\n    record(\n      'mkdir -p created the tree',\n      fs.existsSync(path.join(dir, 'project/src'))\n    );\n\n    await $q`touch project/src/index.mjs`;\n    record(\n      'touch created the file',\n      fs.existsSync(path.join(dir, 'project/src/index.mjs'))\n    );\n\n    record('ls', (await $q`ls project/src`).stdout);\n\n    await $q`cp project/src/index.mjs project/src/copy.mjs`;\n    record('after cp', (await $q`ls project/src`).stdout);\n\n    await $q`mv project/src/copy.mjs project/src/renamed.mjs`;\n    record('after mv', (await $q`ls project/src`).stdout);\n\n    await $q`rm project/src/renamed.mjs`;\n    record('after rm', (await $q`ls project/src`).stdout);\n\n    await $q`rm -rf project`;\n    record(\n      'the tree still exists after rm -rf',\n      fs.existsSync(path.join(dir, 'project'))\n    );\n  }\n);",
+            "rustApi": ["mkdir", "touch", "ls", "rm"],
+            "rustSource": "async fn builtin_filesystem() -> ExampleResult {\n    let directory = tempfile::tempdir()?;\n    let options = RunOptions {\n        mirror: false,\n        cwd: Some(directory.path().to_path_buf()),\n        ..RunOptions::default()\n    };\n    exec(\"mkdir demo\", options.clone()).await?;\n    exec(\"touch demo/file.txt\", options.clone()).await?;\n    let listed = exec(\"ls demo\", options.clone()).await?;\n    exec(\"rm -r demo\", options).await?;\n    Ok(vec![observation(\"created and listed\", listed.stdout)])\n}",
+            "rustOutput": "# builtin-filesystem — Rust\ncreated and listed: \"file.txt\\n\"",
+            "identicalOutput": true,
+            "output": {
+              "node": "# builtin-filesystem — File system built-ins\nmkdir -p created the tree: true\ntouch created the file: true\nls: \"index.mjs\\n\"\nafter cp: \"copy.mjs\\nindex.mjs\\n\"\nafter mv: \"index.mjs\\nrenamed.mjs\\n\"\nafter rm: \"index.mjs\\n\"\nthe tree still exists after rm -rf: false",
+              "bun": "# builtin-filesystem — File system built-ins\nmkdir -p created the tree: true\ntouch created the file: true\nls: \"index.mjs\\n\"\nafter cp: \"copy.mjs\\nindex.mjs\\n\"\nafter mv: \"index.mjs\\nrenamed.mjs\\n\"\nafter rm: \"index.mjs\\n\"\nthe tree still exists after rm -rf: false"
+            }
+          },
+          {
+            "id": "builtin-text",
+            "title": "Text and value built-ins",
+            "category": "Built-in commands",
+            "summary": "echo, seq, yes, basename, dirname, true and false run in-process.",
+            "file": "js/examples/features/builtin-text.mjs",
+            "api": ["$"],
+            "alternatives": {
+              "bun-shell": "await $`echo hi`.text(); // echo is a built-in; seq and yes are not",
+              "zx": "await $`echo hi`; // the system binaries",
+              "execa": "await execa('echo', ['hi']); // the system binaries",
+              "shelljs": "shell.echo('hi'); // echo only",
+              "child_process": "execFile('echo', ['hi']); // the system binaries"
+            },
+            "source": "// Text and value built-ins: echo, cat, seq, basename, dirname, true, false, test.\nimport { $ } from '../../src/$.mjs';\nimport { example, makeTempDir } from './_harness.mjs';\nimport fs from 'fs';\nimport path from 'path';\n\nawait example(\n  { id: 'builtin-text', title: 'Text and value built-ins' },\n  async ({ record }) => {\n    const dir = makeTempDir('text');\n    const file = path.join(dir, 'greeting.txt');\n    fs.writeFileSync(file, 'hello from a file\\n');\n    const $q = $({ mirror: false });\n\n    record('echo', (await $q`echo hello`).stdout);\n    record('echo -n', (await $q`echo -n no newline`).stdout);\n    record('cat', (await $q`cat ${file}`).stdout);\n    record('seq', (await $q`seq 1 4`).stdout);\n    record('basename', (await $q`basename /usr/local/lib/file.txt`).stdout);\n    record('dirname', (await $q`dirname /usr/local/lib/file.txt`).stdout);\n    record('true', (await $q`true`).code);\n    record('false', (await $q`false`).code);\n    record('test on an existing file', (await $q`test -f ${file}`).code);\n    record(\n      'test on a missing file',\n      (await $q`test -f ${path.join(dir, 'missing')}`).code\n    );\n  }\n);",
+            "rustApi": ["echo", "seq", "basename", "dirname", "test", "which"],
+            "rustSource": "async fn builtin_text() -> ExampleResult {\n    let sequence = quiet(\"seq 1 3\").await?;\n    let basename = quiet(\"basename /tmp/example.txt\").await?;\n    Ok(vec![\n        observation(\"sequence\", sequence.stdout),\n        observation(\"basename\", basename.stdout),\n    ])\n}",
+            "rustOutput": "# builtin-text — Rust\nsequence: \"1\\n2\\n3\\n\"\nbasename: \"example.txt\\n\"",
+            "identicalOutput": true,
+            "output": {
+              "node": "# builtin-text — Text and value built-ins\necho: \"hello\\n\"\necho -n: \"no newline\"\ncat: \"hello from a file\\n\"\nseq: \"1\\n2\\n3\\n4\\n\"\nbasename: \"file.txt\\n\"\ndirname: \"/usr/local/lib\\n\"\ntrue: 0\nfalse: 1\ntest on an existing file: 0\ntest on a missing file: 1",
+              "bun": "# builtin-text — Text and value built-ins\necho: \"hello\\n\"\necho -n: \"no newline\"\ncat: \"hello from a file\\n\"\nseq: \"1\\n2\\n3\\n4\\n\"\nbasename: \"file.txt\\n\"\ndirname: \"/usr/local/lib\\n\"\ntrue: 0\nfalse: 1\ntest on an existing file: 0\ntest on a missing file: 1"
+            }
+          },
+          {
+            "id": "builtin-environment",
+            "title": "Environment built-ins",
+            "category": "Built-in commands",
+            "summary": "cd, pwd, env, which and exit affect the command they run in, not the host process.",
+            "file": "js/examples/features/builtin-environment.mjs",
+            "api": ["$"],
+            "alternatives": {
+              "bun-shell": "await $`cd /tmp && pwd`.text(); // cd is scoped to the command",
+              "zx": "cd('/tmp'); // changes the directory for every later command",
+              "execa": "execa({ cwd: '/tmp' })`pwd`; // an option, not a command",
+              "shelljs": "shell.cd('/tmp'); shell.pwd(); // changes the process working directory",
+              "child_process": "execFile('pwd', [], { cwd: '/tmp' });"
+            },
+            "source": "// Environment built-ins: pwd, cd, env, which, sleep, exit.\nimport { $ } from '../../src/$.mjs';\nimport { example, makeTempDir } from './_harness.mjs';\nimport path from 'path';\n\nawait example(\n  { id: 'builtin-environment', title: 'Environment built-ins' },\n  async ({ record }) => {\n    const dir = makeTempDir('env');\n    const $q = $({ mirror: false });\n\n    record(\n      'pwd inside a chosen directory',\n      (await $({ mirror: false, cwd: dir })`pwd`).stdout\n    );\n\n    // cd changes the working directory of the process, and is remembered by the\n    // following commands.\n    const before = (await $q`pwd`).stdout.trim();\n    await $q`cd ${dir}`;\n    record('pwd after cd', (await $q`pwd`).stdout);\n    await $q`cd ${before}`;\n    record('back in the original directory', (await $q`pwd`).stdout);\n\n    const withEnv = await $({ mirror: false, env: { DEMO: 'value' } })`env`;\n    record('env lists the variables', withEnv.stdout);\n\n    record('which finds a binary', (await $q`which sh`).code);\n\n    const started = Date.now();\n    await $q`sleep 0.1`;\n    record('sleep waited', Date.now() - started >= 90);\n  }\n);",
+            "rustApi": ["pwd", "cd", "env"],
+            "rustSource": "async fn builtin_environment() -> ExampleResult {\n    let mut env = HashMap::new();\n    env.insert(\"COMMAND_STREAM_DEMO\".to_string(), \"visible\".to_string());\n    let result = exec(\n        \"env\",\n        RunOptions {\n            mirror: false,\n            env: Some(env),\n            ..RunOptions::default()\n        },\n    )\n    .await?;\n    Ok(vec![observation(\n        \"configured environment visible\",\n        result.stdout.contains(\"COMMAND_STREAM_DEMO=visible\"),\n    )])\n}",
+            "rustOutput": "# builtin-environment — Rust\nconfigured environment visible: true",
+            "identicalOutput": true,
+            "output": {
+              "node": "# builtin-environment — Environment built-ins\npwd inside a chosen directory: \"\u003cenv-dir>\\n\"\npwd after cd: \"\u003ccwd>\\n\"\nback in the original directory: \"\u003ccwd>\\n\"\nenv lists the variables: \"DEMO=value\\n\"\nwhich finds a binary: 0\nsleep waited: true",
+              "bun": "# builtin-environment — Environment built-ins\npwd inside a chosen directory: \"\u003cenv-dir>\\n\"\npwd after cd: \"\u003ccwd>\\n\"\nback in the original directory: \"\u003ccwd>\\n\"\nenv lists the variables: \"DEMO=value\\n\"\nwhich finds a binary: 0\nsleep waited: true"
+            }
+          },
+          {
+            "id": "virtual-commands",
+            "title": "Registering your own commands",
+            "category": "Your own commands",
+            "summary": "A handler can be registered by name and invoked through a registry or command runner.",
+            "file": "js/examples/features/virtual-commands.mjs",
+            "api": ["register", "unregister", "listCommands"],
+            "alternatives": {
+              "bun-shell": {
+                "unsupported": "the built-in set is fixed; a name cannot be bound to a JavaScript function"
+              },
+              "zx": {
+                "unsupported": "a command name always resolves to a binary in PATH"
+              },
+              "execa": {
+                "unsupported": "a command name always resolves to a binary in PATH"
+              },
+              "shelljs": "require('shelljs/plugin').register('greet', (options, name) => `hi ${name}\\n`);\nshell.greet('bob'); // a method, not a command usable inside a pipeline string",
+              "child_process": {
+                "unsupported": "a command name always resolves to a binary in PATH"
+              }
+            },
+            "source": "// Any JavaScript function can be registered as a command and then used from a\n// command line like a real binary.\nimport { $, register, unregister, listCommands } from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\n\nconst $q = $({ mirror: false });\n\nawait example(\n  { id: 'virtual-commands', title: 'Registering your own commands' },\n  async ({ record }) => {\n    register('greet', async ({ args }) => ({\n      stdout: `Hello, ${args.join(' ') || 'world'}!\\n`,\n      code: 0,\n    }));\n\n    record('the command is registered', listCommands().includes('greet'));\n    record('without arguments', (await $q`greet`).stdout);\n    record('with arguments', (await $q`greet Node and Bun`).stdout);\n\n    // A handler decides its own exit code and may write to stderr.\n    register('fail-with', async ({ args }) => ({\n      stderr: `failing on purpose\\n`,\n      code: Number(args[0] ?? 1),\n    }));\n    const failed = await $q`fail-with 42`;\n    record('custom exit code', failed.code);\n    record('custom stderr', failed.stderr);\n\n    unregister('greet');\n    unregister('fail-with');\n    record('unregistered again', listCommands().includes('greet'));\n  }\n);",
+            "rustApi": [
+              "VirtualCommandRegistry::register",
+              "VirtualCommandRegistry::unregister"
+            ],
+            "rustSource": "async fn virtual_commands() -> ExampleResult {\n    let mut registry = VirtualCommandRegistry::new();\n    registry.register(\"greet\", greet_handler);\n    let handler = registry.get(\"greet\").expect(\"registered handler\");\n    let result = handler(CommandContext::new(vec![\"Rust\".to_string()])).await;\n    let removed = registry.unregister(\"greet\");\n    Ok(vec![\n        observation(\"custom command output\", result.stdout),\n        observation(\"unregistered again\", removed),\n    ])\n}",
+            "rustOutput": "# virtual-commands — Rust\ncustom command output: \"Hello, Rust!\\n\"\nunregistered again: true",
+            "identicalOutput": true,
+            "output": {
+              "node": "# virtual-commands — Registering your own commands\nthe command is registered: true\nwithout arguments: \"Hello, world!\\n\"\nwith arguments: \"Hello, Node and Bun!\\n\"\ncustom exit code: 42\ncustom stderr: \"failing on purpose\\n\"\nunregistered again: false",
+              "bun": "# virtual-commands — Registering your own commands\nthe command is registered: true\nwithout arguments: \"Hello, world!\\n\"\nwith arguments: \"Hello, Node and Bun!\\n\"\ncustom exit code: 42\ncustom stderr: \"failing on purpose\\n\"\nunregistered again: false"
+            }
+          },
+          {
+            "id": "virtual-context",
+            "title": "The handler context",
+            "category": "Your own commands",
+            "summary": "A handler receives args, stdin, cwd, env and a cancellation signal.",
+            "file": "js/examples/features/virtual-context.mjs",
+            "api": ["register"],
+            "alternatives": {
+              "bun-shell": { "unsupported": "no handler API" },
+              "zx": { "unsupported": "no handler API" },
+              "execa": { "unsupported": "no handler API" },
+              "shelljs": "require('shelljs/plugin').readFromPipe(); // stdin only; no cwd, env or cancellation",
+              "child_process": { "unsupported": "no handler API" }
+            },
+            "source": "// A command handler receives a context object describing how it was invoked.\nimport { $, register, unregister } from '../../src/$.mjs';\nimport { example, makeTempDir } from './_harness.mjs';\n\nawait example(\n  { id: 'virtual-context', title: 'The handler context' },\n  async ({ record }) => {\n    const dir = makeTempDir('context');\n\n    register('describe', async ({ args, stdin, cwd, env, options }) => ({\n      stdout:\n        JSON.stringify({\n          args,\n          stdin,\n          cwdIsTheOneWeAskedFor: cwd === dir,\n          envValue: env.DEMO,\n          mirror: options.mirror,\n        }) + '\\n',\n      code: 0,\n    }));\n\n    const result = await $({\n      mirror: false,\n      cwd: dir,\n      env: { DEMO: 'from-options' },\n    })`echo piped | describe one two`;\n    record('context seen by the handler', JSON.parse(result.stdout));\n\n    unregister('describe');\n  }\n);",
+            "rustApi": ["CommandContext"],
+            "rustSource": "async fn virtual_context() -> ExampleResult {\n    let mut context = CommandContext::new(vec![\"one\".to_string(), \"two\".to_string()]);\n    context.stdin = Some(\"piped\\n\".to_string());\n    context.cwd = Some(std::env::temp_dir());\n    context.env = Some(HashMap::from([(\"DEMO\".to_string(), \"value\".to_string())]));\n    Ok(vec![observation(\n        \"handler context\",\n        json!({\n            \"args\": context.args,\n            \"stdin\": context.stdin,\n            \"has_cwd\": context.cwd.is_some(),\n            \"env_value\": context.env.and_then(|env| env.get(\"DEMO\").cloned()),\n        }),\n    )])\n}",
+            "rustOutput": "# virtual-context — Rust\nhandler context: {\"args\":[\"one\",\"two\"],\"env_value\":\"value\",\"has_cwd\":true,\"stdin\":\"piped\\n\"}",
+            "identicalOutput": true,
+            "output": {
+              "node": "# virtual-context — The handler context\ncontext seen by the handler: {\"args\":[\"one\",\"two\"],\"stdin\":\"piped\\n\",\"cwdIsTheOneWeAskedFor\":true,\"envValue\":\"from-options\",\"mirror\":false}",
+              "bun": "# virtual-context — The handler context\ncontext seen by the handler: {\"args\":[\"one\",\"two\"],\"stdin\":\"piped\\n\",\"cwdIsTheOneWeAskedFor\":true,\"envValue\":\"from-options\",\"mirror\":false}"
+            }
+          },
+          {
+            "id": "virtual-streaming",
+            "title": "Streaming commands",
+            "category": "Your own commands",
+            "summary": "A streaming handler publishes output incrementally like a real process.",
+            "file": "js/examples/features/virtual-streaming.mjs",
+            "api": ["register"],
+            "alternatives": {
+              "bun-shell": { "unsupported": "no handler API" },
+              "zx": { "unsupported": "no handler API" },
+              "execa": { "unsupported": "no handler API" },
+              "shelljs": {
+                "unsupported": "a plugin returns its output as one value when it is done"
+              },
+              "child_process": { "unsupported": "no handler API" }
+            },
+            "source": "// A handler written as an async generator streams its output chunk by chunk,\n// so consumers see data before the command has finished.\nimport { $, register, unregister } from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\n\nawait example(\n  { id: 'virtual-streaming', title: 'Streaming commands' },\n  async ({ record }) => {\n    register('countdown', async function* ({ args }) {\n      for (let i = Number(args[0] ?? 3); i > 0; i--) {\n        yield `${i}\\n`;\n      }\n      yield 'liftoff\\n';\n    });\n\n    const chunks = [];\n    for await (const chunk of $({ mirror: false })`countdown 3`.stream()) {\n      if (chunk.type === 'exit') {\n        continue;\n      }\n      chunks.push(chunk.data.toString());\n    }\n    record('chunks received one by one', chunks);\n    record(\n      'same command awaited as a whole',\n      (await $({ mirror: false })`countdown 2`).stdout\n    );\n\n    // Streaming commands compose with the rest of a pipeline.\n    record(\n      'piped into a built-in',\n      (await $({ mirror: false })`countdown 2 | cat`).stdout\n    );\n\n    unregister('countdown');\n  }\n);",
+            "rustApi": ["CommandContext::output_tx", "StreamChunk"],
+            "rustSource": "async fn virtual_streaming() -> ExampleResult {\n    let (sender, mut receiver) = tokio::sync::mpsc::channel(4);\n    let mut context = CommandContext::new(Vec::new());\n    context.output_tx = Some(sender);\n    let result = streaming_handler(context).await;\n    let mut chunks = Vec::new();\n    while let Ok(chunk) = receiver.try_recv() {\n        if let command_stream::StreamChunk::Stdout(text) = chunk {\n            chunks.push(text);\n        }\n    }\n    Ok(vec![\n        observation(\"chunks\", chunks),\n        observation(\"collected output\", result.stdout),\n    ])\n}",
+            "rustOutput": "# virtual-streaming — Rust\nchunks: [\"one\\n\",\"two\\n\"]\ncollected output: \"one\\ntwo\\n\"",
+            "identicalOutput": true,
+            "output": {
+              "node": "# virtual-streaming — Streaming commands\nchunks received one by one: [\"3\\n\",\"2\\n\",\"1\\n\",\"liftoff\\n\"]\nsame command awaited as a whole: \"2\\n1\\nliftoff\\n\"\npiped into a built-in: \"2\\n1\\nliftoff\\n\"",
+              "bun": "# virtual-streaming — Streaming commands\nchunks received one by one: [\"3\\n\",\"2\\n\",\"1\\n\",\"liftoff\\n\"]\nsame command awaited as a whole: \"2\\n1\\nliftoff\\n\"\npiped into a built-in: \"2\\n1\\nliftoff\\n\""
+            }
+          },
+          {
+            "id": "pipelines",
+            "title": "Pipelines",
+            "category": "Shell syntax",
+            "summary": "Commands can be composed into pipelines whose output feeds the next stage.",
+            "file": "js/examples/features/pipelines.mjs",
+            "api": ["$", "ProcessRunner#pipe"],
+            "alternatives": {
+              "bun-shell": "await $`echo hi | tr a-z A-Z`.text();",
+              "zx": "await $`echo hi`.pipe($`tr a-z A-Z`);",
+              "execa": "await execa`echo hi`.pipe`tr a-z A-Z`;",
+              "shelljs": "shell.echo('hi').exec('tr a-z A-Z');",
+              "child_process": "// connect the streams by hand: a.stdout.pipe(b.stdin)"
+            },
+            "source": "// Pipelines mix built-ins, your own commands and real binaries freely.\nimport { $, register, unregister } from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\n\nconst $q = $({ mirror: false });\n\nawait example({ id: 'pipelines', title: 'Pipelines' }, async ({ record }) => {\n  register('upper', async ({ stdin }) => ({\n    stdout: String(stdin ?? '').toUpperCase(),\n    code: 0,\n  }));\n\n  record('built-in into built-in', (await $q`seq 1 3 | cat`).stdout);\n  record('built-in into your command', (await $q`echo hello | upper`).stdout);\n  record(\n    'your command into a real binary',\n    (await $q`echo hello | upper | tr A-Z a-z`).stdout\n  );\n  record(\n    'real binary into your command',\n    (await $q`printf 'abc' | upper`).stdout\n  );\n\n  // The exit code of a pipeline is the exit code of its last stage.\n  record(\n    'exit code of the last stage',\n    (await $q`echo x | sh -c 'exit 7'`).code\n  );\n  record(\n    'an earlier failure does not change it',\n    (await $q`sh -c 'exit 3' | cat`).code\n  );\n\n  // The .pipe() method builds the same pipeline from separate commands.\n  const piped = await $({ mirror: false })`echo method`.pipe(\n    $({ mirror: false })`upper`\n  );\n  record('.pipe() method', piped.stdout);\n\n  unregister('upper');\n});",
+            "rustApi": ["Pipeline", "PipelineExt"],
+            "rustSource": "async fn pipelines() -> ExampleResult {\n    let result = Pipeline::new()\n        .add(\"printf 'hello\\\\nworld\\\\n'\")\n        .add(\"grep world\")\n        .mirror_output(false)\n        .run()\n        .await?;\n    Ok(vec![observation(\"pipeline output\", result.stdout)])\n}",
+            "rustOutput": "# pipelines — Rust\npipeline output: \"world\\n\"",
+            "identicalOutput": true,
+            "output": {
+              "node": "# pipelines — Pipelines\nbuilt-in into built-in: \"1\\n2\\n3\\n\"\nbuilt-in into your command: \"HELLO\\n\"\nyour command into a real binary: \"hello\\n\"\nreal binary into your command: \"ABC\"\nexit code of the last stage: 7\nan earlier failure does not change it: 0\n.pipe() method: \"METHOD\\n\"",
+              "bun": "# pipelines — Pipelines\nbuilt-in into built-in: \"1\\n2\\n3\\n\"\nbuilt-in into your command: \"HELLO\\n\"\nyour command into a real binary: \"hello\\n\"\nreal binary into your command: \"ABC\"\nexit code of the last stage: 7\nan earlier failure does not change it: 0\n.pipe() method: \"METHOD\\n\""
+            }
+          },
+          {
+            "id": "redirection",
+            "title": "Redirecting output and input",
+            "category": "Shell syntax",
+            "summary": ">, >> and \u003c redirect command input and output with shell-compatible behavior.",
+            "file": "js/examples/features/redirection.mjs",
+            "api": ["$"],
+            "alternatives": {
+              "bun-shell": "await $`echo hi > out.txt`;",
+              "zx": "await $`echo hi > out.txt`; // handled by the system shell",
+              "execa": "await execa({ stdout: { file: 'out.txt' } })`echo hi`;",
+              "shelljs": "shell.echo('hi').to('out.txt');",
+              "child_process": "spawn('echo', ['hi'], { stdio: ['ignore', fs.openSync('out.txt', 'w'), 'inherit'] });"
+            },
+            "source": "// Output and input redirection work with built-ins and with your own commands,\n// without handing the command line to a real shell.\nimport { $ } from '../../src/$.mjs';\nimport { example, makeTempDir } from './_harness.mjs';\nimport fs from 'fs';\nimport path from 'path';\n\nawait example(\n  { id: 'redirection', title: 'Redirecting output and input' },\n  async ({ record }) => {\n    const dir = makeTempDir('redirect');\n    const file = path.join(dir, 'out.txt');\n    const $q = $({ mirror: false });\n\n    const written = await $q`echo first > ${file}`;\n    record('the command itself prints nothing', written.stdout);\n    record('the file holds the output', fs.readFileSync(file, 'utf8'));\n\n    await $q`echo second >> ${file}`;\n    record('>> appends', fs.readFileSync(file, 'utf8'));\n\n    const numbers = path.join(dir, 'numbers.txt');\n    await $q`seq 1 3 | cat > ${numbers}`;\n    record('a pipeline can redirect too', fs.readFileSync(numbers, 'utf8'));\n\n    record('\u003c feeds a command from a file', (await $q`cat \u003c ${file}`).stdout);\n    record(\n      'a quoted > stays a literal argument',\n      (await $q`echo \"a > b\"`).stdout\n    );\n  }\n);",
+            "rustApi": ["exec"],
+            "rustSource": "async fn redirection() -> ExampleResult {\n    let directory = tempfile::tempdir()?;\n    let file = directory.path().join(\"output.txt\");\n    let result = exec(\n        \"echo redirected > output.txt\",\n        RunOptions {\n            mirror: false,\n            cwd: Some(directory.path().to_path_buf()),\n            ..RunOptions::default()\n        },\n    )\n    .await?;\n    Ok(vec![\n        observation(\"exit code\", result.code),\n        observation(\"file contents\", std::fs::read_to_string(file)?),\n    ])\n}",
+            "rustOutput": "# redirection — Rust\nexit code: 0\nfile contents: \"redirected\\n\"",
+            "identicalOutput": true,
+            "output": {
+              "node": "# redirection — Redirecting output and input\nthe command itself prints nothing: \"\"\nthe file holds the output: \"first\\n\"\n>> appends: \"first\\nsecond\\n\"\na pipeline can redirect too: \"1\\n2\\n3\\n\"\n\u003c feeds a command from a file: \"first\\nsecond\\n\"\na quoted > stays a literal argument: \"a > b\\n\"",
+              "bun": "# redirection — Redirecting output and input\nthe command itself prints nothing: \"\"\nthe file holds the output: \"first\\n\"\n>> appends: \"first\\nsecond\\n\"\na pipeline can redirect too: \"1\\n2\\n3\\n\"\n\u003c feeds a command from a file: \"first\\nsecond\\n\"\na quoted > stays a literal argument: \"a > b\\n\""
+            }
+          },
+          {
+            "id": "sequences",
+            "title": "Command sequences",
+            "category": "Shell syntax",
+            "summary": "&&, ||, ; and parentheses execute with the expected shell semantics.",
+            "file": "js/examples/features/sequences.mjs",
+            "api": ["$"],
+            "alternatives": {
+              "bun-shell": "await $`mkdir -p dir && cd dir && pwd`.text();",
+              "zx": "await $`mkdir -p dir && cd dir && pwd`; // the system shell runs it",
+              "execa": {
+                "unsupported": "no shell operators unless the shell option is turned on, which gives up escaping"
+              },
+              "shelljs": "shell.exec('mkdir -p dir && cd dir && pwd'); // the system shell runs it",
+              "child_process": "execFile('sh', ['-c', 'mkdir -p dir && cd dir && pwd']);"
+            },
+            "source": "// Operators between commands: && runs on success, || runs on failure,\n// ; runs unconditionally and ( ) groups commands into a subshell.\nimport { $ } from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\n\nconst $q = $({ mirror: false });\n\nawait example(\n  { id: 'sequences', title: 'Command sequences' },\n  async ({ record }) => {\n    record('&& after a success', (await $q`true && echo ran`).stdout);\n    record('&& after a failure', (await $q`false && echo ran`).stdout);\n    record('|| after a failure', (await $q`false || echo fallback`).stdout);\n    record('|| after a success', (await $q`true || echo fallback`).stdout);\n    record('; runs both', (await $q`echo one ; echo two`).stdout);\n    record('( ) groups commands', (await $q`(echo a ; echo b)`).stdout);\n\n    const chain = await $q`false && echo skipped`;\n    record('exit code of a short-circuited chain', chain.code);\n  }\n);",
+            "rustApi": ["exec"],
+            "rustSource": "async fn sequences() -> ExampleResult {\n    let result = quiet(\"false || echo fallback; echo next\").await?;\n    Ok(vec![observation(\"sequence output\", result.stdout)])\n}",
+            "rustOutput": "# sequences — Rust\nsequence output: \"fallback\\nnext\\n\"",
+            "identicalOutput": true,
+            "output": {
+              "node": "# sequences — Command sequences\n&& after a success: \"ran\\n\"\n&& after a failure: \"\"\n|| after a failure: \"fallback\\n\"\n|| after a success: \"\"\n; runs both: \"one\\ntwo\\n\"\n( ) groups commands: \"a\\nb\\n\"\nexit code of a short-circuited chain: 1",
+              "bun": "# sequences — Command sequences\n&& after a success: \"ran\\n\"\n&& after a failure: \"\"\n|| after a failure: \"fallback\\n\"\n|| after a success: \"\"\n; runs both: \"one\\ntwo\\n\"\n( ) groups commands: \"a\\nb\\n\"\nexit code of a short-circuited chain: 1"
+            }
+          },
+          {
+            "id": "interpolation",
+            "title": "Safe interpolation",
+            "category": "Shell syntax",
+            "summary": "Interpolated values are escaped as arguments; each language also exposes an explicit raw form.",
+            "file": "js/examples/features/interpolation.mjs",
+            "api": ["$", "quote", "raw"],
+            "alternatives": {
+              "bun-shell": "await $`echo ${value}`; // escaped; $.escape(value) shows the result",
+              "zx": "await $`echo ${value}`; // escaped; quote(value) shows the result",
+              "execa": "await execa`echo ${value}`; // passed as an argument, no shell to escape for",
+              "shelljs": {
+                "unsupported": "shell.exec takes a string, so escaping is the caller’s job"
+              },
+              "child_process": "execFile('echo', [value]); // arguments are never parsed as shell syntax"
+            },
+            "source": "// Interpolated values are quoted automatically, so user input cannot turn into\n// extra shell syntax.\nimport { $, quote, raw } from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\n\nconst $q = $({ mirror: false });\n\nawait example(\n  { id: 'interpolation', title: 'Safe interpolation' },\n  async ({ record }) => {\n    const name = \"it's a name\";\n    record('quotes are handled', (await $q`echo ${name}`).stdout);\n\n    const dangerous = 'hello; rm -rf /tmp/nothing';\n    record(\n      'injection stays one argument',\n      (await $q`echo ${dangerous}`).stdout\n    );\n\n    const args = ['one', 'two three'];\n    record(\n      'an array becomes separate arguments',\n      (await $q`echo ${args}`).stdout\n    );\n\n    record('quote() shows what interpolation does', quote(\"it's a name\"));\n\n    // raw() opts out of quoting when you really mean shell syntax.\n    record('raw() keeps shell syntax', (await $q`echo ${raw('a b')}`).stdout);\n  }\n);",
+            "rustApi": ["cmd!", "quote"],
+            "rustSource": "async fn interpolation() -> ExampleResult {\n    let value = \"hello from Rust\";\n    let result = cmd!(\"echo {}\", value).await?;\n    Ok(vec![observation(\"macro interpolation\", result.stdout)])\n}",
+            "rustOutput": "# interpolation — Rust\nmacro interpolation: \"hello from Rust\\n\"",
+            "identicalOutput": true,
+            "output": {
+              "node": "# interpolation — Safe interpolation\nquotes are handled: \"it's a name\\n\"\ninjection stays one argument: \"hello; rm -rf \u003ctmp>/nothing\\n\"\nan array becomes separate arguments: \"one two three\\n\"\nquote() shows what interpolation does: \"'it'\\\\''s a name'\"\nraw() keeps shell syntax: \"a b\\n\"",
+              "bun": "# interpolation — Safe interpolation\nquotes are handled: \"it's a name\\n\"\ninjection stays one argument: \"hello; rm -rf \u003ctmp>/nothing\\n\"\nan array becomes separate arguments: \"one two three\\n\"\nquote() shows what interpolation does: \"'it'\\\\''s a name'\"\nraw() keeps shell syntax: \"a b\\n\""
+            }
+          },
+          {
+            "id": "shell-settings",
+            "title": "Shell settings",
+            "category": "Shell syntax",
+            "summary": "Shell settings model errexit, pipefail, verbose, xtrace and nounset behavior.",
+            "file": "js/examples/features/shell-settings.mjs",
+            "api": ["shell", "set", "unset"],
+            "alternatives": {
+              "bun-shell": "$.throws(true); // errexit only",
+              "zx": "$.verbose = true; // verbose only; the rest belong to the system shell",
+              "execa": {
+                "unsupported": "no shell settings; the equivalents are per-command options"
+              },
+              "shelljs": "shell.config.fatal = true; shell.config.verbose = true; // errexit and verbose",
+              "child_process": "execFile('sh', ['-c', 'set -eo pipefail; ...']);"
+            },
+            "source": "// Shell settings mirror `set -e`, `set -x`, `set -v` and `set -o pipefail`.\nimport { $, shell, set, unset } from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\n\nconst $q = $({ mirror: false });\n\nawait example(\n  { id: 'shell-settings', title: 'Shell settings' },\n  async ({ record }) => {\n    record('defaults', shell.settings());\n\n    set('e');\n    record('set(\"e\") enables errexit', shell.settings().errexit);\n    try {\n      await $q`sh -c 'exit 5'`;\n      record('failing command with errexit', 'did not throw');\n    } catch (error) {\n      record('failing command with errexit', `threw with code ${error.code}`);\n    }\n    unset('e');\n\n    shell.pipefail(true);\n    record(\n      'pipefail makes an early failure win',\n      (await $q`sh -c 'exit 3' | cat`).code\n    );\n    shell.pipefail(false);\n    record(\n      'without pipefail the last stage wins',\n      (await $q`sh -c 'exit 3' | cat`).code\n    );\n\n    set('x');\n    record('xtrace on', shell.settings().xtrace);\n    unset('x');\n    record('settings restored', shell.settings());\n  }\n);",
+            "rustApi": [
+              "ShellSettings",
+              "set_shell_option",
+              "unset_shell_option"
+            ],
+            "rustSource": "async fn shell_settings() -> ExampleResult {\n    set_shell_option(\"pipefail\").await;\n    let with_pipefail = Pipeline::new().add(\"false\").add(\"true\").run().await?;\n    unset_shell_option(\"pipefail\").await;\n    let without_pipefail = Pipeline::new().add(\"false\").add(\"true\").run().await?;\n    Ok(vec![\n        observation(\"with pipefail\", with_pipefail.code),\n        observation(\"without pipefail\", without_pipefail.code),\n    ])\n}",
+            "rustOutput": "# shell-settings — Rust\nwith pipefail: 1\nwithout pipefail: 0",
+            "identicalOutput": true,
+            "output": {
+              "node": "# shell-settings — Shell settings\ndefaults: {\"errexit\":false,\"verbose\":false,\"xtrace\":false,\"pipefail\":false,\"nounset\":false}\nset(\"e\") enables errexit: true\nfailing command with errexit: \"threw with code 5\"\npipefail makes an early failure win: 3\nwithout pipefail the last stage wins: 0\nxtrace on: true\nsettings restored: {\"errexit\":false,\"verbose\":false,\"xtrace\":false,\"pipefail\":false,\"nounset\":false}",
+              "bun": "# shell-settings — Shell settings\ndefaults: {\"errexit\":false,\"verbose\":false,\"xtrace\":false,\"pipefail\":false,\"nounset\":false}\nset(\"e\") enables errexit: true\nfailing command with errexit: \"threw with code 5\"\npipefail makes an early failure win: 3\nwithout pipefail the last stage wins: 0\nxtrace on: true\nsettings restored: {\"errexit\":false,\"verbose\":false,\"xtrace\":false,\"pipefail\":false,\"nounset\":false}"
+            }
+          },
+          {
+            "id": "ansi-utils",
+            "title": "ANSI and control character helpers",
+            "category": "Utilities",
+            "summary": "Helpers can strip colours and control characters from captured output.",
+            "file": "js/examples/features/ansi-utils.mjs",
+            "api": [
+              "AnsiUtils",
+              "configureAnsi",
+              "getAnsiConfig",
+              "processOutput"
+            ],
+            "alternatives": {
+              "bun-shell": {
+                "unsupported": "no helper; strip the codes yourself"
+              },
+              "zx": "chalk is re-exported for adding colour, but there is no helper for removing it",
+              "execa": "await execa({ stripFinalNewline: true })`echo hi`; // trailing newline only, not ANSI",
+              "shelljs": {
+                "unsupported": "no helper; strip the codes yourself"
+              },
+              "child_process": {
+                "unsupported": "no helper; strip the codes yourself"
+              }
+            },
+            "source": "// Helpers for dealing with ANSI escape sequences and control characters in\n// captured output.\nimport {\n  AnsiUtils,\n  processOutput,\n  configureAnsi,\n  getAnsiConfig,\n} from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\n\nconst ESC = String.fromCharCode(27);\nconst BELL = String.fromCharCode(7);\n\nawait example(\n  { id: 'ansi-utils', title: 'ANSI and control character helpers' },\n  async ({ record }) => {\n    const coloured = `${ESC}[31mred${ESC}[0m and ${ESC}[32mgreen${ESC}[0m`;\n    record('stripAnsi removes the colours', AnsiUtils.stripAnsi(coloured));\n    record(\n      'stripControlChars keeps text readable',\n      AnsiUtils.stripControlChars(`beep${BELL}boop`)\n    );\n    record(\n      'stripAll does both',\n      AnsiUtils.stripAll(`${ESC}[31mred${ESC}[0m${BELL}`)\n    );\n    record(\n      'cleanForProcessing handles buffers',\n      AnsiUtils.cleanForProcessing(Buffer.from(coloured)).toString()\n    );\n\n    // The same helpers can be applied to every captured chunk through the global\n    // configuration.\n    const original = getAnsiConfig();\n    record('default config', original);\n    configureAnsi({ preserveAnsi: false });\n    record('processOutput with preserveAnsi disabled', processOutput(coloured));\n    configureAnsi(original);\n    record('config restored', getAnsiConfig());\n  }\n);",
+            "rustApi": ["AnsiUtils", "AnsiConfig"],
+            "rustSource": "async fn ansi_utils() -> ExampleResult {\n    Ok(vec![observation(\n        \"stripped output\",\n        AnsiUtils::strip_all(\"\\u{1b}[31mred\\u{1b}[0m\"),\n    )])\n}",
+            "rustOutput": "# ansi-utils — Rust\nstripped output: \"red\"",
+            "identicalOutput": true,
+            "output": {
+              "node": "# ansi-utils — ANSI and control character helpers\nstripAnsi removes the colours: \"red and green\"\nstripControlChars keeps text readable: \"beepboop\"\nstripAll does both: \"[31mred[0m\"\ncleanForProcessing handles buffers: \"[31mred[0m and [32mgreen[0m\"\ndefault config: {\"preserveAnsi\":true,\"preserveControlChars\":true}\nprocessOutput with preserveAnsi disabled: \"red and green\"\nconfig restored: {\"preserveAnsi\":true,\"preserveControlChars\":true}",
+              "bun": "# ansi-utils — ANSI and control character helpers\nstripAnsi removes the colours: \"red and green\"\nstripControlChars keeps text readable: \"beepboop\"\nstripAll does both: \"[31mred[0m\"\ncleanForProcessing handles buffers: \"[31mred[0m and [32mgreen[0m\"\ndefault config: {\"preserveAnsi\":true,\"preserveControlChars\":true}\nprocessOutput with preserveAnsi disabled: \"red and green\"\nconfig restored: {\"preserveAnsi\":true,\"preserveControlChars\":true}"
+            }
+          }
+        ]
+      }
+    </script>
+    <script>
+      const data = JSON.parse(document.getElementById('data').textContent);
+      const others = data.libraries.filter(
+        (library) => library.id !== 'command-stream'
+      );
+      const byId = new Map(
+        data.features.map((feature) => [feature.id, feature])
+      );
+
+      function element(tag, text, className) {
+        const result = document.createElement(tag);
+        if (text !== undefined) result.textContent = String(text);
+        if (className) result.className = className;
+        return result;
+      }
+
+      function featureLink(feature) {
+        const link = element('a', feature.title);
+        link.href = '#' + encodeURIComponent(feature.id);
+        return link;
+      }
+
+      function externalLink(library) {
+        const link = element('a', library.name);
+        const url = new URL(library.url);
+        if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+          throw new Error('Unsupported documentation URL protocol');
+        }
+        link.href = url.href;
+        return link;
+      }
+
+      function codeBlock(text) {
+        const pre = element('pre');
+        pre.append(element('code', text));
+        return pre;
+      }
+
+      function badges(names) {
+        const paragraph = element('p');
+        for (const name of names) {
+          const badge = element('span', undefined, 'badge');
+          badge.append(element('code', name));
+          paragraph.append(badge, ' ');
+        }
+        return paragraph;
+      }
+
+      function comparisonTable(headers, rows) {
+        const table = element('table');
+        const head = element('thead');
+        const headRow = element('tr');
+        for (const header of headers) headRow.append(element('th', header));
+        head.append(headRow);
+
+        const body = element('tbody');
+        for (const values of rows) {
+          const row = element('tr');
+          for (const value of values) {
+            const cell = element('td');
+            if (typeof value === 'string') cell.textContent = value;
+            else cell.append(value);
+            row.append(cell);
+          }
+          body.append(row);
+        }
+        table.append(head, body);
+        return table;
+      }
+
+      function renderNav(query) {
+        const needle = query.trim().toLowerCase();
+        const fragment = document.createDocumentFragment();
+        for (const category of data.categories) {
+          const matches = data.features.filter(
+            (feature) =>
+              feature.category === category &&
+              (needle === '' ||
+                (
+                  feature.title +
+                  ' ' +
+                  feature.summary +
+                  ' ' +
+                  feature.api.join(' ')
+                )
+                  .toLowerCase()
+                  .includes(needle))
+          );
+          if (matches.length === 0) continue;
+          fragment.append(element('h2', category));
+          for (const feature of matches) fragment.append(featureLink(feature));
+        }
+        document.getElementById('nav-links').replaceChildren(fragment);
+        markActive();
+      }
+
+      function markActive() {
+        const current = location.hash.slice(1);
+        for (const link of document.querySelectorAll('nav a')) {
+          link.classList.toggle(
+            'active',
+            link.getAttribute('href') === '#' + current
+          );
+        }
+      }
+
+      function overview() {
+        const fragment = document.createDocumentFragment();
+        fragment.append(
+          element('h2', 'Language and runtime parity'),
+          element(
+            'p',
+            'Every feature below has an executable JavaScript and Rust example. JavaScript output is also compared across Node and Bun.'
+          ),
+          comparisonTable(
+            [
+              'Feature',
+              ...data.runtimes.map(
+                (runtime) => 'JavaScript (' + runtime.label + ')'
+              ),
+              'Rust',
+            ],
+            data.features.map((feature) => [
+              featureLink(feature),
+              ...data.runtimes.map(() => '✓'),
+              '✓',
+            ])
+          ),
+          element('h2', 'Library comparison'),
+          comparisonTable(
+            [
+              'Feature',
+              'command-stream',
+              ...others.map((library) => library.name),
+            ],
+            data.features.map((feature) => [
+              featureLink(feature),
+              '✓',
+              ...others.map((library) => {
+                const alternative = feature.alternatives[library.id];
+                return typeof alternative === 'string' ? '✓' : '—';
+              }),
+            ])
+          )
+        );
+        return fragment;
+      }
+
+      function featureView(feature) {
+        const fragment = document.createDocumentFragment();
+        fragment.append(
+          element('h2', feature.title),
+          element('p', feature.summary)
+        );
+        const category = element('p');
+        category.append(element('span', feature.category, 'badge'));
+        fragment.append(
+          category,
+          element('h3', 'JavaScript'),
+          badges(feature.api),
+          element('h4', 'Example'),
+          codeBlock(feature.source),
+          element('h4', 'Output')
+        );
+
+        if (feature.identicalOutput) {
+          fragment.append(
+            element(
+              'p',
+              'Identical in ' +
+                data.runtimes.map((runtime) => runtime.label).join(' and ') +
+                ':'
+            ),
+            codeBlock(feature.output[data.runtimes[0].id])
+          );
+        } else {
+          for (const runtime of data.runtimes) {
+            fragment.append(
+              element('h4', runtime.label),
+              codeBlock(feature.output[runtime.id])
+            );
+          }
+        }
+
+        fragment.append(
+          element('h3', 'Rust'),
+          badges(feature.rustApi),
+          element('h4', 'Example'),
+          codeBlock(feature.rustSource),
+          element('h4', 'Output'),
+          codeBlock(feature.rustOutput),
+          element('h3', 'The same thing in other libraries')
+        );
+
+        for (const library of others) {
+          const heading = element('h4');
+          heading.append(externalLink(library));
+          fragment.append(heading);
+          const alternative = feature.alternatives[library.id];
+          fragment.append(
+            typeof alternative === 'string'
+              ? codeBlock(alternative)
+              : element(
+                  'p',
+                  'Not supported — ' + alternative.unsupported + '.',
+                  'unsupported'
+                )
+          );
+        }
+        return fragment;
+      }
+
+      function render() {
+        let id = '';
+        try {
+          id = decodeURIComponent(location.hash.slice(1));
+        } catch {
+          /* Invalid hash: show overview. */
+        }
+        const feature = byId.get(id);
+        document
+          .getElementById('content')
+          .replaceChildren(feature ? featureView(feature) : overview());
+        markActive();
+        window.scrollTo(0, 0);
+      }
+
+      document
+        .getElementById('filter')
+        .addEventListener('input', (event) => renderNav(event.target.value));
+      window.addEventListener('hashchange', render);
+      renderNav('');
+      render();
+    </script>
+  </body>
+</html>
