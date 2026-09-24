@@ -76,7 +76,7 @@ test.skipIf(isWindows)(
     const elapsed = Date.now() - start;
 
     expect(result.code).toBe(0);
-    expect(result.stdout).toContain('done');
+    expect(result.stdout?.toString()).toContain('done');
     expect(elapsed).toBeLessThan(10000);
   },
   20000

@@ -98,7 +98,7 @@ describe('issue #18 - process id access', () => {
     const runner = $(quiet)`echo hello`;
     const result = await runner;
 
-    expect(result.stdout).toBe('hello\n');
+    expect(result.stdout?.toString()).toBe('hello\n');
     expect(runner.pid).toBeUndefined();
   });
 

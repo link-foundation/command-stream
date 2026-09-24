@@ -1,6 +1,6 @@
 // ProcessRunner execution methods - start, sync, async, and related methods
-
 import cp from 'child_process';
+import { toStreamResult } from './$.result-streams.mjs';
 import { trace } from './$.trace.mjs';
 import {
   buildCommandArgv,
@@ -1045,11 +1045,11 @@ export function attachExecutionMethods(ProcessRunner, deps) {
 
     if (mode === 'sync') {
       trace('ProcessRunner', () => `BRANCH: mode => sync`);
-      return this._startSync();
+      return toStreamResult(this._startSync());
     }
 
     trace('ProcessRunner', () => `BRANCH: mode => async`);
-    return this._startAsync();
+    return this._startAsync().then(toStreamResult);
   };
 
   ProcessRunner.prototype.sync = function () {
@@ -1465,7 +1465,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
     if (!this.promise) {
       this.promise = this._startAsync();
     }
-    return this.promise.then(onFulfilled, onRejected);
+    return this.promise.then(toStreamResult).then(onFulfilled, onRejected);
   };
 
   ProcessRunner.prototype.catch = function (onRejected) {
@@ -1473,7 +1473,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
     if (!this.promise) {
       this.promise = this._startAsync();
     }
-    return this.promise.catch(onRejected);
+    return this.promise.then(toStreamResult).catch(onRejected);
   };
 
   ProcessRunner.prototype.finally = function (onFinally) {
@@ -1481,7 +1481,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
     if (!this.promise) {
       this.promise = this._startAsync();
     }
-    return this.promise.finally(() => {
+    return this.promise.then(toStreamResult).finally(() => {
       if (!this.finished) {
         this.finish(
           createResult({

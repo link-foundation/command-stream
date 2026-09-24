@@ -53,7 +53,7 @@ describe('ProcessRunner shell file/args mode', () => {
     const result = await runner;
 
     expect(result.code).toBe(0);
-    expect(result.stdout).toBe(
+    expect(result.stdout?.toString()).toBe(
       'ARG[--install-extension]\nARG[publisher.extension]\n'
     );
   });
@@ -67,7 +67,7 @@ describe('ProcessRunner shell file/args mode', () => {
     const result = runner.sync();
 
     expect(result.code).toBe(0);
-    expect(result.stdout).toBe(
+    expect(result.stdout?.toString()).toBe(
       'ARG[--install-extension]\nARG[publisher.extension]\n'
     );
   });

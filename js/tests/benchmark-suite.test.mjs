@@ -101,7 +101,7 @@ describe('competitor adapters', () => {
       ]);
       expect(`${adapter.name}: ${result.exitCode}`).toBe(`${adapter.name}: 0`);
       expect(JSON.parse(result.stdout)).toEqual(['hello world', '$literal']);
-      expect(result.stderr).toBe('');
+      expect(result.stderr?.toString()).toBe('');
     }
   });
 });

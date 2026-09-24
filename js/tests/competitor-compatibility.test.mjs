@@ -422,7 +422,9 @@ describe('ported public process behavior', () => {
       const result = await runFixture('cwd', [], { cwd: directory });
 
       expect(result.code).toBe(0);
-      expect(realpathSync(result.stdout)).toBe(realpathSync(directory));
+      expect(realpathSync(result.stdout.toString())).toBe(
+        realpathSync(directory)
+      );
     }
   );
 
@@ -471,8 +473,8 @@ describe('ported public process behavior', () => {
         ]);
 
         expect(result.code).toBe(0);
-        expect(result.stdout).toBe(expected.stdout);
-        expect(result.stderr).toBe(expected.stderr);
+        expect(result.stdout?.toString()).toBe(expected.stdout);
+        expect(result.stderr?.toString()).toBe(expected.stderr);
       }
     }
   );
@@ -484,7 +486,7 @@ describe('ported public process behavior', () => {
       const output = 'first\n\nlast\n';
       const result = await runFixture('stdio', [output, '']);
 
-      expect(result.stdout).toBe(output);
+      expect(result.stdout?.toString()).toBe(output);
     }
   );
 
@@ -495,7 +497,7 @@ describe('ported public process behavior', () => {
       const output = 'こんにちは — héllø — ☃\n';
       const result = await runFixture('stdio', [output, '']);
 
-      expect(result.stdout).toBe(output);
+      expect(result.stdout?.toString()).toBe(output);
     }
   );
 
@@ -553,8 +555,8 @@ describe('ported public process behavior', () => {
     const result = await runFixture('stdin', [], { stdin: input });
 
     expect(result.code).toBe(0);
-    expect(result.stdout).toBe(input);
-    expect(result.stdin).toBe(input);
+    expect(result.stdout?.toString()).toBe(input);
+    expect(result.stdin?.toString()).toBe(input);
   });
 
   port(
@@ -595,8 +597,8 @@ describe('ported public process behavior', () => {
         runFixture('delayed', ['beta-', 'done', '20']),
       ]);
 
-      expect(alpha.stdout).toBe('alpha-done');
-      expect(beta.stdout).toBe('beta-done');
+      expect(alpha.stdout?.toString()).toBe('alpha-done');
+      expect(beta.stdout?.toString()).toBe('beta-done');
     }
   );
 
@@ -614,7 +616,7 @@ describe('ported public process behavior', () => {
       expect(runner.finished).toBe(false);
 
       const result = await completion;
-      expect(result.stdout).toBe('firstsecond');
+      expect(result.stdout?.toString()).toBe('firstsecond');
     }
   );
 
@@ -630,8 +632,8 @@ describe('ported public process behavior', () => {
 
       const result = await runner;
       expect(eventOutput).toEqual({
-        stdout: result.stdout,
-        stderr: result.stderr,
+        stdout: result.stdout.toString(),
+        stderr: result.stderr.toString(),
       });
     }
   );
@@ -674,7 +676,7 @@ describe('ported public process behavior', () => {
       const result = await source.pipe(destination);
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toBe('piped input');
+      expect(result.stdout?.toString()).toBe('piped input');
     }
   );
 

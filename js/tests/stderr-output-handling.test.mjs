@@ -30,8 +30,8 @@ describe('Stderr output handling in $.mjs', () => {
         );
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('stdout message');
-      expect(result.stderr).toContain('stderr message');
+      expect(result.stdout?.toString()).toContain('stdout message');
+      expect(result.stderr?.toString()).toContain('stderr message');
     }
   );
 
@@ -55,9 +55,9 @@ describe('Stderr output handling in $.mjs', () => {
       });
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toBeDefined();
+      expect(result.stdout?.toString()).toBeDefined();
       // Version info should be in stdout
-      expect(result.stdout).toContain('gh version');
+      expect(result.stdout?.toString()).toContain('gh version');
     }
   );
 
@@ -72,9 +72,9 @@ describe('Stderr output handling in $.mjs', () => {
         });
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('stdout');
-      expect(result.stdout).toContain('stderr');
-      expect(result.stderr).toBe(''); // stderr should be empty since redirected
+      expect(result.stdout?.toString()).toContain('stdout');
+      expect(result.stdout?.toString()).toContain('stderr');
+      expect(result.stderr?.toString()).toBe(''); // stderr should be empty since redirected
     }
   );
 
@@ -104,8 +104,8 @@ done
         const duration = Date.now() - startTime;
 
         expect(result.code).toBe(0);
-        expect(result.stdout).toContain('stdout: iteration 3');
-        expect(result.stderr).toContain('stderr: iteration 3');
+        expect(result.stdout?.toString()).toContain('stdout: iteration 3');
+        expect(result.stderr?.toString()).toContain('stderr: iteration 3');
         expect(duration).toBeLessThan(2000); // Should complete quickly, not hang
       } finally {
         await fs.unlink(scriptPath).catch(() => {});
@@ -168,7 +168,7 @@ done
           );
 
         expect(result1.code).toBe(0);
-        expect(result1.stdout).toBeDefined();
+        expect(result1.stdout?.toString()).toBeDefined();
 
         // The URL should be in stdout
         const url1 = result1.stdout.trim();
@@ -192,11 +192,11 @@ done
           );
 
         expect(result2.code).toBe(0);
-        expect(result2.stdout).toBeDefined();
+        expect(result2.stdout?.toString()).toBeDefined();
 
         // Should contain both progress messages and URL
-        expect(result2.stdout).toContain('Creating gist');
-        expect(result2.stdout).toContain('gist.github.com');
+        expect(result2.stdout?.toString()).toContain('Creating gist');
+        expect(result2.stdout?.toString()).toContain('gist.github.com');
 
         // Extract and clean up second gist
         const lines = result2.stdout.trim().split('\n');

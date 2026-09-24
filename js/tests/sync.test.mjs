@@ -27,8 +27,8 @@ describe('Synchronous Execution (.sync())', () => {
 
       expect(result.stdout.trim()).toBe('hello sync');
       expect(result.code).toBe(0);
-      expect(typeof result.stdout).toBe('string');
-      expect(typeof result.stderr).toBe('string');
+      expect(typeof result.stdout).toBe('object');
+      expect(typeof result.stderr).toBe('object');
     });
 
     test('should handle stderr in sync mode', () => {
@@ -49,7 +49,7 @@ describe('Synchronous Execution (.sync())', () => {
       const result = $`nonexistent-command-99999`.sync();
 
       expect(result.code).not.toBe(0);
-      expect(result.stderr).toContain('not found');
+      expect(result.stderr?.toString()).toContain('not found');
     });
   });
 
@@ -213,8 +213,8 @@ describe('Synchronous Execution (.sync())', () => {
         expect(true).toBe(false); // Should not reach here
       } catch (error) {
         expect(error.code).toBe(5);
-        expect(error.stdout).toContain('output');
-        expect(error.stderr).toContain('error');
+        expect(error.stdout?.toString()).toContain('output');
+        expect(error.stderr?.toString()).toContain('error');
         expect(error.result).toBeDefined();
         expect(error.message).toContain('exit code 5');
       }
@@ -245,9 +245,9 @@ describe('Synchronous Execution (.sync())', () => {
     test('should handle commands with quotes and special characters', () => {
       const result = $`echo "It's a 'test' with \\"quotes\\""`.sync();
 
-      expect(result.stdout).toContain("It's");
-      expect(result.stdout).toContain('test');
-      expect(result.stdout).toContain('quotes');
+      expect(result.stdout?.toString()).toContain("It's");
+      expect(result.stdout?.toString()).toContain('test');
+      expect(result.stdout?.toString()).toContain('quotes');
     });
   });
 
@@ -261,8 +261,12 @@ describe('Synchronous Execution (.sync())', () => {
       // Async version
       const asyncResult = await $`sh -c '${command}'`;
 
-      expect(syncResult.stdout).toBe(asyncResult.stdout);
-      expect(syncResult.stderr).toBe(asyncResult.stderr);
+      expect(syncResult.stdout?.toString()).toBe(
+        asyncResult.stdout?.toString()
+      );
+      expect(syncResult.stderr?.toString()).toBe(
+        asyncResult.stderr?.toString()
+      );
       expect(syncResult.code).toBe(asyncResult.code);
     });
 

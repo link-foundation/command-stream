@@ -170,8 +170,8 @@ describe('Yes Command Cleanup Tests', () => {
     // Run in subprocess
     const result = await $`node --input-type=module -e ${script}`;
 
-    expect(result.stdout).toContain('COUNT:3');
-    expect(result.stdout).toContain('FINISHED:true');
+    expect(result.stdout?.toString()).toContain('COUNT:3');
+    expect(result.stdout?.toString()).toContain('FINISHED:true');
     expect(result.code).toBe(0);
   });
 

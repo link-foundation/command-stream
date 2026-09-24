@@ -198,7 +198,7 @@ describe('command-stream Feature Validation', () => {
       expect(eventCount).toBeGreaterThan(0);
       expect(eventData.trim()).toBe('mixed pattern test');
       expect(result.stdout.trim()).toBe('mixed pattern test');
-      expect(eventData).toBe(result.stdout);
+      expect(eventData).toBe(result.stdout.toString());
     });
   });
 

@@ -54,7 +54,7 @@ describe('virtual commands and the stdin option', () => {
         stdin: 'inherit',
       })`stdin-probe`;
       expect(result.code).toBe(0);
-      expect(result.stdout).toBe('""');
+      expect(result.stdout?.toString()).toBe('""');
     } finally {
       unregister('stdin-probe');
     }
@@ -63,19 +63,19 @@ describe('virtual commands and the stdin option', () => {
   test('a stdio mode keyword leaves a built-in command with no input', async () => {
     const result = await $({ mirror: false, stdin: 'inherit' })`cat`;
     expect(result.code).toBe(0);
-    expect(result.stdout).toBe('');
+    expect(result.stdout?.toString()).toBe('');
   });
 
   test('piped input reaches a virtual command', async () => {
     const result = await $({ mirror: false })`echo hello | cat`;
     expect(result.code).toBe(0);
-    expect(result.stdout).toBe('hello\n');
+    expect(result.stdout?.toString()).toBe('hello\n');
   });
 
   test('explicit stdin data reaches a virtual command', async () => {
     const result = await $({ mirror: false, stdin: 'from option\n' })`cat`;
     expect(result.code).toBe(0);
-    expect(result.stdout).toBe('from option\n');
+    expect(result.stdout?.toString()).toBe('from option\n');
   });
 
   test('piped input wins over the pipeline stdin option', async () => {
@@ -84,7 +84,7 @@ describe('virtual commands and the stdin option', () => {
       stdin: 'from option\n',
     })`echo piped | cat`;
     expect(result.code).toBe(0);
-    expect(result.stdout).toBe('piped\n');
+    expect(result.stdout?.toString()).toBe('piped\n');
   });
 
   test('tee receives piped input, not the stdio mode keyword', async () => {
@@ -93,7 +93,7 @@ describe('virtual commands and the stdin option', () => {
       const file = join(dir, 'out.txt');
       const result = await $({ mirror: false })`echo streamed | tee ${file}`;
       expect(result.code).toBe(0);
-      expect(result.stdout).toBe('streamed\n');
+      expect(result.stdout?.toString()).toBe('streamed\n');
       expect(readFileSync(file, 'utf8')).toBe('streamed\n');
     } finally {
       rmSync(dir, { recursive: true, force: true });

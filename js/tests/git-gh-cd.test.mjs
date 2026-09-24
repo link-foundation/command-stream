@@ -73,7 +73,7 @@ describe.skipIf(isWindows)(
 
         const statusResult = await $`cd ${tempDir} && git status`;
         expect(statusResult.code).toBe(0);
-        expect(statusResult.stdout).toContain('On branch');
+        expect(statusResult.stdout?.toString()).toContain('On branch');
         expect(process.cwd()).toBe(originalCwd);
       });
 
@@ -105,11 +105,11 @@ describe.skipIf(isWindows)(
         const commitResult =
           await $`cd ${tempDir} && git commit -m "Initial commit"`;
         expect(commitResult.code).toBe(0);
-        expect(commitResult.stdout).toContain('1 file changed');
+        expect(commitResult.stdout?.toString()).toContain('1 file changed');
 
         const logResult = await $`cd ${tempDir} && git log --oneline`;
         expect(logResult.code).toBe(0);
-        expect(logResult.stdout).toContain('Initial commit');
+        expect(logResult.stdout?.toString()).toContain('Initial commit');
         expect(process.cwd()).toBe(originalCwd);
       });
 
@@ -152,10 +152,10 @@ describe.skipIf(isWindows)(
           expect(repo2Content.stdout.trim()).toBe('repo2');
 
           const repo1Status = await $`cd ${tempDir} && git status --porcelain`;
-          expect(repo1Status.stdout).toContain('file.txt');
+          expect(repo1Status.stdout?.toString()).toContain('file.txt');
 
           const repo2Status = await $`cd ${tempDir2} && git status --porcelain`;
-          expect(repo2Status.stdout).toContain('file.txt');
+          expect(repo2Status.stdout?.toString()).toContain('file.txt');
         } finally {
           rmSync(tempDir2, { recursive: true, force: true });
           expect(process.cwd()).toBe(originalCwd);
@@ -173,10 +173,10 @@ describe.skipIf(isWindows)(
 
         const diffResult = await $`cd ${tempDir} && git diff`;
         expect(diffResult.code).toBe(0);
-        expect(diffResult.stdout).toContain('+line2');
+        expect(diffResult.stdout?.toString()).toContain('+line2');
 
         const statusResult = await $`cd ${tempDir} && git status --porcelain`;
-        expect(statusResult.stdout).toContain(' M file.txt');
+        expect(statusResult.stdout?.toString()).toContain(' M file.txt');
 
         expect(process.cwd()).toBe(originalCwd);
       });
@@ -272,7 +272,7 @@ describe.skipIf(isWindows)(
           // Test gh command patterns that would work in a repo context
           const statusResult = await $`cd ${tempDir} && git status --porcelain`;
           expect(statusResult.code).toBe(0);
-          expect(statusResult.stdout).toBe('');
+          expect(statusResult.stdout?.toString()).toBe('');
 
           // Simulate checking for existing PRs (would fail without actual remote)
           const prListCmd =
@@ -325,7 +325,9 @@ describe.skipIf(isWindows)(
 
           // Step 8: Verify commit
           const logResult = await $`cd ${tempDir} && git log --oneline -1`;
-          expect(logResult.stdout).toContain('Add feature implementation');
+          expect(logResult.stdout?.toString()).toContain(
+            'Add feature implementation'
+          );
           expect(process.cwd()).toBe(originalCwd);
         } finally {
           rmSync(tempDir, { recursive: true, force: true });
@@ -385,18 +387,20 @@ describe.skipIf(isWindows)(
           // Complex workflow with &&, ||, and ;
           const result =
             await $`cd ${tempDir} && git init && git config user.email "test@test.com" && git config user.name "Test" ; echo "setup done"`;
-          expect(result.stdout).toContain('setup done');
+          expect(result.stdout?.toString()).toContain('setup done');
 
           // Use || for error handling - git remote add returns 0 even for non-existent URLs
           const errorHandling =
             await $`cd ${tempDir} && git remote get-url nonexistent 2>/dev/null || echo "remote failed as expected"`;
-          expect(errorHandling.stdout).toContain('remote failed as expected');
+          expect(errorHandling.stdout?.toString()).toContain(
+            'remote failed as expected'
+          );
 
           // Complex chain with file operations
           await $`cd ${tempDir} && echo "test" > file1.txt && git add . && git commit -m "test" && echo "committed"`;
 
           const logCheck = await $`cd ${tempDir} && git log --oneline`;
-          expect(logCheck.stdout).toContain('test');
+          expect(logCheck.stdout?.toString()).toContain('test');
 
           expect(process.cwd()).toBe(originalCwd);
         } finally {
@@ -428,7 +432,7 @@ describe.skipIf(isWindows)(
 
           const logResult =
             await $`cd ${tempDirWithSpace} && git log --oneline`;
-          expect(logResult.stdout).toContain('test');
+          expect(logResult.stdout?.toString()).toContain('test');
         } finally {
           rmSync(baseTempDir, { recursive: true, force: true });
         }

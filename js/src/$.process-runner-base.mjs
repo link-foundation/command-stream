@@ -36,6 +36,38 @@ function waitForChildStream(self, streamName) {
   });
 }
 
+/** Capture writes made through a public live stdin stream once per child. */
+function trackStdinWrites(runner, stream) {
+  if (!stream || stream._commandStreamTracksInput) {
+    return stream;
+  }
+  Object.defineProperty(stream, '_commandStreamTracksInput', { value: true });
+  const record = (chunk, args) => {
+    if (
+      chunk !== null &&
+      chunk !== undefined &&
+      runner.options.capture &&
+      runner.inChunks
+    ) {
+      const encoding = typeof args[0] === 'string' ? args[0] : 'utf8';
+      runner.inChunks.push(Buffer.from(chunk, encoding));
+    }
+  };
+  const write = stream.write;
+  stream.write = function (chunk, ...args) {
+    const written = write.call(this, chunk, ...args);
+    record(chunk, args);
+    return written;
+  };
+  const end = stream.end;
+  stream.end = function (chunk, ...args) {
+    const ended = end.call(this, chunk, ...args);
+    record(chunk, args);
+    return ended;
+  };
+  return stream;
+}
+
 /**
  * Check if command is a virtual command
  * @param {object} self - ProcessRunner instance
@@ -135,7 +167,7 @@ function getStdinStream(self) {
   self._autoStartIfNeeded('streams.stdin access');
 
   if (self._child && self._child.stdin) {
-    return self._child.stdin;
+    return trackStdinWrites(self, self._child.stdin);
   }
   if (self.finished) {
     return null;
@@ -149,10 +181,14 @@ function getStdinStream(self) {
   }
   if (!self.started) {
     self._startAsync();
-    return waitForChildStream(self, 'stdin');
+    return waitForChildStream(self, 'stdin').then((stream) =>
+      trackStdinWrites(self, stream)
+    );
   }
   if (self.promise && !self._child) {
-    return waitForChildStream(self, 'stdin');
+    return waitForChildStream(self, 'stdin').then((stream) =>
+      trackStdinWrites(self, stream)
+    );
   }
   return null;
 }
@@ -411,7 +447,7 @@ class ProcessRunner extends StreamEmitter {
           2
         )}`
     );
-    return this._child ? this._child.stdin : null;
+    return this._child ? trackStdinWrites(this, this._child.stdin) : null;
   }
 
   _autoStartIfNeeded(reason) {
@@ -486,7 +522,7 @@ class ProcessRunner extends StreamEmitter {
           return self.result.stdin || '';
         }
         return self.then
-          ? self.then((result) => result.stdin || '')
+          ? self.then((result) => String(result.stdin ?? ''))
           : Promise.resolve('');
       },
       get stdout() {
@@ -495,7 +531,7 @@ class ProcessRunner extends StreamEmitter {
           return self.result.stdout || '';
         }
         return self.then
-          ? self.then((result) => result.stdout || '')
+          ? self.then((result) => String(result.stdout ?? ''))
           : Promise.resolve('');
       },
       get stderr() {
@@ -504,7 +540,7 @@ class ProcessRunner extends StreamEmitter {
           return self.result.stderr || '';
         }
         return self.then
-          ? self.then((result) => result.stderr || '')
+          ? self.then((result) => String(result.stderr ?? ''))
           : Promise.resolve('');
       },
     };

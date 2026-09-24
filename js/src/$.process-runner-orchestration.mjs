@@ -233,7 +233,7 @@ export function attachOrchestrationMethods(ProcessRunner, deps) {
     this._activeNestedRunner = runner;
 
     try {
-      return await runner;
+      return await runner._startAsync();
     } finally {
       runner.off('data', forwardData);
       if (this._activeNestedRunner === runner) {

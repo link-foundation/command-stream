@@ -1130,7 +1130,9 @@ const syncResult = syncCmd.sync();
 
 ### Streaming Interfaces
 
-Advanced streaming interfaces for fine-grained process control:
+Completed results have readable `stdout` and `stderr` streams and a writable
+`stdin` record. See [result streams](docs/RESULT_STREAMS.md) for examples and
+the distinction between completed snapshots and live process streams.
 
 ```javascript
 import { $ } from 'command-stream';
@@ -1187,9 +1189,9 @@ console.log('Started?', cmd.started); // false
 const output = await cmd.streams.stdout; // Auto-starts, immediate access
 console.log('Started?', cmd.started); // true
 
-// 🔙 BACKWARD COMPATIBLE: Traditional await still works
+// Traditional await returns streams on the result
 const traditional = await $`echo "still works"`;
-console.log(traditional.stdout); // "still works\n"
+console.log(traditional.stdout.toString()); // "still works\n"
 ```
 
 **Key Features:**
@@ -2015,9 +2017,9 @@ All built-in commands support:
 ```javascript
 {
   code: number,        // Exit code
-  stdout: string,      // Complete stdout output
-  stderr: string,      // Complete stderr output
-  stdin: string,       // Input sent to process
+  stdout: Readable,    // Captured stdout (undefined when capture is false)
+  stderr: Readable,    // Captured stderr (undefined when capture is false)
+  stdin: Writable,     // Record of input sent to the completed process
   child: ChildProcess, // Original child process object
   async text()         // Bun.$ compatibility method - returns stdout as string
 }
@@ -2037,8 +2039,8 @@ const text1 = await result1.text(); // "hello world\n"
 const result2 = $`echo "sync example"`.sync();
 const text2 = await result2.text(); // "sync example\n"
 
-// .text() is equivalent to accessing .stdout
-expect(await result.text()).toBe(result.stdout);
+// .text() returns the captured stdout as a string
+expect(await result.text()).toBe(result.stdout.toString());
 
 // Works with built-in commands
 const result3 = await $`seq 1 3`;

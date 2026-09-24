@@ -182,8 +182,8 @@ test.skipIf(isWindows)(
   async () => {
     const evil = '"; echo PWNED; "';
     const result = await $({ mirror: false })`echo "${evil}"`;
-    expect(result.stdout).toBe(`${evil}\n`);
-    expect(result.stdout).not.toContain('PWNED\n');
+    expect(result.stdout?.toString()).toBe(`${evil}\n`);
+    expect(result.stdout?.toString()).not.toContain('PWNED\n');
   }
 );
 
@@ -195,7 +195,9 @@ test.skipIf(isWindows)(
     const script = 'for f in one two; do echo "Processing: $f"; done';
     const result = await $({ mirror: false })`bash -c "${script}"`;
     expect(result.code).toBe(0);
-    expect(result.stdout).toBe('Processing: one\nProcessing: two\n');
+    expect(result.stdout?.toString()).toBe(
+      'Processing: one\nProcessing: two\n'
+    );
   }
 );
 
@@ -204,7 +206,7 @@ test.skipIf(isWindows)(
   async () => {
     const script = 'x=5; echo "x is $x"';
     const result = await $({ mirror: false })`bash -c "${script}"`;
-    expect(result.stdout).toBe('x is 5\n');
+    expect(result.stdout?.toString()).toBe('x is 5\n');
   }
 );
 
@@ -282,7 +284,7 @@ for (const [name, script, value] of PARITY_CASES) {
       encoding: 'utf8',
     });
     const result = await $({ mirror: false })(templateFrom(script), value);
-    expect(result.stdout).toBe(reference.stdout);
+    expect(result.stdout?.toString()).toBe(reference.stdout);
     expect(result.code).toBe(reference.status);
   });
 }

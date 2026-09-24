@@ -68,7 +68,7 @@ describe.skipIf(process.platform === 'win32')('language parity guard', () => {
     const result = parityResult([path]);
 
     expect(result.status).toBe(1);
-    expect(result.stdout).toContain(expectedMessage);
+    expect(result.stdout?.toString()).toContain(expectedMessage);
   });
 
   test('paired benchmark changes pass', () => {
@@ -78,20 +78,24 @@ describe.skipIf(process.platform === 'win32')('language parity guard', () => {
     ]);
 
     expect(result.status).toBe(0);
-    expect(result.stdout).toContain('Language parity check passed.');
+    expect(result.stdout?.toString()).toContain(
+      'Language parity check passed.'
+    );
   });
 
   test('a generated Rust benchmark lockfile does not require a JavaScript edit', () => {
     const result = parityResult(['rust/benchmarks/Cargo.lock']);
 
     expect(result.status).toBe(0);
-    expect(result.stdout).toContain('Language parity check passed.');
+    expect(result.stdout?.toString()).toContain(
+      'Language parity check passed.'
+    );
   });
 
   test('a benchmark edit cannot stand in for a source implementation', () => {
     const result = parityResult(['js/src/.keep', 'rust/benchmarks/.keep']);
 
     expect(result.status).toBe(1);
-    expect(result.stdout).toContain('Rust source');
+    expect(result.stdout?.toString()).toContain('Rust source');
   });
 });

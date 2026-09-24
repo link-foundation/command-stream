@@ -53,7 +53,7 @@ test.skipIf(isWindows)(
     const result = await $({ mirror: false })`echo "${COMPLEX_CONTENT}"`;
 
     expect(result.code).toBe(0);
-    expect(result.stdout).toBe(`${COMPLEX_CONTENT}\n`);
+    expect(result.stdout?.toString()).toBe(`${COMPLEX_CONTENT}\n`);
   }
 );
 
@@ -62,7 +62,7 @@ test.skipIf(isWindows)(
   async () => {
     const printed = await $({ mirror: false })`printf '%s' ${COMPLEX_CONTENT}`;
 
-    expect(printed.stdout).toBe(COMPLEX_CONTENT);
+    expect(printed.stdout?.toString()).toBe(COMPLEX_CONTENT);
   }
 );
 
@@ -118,7 +118,7 @@ process.stdout.write(content);
     })`node --input-type=module -e ${script}`;
 
     expect(result.code).toBe(0);
-    expect(result.stdout).toBe(COMPLEX_CONTENT);
+    expect(result.stdout?.toString()).toBe(COMPLEX_CONTENT);
   }
 );
 
@@ -133,7 +133,7 @@ $(touch ${marker})
     const result = await $({ mirror: false })`printf '%s' ${value}`;
 
     expect(result.code).toBe(0);
-    expect(result.stdout).toBe(value);
+    expect(result.stdout?.toString()).toBe(value);
     expect(fs.existsSync(marker)).toBe(false);
   }
 );
@@ -154,6 +154,6 @@ for (const [name, commandStreamScript, shScript] of [
     );
 
     expect(result.code).toBe(reference.status);
-    expect(result.stdout).toBe(reference.stdout);
+    expect(result.stdout?.toString()).toBe(reference.stdout);
   });
 }

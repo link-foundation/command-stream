@@ -7,7 +7,7 @@ describe('$({ options }) syntax', () => {
     // Test with stdin option
     const $withStdin = $({ stdin: 'test input\n' });
     const result1 = await $withStdin`cat`;
-    expect(result1.stdout).toBe('test input\n');
+    expect(result1.stdout?.toString()).toBe('test input\n');
     expect(result1.code).toBe(0);
   });
 
@@ -15,7 +15,7 @@ describe('$({ options }) syntax', () => {
     // Test with capture: false
     const $noCapture = $({ capture: false });
     const result = await $noCapture`echo "test"`;
-    expect(result.stdout).toBeUndefined();
+    expect(result.stdout?.toString()).toBeUndefined();
     expect(result.code).toBe(0);
   });
 
@@ -27,7 +27,7 @@ describe('$({ options }) syntax', () => {
       mirror: false,
     });
     const result = await $custom`cat`;
-    expect(result.stdout).toBe('hello world');
+    expect(result.stdout?.toString()).toBe('hello world');
     expect(result.code).toBe(0);
   });
 
@@ -107,6 +107,6 @@ describe('$({ options }) syntax', () => {
     const $custom = $({ capture: true, mirror: false });
     const result = await $custom`ls /nonexistent-path-${Date.now()}`;
     expect(result.code).toBeGreaterThan(0);
-    expect(result.stderr).toContain('No such file or directory');
+    expect(result.stderr?.toString()).toContain('No such file or directory');
   });
 });
