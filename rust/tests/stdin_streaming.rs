@@ -18,4 +18,5 @@ async fn writes_to_a_running_commands_stdin() {
 
     let result = runner.run().await.unwrap();
     assert_eq!(result.stdout, "first line\nsecond line\n");
+    assert_eq!(result.stdin.to_string(), "first line\nsecond line\n");
 }

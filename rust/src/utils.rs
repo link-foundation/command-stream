@@ -13,6 +13,7 @@
 //! - `quote` - Shell quoting utilities
 //! - `utils` (this module) - Command results and virtual command helpers
 
+use crate::result_streams::{CapturedInput, CapturedOutput};
 use std::collections::HashMap;
 use std::env;
 use std::path::{Path, PathBuf};
@@ -152,46 +153,45 @@ pub(crate) fn shell_command(
 /// Result type for virtual command operations
 #[derive(Debug, Clone)]
 pub struct CommandResult {
-    pub stdout: String,
-    pub stderr: String,
+    pub stdout: CapturedOutput,
+    pub stderr: CapturedOutput,
+    pub stdin: CapturedInput,
     pub code: i32,
 }
 
 impl CommandResult {
+    /// Create a result with readable output snapshots and a writable input record.
+    pub fn new(
+        stdout: impl Into<CapturedOutput>,
+        stderr: impl Into<CapturedOutput>,
+        code: i32,
+    ) -> Self {
+        Self {
+            stdout: stdout.into(),
+            stderr: stderr.into(),
+            stdin: CapturedInput::default(),
+            code,
+        }
+    }
+
     /// Create a success result with stdout output
     pub fn success(stdout: impl Into<String>) -> Self {
-        CommandResult {
-            stdout: stdout.into(),
-            stderr: String::new(),
-            code: 0,
-        }
+        Self::new(stdout.into(), "", 0)
     }
 
     /// Create an empty success result
     pub fn success_empty() -> Self {
-        CommandResult {
-            stdout: String::new(),
-            stderr: String::new(),
-            code: 0,
-        }
+        Self::new("", "", 0)
     }
 
     /// Create an error result with stderr output
     pub fn error(stderr: impl Into<String>) -> Self {
-        CommandResult {
-            stdout: String::new(),
-            stderr: stderr.into(),
-            code: 1,
-        }
+        Self::new("", stderr.into(), 1)
     }
 
     /// Create an error result with custom exit code
     pub fn error_with_code(stderr: impl Into<String>, code: i32) -> Self {
-        CommandResult {
-            stdout: String::new(),
-            stderr: stderr.into(),
-            code,
-        }
+        Self::new("", stderr.into(), code)
     }
 
     /// Check if the command was successful

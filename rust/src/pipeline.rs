@@ -132,11 +132,7 @@ impl Pipeline {
     /// Execute the pipeline and return the result
     pub async fn run(self) -> Result<CommandResult> {
         if self.commands.is_empty() {
-            return Ok(CommandResult {
-                stdout: String::new(),
-                stderr: "No commands in pipeline".to_string(),
-                code: 1,
-            });
+            return Ok(CommandResult::new("", "No commands in pipeline", 1));
         }
 
         trace_lazy("Pipeline", || {
@@ -146,11 +142,7 @@ impl Pipeline {
         let mut current_stdin = self.stdin.clone();
         let mut effective_cwd = self.cwd.clone();
         let mut effective_env = self.env.clone();
-        let mut last_result = CommandResult {
-            stdout: String::new(),
-            stderr: String::new(),
-            code: 0,
-        };
+        let mut last_result = CommandResult::new("", "", 0);
         let mut accumulated_stderr = String::new();
         let mut exit_codes = Vec::with_capacity(self.commands.len());
         let pipefail = crate::get_shell_settings().await.pipefail;
@@ -182,7 +174,7 @@ impl Pipeline {
                 {
                     let VirtualCommandResult { result, cd_context } = result;
                     exit_codes.push(result.code);
-                    current_stdin = Some(result.stdout.clone());
+                    current_stdin = Some(result.stdout.to_string());
                     accumulated_stderr.push_str(&result.stderr);
                     if result.code == 0 {
                         if let Some(context) = cd_context {
@@ -270,18 +262,14 @@ impl Pipeline {
 
             // Set up stdin for next command
             current_stdin = Some(stdout_content.clone());
-            last_result = CommandResult {
-                stdout: stdout_content,
-                stderr: String::new(),
-                code,
-            };
+            last_result = CommandResult::new(stdout_content, "", code);
         }
 
-        Ok(CommandResult {
-            stdout: last_result.stdout,
-            stderr: accumulated_stderr,
-            code: pipeline_exit_code(&exit_codes, pipefail),
-        })
+        Ok(CommandResult::new(
+            last_result.stdout,
+            accumulated_stderr,
+            pipeline_exit_code(&exit_codes, pipefail),
+        ))
     }
 
     /// Try to execute a virtual command
@@ -372,8 +360,8 @@ impl PipelineBuilder {
         let mut exit_codes = vec![first_result.code];
 
         // Then run the rest as a pipeline
-        let mut current_stdin = Some(first_result.stdout.clone());
-        let mut accumulated_stderr = first_result.stderr.clone();
+        let mut current_stdin = Some(first_result.stdout.to_string());
+        let mut accumulated_stderr = first_result.stderr.to_string();
         let mut last_result = first_result;
 
         for cmd_str in &self.additional {
@@ -391,15 +379,15 @@ impl PipelineBuilder {
             accumulated_stderr.push_str(&result.stderr);
             exit_codes.push(result.code);
 
-            current_stdin = Some(result.stdout.clone());
+            current_stdin = Some(result.stdout.to_string());
             last_result = result;
         }
 
-        Ok(CommandResult {
-            stdout: last_result.stdout,
-            stderr: accumulated_stderr,
-            code: pipeline_exit_code(&exit_codes, pipefail),
-        })
+        Ok(CommandResult::new(
+            last_result.stdout,
+            accumulated_stderr,
+            pipeline_exit_code(&exit_codes, pipefail),
+        ))
     }
 }
 
