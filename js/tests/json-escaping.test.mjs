@@ -131,7 +131,7 @@ test.skipIf(isWindows)(
     )[1];
     const result = await $({ mirror: false })`printf '%s' ${json} | cat`;
 
-    expect(result.stdout).toBe(json);
+    expect(result.stdout?.toString()).toBe(json);
   }
 );
 
@@ -209,7 +209,7 @@ for (const [contextName, template] of CONTEXTS) {
           json
         );
 
-        expect(actual.stdout).toBe(expected.stdout);
+        expect(actual.stdout?.toString()).toBe(expected.stdout);
         expect(actual.code).toBe(expected.status);
       }
     );

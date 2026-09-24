@@ -51,6 +51,9 @@ function cleanup() {
 }
 
 function sanitize(value) {
+  if (value && typeof value.toJSON === 'function') {
+    return sanitize(value.toJSON());
+  }
   if (typeof value === 'string') {
     let out = value;
     // Longest needle first, so a temp directory is replaced as a whole instead

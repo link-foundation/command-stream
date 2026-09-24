@@ -201,8 +201,8 @@ describe('cd invocation isolation (issue #197)', () => {
     const result = await runner;
 
     expect(result.code).toBe(143);
-    expect(result).toBe(runner.result);
-    expect(result.stderr).toBe('Process killed with SIGTERM');
+    expect(result.stdout.toString()).toBe(runner.result.stdout);
+    expect(result.stderr?.toString()).toBe('Process killed with SIGTERM');
     expect(() => realpathSync(marker)).toThrow();
   });
 
@@ -255,7 +255,7 @@ describe('cd invocation isolation (issue #197)', () => {
     expect(pwdResult.code).toBe(0);
     expect(pwdResult.stdout.trim()).toBe(nestedDir);
     expect(catResult.code).toBe(0);
-    expect(catResult.stdout).toBe('nested marker');
+    expect(catResult.stdout?.toString()).toBe('nested marker');
     expect(process.cwd()).toBe(hostContext.cwd);
   });
 
@@ -271,8 +271,8 @@ describe('cd invocation isolation (issue #197)', () => {
         mirror: false,
       })`cd ${otherTestDir} && /bin/pwd`;
 
-      expect(childEnv.stdout).toContain(`PWD=${otherTestDir}\n`);
-      expect(childEnv.stdout).toContain(`OLDPWD=${testDir}\n`);
+      expect(childEnv.stdout?.toString()).toContain(`PWD=${otherTestDir}\n`);
+      expect(childEnv.stdout?.toString()).toContain(`OLDPWD=${testDir}\n`);
       expect(realPwd.stdout.trim()).toBe(otherTestDir);
       expect(process.cwd()).toBe(hostContext.cwd);
     }

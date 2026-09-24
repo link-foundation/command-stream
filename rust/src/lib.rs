@@ -68,6 +68,7 @@ pub mod events;
 pub mod macros;
 pub mod pipeline;
 pub mod quote;
+pub mod result_streams;
 pub mod signal;
 pub mod state;
 pub mod stream;
@@ -334,6 +335,7 @@ pub struct ProcessRunner {
     command: String,
     options: RunOptions,
     child: Option<Child>,
+    stdin_bytes: Vec<u8>,
     /// Process id of the spawned child, recorded at spawn time. `run()` takes
     /// the child in order to await it, so reading the id from it only works
     /// between `start()` and `run()`; this copy is what makes `pid()` answer
@@ -410,6 +412,7 @@ impl ProcessRunner {
             command: command.into(),
             options,
             child: None,
+            stdin_bytes: Vec::new(),
             pid: None,
             result: None,
             started: false,
@@ -464,7 +467,11 @@ impl ProcessRunner {
         } else {
             self.command.split_whitespace().next().unwrap_or("")
         };
-        if let Some(result) = self.try_virtual_command(first_word).await {
+        if let Some(mut result) = self.try_virtual_command(first_word).await {
+            if let StdinOption::Content(ref content) = self.options.stdin {
+                result.stdin =
+                    crate::result_streams::CapturedInput::new(content.as_bytes().to_vec());
+            }
             self.result = Some(result);
             self.finished = true;
             return Ok(());
@@ -589,6 +596,7 @@ impl ProcessRunner {
                 ))
             })?;
         stdin.write_all(data.as_ref()).await?;
+        self.stdin_bytes.extend_from_slice(data.as_ref());
         Ok(())
     }
 
@@ -648,11 +656,16 @@ impl ProcessRunner {
         let status = child.wait().await?;
         let code = status.code().unwrap_or(-1);
 
-        let result = CommandResult {
-            stdout: String::from_utf8_lossy(&stdout).into_owned(),
-            stderr: String::from_utf8_lossy(&stderr).into_owned(),
+        let mut result = CommandResult::new(
+            String::from_utf8_lossy(&stdout).into_owned(),
+            String::from_utf8_lossy(&stderr).into_owned(),
             code,
-        };
+        );
+        if let StdinOption::Content(ref content) = self.options.stdin {
+            result.stdin = crate::result_streams::CapturedInput::new(content.as_bytes().to_vec());
+        } else if !self.stdin_bytes.is_empty() {
+            result.stdin = crate::result_streams::CapturedInput::new(self.stdin_bytes.clone());
+        }
 
         self.result = Some(result.clone());
         self.finished = true;

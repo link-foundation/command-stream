@@ -212,8 +212,8 @@ describe('Shell Settings (set -e / set +e equivalent)', () => {
         expect(true).toBe(false);
       } catch (error) {
         expect(error.code).toBe(5);
-        expect(error.stdout).toContain('stdout');
-        expect(error.stderr).toContain('stderr');
+        expect(error.stdout?.toString()).toContain('stdout');
+        expect(error.stderr?.toString()).toContain('stderr');
         expect(error.result).toBeDefined();
         expect(error.result.code).toBe(5);
       }

@@ -196,7 +196,7 @@ for (const [caseName, script, reference] of PARITY_CASES) {
           encoding: 'utf8',
         });
         const result = await $({ mirror: false })(templateFrom(script), value);
-        expect(result.stdout).toBe(expected.stdout);
+        expect(result.stdout?.toString()).toBe(expected.stdout);
         expect(result.code).toBe(expected.status);
       }
     );
@@ -221,18 +221,18 @@ afterAll(() => {
 test.skipIf(isWindows)('cat reads a file whose path has spaces', async () => {
   const result = await $({ mirror: false })`cat ${filePath}`;
   expect(result.code).toBe(0);
-  expect(result.stdout).toBe('hello content\n');
+  expect(result.stdout?.toString()).toBe('hello content\n');
 });
 
 test.skipIf(isWindows)(
   'cat reads the file with author-written quotes too',
   async () => {
-    expect((await $({ mirror: false })`cat "${filePath}"`).stdout).toBe(
-      'hello content\n'
-    );
-    expect((await $({ mirror: false })`cat '${filePath}'`).stdout).toBe(
-      'hello content\n'
-    );
+    expect(
+      (await $({ mirror: false })`cat "${filePath}"`).stdout.toString()
+    ).toBe('hello content\n');
+    expect(
+      (await $({ mirror: false })`cat '${filePath}'`).stdout.toString()
+    ).toBe('hello content\n');
   }
 );
 
@@ -242,14 +242,14 @@ test.skipIf(isWindows)(
     disableVirtualCommands();
     const result = await $({ mirror: false })`cat ${filePath}`;
     expect(result.code).toBe(0);
-    expect(result.stdout).toBe('hello content\n');
+    expect(result.stdout?.toString()).toBe('hello content\n');
   }
 );
 
 test.skipIf(isWindows)('sync execution handles paths with spaces', () => {
   const result = $({ mirror: false })`cat ${filePath}`.sync();
   expect(result.code).toBe(0);
-  expect(result.stdout).toBe('hello content\n');
+  expect(result.stdout?.toString()).toBe('hello content\n');
 });
 
 test.skipIf(isWindows)(
@@ -257,7 +257,7 @@ test.skipIf(isWindows)(
   async () => {
     const result = await $({ mirror: false })`ls ${workDir}`;
     expect(result.code).toBe(0);
-    expect(result.stdout).toContain('report file.txt');
+    expect(result.stdout?.toString()).toContain('report file.txt');
   }
 );
 
@@ -289,7 +289,7 @@ test.skipIf(isWindows)('redirection writes to a path with spaces', async () => {
 test.skipIf(isWindows)('a pipeline keeps the path in one piece', async () => {
   const result = await $({ mirror: false })`cat ${filePath} | grep hello`;
   expect(result.code).toBe(0);
-  expect(result.stdout).toBe('hello content\n');
+  expect(result.stdout?.toString()).toBe('hello content\n');
 });
 
 test.skipIf(isWindows)(
@@ -304,7 +304,7 @@ test.skipIf(isWindows)(
 test.skipIf(isWindows)('test -f finds a path with spaces', async () => {
   const result = await $({ mirror: false })`test -f ${filePath} && echo found`;
   expect(result.code).toBe(0);
-  expect(result.stdout).toBe('found\n');
+  expect(result.stdout?.toString()).toBe('found\n');
 });
 
 // --- injection safety ------------------------------------------------------

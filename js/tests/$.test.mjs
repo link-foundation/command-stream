@@ -265,7 +265,7 @@ describe('ProcessRunner - Classic Await Pattern', () => {
 
     expect(result.code).toBe(0);
     expect(result.stdout.trim()).toBe('hello world');
-    expect(result.stderr).toBe('');
+    expect(result.stderr?.toString()).toBe('');
   });
 
   test('should handle command with non-zero exit', async () => {
@@ -456,7 +456,7 @@ describe('ProcessRunner - Mixed Pattern', () => {
     expect(eventCount).toBeGreaterThan(0);
     expect(eventData.trim()).toBe('mixed test');
     expect(result.stdout.trim()).toBe('mixed test');
-    expect(eventData).toBe(result.stdout);
+    expect(eventData).toBe(result.stdout.toString());
   });
 });
 
@@ -517,7 +517,7 @@ describe('Public APIs', () => {
       const result = await exec('pwd');
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toBeTruthy();
+      expect(result.stdout?.toString()).toBeTruthy();
     });
   });
 
@@ -586,7 +586,7 @@ describe('Error Handling and Edge Cases', () => {
     const result = await $`true`;
 
     expect(result.code).toBe(0);
-    expect(result.stdout).toBe('');
+    expect(result.stdout?.toString()).toBe('');
   });
 
   test('should handle stdin options', async () => {
@@ -616,7 +616,7 @@ describe('ProcessRunner Options', () => {
     );
 
     const result = await process;
-    expect(result.stdout).toBeUndefined();
+    expect(result.stdout?.toString()).toBeUndefined();
   });
 
   // Skip on Windows - uses 'pwd' command

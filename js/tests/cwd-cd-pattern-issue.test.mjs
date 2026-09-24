@@ -123,8 +123,8 @@ describe.skipIf(isWindows)('Issue #197: invocation-scoped cd', () => {
     // Simulate build process that depends on being in correct directory
     const buildResult = await $`cd ${testDir} && ls src && cat src/index.js`;
     expect(buildResult.code).toBe(0);
-    expect(buildResult.stdout).toContain('index.js');
-    expect(buildResult.stdout).toContain('Hello from build');
+    expect(buildResult.stdout?.toString()).toContain('index.js');
+    expect(buildResult.stdout?.toString()).toContain('Hello from build');
   });
 
   test('should work with relative paths after cd', async () => {
@@ -157,7 +157,7 @@ describe.skipIf(isWindows)('Issue #197: invocation-scoped cd', () => {
     // Both methods should produce the same result
     expect(cdMethod.code).toBe(0);
     expect(cwdMethod.code).toBe(0);
-    expect(cdMethod.stdout).toBe(cwdMethod.stdout);
+    expect(cdMethod.stdout?.toString()).toBe(cwdMethod.stdout?.toString());
     expect(cdMethod.stdout.trim()).toBe('test content');
   });
 
@@ -268,7 +268,7 @@ describe.skipIf(isWindows)('cd sh-compatibility within one invocation', () => {
     process.chdir(testDir);
     const result = await $`cd ${join(testDir, 'nope')}`;
     expect(result.code).toBe(1);
-    expect(result.stderr).toContain('cd:');
+    expect(result.stderr?.toString()).toContain('cd:');
     expect(normalizePath(process.cwd())).toBe(testDir);
   });
 

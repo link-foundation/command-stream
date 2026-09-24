@@ -56,7 +56,7 @@ test.skipIf(isWindows)('pre-quoted input matches "$V" in /bin/sh', async () => {
     const result = await $({ mirror: false })`node ${PRINTER} ${value}`;
 
     expect(result.code).toBe(reference.status);
-    expect(result.stdout).toBe(reference.stdout);
+    expect(result.stdout?.toString()).toBe(reference.stdout);
     expect(argsOf(result.stdout)).toEqual([value]);
   }
 });
@@ -110,5 +110,5 @@ test('legacy passthrough still rejects unbalanced quoted input', async () => {
 
   const result = await $({ mirror: false })`node ${PRINTER} ${arg}`;
   expect(argsOf(result.stdout)).toEqual([arg]);
-  expect(result.stdout).not.toContain('\nnot-executed\n');
+  expect(result.stdout?.toString()).not.toContain('\nnot-executed\n');
 });

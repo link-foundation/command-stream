@@ -69,7 +69,7 @@ describe.skipIf(isWindows)('cd Virtual Command - Core Behavior', () => {
       const result = await $`cd ${tempDir} && pwd`;
       expect(result.code).toBe(0);
       expect(normalizePath(result.stdout.trim())).toBe(normalizePath(tempDir));
-      expect(result.stderr).toBe('');
+      expect(result.stderr?.toString()).toBe('');
       verifyCwd(originalCwd, 'After invocation');
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
@@ -151,7 +151,7 @@ describe.skipIf(isWindows)('cd Virtual Command - Core Behavior', () => {
     const originalCwd = process.cwd();
 
     const result = await $`cd ${nonExistent} 2>&1 || echo "failed"`;
-    expect(result.stdout).toContain('failed');
+    expect(result.stdout?.toString()).toContain('failed');
 
     // Verify we're still in the same directory
     const pwd = await $`pwd`;
@@ -241,8 +241,8 @@ describe.skipIf(isWindows)('cd Virtual Command - Command Chains', () => {
       const result =
         await $`cd ${dir1} && cat file1.txt && cd ${dir2} && cat file2.txt`;
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('content1');
-      expect(result.stdout).toContain('content2');
+      expect(result.stdout?.toString()).toContain('content1');
+      expect(result.stdout?.toString()).toContain('content2');
       verifyCwd(originalCwd, 'After invocation');
     } finally {
       rmSync(baseDir, { recursive: true, force: true });

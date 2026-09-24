@@ -84,8 +84,8 @@ describe('GitHub Gist Operations with $.mjs', () => {
 
       // Should complete successfully
       expect(result.code).toBe(0);
-      expect(result.stdout).toBeDefined();
-      expect(result.stdout).toContain('gist.github.com');
+      expect(result.stdout?.toString()).toBeDefined();
+      expect(result.stdout?.toString()).toContain('gist.github.com');
 
       // Extract gist ID for cleanup
       const lines = result.stdout.trim().split('\n');
@@ -113,8 +113,8 @@ describe('GitHub Gist Operations with $.mjs', () => {
     });
 
     expect(result.code).toBe(0);
-    expect(result.stdout).toBeDefined();
-    expect(result.stdout).toContain('test-gist-file.txt');
+    expect(result.stdout?.toString()).toBeDefined();
+    expect(result.stdout?.toString()).toContain('test-gist-file.txt');
   });
 
   test('gh api should work for gist operations', async () => {
@@ -164,7 +164,7 @@ describe('GitHub Gist Operations with $.mjs', () => {
       });
 
       expect(verifyResult.code).toBe(0);
-      expect(verifyResult.stdout).toContain('added.txt');
+      expect(verifyResult.stdout?.toString()).toContain('added.txt');
     } finally {
       await fs.unlink(tempFile2).catch(() => {});
     }
@@ -213,7 +213,7 @@ describe('GitHub Gist Operations with $.mjs', () => {
     });
 
     expect(result.code).toBe(0);
-    expect(result.stdout).toBeDefined();
+    expect(result.stdout?.toString()).toBeDefined();
     // Should be a single line (gist ID)
     const lines = result.stdout.trim().split('\n');
     expect(lines.length).toBe(1);

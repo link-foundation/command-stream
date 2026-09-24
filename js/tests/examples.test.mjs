@@ -63,11 +63,11 @@ describe('Examples Execution Tests', () => {
   test.skip('readme-example.mjs should execute and demonstrate new API signature', async () => {
     const result = await $`node js/examples/readme-example.mjs`;
     expect(result.code).toBe(0);
-    expect(result.stdout).toContain('Hello, World!');
-    expect(result.stdout).toContain('Hello, Mr. Smith!');
-    expect(result.stdout).toContain('"stdinLength": 11');
-    expect(result.stdout).toContain('"mirror": true');
-    expect(result.stdout).toContain('"capture": true');
+    expect(result.stdout?.toString()).toContain('Hello, World!');
+    expect(result.stdout?.toString()).toContain('Hello, Mr. Smith!');
+    expect(result.stdout?.toString()).toContain('"stdinLength": 11');
+    expect(result.stdout?.toString()).toContain('"mirror": true');
+    expect(result.stdout?.toString()).toContain('"capture": true');
   });
 
   // JSON streaming test - key feature
@@ -75,9 +75,11 @@ describe('Examples Execution Tests', () => {
   test.skip('simple-jq-streaming.mjs should complete successfully', async () => {
     const result = await $`node js/examples/simple-jq-streaming.mjs`;
     expect(result.code).toBe(0);
-    expect(result.stdout).toContain('✅ Streaming completed successfully!');
-    expect(result.stdout).toContain('🎉 All tests passed!');
-    expect(result.stdout).toContain('JSON streaming with jq works');
+    expect(result.stdout?.toString()).toContain(
+      '✅ Streaming completed successfully!'
+    );
+    expect(result.stdout?.toString()).toContain('🎉 All tests passed!');
+    expect(result.stdout?.toString()).toContain('JSON streaming with jq works');
   });
 
   // Summary test to report on examples

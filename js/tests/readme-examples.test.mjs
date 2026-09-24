@@ -36,7 +36,7 @@ describe('README Examples and Use Cases', () => {
       const result = await $`echo "hello world"`;
       expect(result.stdout.trim()).toBe('hello world');
       expect(result.code).toBe(0);
-      expect(typeof result.stdout).toBe('string');
+      expect(typeof result.stdout).toBe('object');
     });
   });
 
@@ -182,7 +182,7 @@ describe('README Examples and Use Cases', () => {
         mirror: false,
         capture: false,
       });
-      expect(perfResult.stdout).toBeUndefined();
+      expect(perfResult.stdout?.toString()).toBeUndefined();
     });
   });
 
@@ -339,9 +339,9 @@ describe('README Examples and Use Cases', () => {
 
       // Verify result object structure from API docs
       expect(typeof result.code).toBe('number');
-      expect(typeof result.stdout).toBe('string');
-      expect(typeof result.stderr).toBe('string');
-      expect(typeof result.stdin).toBe('string');
+      expect(typeof result.stdout).toBe('object');
+      expect(typeof result.stderr).toBe('object');
+      expect(typeof result.stdin).toBe('object');
       expect(result.child).toBeDefined();
 
       expect(result.code).toBe(0);

@@ -70,7 +70,7 @@ test('exports a fully initialized ProcessRunner subpath', async () => {
   const result = await runner;
 
   expect(result.code).toBe(0);
-  expect(result.stdout).toBe('lightweight runner');
+  expect(result.stdout?.toString()).toBe('lightweight runner');
 });
 
 test('keeps terminal features out of the ProcessRunner module graph', () => {

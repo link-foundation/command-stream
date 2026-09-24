@@ -21,8 +21,8 @@ test.skipIf(isWindows)(
 
     const result = await catCmd;
     expect(result.code).toBe(0);
-    expect(result.stdout).toContain('Hello from streams.stdin!');
-    expect(result.stdout).toContain('Multiple lines work');
+    expect(result.stdout?.toString()).toContain('Hello from streams.stdin!');
+    expect(result.stdout?.toString()).toContain('Multiple lines work');
   }
 );
 
@@ -122,8 +122,8 @@ test.skipIf(isWindows)(
     expect(typeof result.code).toBe('number');
     expect(result.code).toBe(0); // Should exit cleanly when stdin is closed
     expect(result.stdout.length).toBeGreaterThan(0);
-    expect(result.stdout).toContain('Hello from stdin!');
-    expect(result.stdout).toContain('Multiple lines work');
+    expect(result.stdout?.toString()).toContain('Hello from stdin!');
+    expect(result.stdout?.toString()).toContain('Multiple lines work');
   },
   5000
 );
@@ -167,7 +167,7 @@ test.skipIf(isWindows)(
 
     const result = await sortCmd;
     expect(result.code).toBe(0);
-    expect(result.stdout).toBe('apple\nbanana\nzebra\n');
+    expect(result.stdout?.toString()).toBe('apple\nbanana\nzebra\n');
   }
 );
 
@@ -186,9 +186,9 @@ test.skipIf(isWindows)(
 
     const result = await grepCmd;
     expect(result.code).toBe(0);
-    expect(result.stdout).toContain('important message 1');
-    expect(result.stdout).toContain('another important note');
-    expect(result.stdout).not.toContain('ignore this');
-    expect(result.stdout).not.toContain('skip this');
+    expect(result.stdout?.toString()).toContain('important message 1');
+    expect(result.stdout?.toString()).toContain('another important note');
+    expect(result.stdout?.toString()).not.toContain('ignore this');
+    expect(result.stdout?.toString()).not.toContain('skip this');
   }
 );

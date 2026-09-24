@@ -604,7 +604,7 @@ await $`echo ${userInput}`; // ✅ Safe - auto-escaped
 import { $ } from 'command-stream';
 
 const result = await $`ls -la`;
-console.log(result.stdout);
+console.log(result.stdout.toString());
 console.log(result.code); // exit code
 console.log(result.exitCode); // alias for result.code
 ```
@@ -843,7 +843,7 @@ import { $ } from 'command-stream';
 
 // Use .sync() for blocking execution
 const result = $`echo "hello"`.sync();
-console.log(result.stdout); // "hello\n"
+console.log(result.stdout.toString()); // "hello\n"
 
 // Events still work but are batched after completion
 $`echo "world"`.on('end', (result) => console.log('Done:', result)).sync();
@@ -1118,7 +1118,7 @@ process.on('data', (chunk) => {
   processRealTimeData(chunk);
 });
 const result = await process;
-console.log('Final output:', result.stdout);
+console.log('Final output:', result.stdout.toString());
 
 // Sync mode - events fire after completion (batched)
 const syncCmd = $`another-command`;
@@ -1130,7 +1130,9 @@ const syncResult = syncCmd.sync();
 
 ### Streaming Interfaces
 
-Advanced streaming interfaces for fine-grained process control:
+Completed results have readable `stdout` and `stderr` streams and a writable
+`stdin` record. See [result streams](docs/RESULT_STREAMS.md) for examples and
+the distinction between completed snapshots and live process streams.
 
 ```javascript
 import { $ } from 'command-stream';
@@ -1145,7 +1147,7 @@ stdin.write('skip this too\n');
 stdin.end();
 
 const result = await grepCmd;
-console.log(result.stdout); // "important message\n"
+console.log(result.stdout.toString()); // "important message\n"
 
 // 🔧 BINARY DATA: Access raw buffers (after command finishes)
 const cmd = $`echo "Hello World"`;
@@ -1187,9 +1189,9 @@ console.log('Started?', cmd.started); // false
 const output = await cmd.streams.stdout; // Auto-starts, immediate access
 console.log('Started?', cmd.started); // true
 
-// 🔙 BACKWARD COMPATIBLE: Traditional await still works
+// Traditional await returns streams on the result
 const traditional = await $`echo "still works"`;
-console.log(traditional.stdout); // "still works\n"
+console.log(traditional.stdout.toString()); // "still works\n"
 ```
 
 **Key Features:**
@@ -1252,7 +1254,7 @@ await $`touch project/src/index.js project/tests/test.js`;
 
 // List files with details
 const files = await $`ls -la project/src`;
-console.log(files.stdout);
+console.log(files.stdout.toString());
 
 // Copy and move operations
 await $`cp project/src/index.js project/src/backup.js`;
@@ -1261,7 +1263,7 @@ await $`mv project/src/backup.js project/backup.js`;
 // File content operations
 await $`echo "export default 'Hello World';" > project/src/index.js`;
 const content = await $`cat project/src/index.js`;
-console.log(content.stdout);
+console.log(content.stdout.toString());
 
 // Path operations
 const filename = await $`basename project/src/index.js .js`; // → "index"
@@ -1287,7 +1289,7 @@ import { $ } from 'command-stream';
 
 const before = process.cwd();
 const result = await $`cd /some/directory && pwd`;
-console.log(result.stdout); // /some/directory
+console.log(result.stdout.toString()); // /some/directory
 console.log(process.cwd() === before); // true
 ```
 
@@ -1571,8 +1573,8 @@ import { $ } from 'command-stream';
 // 3. Capture both outputs for programmatic access
 const result = await $`sh -c "echo 'Hello'; echo 'Error!' >&2"`;
 
-console.log('Captured stdout:', result.stdout); // "Hello\n"
-console.log('Captured stderr:', result.stderr); // "Error!\n"
+console.log('Captured stdout:', result.stdout.toString()); // "Hello\n"
+console.log('Captured stderr:', result.stderr.toString()); // "Error!\n"
 console.log('Exit code:', result.code); // 0
 ```
 
@@ -1595,8 +1597,8 @@ is opt-in because the shell-like default keeps stdout and stderr distinct:
 
 ```javascript
 const result = await $({ mirror: false })`gh pr create --fill 2>&1`;
-console.log(result.stdout); // includes anything the command wrote to stderr
-console.log(result.stderr); // empty after the redirection
+console.log(result.stdout.toString()); // includes anything the command wrote to stderr
+console.log(result.stderr.toString()); // empty after the redirection
 ```
 
 **Key Default Options:**
@@ -1919,7 +1921,7 @@ const result = await $({
   customValue: 'hello world',
   cwd: '/tmp',
 })`show-options`;
-console.log(result.stdout); // Output: Custom: hello world, CWD: /tmp
+console.log(result.stdout.toString()); // Output: Custom: hello world, CWD: /tmp
 ```
 
 #### Handler Function Signature
@@ -2015,9 +2017,9 @@ All built-in commands support:
 ```javascript
 {
   code: number,        // Exit code
-  stdout: string,      // Complete stdout output
-  stderr: string,      // Complete stderr output
-  stdin: string,       // Input sent to process
+  stdout: Readable,    // Captured stdout (undefined when capture is false)
+  stderr: Readable,    // Captured stderr (undefined when capture is false)
+  stdin: Writable,     // Record of input sent to the completed process
   child: ChildProcess, // Original child process object
   async text()         // Bun.$ compatibility method - returns stdout as string
 }
@@ -2037,8 +2039,8 @@ const text1 = await result1.text(); // "hello world\n"
 const result2 = $`echo "sync example"`.sync();
 const text2 = await result2.text(); // "sync example\n"
 
-// .text() is equivalent to accessing .stdout
-expect(await result.text()).toBe(result.stdout);
+// .text() returns the captured stdout as a string
+expect(await result.text()).toBe(result.stdout.toString());
 
 // Works with built-in commands
 const result3 = await $`seq 1 3`;

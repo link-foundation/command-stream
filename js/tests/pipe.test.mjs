@@ -42,7 +42,7 @@ describe('Programmatic .pipe() Method', () => {
       const result = await $`echo "Hello World"`.pipe($`add-prefix "Piped:"`);
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toBe('Piped: Hello World\n');
+      expect(result.stdout?.toString()).toBe('Piped: Hello World\n');
 
       // Cleanup
       unregister('add-prefix');
@@ -63,7 +63,7 @@ describe('Programmatic .pipe() Method', () => {
       const result = await $`echo "hello"`.pipe($`double`).pipe($`count-chars`);
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toBe('10\n'); // "hellohello" = 10 chars
+      expect(result.stdout?.toString()).toBe('10\n'); // "hellohello" = 10 chars
 
       // Cleanup
       unregister('double');
@@ -81,7 +81,7 @@ describe('Programmatic .pipe() Method', () => {
       const result = await $`echo "test"`.pipe($`prefix "[PIPED]"`);
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toBe('[PIPED] test\n');
+      expect(result.stdout?.toString()).toBe('[PIPED] test\n');
 
       // Cleanup
       unregister('prefix');
@@ -96,10 +96,10 @@ describe('Programmatic .pipe() Method', () => {
 
       expect(result.code).toBe(1);
       // More flexible error message checking - different systems may format differently
-      expect(result.stderr).toMatch(
+      expect(result.stderr?.toString()).toMatch(
         /No such file or directory|nonexistent-file\.txt|cannot access|Command failed with exit code 1/i
       );
-      expect(result.stdout).toBe(''); // Destination should not execute
+      expect(result.stdout?.toString()).toBe(''); // Destination should not execute
     });
 
     test('should handle errors in destination command', async () => {
@@ -113,7 +113,7 @@ describe('Programmatic .pipe() Method', () => {
 
       expect(result.code).toBe(42);
       // More flexible error checking - the pipe implementation may wrap errors
-      expect(result.stderr).toMatch(
+      expect(result.stderr?.toString()).toMatch(
         /Virtual command failed|Command failed with exit code 42/i
       );
 
@@ -129,7 +129,7 @@ describe('Programmatic .pipe() Method', () => {
       const result = await $`echo "hello"`.pipe($`throw-error`);
 
       expect(result.code).toBe(1);
-      expect(result.stderr).toContain('Something went wrong');
+      expect(result.stderr?.toString()).toContain('Something went wrong');
 
       // Cleanup
       unregister('throw-error');
@@ -159,7 +159,7 @@ describe('Programmatic .pipe() Method', () => {
         .pipe($`add-brackets`);
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toBe('[OLLEH]\n');
+      expect(result.stdout?.toString()).toBe('[OLLEH]\n');
 
       // Cleanup
       unregister('uppercase');
@@ -179,9 +179,9 @@ describe('Programmatic .pipe() Method', () => {
         .pipe($`warn-and-pass cmd2`);
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toBe('data\n');
-      expect(result.stderr).toContain('Warning from cmd1');
-      expect(result.stderr).toContain('Warning from cmd2');
+      expect(result.stdout?.toString()).toBe('data\n');
+      expect(result.stderr?.toString()).toContain('Warning from cmd1');
+      expect(result.stderr?.toString()).toContain('Warning from cmd2');
 
       // Cleanup
       unregister('warn-and-pass');
@@ -201,7 +201,7 @@ describe('Programmatic .pipe() Method', () => {
       const result = await $`cat ${testFile}`.pipe($`count-lines`);
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toBe('3\n');
+      expect(result.stdout?.toString()).toBe('3\n');
 
       // Cleanup
       unregister('count-lines');
@@ -222,7 +222,7 @@ describe('Programmatic .pipe() Method', () => {
       const result = await $`generate-sequence 5`.pipe($`capture-lines`);
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toBe('Got 5 lines\n');
+      expect(result.stdout?.toString()).toBe('Got 5 lines\n');
 
       // Cleanup
       unregister('generate-sequence');
@@ -254,7 +254,7 @@ describe('Programmatic .pipe() Method', () => {
       const elapsed = Date.now() - start;
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toBe('100\n');
+      expect(result.stdout?.toString()).toBe('100\n');
       expect(elapsed).toBeLessThan(2000); // Should complete within 2 seconds
 
       // Cleanup
@@ -281,7 +281,7 @@ describe('Programmatic .pipe() Method', () => {
         .pipe($`format-output`);
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toBe('Formatted: hello processed\n');
+      expect(result.stdout?.toString()).toBe('Formatted: hello processed\n');
 
       // Cleanup
       unregister('format-output');

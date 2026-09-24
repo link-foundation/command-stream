@@ -114,11 +114,7 @@ pub async fn tee(ctx: CommandContext) -> CommandResult {
                 "tee: cancelled while writing files".to_string()
             });
             // SIGINT exit code, with the input still forwarded to stdout.
-            return CommandResult {
-                stdout: input,
-                stderr,
-                code: 130,
-            };
+            return CommandResult::new(input, stderr, 130);
         }
 
         let resolved_path = VirtualUtils::resolve_path(file, Some(&cwd));
@@ -156,11 +152,7 @@ pub async fn tee(ctx: CommandContext) -> CommandResult {
         )
     });
 
-    CommandResult {
-        stdout: input,
-        stderr,
-        code,
-    }
+    CommandResult::new(input, stderr, code)
 }
 
 #[cfg(test)]

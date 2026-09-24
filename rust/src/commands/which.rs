@@ -44,18 +44,10 @@ pub async fn which(ctx: CommandContext) -> CommandResult {
     }
 
     if output.is_empty() {
-        CommandResult {
-            stdout: String::new(),
-            stderr: errors,
-            code: 1,
-        }
+        CommandResult::new("", errors, 1)
     } else if !found_all {
         // Some commands found, some not
-        CommandResult {
-            stdout: output,
-            stderr: errors,
-            code: 1,
-        }
+        CommandResult::new(output, errors, 1)
     } else {
         CommandResult::success(output)
     }

@@ -138,7 +138,7 @@ describe('CommonJS entry point (issue #189)', () => {
 
       // stderr is not required to be empty: Node.js 20 and 22 print an
       // ExperimentalWarning when require() loads an ES module.
-      expect(result.stderr).not.toContain('ERR_REQUIRE_ESM');
+      expect(result.stderr?.toString()).not.toContain('ERR_REQUIRE_ESM');
       expect(result.status).toBe(0);
       expect(JSON.parse(result.stdout.trim())).toEqual({
         stdout: 'launch-probe',

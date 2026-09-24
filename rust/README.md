@@ -71,6 +71,27 @@ merged output is captured in `stdout`, while `stderr` is empty.
 
 ## Streaming
 
+Completed `CommandResult` values expose readable `stdout` and `stderr`
+snapshots (`std::io::Read`) and a writable `stdin` record (`std::io::Write`).
+String methods and formatting remain available on the output snapshots. Reading
+advances a byte cursor; call `rewind()` to read again. For a running child,
+configure `StdinOption::Pipe` and call `ProcessRunner::write_stdin`, then
+`close_stdin`. Writes to `result.stdin` after completion update only the record.
+
+```rust,no_run
+use command_stream::{exec, RunOptions};
+use std::io::Read;
+
+# async fn example() -> Result<(), command_stream::Error> {
+let mut result = exec("echo hello", RunOptions { mirror: false, ..RunOptions::default() }).await?;
+let mut output = String::new();
+result.stdout.read_to_string(&mut output)?;
+assert_eq!(output.trim(), "hello");
+assert_eq!(result.stdout.trim(), "hello");
+# Ok(())
+# }
+```
+
 `StreamingRunner` streams output as it arrives and mirrors the JavaScript
 `stream()` async iterator (issue #155):
 

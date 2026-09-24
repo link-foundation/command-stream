@@ -122,7 +122,9 @@ describe('GitHub search escaping (issue #48)', () => {
       const result = await $({
         mirror: false,
       })`${process.execPath} ${argprint} --label "${label}"`;
-      expect(result.stdout).toBe('ARG[--label]\nARG[help wanted]\n');
+      expect(result.stdout?.toString()).toBe(
+        'ARG[--label]\nARG[help wanted]\n'
+      );
     }
   );
 
@@ -133,7 +135,9 @@ describe('GitHub search escaping (issue #48)', () => {
       const result = await $({
         mirror: false,
       })`${process.execPath} ${argprint} --label "${label}"`;
-      expect(result.stdout).toBe("ARG[--label]\nARG[it's complicated]\n");
+      expect(result.stdout?.toString()).toBe(
+        "ARG[--label]\nARG[it's complicated]\n"
+      );
     }
   );
 
@@ -151,8 +155,8 @@ describe('GitHub search escaping (issue #48)', () => {
         { encoding: 'utf8' }
       );
 
-      expect(csResult.stdout).toBe(shOut);
-      expect(csResult.stdout).toBe('ARG[label:help wanted]\n');
+      expect(csResult.stdout?.toString()).toBe(shOut);
+      expect(csResult.stdout?.toString()).toBe('ARG[label:help wanted]\n');
     }
   );
 });

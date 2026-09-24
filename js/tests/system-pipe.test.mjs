@@ -44,8 +44,8 @@ describe.skipIf(isWindows)('System Command Piping (Issue #8)', () => {
         const result = await $`echo '{"message": "hi", "number": 42}' | jq .`;
 
         expect(result.code).toBe(0);
-        expect(result.stdout).toContain('"message": "hi"');
-        expect(result.stdout).toContain('"number": 42');
+        expect(result.stdout?.toString()).toContain('"message": "hi"');
+        expect(result.stdout?.toString()).toContain('"number": 42');
       }
     );
 
@@ -84,9 +84,9 @@ describe.skipIf(isWindows)('System Command Piping (Issue #8)', () => {
       const result = await $`printf "Line1\\nline2\\nLINE3" | grep -i line`;
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('Line1');
-      expect(result.stdout).toContain('line2');
-      expect(result.stdout).toContain('LINE3');
+      expect(result.stdout?.toString()).toContain('Line1');
+      expect(result.stdout?.toString()).toContain('line2');
+      expect(result.stdout?.toString()).toContain('LINE3');
     });
   });
 

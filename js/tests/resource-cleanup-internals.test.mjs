@@ -397,7 +397,7 @@ describe('Resource Cleanup Internal Verification', () => {
     test('should cleanup streams when piping', async () => {
       const result = await $`echo "test" | cat`;
 
-      expect(result.stdout).toContain('test');
+      expect(result.stdout?.toString()).toContain('test');
 
       // Both runners in the pipeline should be cleaned up
       // We can't directly access them, but we can verify no handlers remain
@@ -409,7 +409,7 @@ describe('Resource Cleanup Internal Verification', () => {
   describe('Pipeline Cleanup', () => {
     test('should cleanup all processes in pipeline', async () => {
       const result = await $`echo "hello" | cat | cat`;
-      expect(result.stdout).toContain('hello');
+      expect(result.stdout?.toString()).toContain('hello');
 
       // Verify no lingering handlers
       const state = getInternalState();

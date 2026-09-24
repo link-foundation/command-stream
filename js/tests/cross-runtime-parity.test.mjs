@@ -86,7 +86,7 @@ describe('virtual command stdin', () => {
     }));
     try {
       const result = await $q`parity-stdin`;
-      expect(result.stdout).toBe('""');
+      expect(result.stdout?.toString()).toBe('""');
     } finally {
       unregister('parity-stdin');
     }
@@ -98,7 +98,9 @@ describe('virtual command stdin', () => {
       code: 0,
     }));
     try {
-      expect((await $q`echo abc | parity-upper`).stdout).toBe('ABC\n');
+      expect((await $q`echo abc | parity-upper`).stdout.toString()).toBe(
+        'ABC\n'
+      );
     } finally {
       unregister('parity-upper');
     }
@@ -110,7 +112,9 @@ describe('virtual command stdin', () => {
       code: 0,
     }));
     try {
-      expect((await $q`sh -c 'echo sys' | parity-upper`).stdout).toBe('SYS\n');
+      expect(
+        (await $q`sh -c 'echo sys' | parity-upper`).stdout.toString()
+      ).toBe('SYS\n');
     } finally {
       unregister('parity-upper');
     }
@@ -127,7 +131,7 @@ describe('virtual command stdin', () => {
         capture: true,
         stdin: 'given\n',
       })`parity-upper`;
-      expect(result.stdout).toBe('GIVEN\n');
+      expect(result.stdout?.toString()).toBe('GIVEN\n');
     } finally {
       unregister('parity-upper');
     }
@@ -146,7 +150,7 @@ describe('virtual command stdin', () => {
         cwd: os.tmpdir(),
       })`parity-ctx one two`;
       expect(seen.args).toEqual(['one', 'two']);
-      expect(seen.stdin).toBe('');
+      expect(seen.stdin?.toString()).toBe('');
       expect(seen.cwd).toBe(os.tmpdir());
       expect(typeof seen.isCancelled).toBe('function');
       expect(seen.options).toBeDefined();
@@ -192,7 +196,7 @@ describe('virtual command streaming', () => {
     try {
       const result =
         await $q`parity-handshake | ${process.execPath} ${consumer} ${marker}`;
-      expect(result.stdout).toBe('first\nsecond\n');
+      expect(result.stdout?.toString()).toBe('first\nsecond\n');
       expect(fs.existsSync(marker)).toBe(true);
     } finally {
       unregister('parity-handshake');
@@ -210,7 +214,7 @@ describe('pipeline exit codes', () => {
     try {
       const result = await $q`echo a | parity-fail`;
       expect(result.code).toBe(7);
-      expect(result.stderr).toContain('boom');
+      expect(result.stderr?.toString()).toContain('boom');
     } finally {
       unregister('parity-fail');
     }
@@ -235,7 +239,7 @@ describe('pipeline exit codes', () => {
     try {
       const result = await $q`parity-fail | cat`;
       expect(result.code).toBe(0);
-      expect(result.stderr).toContain('boom');
+      expect(result.stderr?.toString()).toContain('boom');
     } finally {
       unregister('parity-fail');
     }
@@ -247,7 +251,7 @@ describe('output redirection with built-in and virtual commands', () => {
     const file = path.join(tempDir(), 'out.txt');
     const result = await $q`echo hello > ${file}`;
     expect(result.code).toBe(0);
-    expect(result.stdout).toBe('');
+    expect(result.stdout?.toString()).toBe('');
     expect(fs.readFileSync(file, 'utf8')).toBe('hello\n');
   });
 
@@ -262,13 +266,13 @@ describe('output redirection with built-in and virtual commands', () => {
     const file = path.join(tempDir(), 'numbers.txt');
     const result = await $q`seq 1 3 | cat > ${file}`;
     expect(result.code).toBe(0);
-    expect(result.stdout).toBe('');
+    expect(result.stdout?.toString()).toBe('');
     expect(fs.readFileSync(file, 'utf8')).toBe('1\n2\n3\n');
   });
 
   test('a quoted ">" stays a literal argument', async () => {
     const result = await $q`echo "a > b"`;
-    expect(result.stdout).toBe('a > b\n');
+    expect(result.stdout?.toString()).toBe('a > b\n');
   });
 
   test('input redirection feeds a built-in command', async () => {
@@ -276,7 +280,7 @@ describe('output redirection with built-in and virtual commands', () => {
     fs.writeFileSync(file, 'from-file\n');
     const result = await $q`cat < ${file}`;
     expect(result.code).toBe(0);
-    expect(result.stdout).toBe('from-file\n');
+    expect(result.stdout?.toString()).toBe('from-file\n');
   });
 });
 
@@ -292,7 +296,9 @@ describe('built-in commands behave like their POSIX counterparts', () => {
       fs.writeFileSync(path.join(dir, name), '');
     }
     const result = await $q`ls ${dir}`;
-    expect(result.stdout).toBe('alpha.txt\nmiddle.txt\nzebra.txt\n');
+    expect(result.stdout?.toString()).toBe(
+      'alpha.txt\nmiddle.txt\nzebra.txt\n'
+    );
   });
 
   test('ls -a sorts the dot entries in too', async () => {
@@ -302,7 +308,7 @@ describe('built-in commands behave like their POSIX counterparts', () => {
       fs.writeFileSync(path.join(dir, name), '');
     }
     const result = await $q`ls -a ${dir}`;
-    expect(result.stdout).toBe('.hidden\nvisible.txt\n');
+    expect(result.stdout?.toString()).toBe('.hidden\nvisible.txt\n');
   });
 
   test('sleep does not keep the process alive after it finishes', async () => {
@@ -347,7 +353,7 @@ describe('pipefail reports an exit code instead of throwing', () => {
   test('without pipefail the last stage decides', async () => {
     const result = await $q`sh -c 'echo x; exit 3' | cat`;
     expect(result.code).toBe(0);
-    expect(result.stdout).toBe('x\n');
+    expect(result.stdout?.toString()).toBe('x\n');
   });
 
   test('with pipefail the rightmost failing stage decides', async () => {
@@ -355,7 +361,7 @@ describe('pipefail reports an exit code instead of throwing', () => {
     const result = await $q`sh -c 'echo x; exit 3' | cat`;
     expect(result.code).toBe(3);
     // bash keeps the output of a pipeline that pipefail marked as failed.
-    expect(result.stdout).toBe('x\n');
+    expect(result.stdout?.toString()).toBe('x\n');
   });
 
   test('with pipefail a failing built-in stage decides', async () => {
@@ -402,26 +408,26 @@ describe('quoting survives the trip to a command', () => {
     test(`echo passes through ${description}`, async () => {
       enableVirtualCommands();
       const builtin = await $q`echo ${value}`;
-      expect(builtin.stdout).toBe(`${value}\n`);
+      expect(builtin.stdout?.toString()).toBe(`${value}\n`);
     });
   }
 
   test('an interpolated apostrophe does not split the pipeline', async () => {
     enableVirtualCommands();
     const result = await $q`echo ${"it's a name"} | cat`;
-    expect(result.stdout).toBe("it's a name\n");
+    expect(result.stdout?.toString()).toBe("it's a name\n");
   });
 
   test('a pipe inside a quoted argument is not a pipeline separator', async () => {
     enableVirtualCommands();
     const result = await $q`echo "a | b"`;
-    expect(result.stdout).toBe('a | b\n');
+    expect(result.stdout?.toString()).toBe('a | b\n');
   });
 
   test('adjacent quoted and unquoted pieces form one argument', async () => {
     enableVirtualCommands();
     const result = await $q`echo pre"in quotes"post`;
-    expect(result.stdout).toBe('prein quotespost\n');
+    expect(result.stdout?.toString()).toBe('prein quotespost\n');
   });
 
   test('a system command still sees the shell expansion it was given', async () => {
@@ -429,12 +435,12 @@ describe('quoting survives the trip to a command', () => {
     // command line must keep `$HOME` unexpanded for the shell to expand.
     const result = await $q`printf '%s' $HOME`;
     expect(result.stdout.length).toBeGreaterThan(0);
-    expect(result.stdout).not.toBe('$HOME');
+    expect(result.stdout?.toString()).not.toBe('$HOME');
   });
 
   test('a system command keeps a quoted expansion literal', async () => {
     const result = await $q`printf '%s' '$HOME'`;
-    expect(result.stdout).toBe('$HOME');
+    expect(result.stdout?.toString()).toBe('$HOME');
   });
 
   test('the enhanced parser unquotes a path the same way', async () => {

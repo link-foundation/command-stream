@@ -246,7 +246,7 @@ fn pipeline_cases(executable: &Path, bytes: usize) -> Vec<BenchmarkCase> {
                     executable,
                     fixture_arguments("stdin-count", &[]),
                 )
-                .stdin(source.stdout)
+                .stdin(source.stdout.to_string())
                 .collect()
                 .await
                 .map_err(|error| error.to_string())?;

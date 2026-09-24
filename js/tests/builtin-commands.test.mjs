@@ -47,19 +47,19 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
 
       const result = await $`cat ${testFile}`;
       expect(result.code).toBe(0);
-      expect(result.stdout).toBe('Hello World\nLine 2\n');
+      expect(result.stdout?.toString()).toBe('Hello World\nLine 2\n');
     });
 
     test('cat should read from stdin when no files provided', async () => {
       const result = await $`echo "input" | cat`;
       expect(result.code).toBe(0);
-      expect(result.stdout).toBe('input\n');
+      expect(result.stdout?.toString()).toBe('input\n');
     });
 
     test('cat should handle non-existent files', async () => {
       const result = await $`cat nonexistent.txt`;
       expect(result.code).toBe(1);
-      expect(result.stderr).toContain('No such file or directory');
+      expect(result.stderr?.toString()).toContain('No such file or directory');
     });
   });
 
@@ -71,9 +71,9 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
 
       const result = await $`ls ${TEST_DIR}`;
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('file1.txt');
-      expect(result.stdout).toContain('file2.txt');
-      expect(result.stdout).toContain('subdir');
+      expect(result.stdout?.toString()).toContain('file1.txt');
+      expect(result.stdout?.toString()).toContain('file2.txt');
+      expect(result.stdout?.toString()).toContain('subdir');
     });
 
     test('ls should support -a flag for hidden files', async () => {
@@ -82,8 +82,8 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
 
       const result = await $`ls -a ${TEST_DIR}`;
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('.hidden');
-      expect(result.stdout).toContain('visible.txt');
+      expect(result.stdout?.toString()).toContain('.hidden');
+      expect(result.stdout?.toString()).toContain('visible.txt');
     });
 
     test('ls should support -l flag for long format', async () => {
@@ -91,8 +91,8 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
 
       const result = await $`ls -l ${TEST_DIR}`;
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('-rw-r--r--');
-      expect(result.stdout).toContain('test.txt');
+      expect(result.stdout?.toString()).toContain('-rw-r--r--');
+      expect(result.stdout?.toString()).toContain('test.txt');
     });
   });
 
@@ -148,7 +148,7 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
 
       const result = await $`rm ${testDir}`;
       expect(result.code).toBe(1);
-      expect(result.stderr).toContain('Is a directory');
+      expect(result.stderr?.toString()).toContain('Is a directory');
       expect(existsSync(testDir)).toBe(true);
     });
 
@@ -241,19 +241,19 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
     test('seq should generate number sequence', async () => {
       const result = await $`seq 1 3`;
       expect(result.code).toBe(0);
-      expect(result.stdout).toBe('1\n2\n3\n');
+      expect(result.stdout?.toString()).toBe('1\n2\n3\n');
     });
 
     test('seq should handle single argument', async () => {
       const result = await $`seq 3`;
       expect(result.code).toBe(0);
-      expect(result.stdout).toBe('1\n2\n3\n');
+      expect(result.stdout?.toString()).toBe('1\n2\n3\n');
     });
 
     test('seq should handle step argument', async () => {
       const result = await $`seq 1 2 5`;
       expect(result.code).toBe(0);
-      expect(result.stdout).toBe('1\n3\n5\n');
+      expect(result.stdout?.toString()).toBe('1\n3\n5\n');
     });
   });
 
@@ -304,7 +304,7 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
         // Test with a command that should definitely exist on all systems
         const result = await $`which sh`;
         expect(result.code).toBe(0);
-        expect(result.stdout).toMatch(/\/.*sh/); // Should contain path to sh
+        expect(result.stdout?.toString()).toMatch(/\/.*sh/); // Should contain path to sh
       }
     );
 
@@ -313,7 +313,7 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
       const command = typeof Bun !== 'undefined' ? 'bun' : 'node';
       const result = await $`which ${command}`;
       expect(result.code).toBe(0);
-      expect(result.stdout).toMatch(new RegExp(`.*${command}`));
+      expect(result.stdout?.toString()).toMatch(new RegExp(`.*${command}`));
     });
 
     test('which should find homebrew-installed commands (if available)', async () => {
@@ -343,7 +343,7 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
       // If gh is installed, it should return 0, otherwise skip this test
       // Note: We can't guarantee gh is installed on all systems
       if (result.code === 0) {
-        expect(result.stdout).toMatch(/.*gh/);
+        expect(result.stdout?.toString()).toMatch(/.*gh/);
       } else {
         trace(
           'BuiltinTest',
@@ -355,19 +355,21 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
     test('which should return non-zero for non-existent commands', async () => {
       const result = await $`which nonexistent-command-12345`;
       expect(result.code).toBe(1);
-      expect(result.stderr).toContain('no nonexistent-command-12345 in PATH');
+      expect(result.stderr?.toString()).toContain(
+        'no nonexistent-command-12345 in PATH'
+      );
     });
 
     test('which should find built-in virtual commands', async () => {
       const result = await $`which echo`;
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('shell builtin');
+      expect(result.stdout?.toString()).toContain('shell builtin');
     });
 
     test('which should handle missing arguments', async () => {
       const result = await $`which`;
       expect(result.code).toBe(1);
-      expect(result.stderr).toContain('missing operand');
+      expect(result.stderr?.toString()).toContain('missing operand');
     });
   });
 
@@ -376,7 +378,7 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
       const result = await $`which tee`;
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toBe('tee: shell builtin\n');
+      expect(result.stdout?.toString()).toBe('tee: shell builtin\n');
     });
 
     test('tee should write to file and stdout', async () => {
@@ -384,7 +386,7 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
       const result = await $`echo "Hello Tee!" | tee ${testFile}`;
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toBe('Hello Tee!\n');
+      expect(result.stdout?.toString()).toBe('Hello Tee!\n');
       expect(existsSync(testFile)).toBe(true);
 
       const fileContent = readFileSync(testFile, 'utf8');
@@ -397,7 +399,7 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
       const result = await $`echo "deploying" | tee ${testFile} | cat`;
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toBe('deploying\n');
+      expect(result.stdout?.toString()).toBe('deploying\n');
       expect(readFileSync(testFile, 'utf8')).toBe('deploying\n');
     });
 
@@ -410,7 +412,7 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
         await $`echo "Multiple files" | tee ${file1} ${file2} ${file3}`;
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toBe('Multiple files\n');
+      expect(result.stdout?.toString()).toBe('Multiple files\n');
 
       [file1, file2, file3].forEach((file) => {
         expect(existsSync(file)).toBe(true);
@@ -429,7 +431,7 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
       const result = await $`echo "Second line" | tee -a ${testFile}`;
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toBe('Second line\n');
+      expect(result.stdout?.toString()).toBe('Second line\n');
 
       const fileContent = readFileSync(testFile, 'utf8');
       expect(fileContent).toBe('First line\nSecond line\n');
@@ -474,7 +476,7 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
       })`tee -- -a`;
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toBe('literal\n');
+      expect(result.stdout?.toString()).toBe('literal\n');
       // `-a` after `--` is a file name, not the append flag.
       expect(readFileSync(join(TEST_DIR, '-a'), 'utf8')).toBe('literal\n');
       expect(existsSync(join(TEST_DIR, '--'))).toBe(false);
@@ -485,7 +487,7 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
       const result = await $({ stdin: 'dash\n', cwd: TEST_DIR })`tee -`;
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toBe('dash\n');
+      expect(result.stdout?.toString()).toBe('dash\n');
       expect(readFileSync(join(TEST_DIR, '-'), 'utf8')).toBe('dash\n');
     });
 
@@ -496,7 +498,7 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
       const result = await $({ stdin: inputData })`tee ${testFile}`;
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toBe(inputData);
+      expect(result.stdout?.toString()).toBe(inputData);
 
       const fileContent = readFileSync(testFile, 'utf8');
       expect(fileContent).toBe(inputData);
@@ -508,7 +510,7 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
       const result = await $({ stdin: '' })`tee ${testFile}`;
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toBe('');
+      expect(result.stdout?.toString()).toBe('');
       expect(existsSync(testFile)).toBe(true);
 
       const fileContent = readFileSync(testFile, 'utf8');
@@ -519,8 +521,8 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
       const result = await $({ stdin: 'just stdout\n' })`tee`;
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toBe('just stdout\n');
-      expect(result.stderr).toBe('');
+      expect(result.stdout?.toString()).toBe('just stdout\n');
+      expect(result.stderr?.toString()).toBe('');
     });
 
     test('tee should work in complex pipelines', async () => {
@@ -529,7 +531,7 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
       const result = await $`echo "pipeline test" | tee ${testFile} | cat`;
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toBe('pipeline test\n');
+      expect(result.stdout?.toString()).toBe('pipeline test\n');
 
       const fileContent = readFileSync(testFile, 'utf8');
       expect(fileContent).toBe('pipeline test\n');
@@ -544,11 +546,11 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
       })`tee ${invalidPath} ${goodFile}`;
 
       expect(result.code).toBe(1);
-      expect(result.stderr).toBe(
+      expect(result.stderr?.toString()).toBe(
         `tee: ${invalidPath}: No such file or directory\n`
       );
       // stdout and the remaining file are still written, like GNU tee.
-      expect(result.stdout).toBe('error test');
+      expect(result.stdout?.toString()).toBe('error test');
       expect(readFileSync(goodFile, 'utf8')).toBe('error test');
     });
 
@@ -556,10 +558,10 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
       const result = await $({ stdin: 'test' })`tee --unknown-option file.txt`;
 
       expect(result.code).toBe(1);
-      expect(result.stderr).toBe(
+      expect(result.stderr?.toString()).toBe(
         "tee: unrecognized option '--unknown-option'\n"
       );
-      expect(result.stdout).toBe('');
+      expect(result.stdout?.toString()).toBe('');
       expect(existsSync('file.txt')).toBe(false);
     });
 
@@ -567,7 +569,7 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
       const result = await $({ stdin: 'test' })`tee -z file.txt`;
 
       expect(result.code).toBe(1);
-      expect(result.stderr).toBe("tee: invalid option -- 'z'\n");
+      expect(result.stderr?.toString()).toBe("tee: invalid option -- 'z'\n");
       expect(existsSync('file.txt')).toBe(false);
     });
 
@@ -582,7 +584,7 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
 
       // SIGINT exit code, with the input still forwarded to stdout.
       expect(result.code).toBe(130);
-      expect(result.stdout).toBe('payload');
+      expect(result.stdout?.toString()).toBe('payload');
       expect(existsSync(testFile)).toBe(false);
     });
 
@@ -612,18 +614,18 @@ describe('Built-in Commands (Bun.$ compatible)', () => {
     test('commands should provide helpful error messages', async () => {
       const result = await $`cat nonexistent.txt`;
       expect(result.code).toBe(1);
-      expect(result.stderr).toContain('cat:');
-      expect(result.stderr).toContain('nonexistent.txt');
+      expect(result.stderr?.toString()).toContain('cat:');
+      expect(result.stderr?.toString()).toContain('nonexistent.txt');
     });
 
     test('commands should handle missing operands', async () => {
       const mkdirResult = await $`mkdir`;
       expect(mkdirResult.code).toBe(1);
-      expect(mkdirResult.stderr).toContain('missing operand');
+      expect(mkdirResult.stderr?.toString()).toContain('missing operand');
 
       const rmResult = await $`rm`;
       expect(rmResult.code).toBe(1);
-      expect(rmResult.stderr).toContain('missing operand');
+      expect(rmResult.stderr?.toString()).toContain('missing operand');
     });
   });
 });

@@ -243,6 +243,7 @@ impl StreamingRunner {
 
     /// Run to completion and collect all output
     pub async fn collect(self) -> Result<CommandResult> {
+        let stdin_content = self.stdin_content.clone();
         let mut stdout = Vec::new();
         let mut stderr = Vec::new();
         let mut exit_code = 0;
@@ -260,11 +261,15 @@ impl StreamingRunner {
             std::io::Error::other(format!("streaming process task failed: {error}"))
         })??;
 
-        Ok(CommandResult {
-            stdout: String::from_utf8_lossy(&stdout).to_string(),
-            stderr: String::from_utf8_lossy(&stderr).to_string(),
-            code: exit_code,
-        })
+        let mut result = CommandResult::new(
+            String::from_utf8_lossy(&stdout).to_string(),
+            String::from_utf8_lossy(&stderr).to_string(),
+            exit_code,
+        );
+        if let Some(content) = stdin_content {
+            result.stdin = crate::result_streams::CapturedInput::new(content.into_bytes());
+        }
+        Ok(result)
     }
 }
 

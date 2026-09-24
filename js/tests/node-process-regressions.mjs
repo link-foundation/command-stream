@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { afterEach, test } from 'node:test';
+import { Readable, Writable } from 'node:stream';
 
 import {
   $,
@@ -40,8 +41,11 @@ test('explicit stdin is written exactly once in Node.js', async () => {
   );
 
   assert.equal(result.code, 0);
-  assert.equal(result.stdout, input);
-  assert.equal(result.stdin, input);
+  assert.ok(result.stdout instanceof Readable);
+  assert.ok(result.stderr instanceof Readable);
+  assert.ok(result.stdin instanceof Writable);
+  assert.equal(result.stdout.toString(), input);
+  assert.equal(result.stdin.toString(), input);
 });
 
 test('an unavailable exact executable returns an async result in Node.js', async () => {
@@ -86,7 +90,7 @@ test('a stdio mode keyword never becomes virtual command input in Node.js', asyn
     const result = await $({ mirror: false, stdin: 'inherit' })`stdin-probe`;
 
     assert.equal(result.code, 0);
-    assert.equal(result.stdout, '""');
+    assert.equal(result.stdout.toString(), '""');
   } finally {
     unregister('stdin-probe');
   }
@@ -97,7 +101,7 @@ test('piped input reaches a virtual command in Node.js', async () => {
   const result = await $({ mirror: false })`echo hello | cat`;
 
   assert.equal(result.code, 0);
-  assert.equal(result.stdout, 'hello\n');
+  assert.equal(result.stdout.toString(), 'hello\n');
 });
 
 test('piped input wins over the pipeline stdin option in Node.js', async () => {
@@ -108,5 +112,5 @@ test('piped input wins over the pipeline stdin option in Node.js', async () => {
   })`echo piped | cat`;
 
   assert.equal(result.code, 0);
-  assert.equal(result.stdout, 'piped\n');
+  assert.equal(result.stdout.toString(), 'piped\n');
 });

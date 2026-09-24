@@ -30,8 +30,8 @@ describe.skipIf(isWindows)('GitHub CLI (gh) commands', () => {
     expect([0, 1]).toContain(result.code);
 
     // Should have stdout
-    expect(result.stdout).toBeDefined();
-    expect(typeof result.stdout).toBe('string');
+    expect(result.stdout?.toString()).toBeDefined();
+    expect(typeof result.stdout).toBe('object');
 
     // If authenticated (exit code 0), output should contain success indicators
     // If not authenticated (exit code 1), that's also fine - we're testing $.mjs works
@@ -95,7 +95,7 @@ describe.skipIf(isWindows)('GitHub CLI (gh) commands', () => {
     }
 
     expect(result.code).toBe(0);
-    expect(result.stdout).toBeDefined();
+    expect(result.stdout?.toString()).toBeDefined();
     expect(result.stdout.trim().length).toBeGreaterThan(0);
   });
 
@@ -131,9 +131,9 @@ describe.skipIf(isWindows)('GitHub CLI (gh) commands', () => {
     }
 
     expect(result.code).toBe(0);
-    expect(result.stdout).toBeDefined();
+    expect(result.stdout?.toString()).toBeDefined();
     // Output could be empty if user has no gists
-    expect(typeof result.stdout).toBe('string');
+    expect(typeof result.stdout).toBe('object');
   });
 
   test('complex gh command with pipes and jq', async () => {
@@ -158,7 +158,7 @@ describe.skipIf(isWindows)('GitHub CLI (gh) commands', () => {
     // This version uses || echo to handle the limited token case gracefully
     // We're testing that $.mjs can pipe commands, not that we have full API access
     expect(result.code).toBe(0);
-    expect(result.stdout).toBeDefined();
+    expect(result.stdout?.toString()).toBeDefined();
     expect(result.stdout.split('\n').length).toBeLessThanOrEqual(2); // Should be one line plus possible newline
   });
 });

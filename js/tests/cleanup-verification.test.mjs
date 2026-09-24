@@ -68,7 +68,7 @@ describe('Cleanup Verification', () => {
 
     const result = await $`cd ${tempDir} && echo "test" && pwd`;
 
-    expect(result.stdout).toContain('test');
+    expect(result.stdout?.toString()).toContain('test');
     expect(normalizePath(result.stdout.trim().split('\n').at(-1))).toBe(
       normalizePath(tempDir)
     );

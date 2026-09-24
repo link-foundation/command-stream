@@ -35,6 +35,7 @@ import {
 } from './terminal-capture.mjs';
 
 import { ProcessRunner } from './process-runner.mjs';
+import { toStreamResult } from './$.result-streams.mjs';
 
 // Public APIs
 async function sh(commandString, options = {}) {
@@ -61,7 +62,7 @@ async function sh(commandString, options = {}) {
     'API',
     () => `sh EXIT | ${JSON.stringify({ code: result.code }, null, 2)}`
   );
-  return result;
+  return toStreamResult(result);
 }
 
 async function exec(file, args = [], options = {}) {
@@ -86,7 +87,7 @@ async function exec(file, args = [], options = {}) {
     'API',
     () => `exec EXIT | ${JSON.stringify({ code: result.code }, null, 2)}`
   );
-  return result;
+  return toStreamResult(result);
 }
 
 // eslint-disable-next-line require-await -- delegates to sh/exec which are async

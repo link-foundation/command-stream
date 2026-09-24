@@ -111,8 +111,8 @@ describe('Redirection is never handed to a built-in as an argument (issue #46)',
         };
       }
 
-      expect(actual.stdout).toBe(expected.stdout);
-      expect(actual.stderr).toBe(expected.stderr);
+      expect(actual.stdout?.toString()).toBe(expected.stdout);
+      expect(actual.stderr?.toString()).toBe(expected.stderr);
       expect(actual.code).toBe(expected.code);
       expect(await snapshot(csDir)).toEqual(await snapshot(shDir));
     });
@@ -136,7 +136,7 @@ describe('Redirection is never handed to a built-in as an argument (issue #46)',
         cwd: csDir,
         mirror: false,
       })`${{ raw: command }}`;
-      expect(result.stdout).toBe(expected.stdout);
+      expect(result.stdout?.toString()).toBe(expected.stdout);
       expect(result.code).toBe(expected.code);
     });
   }
@@ -170,7 +170,7 @@ describe('Redirection is never handed to a built-in as an argument (issue #46)',
       // Before the fix this was code 0 with an empty stdout: the whole command
       // had been swallowed by the virtual `git`-less dispatch path.
       expect(result.code).not.toBe(0);
-      expect(result.stdout).toContain('fatal:');
+      expect(result.stdout?.toString()).toContain('fatal:');
     }
   );
 

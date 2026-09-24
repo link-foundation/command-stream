@@ -20,6 +20,7 @@ The same command can be run without awaiting, blocking until it finishes.
 // .sync() runs a command synchronously and returns the finished result.
 import { $ } from '../../src/$.mjs';
 import { example } from './_harness.mjs';
+import { Readable } from 'node:stream';
 
 const $q = $({ mirror: false });
 
@@ -31,7 +32,7 @@ await example(
     record('code', result.code);
     record(
       'result is available without await',
-      typeof result.stdout === 'string'
+      result.stdout instanceof Readable
     );
 
     const failed = $q`sh -c 'exit 3'`.sync();

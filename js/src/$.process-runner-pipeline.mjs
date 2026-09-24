@@ -1139,7 +1139,7 @@ export function attachPipelineMethods(ProcessRunner, deps) {
 
     try {
       trace('ProcessRunner', () => 'Executing source command');
-      const sourceResult = await source;
+      const sourceResult = await source._startAsync();
 
       if (sourceResult.code !== 0) {
         trace(
@@ -1163,7 +1163,7 @@ export function attachPipelineMethods(ProcessRunner, deps) {
         stdin: sourceResult.stdout,
       });
 
-      const destResult = await destWithStdin;
+      const destResult = await destWithStdin._startAsync();
 
       trace(
         'ProcessRunner',

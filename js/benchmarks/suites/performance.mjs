@@ -73,7 +73,10 @@ async function bufferedCommand(bytes) {
       stdin: 'ignore',
     }
   );
-  return { received: Buffer.byteLength(result.stdout), exitCode: result.code };
+  return {
+    received: Buffer.byteLength(result.stdout.toString()),
+    exitCode: result.code,
+  };
 }
 
 function fixtureRunner(mode, value, options = {}) {
@@ -91,15 +94,18 @@ async function programmaticPipeline(bytes) {
   const result = await fixtureRunner('emit', bytes).pipe(
     fixtureRunner('stdin-count', '', { stdin: 'pipe' })
   );
-  return { exitCode: result.code, received: result.stdout };
+  return { exitCode: result.code, received: result.stdout.toString() };
 }
 
 async function bufferedPipeline(bytes) {
   const source = await fixtureRunner('emit', bytes);
   const destination = await fixtureRunner('stdin-count', '', {
-    stdin: source.stdout,
+    stdin: source.stdout.toString(),
   });
-  return { exitCode: destination.code, received: destination.stdout };
+  return {
+    exitCode: destination.code,
+    received: destination.stdout.toString(),
+  };
 }
 
 async function builtInEcho() {
@@ -212,7 +218,7 @@ export async function runPerformanceSuite({ runner, adapters, smoke = false }) {
               [fixture, 'echo', 'benchmark'],
               { capture: true, mirror: false, stdin: 'ignore' }
             );
-            return result.stdout;
+            return result.stdout.toString();
           },
           validate: (output) => output === '["benchmark"]',
         },
