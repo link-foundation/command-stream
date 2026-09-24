@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.0
+
+### Major Changes
+
+- e9afa6e: Expose completed result stdout and stderr as readable streams and stdin as a writable record. Use `result.text()` or `result.stdout.toString()` for captured text.
+
 ## 0.25.0
 
 ### Minor Changes
