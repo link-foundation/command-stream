@@ -4,8 +4,8 @@ Completed command results expose `stdout` and `stderr` as Node.js `Readable`
 streams containing captured output. `stdin` is a `Writable` record of input
 sent to the command. The output streams are one-shot: iterate or pipe them once.
 `toString()` returns the saved text without consuming the stream.
-`result.text()` and `command.strings.stdout` return strings. When `capture:
-false`, `stdout` and `stderr` remain `undefined`.
+`result.text()` and `command.strings.stdout` return strings. If capture is
+disabled, `stdout` and `stderr` remain `undefined`.
 
 To write to a running child, use `command.streams.stdin` before awaiting the
 command. Writes to the completed result's `stdin` update only its local record.
