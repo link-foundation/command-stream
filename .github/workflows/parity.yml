@@ -1,0 +1,61 @@
+name: Language parity check
+
+# Ensure source and benchmark changes are made in both the JavaScript and Rust
+# implementations. Each category is paired independently. A deliberately
+# single-language PR must carry the `parity-exempt` label.
+#
+# See issue #155 review feedback: "double check that all features that are
+# supported in JavaScript are fully supported in Rust and we have CI/CD rules,
+# that check that we do changes in both languages always".
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+jobs:
+  parity:
+    name: JS/Rust implementation parity
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Skip entirely when the PR is explicitly marked as a single-language change.
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'parity-exempt') }}
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-parity
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          # Read-only job: the parity script only diffs the checked-out history.
+          persist-credentials: false
+
+      - name: Check JavaScript/Rust implementation parity
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash .github/scripts/check-language-parity.sh
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24.x'
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: latest
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable branch @ 2026-09-03
+
+      - name: Install JavaScript dependencies
+        working-directory: js
+        run: bun install --frozen-lockfile
+
+      - name: Execute every feature in JavaScript and Rust
+        run: node scripts/check-parity.mjs
+
+      - name: Check generated feature documentation
+        run: node scripts/generate-docs.mjs --check

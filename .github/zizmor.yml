@@ -1,0 +1,21 @@
+# zizmor configuration — https://docs.zizmor.sh/configuration/
+#
+# Mirrors the policy used by the pipeline templates
+# (link-foundation/js-ai-driven-development-pipeline-template and
+# link-foundation/rust-ai-driven-development-pipeline-template) so that a
+# workflow copied from either side keeps passing here.
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        # These publishers are trusted at tag granularity: their release tags
+        # are the reference this repository is meant to read at a glance.
+        # Everything else must be pinned to a full commit hash.
+        actions/*: ref-pin
+        github/*: ref-pin
+        docker/*: ref-pin
+        astral-sh/*: ref-pin
+        lycheeverse/*: ref-pin
+        zizmorcore/*: ref-pin
+        changesets/*: ref-pin
+        '*': hash-pin
