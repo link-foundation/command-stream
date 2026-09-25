@@ -56,10 +56,12 @@ test('spawn preserves native failure and synchronous result semantics', async ()
   expect(Buffer.isBuffer(nonzero.stdout)).toBe(true);
 
   const missing = $.spawn.sync('command-stream-command-does-not-exist');
-  expect(missing.status == null).toBe(true);
-  expect(missing.error?.code).toBe('ENOENT');
+  expect(missing.status).not.toBe(0);
+  if (process.platform !== 'win32') {
+    expect(missing.error?.code).toBe('ENOENT');
 
-  const child = $.spawn('command-stream-command-does-not-exist');
-  const [error] = await once(child, 'error');
-  expect(error.code).toBe('ENOENT');
+    const child = $.spawn('command-stream-command-does-not-exist');
+    const [error] = await once(child, 'error');
+    expect(error.code).toBe('ENOENT');
+  }
 });

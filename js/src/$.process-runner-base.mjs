@@ -54,17 +54,34 @@ function trackStdinWrites(runner, stream) {
     }
   };
   const write = stream.write;
-  stream.write = function (chunk, ...args) {
+  const trackedWrite = function (chunk, ...args) {
     const written = write.call(this, chunk, ...args);
     record(chunk, args);
     return written;
   };
   const end = stream.end;
-  stream.end = function (chunk, ...args) {
+  const trackedEnd = function (chunk, ...args) {
     const ended = end.call(this, chunk, ...args);
     record(chunk, args);
     return ended;
   };
+  const setMethod = (name, method) => {
+    try {
+      return Reflect.set(stream, name, method);
+    } catch {
+      return false;
+    }
+  };
+  // Bun on Windows exposes native stdin methods as read-only. Keep the stream
+  // usable even when its methods cannot be wrapped for input snapshots.
+  if (!setMethod('write', trackedWrite)) {
+    trace('ProcessRunner', () => 'Native stdin.write is read-only');
+    return stream;
+  }
+  if (!setMethod('end', trackedEnd)) {
+    setMethod('write', write);
+    trace('ProcessRunner', () => 'Native stdin.end is read-only');
+  }
   return stream;
 }
 
