@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.0
+
+### Minor Changes
+
+- 870dcc8: Expose cross-spawn as `$.spawn`, `spawn`, and `$.spawn.sync` while preserving native ChildProcess streams, options, and failure semantics. Document JavaScript and Rust migration paths.
+
 ## 1.0.0
 
 ### Major Changes
