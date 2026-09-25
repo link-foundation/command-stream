@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test';
 import { once } from 'node:events';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import crossSpawn from 'cross-spawn';
@@ -40,7 +40,10 @@ test('spawn accepts cwd, env, and piped stdin without losing streaming output', 
     child.stdin.end('input');
     const [code] = await once(child, 'close');
     expect(code).toBe(0);
-    expect(Buffer.concat(chunks).toString()).toBe(`${cwd}:value:input`);
+    const output = Buffer.concat(chunks).toString();
+    expect(output.endsWith(':value:input')).toBe(true);
+    const reportedCwd = output.slice(0, -':value:input'.length);
+    expect(realpathSync(reportedCwd)).toBe(realpathSync(cwd));
   } finally {
     rmSync(cwd, { recursive: true, force: true });
   }
