@@ -1,6 +1,25 @@
 import { expect, test } from 'bun:test';
 import { Readable, Writable } from 'node:stream';
-import { $, exec, sh } from '../src/$.mjs';
+import { $, ProcessRunner, exec, sh } from '../src/$.mjs';
+
+test('readonly native stdin methods remain accessible', () => {
+  const write = () => true;
+  const end = () => {};
+  const stdin = {};
+  Object.defineProperties(stdin, {
+    write: { value: write },
+    end: { value: end },
+  });
+  const runner = new ProcessRunner(
+    { mode: 'exec', file: process.execPath, args: [] },
+    { capture: true }
+  );
+  runner._child = { stdin };
+
+  expect(runner.stdin).toBe(stdin);
+  expect(stdin.write('input')).toBe(true);
+  expect(stdin.end).toBe(end);
+});
 
 test('completed results expose readable stdout and stderr and writable stdin', async () => {
   for (const result of [

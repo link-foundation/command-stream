@@ -158,6 +158,25 @@ The exact-argv form bypasses `/bin/sh -c` and `cmd.exe /c`, so it does not
 require shell-specific quoting. It also accepts OS-native executable and
 argument values such as `PathBuf` and `OsString`.
 
+For synchronous callers, the same exact-argument builder supports
+`collect_blocking()`:
+
+```rust,no_run
+use command_stream::StreamingRunner;
+
+fn main() -> command_stream::Result<()> {
+    let result = StreamingRunner::from_argv("git", ["status", "--short"])
+        .collect_blocking()?;
+    assert!(result.is_success());
+    Ok(())
+}
+```
+
+Configure `cwd`, `env`, and `stdin` on the builder before collecting. Call
+`collect_blocking()` outside a Tokio runtime; async code uses `collect().await`.
+The [cross-spawn migration guide](../js/docs/CROSS_SPAWN_MIGRATION.md) maps ten
+common process use cases to both language implementations.
+
 ## Process ID of a Running Command
 
 `pid()` is the id of the operating system process behind a command. It is

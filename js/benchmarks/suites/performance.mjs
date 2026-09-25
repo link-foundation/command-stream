@@ -45,7 +45,7 @@ function streamCommand(bytes) {
       file: process.execPath,
       args: [fixture, 'emit', String(bytes)],
     },
-    { capture: true, mirror: false, stdin: 'ignore' }
+    { capture: false, mirror: false, stdin: 'ignore' }
   );
 }
 
