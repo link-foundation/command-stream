@@ -43,6 +43,27 @@ async fn test_streaming_runner_preserves_exact_argv() {
     );
 }
 
+#[test]
+fn test_exact_argv_blocking_collection() {
+    let executable = std::env::current_exe().unwrap();
+    let result = StreamingRunner::from_argv(executable, ["--list"])
+        .cwd(std::env::temp_dir())
+        .collect_blocking()
+        .unwrap();
+
+    assert!(result.is_success(), "{}", result.stderr);
+    assert!(result.stdout.contains("test_streaming_runner_basic"));
+}
+
+#[tokio::test]
+async fn test_blocking_collection_rejects_nested_runtime() {
+    let executable = std::env::current_exe().unwrap();
+    let error = StreamingRunner::from_argv(executable, ["--list"])
+        .collect_blocking()
+        .expect_err("blocking in a Tokio runtime must return an error");
+    assert!(error.to_string().contains("collect_blocking cannot run"));
+}
+
 /// A direct executable that cannot be spawned must not be mistaken for a
 /// successful command merely because the output channel closes without data.
 #[tokio::test]

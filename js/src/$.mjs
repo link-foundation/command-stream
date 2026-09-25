@@ -36,6 +36,7 @@ import {
 
 import { ProcessRunner } from './process-runner.mjs';
 import { toStreamResult } from './$.result-streams.mjs';
+import crossSpawn from 'cross-spawn';
 
 // Public APIs
 async function sh(commandString, options = {}) {
@@ -431,6 +432,8 @@ function registerBuiltins() {
 }
 
 // Initialize built-in commands
+$tagged.spawn = crossSpawn;
+
 trace('Initialization', () => 'Registering built-in virtual commands');
 registerBuiltins();
 trace(
@@ -442,6 +445,7 @@ export {
   $tagged as $,
   sh,
   exec,
+  crossSpawn as spawn,
   run,
   quote,
   quoteForContext,

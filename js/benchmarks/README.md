@@ -53,6 +53,10 @@ the base branch and produces `benchmark-regressions.json` and Markdown.
 | Features     | Ported behavior and known-gap counts from immutable upstream test corpora.   |
 | Real-world   | CI checks, log analysis, file hashing, and a local HTTP health check.        |
 
+The output-mode comparison uses `capture: false` for streaming so its runner
+does not retain a second copy of the output. The buffered case collects the
+complete result. Both validate that the expected byte count arrived.
+
 All process wrappers execute the same runtime, fixture, arguments, and expected
 output in a scenario. The runner rotates adapter order between iterations to
 reduce first-position bias and aborts immediately on a thrown error or invalid
@@ -87,13 +91,13 @@ const result = await exec('git', ['status', '--short'], {
 });
 ```
 
-| Migrating from | Replace the common entry point with                                   |
-| -------------- | --------------------------------------------------------------------- |
-| Execa          | `exec(file, args, options)` for exact arguments                       |
-| cross-spawn    | `exec(file, args, options)` for a collected promise result            |
-| ShellJS        | `sh(command, options)` for shell syntax, or `exec()` for exact args   |
-| zx             | `` $`command ${value}` ``; interpolation remains a single safe value  |
-| Bun Shell      | `` $`command ${value}` ``; result objects also expose async `.text()` |
+| Migrating from | Replace the common entry point with                                             |
+| -------------- | ------------------------------------------------------------------------------- |
+| Execa          | `exec(file, args, options)` for exact arguments                                 |
+| cross-spawn    | `$.spawn(file, args, options)` for the native child; `exec()` to collect output |
+| ShellJS        | `sh(command, options)` for shell syntax, or `exec()` for exact args             |
+| zx             | `` $`command ${value}` ``; interpolation remains a single safe value            |
+| Bun Shell      | `` $`command ${value}` ``; result objects also expose async `.text()`           |
 
 There are two defaults to review during migration. Output is mirrored unless
 `mirror: false` is set, and non-zero exits are returned unless errexit is

@@ -10,7 +10,9 @@ const manifest = JSON.parse(
 );
 
 const packageVersion = (name) =>
-  name === 'command-stream' ? manifest.version : manifest.devDependencies[name];
+  name === 'command-stream'
+    ? manifest.version
+    : (manifest.dependencies?.[name] ?? manifest.devDependencies?.[name]);
 
 export const EXPECTED_ADAPTERS = [
   'command-stream',

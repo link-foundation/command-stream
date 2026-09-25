@@ -271,6 +271,22 @@ impl StreamingRunner {
         }
         Ok(result)
     }
+
+    /// Run an exact-argument command to completion from synchronous code.
+    ///
+    /// Build the command with [`Self::from_argv`] and configure it with the
+    /// same `cwd`, `env`, and `stdin` methods used by [`Self::collect`]. Call
+    /// this outside a Tokio runtime; async callers should use `collect().await`.
+    pub fn collect_blocking(self) -> Result<CommandResult> {
+        if tokio::runtime::Handle::try_current().is_ok() {
+            return Err(std::io::Error::other(
+                "collect_blocking cannot run inside a Tokio runtime; use collect().await",
+            )
+            .into());
+        }
+        let runtime = tokio::runtime::Runtime::new()?;
+        runtime.block_on(self.collect())
+    }
 }
 
 /// Stream of output chunks from a process

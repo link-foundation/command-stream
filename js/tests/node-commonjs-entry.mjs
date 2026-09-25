@@ -33,3 +33,22 @@ test('require("command-stream") exposes the synchronous API', (context) => {
   assert.equal(result.status, 0, result.stderr);
   assert.equal(result.stdout, 'function:0:node-cjs-probe');
 });
+
+test('require("command-stream") exposes cross-spawn sync semantics', (context) => {
+  if (!supportsRequireEsm(process.versions.node)) {
+    context.skip(`node ${process.versions.node} has no require(esm) support`);
+    return;
+  }
+
+  const sandbox = createCommonJsSandbox();
+  context.after(() => removeCommonJsSandbox(sandbox));
+
+  const result = runSandboxScript(sandbox, 'spawn-probe.cjs', [
+    "const $ = require('command-stream');",
+    "const result = $.spawn.sync(process.execPath, ['-e', 'process.exit(9)']);",
+    'process.stdout.write(`${typeof $.spawn}:${result.status}:${Boolean(result.error)}`);',
+  ]);
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, 'function:9:false');
+});

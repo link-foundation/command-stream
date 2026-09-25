@@ -48,6 +48,10 @@ and produce machine-readable and Markdown comparisons.
 | Features    | Ported behavior and known-gap counts from immutable upstream Rust test corpora.                              |
 | Real-world  | Parallel CI checks, log analysis, file hashing, and a local HTTP health check.                               |
 
+In the output-mode comparison, the buffered case collects the full result.
+The streaming case counts each chunk without retaining the complete output,
+matching the JavaScript suite's `capture: false` streaming setup.
+
 The timing runner rotates API order to reduce first-position bias and records
 mean, median, min, max, standard deviation, p95, p99, and operations per second.
 Median determines the ranking. A failed process or invalid output aborts the
