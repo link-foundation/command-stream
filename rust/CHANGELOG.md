@@ -171,6 +171,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [1.1.0] - 2026-09-25
+
+### Added
+
+- Collect an exact-argument `StreamingRunner` synchronously with `collect_blocking()`.
+
 ## [1.0.0] - 2026-09-24
 
 ### Changed
