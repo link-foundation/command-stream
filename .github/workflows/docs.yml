@@ -1,0 +1,73 @@
+name: Feature documentation website
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'js/examples/features/**'
+      - 'js/src/**'
+      - 'rust/examples/**'
+      - 'rust/src/**'
+      - 'scripts/**'
+      - 'docs/features/**'
+      - 'docs/site/**'
+      - 'docs/README.md'
+      - '.github/workflows/docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Verify and deploy generated documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: main-writer-${{ github.repository }}-main
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24.x'
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: latest
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable branch @ 2026-09-03
+
+      - name: Install JavaScript dependencies
+        working-directory: js
+        run: bun install --frozen-lockfile
+
+      - name: Verify feature parity and generated files
+        run: |
+          node scripts/check-parity.mjs
+          node scripts/generate-docs.mjs --check
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload website artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: docs/site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

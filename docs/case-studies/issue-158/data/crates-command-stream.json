@@ -1,0 +1,6 @@
+{
+  "retrievedAt": "2026-06-08T12:01:18Z",
+  "url": "https://crates.io/api/v1/crates/command-stream",
+  "status": 404,
+  "meaning": "The crates.io API did not have a command-stream crate record at the time of investigation."
+}
