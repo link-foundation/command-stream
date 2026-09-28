@@ -55,8 +55,14 @@ afterAll(() => {
 describe('CommonJS entry point (issue #189)', () => {
   describe('package manifest', () => {
     test('declares a require condition pointing at the CommonJS entry', () => {
-      expect(PACKAGE_JSON.exports['.'].require).toBe('./src/$.cjs');
-      expect(PACKAGE_JSON.exports['.'].import).toBe('./src/$.mjs');
+      expect(PACKAGE_JSON.exports['.'].require).toEqual({
+        types: './types/index.d.cts',
+        default: './src/$.cjs',
+      });
+      expect(PACKAGE_JSON.exports['.'].import).toEqual({
+        types: './types/index.d.ts',
+        default: './src/$.mjs',
+      });
       expect(PACKAGE_JSON.main).toBe('./src/$.cjs');
       expect(PACKAGE_JSON.module).toBe('./src/$.mjs');
     });

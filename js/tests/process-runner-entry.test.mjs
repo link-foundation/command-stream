@@ -8,7 +8,7 @@ const packageDirectory = resolve(testDirectory, '..');
 const packageJson = JSON.parse(
   readFileSync(resolve(packageDirectory, 'package.json'), 'utf8')
 );
-const processRunnerExport = packageJson.exports['./process-runner'];
+const processRunnerExport = packageJson.exports['./process-runner']?.default;
 const terminalDependencies = new Set([
   '@resvg/resvg-js',
   '@xterm/headless',
@@ -46,6 +46,9 @@ function collectModuleGraph(entrypoint) {
 
 test('exports a fully initialized ProcessRunner subpath', async () => {
   expect(processRunnerExport).toBe('./src/process-runner.mjs');
+  expect(packageJson.exports['./process-runner'].types).toBe(
+    './types/process-runner.d.ts'
+  );
 
   const { ProcessRunner } = await import('command-stream/process-runner');
   for (const method of [

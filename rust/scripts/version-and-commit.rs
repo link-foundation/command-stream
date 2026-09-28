@@ -38,7 +38,7 @@ use serde::Deserialize;
 use std::env;
 use std::fs;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 #[cfg(not(test))]
 use std::process::exit;
 use std::process::Command;
@@ -197,6 +197,28 @@ fn update_cargo_lock(
 
     println!("Updated {} to version {}", path_str, new_version);
     Ok(true)
+}
+
+/// The benchmarks crate depends on this package by path and CI checks it with
+/// `--locked`, so a release must bump the package version in its lock file too.
+fn get_benchmarks_cargo_lock_path(rust_root: &str) -> PathBuf {
+    Path::new(rust_root).join("benchmarks").join("Cargo.lock")
+}
+
+/// Sync the package version in every given lock file, returning the paths of
+/// the lock files that were changed and therefore need to be staged.
+fn update_cargo_locks(
+    cargo_lock_paths: &[&Path],
+    crate_name: &str,
+    new_version: &str,
+) -> Result<Vec<String>, String> {
+    let mut updated = Vec::new();
+    for cargo_lock_path in cargo_lock_paths {
+        if update_cargo_lock(cargo_lock_path, crate_name, new_version)? {
+            updated.push(cargo_lock_path.to_string_lossy().to_string());
+        }
+    }
+    Ok(updated)
 }
 
 #[cfg(not(test))]
@@ -437,7 +459,7 @@ fn collect_changelog(changelog_dir: &str, changelog_file: &str, version: &str) {
 
 #[cfg(test)]
 mod tests {
-    use super::update_cargo_lock;
+    use super::{get_benchmarks_cargo_lock_path, update_cargo_lock, update_cargo_locks};
     use std::fs;
     use std::path::PathBuf;
     use std::process::Command;
@@ -520,6 +542,72 @@ version = "1.12.3"
 
         assert!(!update_cargo_lock(&cargo_lock, "example-sum-package-name", "0.14.0").unwrap());
         assert_eq!(fs::read_to_string(&cargo_lock).unwrap(), content);
+    }
+
+    /// Regression test: the rust-v1.1.0 release bumped rust/Cargo.lock but not
+    /// rust/benchmarks/Cargo.lock, so `cargo clippy --locked` in the benchmark
+    /// workflow failed with "cannot update the lock file ... --locked".
+    #[test]
+    fn cargo_locks_update_includes_benchmarks_lock_file() {
+        let rust_root = temp_dir("locks-benchmarks");
+        let rust_root_str = rust_root.to_string_lossy().to_string();
+        let benchmarks_lock = get_benchmarks_cargo_lock_path(&rust_root_str);
+        assert_eq!(
+            benchmarks_lock,
+            rust_root.join("benchmarks").join("Cargo.lock")
+        );
+
+        let cargo_lock = rust_root.join("Cargo.lock");
+        fs::create_dir_all(benchmarks_lock.parent().unwrap()).unwrap();
+        let content = r#"[[package]]
+name = "example-sum-package-name"
+version = "0.13.0"
+"#;
+        fs::write(&cargo_lock, content).unwrap();
+        fs::write(&benchmarks_lock, content).unwrap();
+
+        let updated = update_cargo_locks(
+            &[cargo_lock.as_path(), benchmarks_lock.as_path()],
+            "example-sum-package-name",
+            "0.14.0",
+        )
+        .unwrap();
+
+        assert_eq!(
+            updated,
+            vec![
+                cargo_lock.to_string_lossy().to_string(),
+                benchmarks_lock.to_string_lossy().to_string(),
+            ]
+        );
+        for lock in [&cargo_lock, &benchmarks_lock] {
+            assert!(fs::read_to_string(lock)
+                .unwrap()
+                .contains("name = \"example-sum-package-name\"\nversion = \"0.14.0\""));
+        }
+    }
+
+    #[test]
+    fn cargo_locks_update_skips_missing_benchmarks_lock_file() {
+        let rust_root = temp_dir("locks-no-benchmarks");
+        let rust_root_str = rust_root.to_string_lossy().to_string();
+        let benchmarks_lock = get_benchmarks_cargo_lock_path(&rust_root_str);
+        let cargo_lock = rust_root.join("Cargo.lock");
+        fs::write(
+            &cargo_lock,
+            "[[package]]\nname = \"example-sum-package-name\"\nversion = \"0.13.0\"\n",
+        )
+        .unwrap();
+
+        let updated = update_cargo_locks(
+            &[cargo_lock.as_path(), benchmarks_lock.as_path()],
+            "example-sum-package-name",
+            "0.14.0",
+        )
+        .unwrap();
+
+        assert_eq!(updated, vec![cargo_lock.to_string_lossy().to_string()]);
+        assert!(!benchmarks_lock.exists());
     }
 
     /// Regression test for issue #164: the Rust release job failed with
@@ -740,7 +828,12 @@ fn main() {
     }
 
     let cargo_lock_path = rust_paths::get_cargo_lock_path(&rust_root);
-    let lock_updated = match update_cargo_lock(&cargo_lock_path, &crate_name, &new_version) {
+    let benchmarks_lock_path = get_benchmarks_cargo_lock_path(&rust_root);
+    let updated_locks = match update_cargo_locks(
+        &[cargo_lock_path.as_path(), benchmarks_lock_path.as_path()],
+        &crate_name,
+        &new_version,
+    ) {
         Ok(updated) => updated,
         Err(e) => {
             eprintln!("Error updating Cargo.lock: {}", e);
@@ -751,13 +844,10 @@ fn main() {
     // Collect changelog fragments
     collect_changelog(&changelog_dir, &changelog_file, &new_version);
 
-    // Stage Cargo.toml, Cargo.lock if changed, CHANGELOG.md, and consumed fragments
+    // Stage Cargo.toml, Cargo.lock files if changed, CHANGELOG.md, and consumed fragments
     let package_manifest_str = package_manifest.to_string_lossy().to_string();
-    let cargo_lock_str = cargo_lock_path.to_string_lossy().to_string();
     let mut add_args = vec!["add", &package_manifest_str, &changelog_file];
-    if lock_updated {
-        add_args.push(&cargo_lock_str);
-    }
+    add_args.extend(updated_locks.iter().map(String::as_str));
     let _ = exec("git", &add_args);
     let _ = exec("git", &["add", "-A", &changelog_dir]);
 
