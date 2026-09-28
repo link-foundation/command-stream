@@ -206,3 +206,58 @@ describe('TypeScript examples', () => {
     }, 60000);
   }
 });
+
+describe('docs/TYPESCRIPT.md Rust mapping', () => {
+  const guide = read('docs/TYPESCRIPT.md');
+  const mapping = guide.slice(guide.indexOf('## Rust mapping'));
+  const rows = mapping
+    .split('\n')
+    .filter((line) => line.startsWith('| ') && line.includes('`'))
+    .map((line) => line.split('|').map((cell) => cell.trim()));
+  const names = (cell) =>
+    [...cell.matchAll(/`([^`]+)`/g)].map((match) => match[1]);
+
+  const rustSource = (function collect(dir) {
+    return readdirSync(dir, { withFileTypes: true })
+      .map((entry) => {
+        const path = join(dir, entry.name);
+        if (entry.isDirectory()) {
+          return collect(path);
+        }
+        return entry.name.endsWith('.rs') ? readFileSync(path, 'utf8') : '';
+      })
+      .join('\n');
+  })(join(PACKAGE_ROOT, '../rust/src'));
+
+  test('the mapping table has rows', () => {
+    expect(rows.length).toBeGreaterThanOrEqual(20);
+  });
+
+  test('every TypeScript name in the table is declared', () => {
+    const declared = new Set([
+      ...declaredValueExports(),
+      ...declaredTypeExports(apiDts),
+      ...classMembers(apiDts, 'ProcessRunner'),
+    ]);
+    const missing = rows
+      .flatMap(([, , ts]) => names(ts))
+      .filter((name) => !declared.has(name));
+    expect(missing).toEqual([]);
+  });
+
+  test('every Rust name in the table exists in rust/src', () => {
+    const missing = rows
+      .flatMap(([, , , rust]) => names(rust))
+      .filter((name) => {
+        const macro = name.endsWith('!');
+        const ident = name.replace(/!$/, '');
+        const pattern = macro
+          ? new RegExp(`macro_rules!\\s+${ident}\\b`)
+          : new RegExp(
+              `pub (?:async )?(?:fn|struct|enum|type|trait) ${ident}\\b|pub use [^;]*\\b${ident}\\b`
+            );
+        return !pattern.test(rustSource);
+      });
+    expect(missing).toEqual([]);
+  });
+});

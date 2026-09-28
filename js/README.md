@@ -26,6 +26,7 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 - 🔧 **Built-in Commands**: 22 essential commands work identically across platforms
 - 🆔 **Process Identity**: Read the process id with `command.pid`, before, during and after the run
 - 🔄 **Migration**: [Cross-spawn guide for JavaScript and Rust](docs/CROSS_SPAWN_MIGRATION.md)
+- 🟦 **TypeScript**: Bundled strict declarations for ESM and CommonJS, with typed events, streams, pipelines and virtual commands ([guide and Rust mapping](docs/TYPESCRIPT.md))
 
 ## Comparison with Other Libraries
 
@@ -62,7 +63,7 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 | **Test Coverage**              | ✅ **518+ tests, 1165+ assertions**                                                                     | ✅ Excellent                                                                          | ✅ Good                                                                                           | 🟡 Good coverage                                           | ✅ Good                                                                                   | 🟡 Good                                                                         |
 | **CI Reliability**             | ✅ **Platform-specific handling** (macOS/Ubuntu)                                                        | ✅ Good                                                                               | ✅ **Excellent**                                                                                  | 🟡 Basic                                                   | ✅ Good                                                                                   | 🟡 Basic                                                                        |
 | **Documentation**              | ✅ **Comprehensive examples + guides**                                                                  | ✅ Excellent                                                                          | 🟡 Basic                                                                                          | ✅ Good                                                    | ✅ Good                                                                                   | 🟡 Limited                                                                      |
-| **TypeScript**                 | 🔄 Coming soon                                                                                          | ✅ Full support                                                                       | ✅ Built-in                                                                                       | ✅ Built-in                                                | 🟡 Community types                                                                        | ✅ Full support                                                                 |
+| **TypeScript**                 | ✅ **Bundled strict declarations** (ESM + CommonJS), typed events, streams and virtual commands         | ✅ Full support                                                                       | ✅ Built-in                                                                                       | ✅ Built-in                                                | 🟡 Community types                                                                        | ✅ Full support                                                                 |
 | **License**                    | ✅ **Unlicense (Public Domain)**                                                                        | 🟡 MIT                                                                                | 🟡 MIT                                                                                            | 🟡 MIT (+ LGPL dependencies)                               | 🟡 BSD-3-Clause                                                                           | 🟡 Apache 2.0                                                                   |
 
 Performance, memory, and package-size values depend on the runtime and host.
@@ -2439,7 +2440,6 @@ npm run test:signal      # CTRL+C signal handling tests
 
 ### 🔄 **Coming Soon**
 
-- **TypeScript Support**: Full .d.ts definitions and type safety
 - **Enhanced Shell Options**: `set -u` (nounset) and `set -o pipefail` support
 - **More Built-in Commands**: Additional cross-platform utilities
 
