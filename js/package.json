@@ -5,13 +5,23 @@
   "type": "module",
   "main": "./src/$.cjs",
   "module": "./src/$.mjs",
+  "types": "./types/index.d.ts",
   "exports": {
     ".": {
-      "import": "./src/$.mjs",
-      "require": "./src/$.cjs",
+      "import": {
+        "types": "./types/index.d.ts",
+        "default": "./src/$.mjs"
+      },
+      "require": {
+        "types": "./types/index.d.cts",
+        "default": "./src/$.cjs"
+      },
       "default": "./src/$.mjs"
     },
-    "./process-runner": "./src/process-runner.mjs",
+    "./process-runner": {
+      "types": "./types/process-runner.d.ts",
+      "default": "./src/process-runner.mjs"
+    },
     "./package.json": "./package.json"
   },
   "repository": {
@@ -46,9 +56,10 @@
     "format:check": "cd .. && js/node_modules/.bin/prettier --check .",
     "check:duplication": "jscpd src scripts",
     "check:parity": "cd .. && node scripts/check-parity.mjs",
+    "check:types": "tsc -p tests/types/tsconfig.json",
     "docs:generate": "cd .. && node scripts/generate-docs.mjs",
     "docs:check": "cd .. && node scripts/generate-docs.mjs --check",
-    "check": "bun run lint && bun run format:check && bun run check:duplication",
+    "check": "bun run lint && bun run format:check && bun run check:duplication && bun run check:types",
     "build:terminal-font": "node scripts/build-terminal-font.mjs",
     "prepare": "cd .. && js/node_modules/.bin/husky || true",
     "changeset": "changeset",
@@ -77,12 +88,14 @@
     "README.md",
     "BEST-PRACTICES.md",
     "src/",
+    "types/",
     "docs/",
     "examples/"
   ],
   "devDependencies": {
     "@changesets/cli": "^2.31.1",
     "@eslint/js": "^9.39.5",
+    "@types/node": "26.6.3",
     "dejavu-fonts-ttf": "^2.37.3",
     "esbuild": "0.28.2",
     "eslint": "^9.39.5",
@@ -95,6 +108,7 @@
     "prettier": "^3.9.6",
     "shelljs": "0.10.0",
     "subset-font": "^2.7.0",
+    "typescript": "7.0.2",
     "zx": "8.8.5"
   },
   "dependencies": {

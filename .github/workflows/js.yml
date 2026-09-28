@@ -154,6 +154,10 @@ jobs:
         working-directory: js
         run: bun run check:duplication
 
+      - name: Check TypeScript declarations
+        working-directory: js
+        run: bun run check:types
+
   test:
     # The Node entries differ only by version, so the version has to be part of
     # the name; without it three jobs shared the name "Test JavaScript (node on
