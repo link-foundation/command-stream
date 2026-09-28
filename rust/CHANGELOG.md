@@ -172,6 +172,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [1.1.1] - 2026-09-28
+
+### Fixed
+
+- Release script now also bumps the crate version in `rust/benchmarks/Cargo.lock`, so the benchmark workflow's `--locked` checks keep passing after a Rust release.
+
 ## [1.1.0] - 2026-09-25
 
 ### Added
