@@ -15,7 +15,8 @@ import { PACKAGE_ROOT } from './commonjs-sandbox.mjs';
 import * as esm from '../src/$.mjs';
 import * as processRunnerModule from '../src/process-runner.mjs';
 
-const read = (path) => readFileSync(join(PACKAGE_ROOT, path), 'utf8');
+const read = (path) =>
+  readFileSync(join(PACKAGE_ROOT, path), 'utf8').replace(/\r\n/g, '\n');
 const apiDts = read('types/api.d.cts');
 const indexDts = read('types/index.d.ts');
 const indexDcts = read('types/index.d.cts');
