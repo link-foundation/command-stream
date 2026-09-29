@@ -1,0 +1,120 @@
+       Fresh libc v0.2.178
+       Fresh unicode-ident v1.0.22
+       Fresh cfg-if v1.0.4
+       Fresh memchr v2.7.6
+       Fresh scopeguard v1.2.0
+       Fresh smallvec v1.15.1
+       Fresh aho-corasick v1.1.4
+       Fresh proc-macro2 v1.0.104
+       Fresh parking_lot_core v0.9.12
+       Fresh lock_api v0.4.14
+       Fresh errno v0.3.14
+       Fresh regex-syntax v0.8.8
+       Fresh quote v1.0.42
+       Fresh bitflags v2.10.0
+       Fresh autocfg v1.5.0
+       Fresh pin-project-lite v0.2.16
+       Fresh parking_lot v0.12.5
+       Fresh syn v2.0.111
+       Fresh regex-automata v0.4.13
+       Fresh signal-hook-registry v1.4.8
+       Fresh tokio-macros v2.6.0
+       Fresh socket2 v0.6.1
+       Fresh mio v1.1.1
+       Fresh linux-raw-sys v0.11.0
+       Fresh cfg_aliases v0.2.1
+       Fresh bytes v1.11.0
+       Fresh rustix v1.1.3
+       Fresh tokio v1.48.0
+       Fresh serde_core v1.0.228
+       Fresh predicates-core v1.0.9
+       Fresh futures-core v0.3.31
+       Fresh zmij v1.0.2
+       Fresh num-traits v0.2.19
+       Fresh serde_derive v1.0.228
+       Fresh async-stream-impl v0.3.6
+       Fresh thiserror-impl v2.0.17
+       Fresh either v1.15.0
+       Fresh env_home v0.1.0
+       Fresh itoa v1.0.17
+       Fresh iana-time-zone v0.1.64
+       Fresh anstyle v1.0.13
+       Fresh difflib v0.4.0
+       Fresh termtree v0.5.1
+       Fresh once_cell v1.21.3
+       Fresh serde_json v1.0.148
+       Fresh which v7.0.3
+       Fresh predicates v3.1.3
+       Fresh predicates-tree v1.0.12
+       Fresh chrono v0.4.42
+       Fresh thiserror v2.0.17
+       Fresh nix v0.29.0
+       Fresh serde v1.0.228
+       Fresh async-stream v0.3.6
+       Fresh getrandom v0.3.4
+       Fresh tokio-stream v0.1.17
+       Fresh bstr v1.12.1
+       Fresh regex v1.12.2
+       Fresh async-trait v0.1.89
+       Fresh filetime v0.2.26
+       Fresh wait-timeout v0.2.1
+       Fresh fastrand v2.3.0
+       Fresh glob v0.3.3
+       Fresh tokio-test v0.4.4
+warning: unused import: `std::path::Path`
+  --> src/commands/mod.rs:53:5
+   |
+53 | use std::path::Path;
+   |     ^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `e`
+  --> src/commands/touch.rs:33:24
+   |
+33 |             if let Err(e) =
+   |                        ^ help: if this is intentional, prefix it with an underscore: `_e`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `file_type`
+   --> src/commands/ls.rs:124:9
+    |
+124 |     let file_type = if metadata.is_dir() { "d" } else { "-" };
+    |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_file_type`
+
+warning: field `output_rx` is never read
+   --> src/lib.rs:184:5
+    |
+175 | pub struct ProcessRunner {
+    |            ------------- field in this struct
+...
+184 |     output_rx: Option<mpsc::Receiver<StreamChunk>>,
+    |     ^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+       Fresh tempfile v3.24.0
+       Fresh assert_cmd v2.1.1
+warning: `command-stream` (lib) generated 4 warnings (run `cargo fix --lib -p command-stream` to apply 3 suggestions)
+       Fresh command-stream v0.9.5 (/tmp/gh-issue-solver-1780922968363/rust)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.05s
+   Doc-tests command_stream
+     Running `/home/box/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustdoc --edition=2021 --crate-type lib --color auto --crate-name command_stream --test src/lib.rs --test-run-directory /tmp/gh-issue-solver-1780922968363/rust --extern assert_cmd=/tmp/gh-issue-solver-1780922968363/rust/target/debug/deps/libassert_cmd-e52e48642b473a59.rlib --extern async_trait=/tmp/gh-issue-solver-1780922968363/rust/target/debug/deps/libasync_trait-25af62ef852c13f1.so --extern chrono=/tmp/gh-issue-solver-1780922968363/rust/target/debug/deps/libchrono-a696dd4767533fa7.rlib --extern command_stream=/tmp/gh-issue-solver-1780922968363/rust/target/debug/deps/libcommand_stream-4ddf24d0f2043cba.rlib --extern filetime=/tmp/gh-issue-solver-1780922968363/rust/target/debug/deps/libfiletime-6d7642e2f9f8bde0.rlib --extern glob=/tmp/gh-issue-solver-1780922968363/rust/target/debug/deps/libglob-ddf34b48c2f727a7.rlib --extern libc=/tmp/gh-issue-solver-1780922968363/rust/target/debug/deps/liblibc-7a49c4074e502b3b.rlib --extern nix=/tmp/gh-issue-solver-1780922968363/rust/target/debug/deps/libnix-de25de586ff8d1fb.rlib --extern once_cell=/tmp/gh-issue-solver-1780922968363/rust/target/debug/deps/libonce_cell-7551b3a1dae149bb.rlib --extern regex=/tmp/gh-issue-solver-1780922968363/rust/target/debug/deps/libregex-3f4827befad472b3.rlib --extern serde=/tmp/gh-issue-solver-1780922968363/rust/target/debug/deps/libserde-46203e8a6c9e58c4.rlib --extern serde_json=/tmp/gh-issue-solver-1780922968363/rust/target/debug/deps/libserde_json-85fcef24435a3155.rlib --extern tempfile=/tmp/gh-issue-solver-1780922968363/rust/target/debug/deps/libtempfile-9f5406b362cb6593.rlib --extern thiserror=/tmp/gh-issue-solver-1780922968363/rust/target/debug/deps/libthiserror-e62624a28117d3cb.rlib --extern tokio=/tmp/gh-issue-solver-1780922968363/rust/target/debug/deps/libtokio-0354b47b7111be41.rlib --extern tokio_test=/tmp/gh-issue-solver-1780922968363/rust/target/debug/deps/libtokio_test-c8bf71467468b09a.rlib --extern which=/tmp/gh-issue-solver-1780922968363/rust/target/debug/deps/libwhich-f1ef33cf79378bd0.rlib -L dependency=/tmp/gh-issue-solver-1780922968363/rust/target/debug/deps -C embed-bitcode=no --cfg 'feature="default"' --cfg 'feature="json"' --cfg 'feature="serde"' --cfg 'feature="serde_json"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("default", "json", "serde", "serde_json"))' --error-format human`
+
+running 13 tests
+test src/events.rs - events::StreamEmitter::on (line 93) ... ignored
+test src/pipeline.rs - pipeline (line 9) - compile ... ok
+test src/macros.rs - macros (line 17) - compile ... ok
+test src/macros.rs - macros::cmd (line 84) - compile ... ok
+test src/lib.rs - (line 38) - compile ... ok
+test src/stream.rs - stream (line 8) - compile ... ok
+test src/ansi.rs - ansi::AnsiUtils::strip_control_chars (line 37) ... ok
+test src/ansi.rs - ansi::AnsiUtils::strip_ansi (line 17) ... ok
+test src/quote.rs - quote::needs_quoting (line 88) ... ok
+test src/quote.rs - quote::quote_all (line 67) ... ok
+test src/quote.rs - quote::quote (line 13) ... ok
+test src/trace.rs - trace::trace (line 33) ... ok
+test src/trace.rs - trace::trace_lazy (line 55) ... ok
+
+test result: ok. 12 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.62s

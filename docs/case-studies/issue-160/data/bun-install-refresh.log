@@ -1,0 +1,14 @@
+bun install v1.3.14 (0d9b296a)
+
+$ cd .. && js/node_modules/.bin/husky || true
+
++ @changesets/cli@2.29.8
++ eslint@9.39.2
++ eslint-config-prettier@10.1.8
++ eslint-plugin-prettier@5.5.4
++ husky@9.1.7
++ jscpd@4.0.5
++ lint-staged@16.2.7
++ prettier@3.7.4
+
+301 packages installed [352.00ms]
