@@ -32,6 +32,28 @@ const MONTHS = [
 const SIX_MONTHS_SECS = 180 * 24 * 60 * 60;
 const LONG_UNKNOWN = '?????????? ? ? ? ?            ? ';
 
+/**
+ * Bun's `fs.Dir` yields bare Buffers instead of Dirents for
+ * `encoding: 'buffer'`; wrap them and take the type from lstat.
+ */
+function direntOf(entry, dirPath) {
+  if (!(entry instanceof Uint8Array)) {
+    return entry;
+  }
+  const name = Buffer.from(entry);
+  const full = Buffer.concat([Buffer.from(dirPath), Buffer.from(SEP), name]);
+  return {
+    name,
+    isDirectory() {
+      try {
+        return fs.lstatSync(full).isDirectory();
+      } catch {
+        return false;
+      }
+    },
+  };
+}
+
 /** Parse flags: `{opts, start}` (start = first operand or null) or `{illegal}`. */
 function parseOpts(args) {
   const opts = {
@@ -170,9 +192,13 @@ class LsTask {
     }
     const dirPath = this.fsPath(this.path);
     let dir;
+    let entry;
     try {
       dir = fs.opendirSync(dirPath, { encoding: 'buffer' });
+      // Bun's fs.Dir defers open errors (EACCES) to the first read.
+      entry = dir.readSync();
     } catch (e) {
+      dir?.closeSync();
       this.listNonDirectoryOperand(e);
       return;
     }
@@ -186,20 +212,17 @@ class LsTask {
       }
       this.addEntry(Buffer.from('.'), dirPath);
       this.addEntry(Buffer.from('..'), dirPath);
-      for (;;) {
-        let entry;
+      while (entry !== null) {
+        entry = direntOf(entry, dirPath);
+        this.addEntry(entry.name, dirPath);
+        if (entry.isDirectory() && this.opts.recursive) {
+          this.ls.queue.push(new LsTask(this.ls, this.join(entry.name), true));
+        }
         try {
           entry = dir.readSync();
         } catch (e) {
           this.err = this.errorWithPath(e);
           return;
-        }
-        if (entry === null) {
-          break;
-        }
-        this.addEntry(entry.name, dirPath);
-        if (entry.isDirectory() && this.opts.recursive) {
-          this.ls.queue.push(new LsTask(this.ls, this.join(entry.name), true));
         }
       }
     } finally {
