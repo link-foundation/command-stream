@@ -182,6 +182,26 @@ pub fn node_platform() -> &'static str {
     }
 }
 
+/// `"windows"` or `"posix"`, the family names used by `platforms` and
+/// `byPlatform`.
+pub fn platform_family(platform: &str) -> &'static str {
+    if platform == "win32" {
+        "windows"
+    } else {
+        "posix"
+    }
+}
+
+/// Pick the entry of a `{"byPlatform": {...}}` map for `platform`: the exact
+/// platform (`linux`, `darwin`, `win32`), then its family (`windows`,
+/// `posix`), then `default` (`forPlatform`).
+pub fn for_platform<'a>(map: &'a Value, platform: &str) -> Result<&'a Value, String> {
+    [platform, platform_family(platform), "default"]
+        .iter()
+        .find_map(|key| map.get(*key))
+        .ok_or_else(|| format!("byPlatform has no entry for {platform}"))
+}
+
 /// Node's `path.sep`.
 pub const SEP: &str = std::path::MAIN_SEPARATOR_STR;
 
@@ -249,17 +269,24 @@ fn node_normalize(p: &str) -> String {
 pub struct Context {
     /// The temp dir with forward slashes (`{{TEMP}}`).
     pub temp_dir: String,
+    /// The temp dir with `sep` as the separator (`{{TEMP_NATIVE}}`).
+    pub temp_dir_native: String,
     /// The node binary with forward slashes (`{{NODE}}`).
     pub node: String,
     /// The platform path separator (`{{SEP}}`).
     pub sep: String,
+    /// Node's `process.platform`, for `byPlatform` expectations.
+    pub platform: String,
 }
 
 pub fn make_context(temp_dir: &str, node: &str, sep: &str) -> Context {
+    let temp_dir = to_slash(temp_dir);
     Context {
-        temp_dir: to_slash(temp_dir),
+        temp_dir_native: temp_dir.replace('/', sep),
+        temp_dir,
         node: to_slash(node),
         sep: sep.to_string(),
+        platform: node_platform().to_string(),
     }
 }
 
@@ -267,9 +294,11 @@ pub fn to_slash(p: &str) -> String {
     p.replace('\\', "/")
 }
 
-/// Replace `{{TEMP}}`, `{{NODE}}` and `{{SEP}}` inside a string.
+/// Replace `{{TEMP}}`, `{{TEMP_NATIVE}}`, `{{NODE}}` and `{{SEP}}` inside a
+/// string.
 pub fn subst(s: &str, ctx: &Context) -> String {
     s.replace("{{TEMP}}", &ctx.temp_dir)
+        .replace("{{TEMP_NATIVE}}", &ctx.temp_dir_native)
         .replace("{{NODE}}", &ctx.node)
         .replace("{{SEP}}", &ctx.sep)
 }
@@ -591,11 +620,7 @@ pub fn skip_reason(
             .map(|a| a.iter().map(js_string).collect())
     };
     if let Some(platforms) = list("platforms") {
-        let family = if platform == "win32" {
-            "windows"
-        } else {
-            "posix"
-        };
+        let family = platform_family(platform);
         if !platforms.iter().any(|p| p == platform || p == family) {
             return Some(format!(
                 "platform {platform} not in {}",

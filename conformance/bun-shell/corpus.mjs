@@ -66,11 +66,19 @@ export function allCases(casesDir = CASES_DIR) {
 // ---------------------------------------------------------------------------
 
 /** Context used for placeholder substitution. */
-export function makeContext({ tempDir, node, sep = path.sep } = {}) {
+export function makeContext({
+  tempDir,
+  node,
+  sep = path.sep,
+  platform = process.platform,
+} = {}) {
+  const slashed = toSlash(tempDir ?? '');
   return {
-    tempDir: toSlash(tempDir ?? ''),
+    tempDir: slashed,
+    tempDirNative: slashed.replaceAll('/', sep),
     node: toSlash(node ?? 'node'),
     sep,
+    platform,
   };
 }
 
@@ -78,13 +86,14 @@ function toSlash(p) {
   return String(p).replaceAll('\\', '/');
 }
 
-/** Replace {{TEMP}}, {{NODE}} and {{SEP}} inside a string. */
+/** Replace {{TEMP}}, {{TEMP_NATIVE}}, {{NODE}} and {{SEP}} inside a string. */
 export function subst(str, ctx) {
   if (typeof str !== 'string') {
     return str;
   }
   return str
     .replaceAll('{{TEMP}}', ctx.tempDir)
+    .replaceAll('{{TEMP_NATIVE}}', ctx.tempDirNative)
     .replaceAll('{{NODE}}', ctx.node)
     .replaceAll('{{SEP}}', ctx.sep);
 }
@@ -272,11 +281,15 @@ function convertValue(v, ctx, f, buffers) {
  *   {"lineCount": n}        (number of non-empty lines)
  *   {"any": true}
  *   {"allOf": [EXPECT, ...]} {"oneOf": [EXPECT, ...]}
+ *   {"byPlatform": {"windows": EXPECT, "posix": EXPECT, ...}}
  * Returns an error string or null.
  */
 export function matchText(actual, exp, ctx) {
   if (exp === undefined) {
     exp = '';
+  }
+  if (exp && typeof exp === 'object' && 'byPlatform' in exp) {
+    return matchText(actual, forPlatform(exp.byPlatform, ctx.platform), ctx);
   }
   if (
     typeof exp === 'string' ||
@@ -536,6 +549,24 @@ function lexists(p) {
   }
 }
 
+/**
+ * Pick the entry of a {"byPlatform": {...}} map for `platform`: the exact
+ * platform ("linux", "darwin", "win32"), then its family ("windows",
+ * "posix"), then "default".
+ */
+export function forPlatform(map, platform = process.platform) {
+  for (const key of [platform, platformFamily(platform), 'default']) {
+    if (key in map) {
+      return map[key];
+    }
+  }
+  throw new Error(`byPlatform has no entry for ${platform}`);
+}
+
+function platformFamily(platform) {
+  return platform === 'win32' ? 'windows' : 'posix';
+}
+
 // ---------------------------------------------------------------------------
 // Applicability
 // ---------------------------------------------------------------------------
@@ -546,10 +577,7 @@ export function skipReason(
   { platform = process.platform, language = 'js', which = () => true } = {}
 ) {
   if (caseObj.platforms) {
-    const tags = new Set([
-      platform,
-      platform === 'win32' ? 'windows' : 'posix',
-    ]);
+    const tags = new Set([platform, platformFamily(platform)]);
     if (!caseObj.platforms.some((p) => tags.has(p))) {
       return `platform ${platform} not in ${caseObj.platforms.join(',')}`;
     }

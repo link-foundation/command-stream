@@ -34,6 +34,31 @@ fn context_uses_forward_slashes_and_subst_replaces_every_placeholder() {
         subst("{{TEMP}}/a {{TEMP}}/b {{NODE}} x{{SEP}}y {{OTHER}}", &c),
         r"C:/t/x/a C:/t/x/b C:/node/node.exe x\y {{OTHER}}"
     );
+    assert_eq!(subst("{{TEMP_NATIVE}}{{SEP}}a/b", &c), r"C:\t\x\a/b");
+    assert_eq!(subst("{{TEMP_NATIVE}}", &ctx()), "C:/t/x");
+}
+
+#[test]
+fn by_platform_picks_exact_platform_then_family_then_default() {
+    let map = json!({"win32": "w", "posix": "p", "default": "d"});
+    assert_eq!(for_platform(&map, "win32"), Ok(&json!("w")));
+    assert_eq!(for_platform(&map, "darwin"), Ok(&json!("p")));
+    let map = json!({"linux": "l", "default": "d"});
+    assert_eq!(for_platform(&map, "darwin"), Ok(&json!("d")));
+    assert_eq!(
+        for_platform(&json!({"windows": "w"}), "linux"),
+        Err("byPlatform has no entry for linux".to_string())
+    );
+    let mut c = ctx();
+    c.platform = "win32".to_string();
+    let exp = json!({"byPlatform": {"windows": {"contains": "C:"}, "posix": "/x"}});
+    assert_eq!(match_text("C:/t", Some(&exp), &c), Ok(()));
+    c.platform = "linux".to_string();
+    assert_eq!(match_text("/x", Some(&exp), &c), Ok(()));
+    assert_eq!(
+        match_text("C:/t", Some(&exp), &c),
+        Err(r#"expected "/x", got "C:/t""#.to_string())
+    );
 }
 
 #[test]

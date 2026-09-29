@@ -19,6 +19,9 @@ pub fn match_text(actual: &str, exp: Option<&Value>, ctx: &Context) -> Result<()
     let Some(o) = exp.as_object() else {
         return Err(format!("unknown text expectation {}", json(exp)));
     };
+    if let Some(map) = o.get("byPlatform") {
+        return match_text(actual, Some(for_platform(map, &ctx.platform)?), ctx);
+    }
     if truthy(o.get("any")) {
         return Ok(());
     }
