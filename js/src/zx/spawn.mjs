@@ -8,6 +8,8 @@
 
 import cp from 'node:child_process';
 import EventEmitter from 'node:events';
+import fs from 'node:fs';
+import path from 'node:path';
 import process from 'node:process';
 import { Readable, Transform } from 'node:stream';
 
@@ -45,6 +47,57 @@ const defaultCtx = () => ({
   stdio: ['pipe', 'pipe', 'pipe'],
   run: immediate,
 });
+
+const msysShells = new Map();
+
+/**
+ * Whether `shell` runs on the MSYS2 or Cygwin runtime (Git Bash, MSYS2,
+ * Cygwin). Those programs parse their Windows command line themselves.
+ * `Git\bin\bash.exe` is a launcher for `Git\usr\bin\bash.exe`, hence the
+ * `../usr/bin` lookup.
+ *
+ * @param {string} shell Shell executable path.
+ * @returns {boolean} True for an MSYS2 or Cygwin program.
+ */
+export function isMsysShell(shell) {
+  if (!msysShells.has(shell)) {
+    const dir = path.dirname(shell);
+    msysShells.set(
+      shell,
+      [dir, path.join(dir, '..', 'usr', 'bin')].some((d) =>
+        ['msys-2.0.dll', 'cygwin1.dll'].some((dll) =>
+          fs.existsSync(path.join(d, dll))
+        )
+      )
+    );
+  }
+  return msysShells.get(shell);
+}
+
+/**
+ * Encode a `bash -c` command for an MSYS2/Cygwin shell on Windows.
+ *
+ * Node and Bun quote the argument the libuv way: backslashes are doubled
+ * only before a `"` or at the end. The MSYS2/Cygwin runtime then reads a
+ * quoted argument with `\\` -> `\` and `\"` -> `"`, so a zx-quoted path such
+ * as `$'C:\\Users'` would reach bash as `$'C:\Users'` (`\U` is an escape
+ * there). Doubling the other backslash runs makes the round trip exact. The
+ * leading space makes libuv always quote the argument and keeps the runtime
+ * from treating a leading `C:\` as a DOS path.
+ *
+ * @param {string} cmd Command for `bash -c`.
+ * @returns {string} Command to hand to `spawn`.
+ */
+export function msysCommand(cmd) {
+  return ` ${cmd.replace(/\\+(?!["\\]|$)/g, '$&$&')}`;
+}
+
+const spawnCommand = (c) =>
+  process.platform === 'win32' &&
+  typeof c.shell === 'string' &&
+  isMsysShell(c.shell)
+    ? msysCommand(c.cmd)
+    : c.cmd;
 
 const spawnOptions = (c) => ({
   ...c.spawnOpts,
@@ -113,7 +166,7 @@ function makePush(c) {
 function runSync(c, startedAt) {
   const push = makePush(c);
   toggleListeners(c.ee, c.on);
-  const result = c.spawnSync(c.cmd, c.args, spawnOptions(c));
+  const result = c.spawnSync(spawnCommand(c), c.args, spawnOptions(c));
   c.ee.emit('start', result, c);
   if (result.stdout?.length > 0) {
     c.stdout.write(result.stdout);
@@ -168,7 +221,7 @@ function runAsync(c, startedAt) {
   c.run(() => {
     toggleListeners(c.ee, c.on);
     const opts = spawnOptions(c);
-    const child = c.spawn(c.cmd, c.args, opts);
+    const child = c.spawn(spawnCommand(c), c.args, opts);
     c.child = child;
     c.ee.emit('start', child, c);
     wireChild(c, child, opts, startedAt);
