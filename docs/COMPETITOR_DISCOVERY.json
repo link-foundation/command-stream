@@ -1,0 +1,1033 @@
+{
+  "schemaVersion": 1,
+  "snapshotDate": "2026-09-13",
+  "githubApi": "GET /search/repositories?per_page=100&q=<query> (authenticated, complete because every totalCount is below 100)",
+  "queries": [
+    {
+      "language": "javascript",
+      "query": "child process in:name,description,topics language:JavaScript stars:>=500",
+      "totalCount": 2,
+      "results": [
+        {
+          "repository": "rvagg/node-worker-farm",
+          "stars": 1736,
+          "archived": false,
+          "description": "Distribute processing tasks to child processes with an über-simple API and baked-in durability & custom concurrency options."
+        },
+        {
+          "repository": "sindresorhus/nano-spawn",
+          "stars": 592,
+          "archived": false,
+          "description": "Tiny process execution for humans — a better child_process"
+        }
+      ]
+    },
+    {
+      "language": "javascript",
+      "query": "child process in:name,description,topics language:TypeScript stars:>=500",
+      "totalCount": 0,
+      "results": []
+    },
+    {
+      "language": "javascript",
+      "query": "process execution in:name,description,topics language:JavaScript stars:>=500",
+      "totalCount": 2,
+      "results": [
+        {
+          "repository": "sindresorhus/execa",
+          "stars": 7602,
+          "archived": false,
+          "description": "Process execution for humans"
+        },
+        {
+          "repository": "sindresorhus/nano-spawn",
+          "stars": 592,
+          "archived": false,
+          "description": "Tiny process execution for humans — a better child_process"
+        }
+      ]
+    },
+    {
+      "language": "javascript",
+      "query": "shell command in:name,description,topics language:JavaScript stars:>=500",
+      "totalCount": 8,
+      "results": [
+        {
+          "repository": "shelljs/shelljs",
+          "stars": 14396,
+          "archived": false,
+          "description": ":shell: Portable Unix shell commands for Node.js"
+        },
+        {
+          "repository": "sindresorhus/grunt-shell",
+          "stars": 942,
+          "archived": false,
+          "description": "Run shell commands"
+        },
+        {
+          "repository": "botgram/shell-bot",
+          "stars": 835,
+          "archived": false,
+          "description": ":robot: Telegram bot that executes commands and sends the live output"
+        },
+        {
+          "repository": "shelljs/shx",
+          "stars": 1871,
+          "archived": false,
+          "description": "Portable Shell Commands for Node"
+        },
+        {
+          "repository": "pstadler/flightplan",
+          "stars": 1812,
+          "archived": false,
+          "description": "Run sequences of shell commands against local and remote hosts."
+        },
+        {
+          "repository": "kaelzhang/shell-safe-rm",
+          "stars": 617,
+          "archived": false,
+          "description": "😎 Safe-rm: A drop-in and much safer replacement of bash rm with nearly full functionalities and options of the rm command! Safe-rm will act exactly the same as the original rm command."
+        },
+        {
+          "repository": "jcubic/jquery.terminal",
+          "stars": 3236,
+          "archived": false,
+          "description": "jQuery Terminal Emulator - JavaScript library for creating web-based terminals with custom commands"
+        },
+        {
+          "repository": "ehmicky/nve",
+          "stars": 711,
+          "archived": false,
+          "description": "Run any command on specific Node.js versions"
+        }
+      ]
+    },
+    {
+      "language": "javascript",
+      "query": "shell command in:name,description,topics language:TypeScript stars:>=500",
+      "totalCount": 3,
+      "results": [
+        {
+          "repository": "BuilderIO/ai-shell",
+          "stars": 5292,
+          "archived": false,
+          "description": "A CLI that converts natural language to shell commands."
+        },
+        {
+          "repository": "Taitava/obsidian-shellcommands",
+          "stars": 525,
+          "archived": false,
+          "description": "Execute system commands via hotkeys or command palette in Obsidian (https://obsidian.md). Some automated events are also supported, and execution via URI links."
+        },
+        {
+          "repository": "lifo-sh/lifo",
+          "stars": 537,
+          "archived": false,
+          "description": "A browser-native operating system. Unix/Linux reimagined where the browser IS the kernel and Web APIs ARE syscalls. 60+ commands, bash-like shell, virtual filesystem, and IndexedDB persistence."
+        }
+      ]
+    },
+    {
+      "language": "javascript",
+      "query": "environment scripts in:name,description,topics language:TypeScript stars:>=500",
+      "totalCount": 1,
+      "results": [
+        {
+          "repository": "kentcdodds/cross-env",
+          "stars": 6523,
+          "archived": true,
+          "description": "🔀 Cross platform setting of environment scripts"
+        }
+      ]
+    },
+    {
+      "language": "rust",
+      "query": "process execution in:name,description,topics language:Rust stars:>=100",
+      "totalCount": 4,
+      "results": [
+        {
+          "repository": "hniksic/rust-subprocess",
+          "stars": 452,
+          "archived": false,
+          "description": "Execution of and interaction with external processes and pipelines"
+        },
+        {
+          "repository": "apache/auron",
+          "stars": 1803,
+          "archived": false,
+          "description": "Apache Auron(Incubating) is an accelerator for big data engines, leveraging native vectorized execution to accelerate query processing."
+        },
+        {
+          "repository": "rust-embedded/aarch64-cpu",
+          "stars": 116,
+          "archived": false,
+          "description": "Low level access to processors using the AArch64 execution state."
+        },
+        {
+          "repository": "Ray-Code-Svg/SuperNovaAgent",
+          "stars": 186,
+          "archived": false,
+          "description": "SuperNova is a Windows-first desktop AI Workbench that turns chat into traceable tasks. It combines a Tauri + React Workbench, Rust Product Runtime, typed protocol, and Process Kernel so actions can produce visible artifacts, runtime receipts, replayable evidence, and controlled workspace execution."
+        }
+      ]
+    },
+    {
+      "language": "rust",
+      "query": "shell command in:name,description,topics language:Rust stars:>=100",
+      "totalCount": 26,
+      "results": [
+        {
+          "repository": "fish-shell/fish-shell",
+          "stars": 34190,
+          "archived": false,
+          "description": "The user-friendly command line shell."
+        },
+        {
+          "repository": "ajeetdsouza/zoxide",
+          "stars": 39445,
+          "archived": false,
+          "description": "A smarter cd command. Supports all major shells."
+        },
+        {
+          "repository": "Nukesor/pueue",
+          "stars": 6330,
+          "archived": false,
+          "description": ":stars: Manage your shell commands."
+        },
+        {
+          "repository": "Dicklesworthstone/destructive_command_guard",
+          "stars": 5964,
+          "archived": false,
+          "description": "The Destructive Command Guard (dcg) is for blocking dangerous git and shell commands from being executed by agents."
+        },
+        {
+          "repository": "denisidoro/navi",
+          "stars": 17539,
+          "archived": false,
+          "description": "An interactive cheatsheet tool for the command-line"
+        },
+        {
+          "repository": "kaplanelad/shellfirm",
+          "stars": 932,
+          "archived": false,
+          "description": "Safety guardrails for ai coding agents and human terminal commands"
+        },
+        {
+          "repository": "nuta/nsh",
+          "stars": 967,
+          "archived": false,
+          "description": "A command-line shell like fish, but POSIX compatible."
+        },
+        {
+          "repository": "rusty-ferris-club/shellclear",
+          "stars": 229,
+          "archived": false,
+          "description": "Secure shell history commands by finding sensitive data"
+        },
+        {
+          "repository": "google/rust-shell",
+          "stars": 224,
+          "archived": true,
+          "description": "Helper library for std::process::Command to write shell script like tasks in rust"
+        },
+        {
+          "repository": "liljencrantz/crush",
+          "stars": 1885,
+          "archived": false,
+          "description": "Crush is a command line shell that is also a powerful modern programming language."
+        },
+        {
+          "repository": "iagooar/qqqa",
+          "stars": 627,
+          "archived": false,
+          "description": "Fast, stateless LLM for your shell: qq answers; qa runs commands"
+        },
+        {
+          "repository": "iqlusioninc/abscissa",
+          "stars": 593,
+          "archived": false,
+          "description": "Application microframework with command-line option parsing, configuration, error handling, logging, and shell interactions"
+        },
+        {
+          "repository": "iffse/pay-respects",
+          "stars": 711,
+          "archived": false,
+          "description": "Command suggestions, command-not-found and thefuck replacement written in Rust"
+        },
+        {
+          "repository": "YiNNx/cmd-wrapped",
+          "stars": 1288,
+          "archived": false,
+          "description": "👩‍💻 A CLI Tool for Command Line Insights"
+        },
+        {
+          "repository": "rust-shell-script/rust_cmd_lib",
+          "stars": 1155,
+          "archived": false,
+          "description": "Common rust command-line macros and utilities, to write shell-script like tasks in a clean, natural and rusty way"
+        },
+        {
+          "repository": "sigoden/argc",
+          "stars": 1164,
+          "archived": false,
+          "description": "A Bash CLI framework, also a Bash command runner."
+        },
+        {
+          "repository": "phsym/shrust",
+          "stars": 111,
+          "archived": false,
+          "description": "Rust library to create interactive command line shells"
+        },
+        {
+          "repository": "greymd/teip",
+          "stars": 597,
+          "archived": false,
+          "description": "Masking tape to help commands \"do one thing well\""
+        },
+        {
+          "repository": "ctbur/async",
+          "stars": 135,
+          "archived": false,
+          "description": "A tool to parallelize shell commands."
+        },
+        {
+          "repository": "tomhrr/cosh",
+          "stars": 136,
+          "archived": false,
+          "description": "Concatenative command-line shell"
+        },
+        {
+          "repository": "kristoferlund/ostt",
+          "stars": 294,
+          "archived": false,
+          "description": "Open source voice-to-text for the terminal. Record from a hotkey, transcribe with any provider, pipe to AI or shell commands."
+        },
+        {
+          "repository": "jasonjmcghee/plock",
+          "stars": 503,
+          "archived": false,
+          "description": "From anywhere you can type, query and stream the output of any script (e.g. an LLM)"
+        },
+        {
+          "repository": "dimo414/bkt",
+          "stars": 358,
+          "archived": false,
+          "description": "a subprocess caching utility, available as a command line binary and a Rust library."
+        },
+        {
+          "repository": "maxktz/hitch",
+          "stars": 177,
+          "archived": false,
+          "description": "Share your terminal with coding agent in one command. Lightweight shell proxy, written in Rust."
+        },
+        {
+          "repository": "mihaigalos/dusage",
+          "stars": 121,
+          "archived": false,
+          "description": "💾 A command line disk usage information tool."
+        },
+        {
+          "repository": "Tencent/tat-agent",
+          "stars": 156,
+          "archived": false,
+          "description": "TAT agent is an agent written in Rust, which run in CVM, Lighthouse or CPM 2.0 instances. Its role is to run commands remotely without ssh login, invoked from TencentCloud Console/API. Commands include but not limited to: Shell, PowerShell, Python. TAT stands for TencentCloud Automation Tools. See more info at https://cloud.tencent.com/product/tat."
+        }
+      ]
+    },
+    {
+      "language": "rust",
+      "query": "child process in:name,description,topics language:Rust stars:>=100",
+      "totalCount": 2,
+      "results": [
+        {
+          "repository": "oconnor663/duct.rs",
+          "stars": 1043,
+          "archived": false,
+          "description": "a Rust library for running child processes"
+        },
+        {
+          "repository": "passcod/catflap",
+          "stars": 140,
+          "archived": true,
+          "description": "🐈🚪 Creates listening sockets and passes their FDs to a child process. You should probably use systemfd instead!"
+        }
+      ]
+    }
+  ],
+  "candidates": [
+    {
+      "language": "javascript",
+      "repository": "actions/toolkit",
+      "stars": 5847,
+      "archived": false,
+      "description": "",
+      "origins": ["distinct @actions/exec package"],
+      "status": "included"
+    },
+    {
+      "language": "javascript",
+      "repository": "botgram/shell-bot",
+      "stars": 835,
+      "archived": false,
+      "description": ":robot: Telegram bot that executes commands and sends the live output",
+      "origins": ["github-search:4"],
+      "status": "excluded",
+      "reason": "search hit is not a general-purpose command/process execution library"
+    },
+    {
+      "language": "javascript",
+      "repository": "BuilderIO/ai-shell",
+      "stars": 5292,
+      "archived": false,
+      "description": "A CLI that converts natural language to shell commands.",
+      "origins": ["github-search:5"],
+      "status": "excluded",
+      "reason": "search hit is not a general-purpose command/process execution library"
+    },
+    {
+      "language": "javascript",
+      "repository": "denoland/deno",
+      "stars": 108420,
+      "archived": false,
+      "description": "",
+      "origins": ["native runtime primitive"],
+      "status": "included"
+    },
+    {
+      "language": "javascript",
+      "repository": "dsherret/dax",
+      "stars": 1496,
+      "archived": false,
+      "description": "",
+      "origins": ["ecosystem nomination"],
+      "status": "included"
+    },
+    {
+      "language": "javascript",
+      "repository": "dsherret/shell",
+      "stars": 7,
+      "archived": false,
+      "description": "",
+      "origins": ["selected Dax command engine"],
+      "status": "included"
+    },
+    {
+      "language": "javascript",
+      "repository": "ehmicky/nve",
+      "stars": 711,
+      "archived": false,
+      "description": "Run any command on specific Node.js versions",
+      "origins": ["github-search:4", "ecosystem nomination"],
+      "status": "excluded",
+      "reason": "Node-version launcher rather than a general process library"
+    },
+    {
+      "language": "javascript",
+      "repository": "extrabacon/python-shell",
+      "stars": 2161,
+      "archived": false,
+      "description": "",
+      "origins": ["ecosystem nomination"],
+      "status": "excluded",
+      "reason": "bridge limited to one guest language"
+    },
+    {
+      "language": "javascript",
+      "repository": "google/zx",
+      "stars": 45743,
+      "archived": false,
+      "description": "",
+      "origins": ["ecosystem nomination"],
+      "status": "included"
+    },
+    {
+      "language": "javascript",
+      "repository": "jcubic/jquery.terminal",
+      "stars": 3236,
+      "archived": false,
+      "description": "jQuery Terminal Emulator - JavaScript library for creating web-based terminals with custom commands",
+      "origins": ["github-search:4"],
+      "status": "excluded",
+      "reason": "search hit is not a general-purpose command/process execution library"
+    },
+    {
+      "language": "javascript",
+      "repository": "kaelzhang/shell-safe-rm",
+      "stars": 617,
+      "archived": false,
+      "description": "😎 Safe-rm: A drop-in and much safer replacement of bash rm with nearly full functionalities and options of the rm command! Safe-rm will act exactly the same as the original rm command.",
+      "origins": ["github-search:4"],
+      "status": "excluded",
+      "reason": "search hit is not a general-purpose command/process execution library"
+    },
+    {
+      "language": "javascript",
+      "repository": "kentcdodds/cross-env",
+      "stars": 6523,
+      "archived": true,
+      "description": "🔀 Cross platform setting of environment scripts",
+      "origins": ["github-search:6"],
+      "status": "included"
+    },
+    {
+      "language": "javascript",
+      "repository": "lifo-sh/lifo",
+      "stars": 537,
+      "archived": false,
+      "description": "A browser-native operating system. Unix/Linux reimagined where the browser IS the kernel and Web APIs ARE syscalls. 60+ commands, bash-like shell, virtual filesystem, and IndexedDB persistence.",
+      "origins": ["github-search:5"],
+      "status": "excluded",
+      "reason": "search hit is not a general-purpose command/process execution library"
+    },
+    {
+      "language": "javascript",
+      "repository": "moxystudio/node-cross-spawn",
+      "stars": 1171,
+      "archived": false,
+      "description": "",
+      "origins": ["ecosystem nomination"],
+      "status": "included"
+    },
+    {
+      "language": "javascript",
+      "repository": "nodejs/node",
+      "stars": 121848,
+      "archived": false,
+      "description": "",
+      "origins": ["native runtime primitive"],
+      "status": "included"
+    },
+    {
+      "language": "javascript",
+      "repository": "open-cli-tools/concurrently",
+      "stars": 7847,
+      "archived": false,
+      "description": "",
+      "origins": ["ecosystem nomination"],
+      "status": "excluded",
+      "reason": "task orchestrator CLI"
+    },
+    {
+      "language": "javascript",
+      "repository": "oven-sh/bun",
+      "stars": 95955,
+      "archived": false,
+      "description": "",
+      "origins": ["native runtime primitive"],
+      "status": "included"
+    },
+    {
+      "language": "javascript",
+      "repository": "pstadler/flightplan",
+      "stars": 1812,
+      "archived": false,
+      "description": "Run sequences of shell commands against local and remote hosts.",
+      "origins": ["github-search:4", "ecosystem nomination"],
+      "status": "excluded",
+      "reason": "deployment task orchestrator"
+    },
+    {
+      "language": "javascript",
+      "repository": "rvagg/node-worker-farm",
+      "stars": 1736,
+      "archived": false,
+      "description": "Distribute processing tasks to child processes with an über-simple API and baked-in durability & custom concurrency options.",
+      "origins": ["github-search:1"],
+      "status": "excluded",
+      "reason": "search hit is not a general-purpose command/process execution library"
+    },
+    {
+      "language": "javascript",
+      "repository": "shelljs/shelljs",
+      "stars": 14396,
+      "archived": false,
+      "description": ":shell: Portable Unix shell commands for Node.js",
+      "origins": ["github-search:4"],
+      "status": "included"
+    },
+    {
+      "language": "javascript",
+      "repository": "shelljs/shx",
+      "stars": 1871,
+      "archived": false,
+      "description": "Portable Shell Commands for Node",
+      "origins": ["github-search:4", "ecosystem nomination"],
+      "status": "excluded",
+      "reason": "standalone CLI over the selected ShellJS library"
+    },
+    {
+      "language": "javascript",
+      "repository": "sindresorhus/execa",
+      "stars": 7602,
+      "archived": false,
+      "description": "Process execution for humans",
+      "origins": ["github-search:3", "ecosystem nomination"],
+      "status": "included"
+    },
+    {
+      "language": "javascript",
+      "repository": "sindresorhus/grunt-shell",
+      "stars": 942,
+      "archived": false,
+      "description": "Run shell commands",
+      "origins": ["github-search:4"],
+      "status": "excluded",
+      "reason": "task-runner plugin"
+    },
+    {
+      "language": "javascript",
+      "repository": "sindresorhus/nano-spawn",
+      "stars": 592,
+      "archived": false,
+      "description": "Tiny process execution for humans — a better child_process",
+      "origins": ["github-search:1", "github-search:3"],
+      "status": "included"
+    },
+    {
+      "language": "javascript",
+      "repository": "Taitava/obsidian-shellcommands",
+      "stars": 525,
+      "archived": false,
+      "description": "Execute system commands via hotkeys or command palette in Obsidian (https://obsidian.md). Some automated events are also supported, and execution via URI links.",
+      "origins": ["github-search:5"],
+      "status": "excluded",
+      "reason": "search hit is not a general-purpose command/process execution library"
+    },
+    {
+      "language": "rust",
+      "repository": "ajeetdsouza/zoxide",
+      "stars": 39445,
+      "archived": false,
+      "description": "A smarter cd command. Supports all major shells.",
+      "origins": ["github-search:8"],
+      "status": "excluded",
+      "reason": "search hit is not a general-purpose command/process execution library"
+    },
+    {
+      "language": "rust",
+      "repository": "apache/auron",
+      "stars": 1803,
+      "archived": false,
+      "description": "Apache Auron(Incubating) is an accelerator for big data engines, leveraging native vectorized execution to accelerate query processing.",
+      "origins": ["github-search:7"],
+      "status": "excluded",
+      "reason": "search hit is not a general-purpose command/process execution library"
+    },
+    {
+      "language": "rust",
+      "repository": "assert-rs/assert_cmd",
+      "stars": 562,
+      "archived": false,
+      "description": "",
+      "origins": ["ecosystem nomination"],
+      "status": "included"
+    },
+    {
+      "language": "rust",
+      "repository": "ctbur/async",
+      "stars": 135,
+      "archived": false,
+      "description": "A tool to parallelize shell commands.",
+      "origins": ["github-search:8"],
+      "status": "excluded",
+      "reason": "search hit is not a general-purpose command/process execution library"
+    },
+    {
+      "language": "rust",
+      "repository": "denisidoro/navi",
+      "stars": 17539,
+      "archived": false,
+      "description": "An interactive cheatsheet tool for the command-line",
+      "origins": ["github-search:8"],
+      "status": "excluded",
+      "reason": "search hit is not a general-purpose command/process execution library"
+    },
+    {
+      "language": "rust",
+      "repository": "denoland/deno_task_shell",
+      "stars": 139,
+      "archived": false,
+      "description": "",
+      "origins": ["ecosystem nomination"],
+      "status": "excluded",
+      "reason": "task-shell implementation, not a general library API"
+    },
+    {
+      "language": "rust",
+      "repository": "Dicklesworthstone/destructive_command_guard",
+      "stars": 5964,
+      "archived": false,
+      "description": "The Destructive Command Guard (dcg) is for blocking dangerous git and shell commands from being executed by agents.",
+      "origins": ["github-search:8"],
+      "status": "excluded",
+      "reason": "search hit is not a general-purpose command/process execution library"
+    },
+    {
+      "language": "rust",
+      "repository": "dimo414/bkt",
+      "stars": 358,
+      "archived": false,
+      "description": "a subprocess caching utility, available as a command line binary and a Rust library.",
+      "origins": ["github-search:8", "ecosystem nomination"],
+      "status": "included"
+    },
+    {
+      "language": "rust",
+      "repository": "dtolnay/faketty",
+      "stars": 208,
+      "archived": false,
+      "description": "",
+      "origins": ["ecosystem nomination"],
+      "status": "excluded",
+      "reason": "standalone PTY wrapper CLI"
+    },
+    {
+      "language": "rust",
+      "repository": "fish-shell/fish-shell",
+      "stars": 34190,
+      "archived": false,
+      "description": "The user-friendly command line shell.",
+      "origins": ["github-search:8"],
+      "status": "excluded",
+      "reason": "search hit is not a general-purpose command/process execution library"
+    },
+    {
+      "language": "rust",
+      "repository": "google/rust-shell",
+      "stars": 224,
+      "archived": true,
+      "description": "Helper library for std::process::Command to write shell script like tasks in rust",
+      "origins": ["github-search:8", "ecosystem nomination"],
+      "status": "included"
+    },
+    {
+      "language": "rust",
+      "repository": "greymd/teip",
+      "stars": 597,
+      "archived": false,
+      "description": "Masking tape to help commands \"do one thing well\"",
+      "origins": ["github-search:8"],
+      "status": "excluded",
+      "reason": "search hit is not a general-purpose command/process execution library"
+    },
+    {
+      "language": "rust",
+      "repository": "hniksic/rust-subprocess",
+      "stars": 452,
+      "archived": false,
+      "description": "Execution of and interaction with external processes and pipelines",
+      "origins": ["github-search:7", "ecosystem nomination"],
+      "status": "included"
+    },
+    {
+      "language": "rust",
+      "repository": "iagooar/qqqa",
+      "stars": 627,
+      "archived": false,
+      "description": "Fast, stateless LLM for your shell: qq answers; qa runs commands",
+      "origins": ["github-search:8"],
+      "status": "excluded",
+      "reason": "search hit is not a general-purpose command/process execution library"
+    },
+    {
+      "language": "rust",
+      "repository": "iffse/pay-respects",
+      "stars": 711,
+      "archived": false,
+      "description": "Command suggestions, command-not-found and thefuck replacement written in Rust",
+      "origins": ["github-search:8"],
+      "status": "excluded",
+      "reason": "search hit is not a general-purpose command/process execution library"
+    },
+    {
+      "language": "rust",
+      "repository": "iqlusioninc/abscissa",
+      "stars": 593,
+      "archived": false,
+      "description": "Application microframework with command-line option parsing, configuration, error handling, logging, and shell interactions",
+      "origins": ["github-search:8"],
+      "status": "excluded",
+      "reason": "search hit is not a general-purpose command/process execution library"
+    },
+    {
+      "language": "rust",
+      "repository": "jasonjmcghee/plock",
+      "stars": 503,
+      "archived": false,
+      "description": "From anywhere you can type, query and stream the output of any script (e.g. an LLM)",
+      "origins": ["github-search:8"],
+      "status": "excluded",
+      "reason": "search hit is not a general-purpose command/process execution library"
+    },
+    {
+      "language": "rust",
+      "repository": "kaplanelad/shellfirm",
+      "stars": 932,
+      "archived": false,
+      "description": "Safety guardrails for ai coding agents and human terminal commands",
+      "origins": ["github-search:8"],
+      "status": "excluded",
+      "reason": "search hit is not a general-purpose command/process execution library"
+    },
+    {
+      "language": "rust",
+      "repository": "kristoferlund/ostt",
+      "stars": 294,
+      "archived": false,
+      "description": "Open source voice-to-text for the terminal. Record from a hotkey, transcribe with any provider, pipe to AI or shell commands.",
+      "origins": ["github-search:8"],
+      "status": "excluded",
+      "reason": "search hit is not a general-purpose command/process execution library"
+    },
+    {
+      "language": "rust",
+      "repository": "liljencrantz/crush",
+      "stars": 1885,
+      "archived": false,
+      "description": "Crush is a command line shell that is also a powerful modern programming language.",
+      "origins": ["github-search:8"],
+      "status": "excluded",
+      "reason": "search hit is not a general-purpose command/process execution library"
+    },
+    {
+      "language": "rust",
+      "repository": "matklad/xshell",
+      "stars": 834,
+      "archived": false,
+      "description": "",
+      "origins": ["ecosystem nomination"],
+      "status": "included"
+    },
+    {
+      "language": "rust",
+      "repository": "maxktz/hitch",
+      "stars": 177,
+      "archived": false,
+      "description": "Share your terminal with coding agent in one command. Lightweight shell proxy, written in Rust.",
+      "origins": ["github-search:8"],
+      "status": "excluded",
+      "reason": "search hit is not a general-purpose command/process execution library"
+    },
+    {
+      "language": "rust",
+      "repository": "mihaigalos/dusage",
+      "stars": 121,
+      "archived": false,
+      "description": "💾 A command line disk usage information tool.",
+      "origins": ["github-search:8"],
+      "status": "excluded",
+      "reason": "search hit is not a general-purpose command/process execution library"
+    },
+    {
+      "language": "rust",
+      "repository": "Nukesor/pueue",
+      "stars": 6330,
+      "archived": false,
+      "description": ":stars: Manage your shell commands.",
+      "origins": ["github-search:8", "ecosystem nomination"],
+      "status": "excluded",
+      "reason": "task manager application"
+    },
+    {
+      "language": "rust",
+      "repository": "nuta/nsh",
+      "stars": 967,
+      "archived": false,
+      "description": "A command-line shell like fish, but POSIX compatible.",
+      "origins": ["github-search:8"],
+      "status": "excluded",
+      "reason": "search hit is not a general-purpose command/process execution library"
+    },
+    {
+      "language": "rust",
+      "repository": "oconnor663/duct.rs",
+      "stars": 1043,
+      "archived": false,
+      "description": "a Rust library for running child processes",
+      "origins": ["github-search:9", "ecosystem nomination"],
+      "status": "included"
+    },
+    {
+      "language": "rust",
+      "repository": "passcod/catflap",
+      "stars": 140,
+      "archived": true,
+      "description": "🐈🚪 Creates listening sockets and passes their FDs to a child process. You should probably use systemfd instead!",
+      "origins": ["github-search:9"],
+      "status": "excluded",
+      "reason": "socket-activation helper limited to passing listener file descriptors"
+    },
+    {
+      "language": "rust",
+      "repository": "phsym/shrust",
+      "stars": 111,
+      "archived": false,
+      "description": "Rust library to create interactive command line shells",
+      "origins": ["github-search:8"],
+      "status": "excluded",
+      "reason": "search hit is not a general-purpose command/process execution library"
+    },
+    {
+      "language": "rust",
+      "repository": "rash-sh/rash",
+      "stars": 254,
+      "archived": false,
+      "description": "",
+      "origins": ["ecosystem nomination"],
+      "status": "excluded",
+      "reason": "task/configuration orchestrator"
+    },
+    {
+      "language": "rust",
+      "repository": "Ray-Code-Svg/SuperNovaAgent",
+      "stars": 186,
+      "archived": false,
+      "description": "SuperNova is a Windows-first desktop AI Workbench that turns chat into traceable tasks. It combines a Tauri + React Workbench, Rust Product Runtime, typed protocol, and Process Kernel so actions can produce visible artifacts, runtime receipts, replayable evidence, and controlled workspace execution.",
+      "origins": ["github-search:7"],
+      "status": "excluded",
+      "reason": "search hit is not a general-purpose command/process execution library"
+    },
+    {
+      "language": "rust",
+      "repository": "rust-cli/rexpect",
+      "stars": 392,
+      "archived": false,
+      "description": "",
+      "origins": ["ecosystem nomination"],
+      "status": "included"
+    },
+    {
+      "language": "rust",
+      "repository": "rust-embedded/aarch64-cpu",
+      "stars": 116,
+      "archived": false,
+      "description": "Low level access to processors using the AArch64 execution state.",
+      "origins": ["github-search:7"],
+      "status": "excluded",
+      "reason": "search hit is not a general-purpose command/process execution library"
+    },
+    {
+      "language": "rust",
+      "repository": "rust-lang/rust",
+      "stars": 118804,
+      "archived": false,
+      "description": "",
+      "origins": ["native primitive"],
+      "status": "included"
+    },
+    {
+      "language": "rust",
+      "repository": "rust-shell-script/rust_cmd_lib",
+      "stars": 1155,
+      "archived": false,
+      "description": "Common rust command-line macros and utilities, to write shell-script like tasks in a clean, natural and rusty way",
+      "origins": ["github-search:8", "ecosystem nomination"],
+      "status": "included"
+    },
+    {
+      "language": "rust",
+      "repository": "rusty-ferris-club/shellclear",
+      "stars": 229,
+      "archived": false,
+      "description": "Secure shell history commands by finding sensitive data",
+      "origins": ["github-search:8"],
+      "status": "excluded",
+      "reason": "search hit is not a general-purpose command/process execution library"
+    },
+    {
+      "language": "rust",
+      "repository": "sagiegurari/run_script",
+      "stars": 131,
+      "archived": false,
+      "description": "",
+      "origins": ["ecosystem nomination"],
+      "status": "included"
+    },
+    {
+      "language": "rust",
+      "repository": "sigoden/argc",
+      "stars": 1164,
+      "archived": false,
+      "description": "A Bash CLI framework, also a Bash command runner.",
+      "origins": ["github-search:8"],
+      "status": "excluded",
+      "reason": "search hit is not a general-purpose command/process execution library"
+    },
+    {
+      "language": "rust",
+      "repository": "smol-rs/async-process",
+      "stars": 216,
+      "archived": false,
+      "description": "",
+      "origins": ["ecosystem nomination"],
+      "status": "included"
+    },
+    {
+      "language": "rust",
+      "repository": "synek317/shellfn",
+      "stars": 220,
+      "archived": false,
+      "description": "",
+      "origins": ["ecosystem nomination"],
+      "status": "included"
+    },
+    {
+      "language": "rust",
+      "repository": "Tencent/tat-agent",
+      "stars": 156,
+      "archived": false,
+      "description": "TAT agent is an agent written in Rust, which run in CVM, Lighthouse or CPM 2.0 instances. Its role is to run commands remotely without ssh login, invoked from TencentCloud Console/API. Commands include but not limited to: Shell, PowerShell, Python. TAT stands for TencentCloud Automation Tools. See more info at https://cloud.tencent.com/product/tat.",
+      "origins": ["github-search:8"],
+      "status": "excluded",
+      "reason": "search hit is not a general-purpose command/process execution library"
+    },
+    {
+      "language": "rust",
+      "repository": "tokio-rs/tokio",
+      "stars": 33143,
+      "archived": false,
+      "description": "",
+      "origins": ["general async runtime primitive"],
+      "status": "included"
+    },
+    {
+      "language": "rust",
+      "repository": "tomhrr/cosh",
+      "stars": 136,
+      "archived": false,
+      "description": "Concatenative command-line shell",
+      "origins": ["github-search:8"],
+      "status": "excluded",
+      "reason": "search hit is not a general-purpose command/process execution library"
+    },
+    {
+      "language": "rust",
+      "repository": "watchexec/watchexec",
+      "stars": 7181,
+      "archived": false,
+      "description": "",
+      "origins": ["ecosystem nomination"],
+      "status": "excluded",
+      "reason": "file-watcher task orchestrator"
+    },
+    {
+      "language": "rust",
+      "repository": "YiNNx/cmd-wrapped",
+      "stars": 1288,
+      "archived": false,
+      "description": "👩‍💻 A CLI Tool for Command Line Insights",
+      "origins": ["github-search:8"],
+      "status": "excluded",
+      "reason": "search hit is not a general-purpose command/process execution library"
+    },
+    {
+      "language": "rust",
+      "repository": "zhiburt/expectrl",
+      "stars": 215,
+      "archived": false,
+      "description": "",
+      "origins": ["ecosystem nomination"],
+      "status": "included"
+    }
+  ]
+}
