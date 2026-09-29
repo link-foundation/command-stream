@@ -80,6 +80,9 @@ pub mod commands;
 pub mod shell_parser;
 pub mod utils;
 
+// zx-compatible API (google/zx 8.x): `$`-style Shell, ProcessOutput, goods.
+pub mod zx;
+
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::Stdio;
