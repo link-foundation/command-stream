@@ -53,9 +53,10 @@
           "id": "parse/single-atom-tilde",
           "template": ["echo ~"],
           "env": {
-            "HOME": "/home/xyz"
+            "HOME": "/home/xyz",
+            "USERPROFILE": "/home/xyz"
           },
-          "note": "Unquoted `~` expands to $HOME.",
+          "note": "Unquoted `~` expands to $HOME. On Windows `~` expands to $USERPROFILE",
           "expect": {
             "stdout": "/home/xyz\n"
           }
@@ -431,9 +432,9 @@
           "env": {
             "FOO": "pwd"
           },
-          "note": "$FOO expands from the outer env before the prefix assignment.",
+          "note": "$FOO expands from the outer env before the prefix assignment. On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes",
           "expect": {
-            "stdout": "{{TEMP}}\n"
+            "stdout": "{{TEMP_NATIVE}}\n"
           }
         }
       ],

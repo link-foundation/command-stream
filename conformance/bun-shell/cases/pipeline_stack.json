@@ -265,10 +265,10 @@
           "id": "pipeline_stack/cd-pwd-cd-doesn-t-affect-next-command-in-pipeline",
           "template": ["cd / | pwd"],
           "expect": {
-            "stdout": "{{TEMP}}\n",
+            "stdout": "{{TEMP_NATIVE}}\n",
             "exitCode": 0
           },
-          "note": "Upstream uses a stdout callback that returns a boolean (s.includes(\"$TEMP_DIR\")) which TestBuilder ignores, so upstream effectively checks nothing; encoded real Bun 1.4.2 output: cd in a pipeline runs in its own copy of the shell state, so pwd prints the unchanged temp dir."
+          "note": "Upstream uses a stdout callback that returns a boolean (s.includes(\"$TEMP_DIR\")) which TestBuilder ignores, so upstream effectively checks nothing; encoded real Bun 1.4.2 output: cd in a pipeline runs in its own copy of the shell state, so pwd prints the unchanged temp dir. On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes"
         }
       ]
     },
@@ -281,10 +281,10 @@
           "id": "pipeline_stack/cd-cd-pwd-multiple-cd-s-don-t-affect",
           "template": ["mkdir foo; mkdir foo/bar; cd foo | cd foo/bar | pwd"],
           "expect": {
-            "stdout": "{{TEMP}}\n",
+            "stdout": "{{TEMP_NATIVE}}\n",
             "exitCode": 0
           },
-          "note": "Upstream uses a stdout callback that returns a boolean (s.includes(\"$TEMP_DIR\")) which TestBuilder ignores, so upstream effectively checks nothing; encoded real Bun 1.4.2 output: cd in a pipeline runs in its own copy of the shell state, so pwd prints the unchanged temp dir."
+          "note": "Upstream uses a stdout callback that returns a boolean (s.includes(\"$TEMP_DIR\")) which TestBuilder ignores, so upstream effectively checks nothing; encoded real Bun 1.4.2 output: cd in a pipeline runs in its own copy of the shell state, so pwd prints the unchanged temp dir. On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes"
         }
       ]
     },
@@ -297,10 +297,10 @@
           "id": "pipeline_stack/pwd-cd-pwd-cd-in-middle-doesn-t-affect",
           "template": ["pwd | cd / | pwd"],
           "expect": {
-            "stdout": "{{TEMP}}\n",
+            "stdout": "{{TEMP_NATIVE}}\n",
             "exitCode": 0
           },
-          "note": "Upstream uses a stdout callback that returns a boolean (s.includes(\"$TEMP_DIR\")) which TestBuilder ignores, so upstream effectively checks nothing; encoded real Bun 1.4.2 output: cd in a pipeline runs in its own copy of the shell state, so pwd prints the unchanged temp dir. Upstream's callback expected 2 lines, but the first pwd's output is piped into cd (which ignores stdin), so only the last pwd's line is printed."
+          "note": "Upstream uses a stdout callback that returns a boolean (s.includes(\"$TEMP_DIR\")) which TestBuilder ignores, so upstream effectively checks nothing; encoded real Bun 1.4.2 output: cd in a pipeline runs in its own copy of the shell state, so pwd prints the unchanged temp dir. Upstream's callback expected 2 lines, but the first pwd's output is piped into cd (which ignores stdin), so only the last pwd's line is printed. On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes"
         }
       ]
     },

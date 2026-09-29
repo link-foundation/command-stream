@@ -126,14 +126,14 @@
           "expect": {
             "stdout": {
               "sortedLines": [
-                "{{TEMP}}/folder/sub/file.txt",
-                "{{TEMP}}/folder/sub",
-                "{{TEMP}}/folder"
+                "{{TEMP}}/folder",
+                "{{TEMP_NATIVE}}{{SEP}}folder{{SEP}}sub",
+                "{{TEMP_NATIVE}}{{SEP}}folder{{SEP}}sub/file.txt"
               ]
             },
             "absent": ["folder"]
           },
-          "note": "-v prints every removed path (children before their directory); order across siblings is not guaranteed, hence sortedLines. The temp dir itself must survive."
+          "note": "-v prints every removed path (children before their directory); order across siblings is not guaranteed, hence sortedLines. The temp dir itself must survive. `rm -rv` prints nested directories by their native path and files as dir + \"/\" + name"
         },
         {
           "id": "commands-rm/recursive-verbose-cwd-trailing-slash",
@@ -233,14 +233,15 @@
             "stdout": {
               "sortedLines": [
                 "{{TEMP}}/t0/foo/a",
-                "{{TEMP}}/t0/foo/bar/b",
-                "{{TEMP}}/t0/foo/bar",
+                "{{TEMP_NATIVE}}{{SEP}}t0{{SEP}}foo{{SEP}}bar/b",
+                "{{TEMP_NATIVE}}{{SEP}}t0{{SEP}}foo{{SEP}}bar",
                 "{{TEMP}}/t0/foo"
               ]
             },
             "absent": ["t0/foo"],
             "exists": ["t0"]
-          }
+          },
+          "note": "`rm -rv` prints nested directories by their native path and files as dir + \"/\" + name"
         },
         {
           "id": "commands-rm/handoff-eight",
@@ -297,36 +298,36 @@
             "stdout": {
               "sortedLines": [
                 "{{TEMP}}/t0/foo/a",
-                "{{TEMP}}/t0/foo/bar/b",
-                "{{TEMP}}/t0/foo/bar",
+                "{{TEMP_NATIVE}}{{SEP}}t0{{SEP}}foo{{SEP}}bar/b",
+                "{{TEMP_NATIVE}}{{SEP}}t0{{SEP}}foo{{SEP}}bar",
                 "{{TEMP}}/t0/foo",
                 "{{TEMP}}/t1/foo/a",
-                "{{TEMP}}/t1/foo/bar/b",
-                "{{TEMP}}/t1/foo/bar",
+                "{{TEMP_NATIVE}}{{SEP}}t1{{SEP}}foo{{SEP}}bar/b",
+                "{{TEMP_NATIVE}}{{SEP}}t1{{SEP}}foo{{SEP}}bar",
                 "{{TEMP}}/t1/foo",
                 "{{TEMP}}/t2/foo/a",
-                "{{TEMP}}/t2/foo/bar/b",
-                "{{TEMP}}/t2/foo/bar",
+                "{{TEMP_NATIVE}}{{SEP}}t2{{SEP}}foo{{SEP}}bar/b",
+                "{{TEMP_NATIVE}}{{SEP}}t2{{SEP}}foo{{SEP}}bar",
                 "{{TEMP}}/t2/foo",
                 "{{TEMP}}/t3/foo/a",
-                "{{TEMP}}/t3/foo/bar/b",
-                "{{TEMP}}/t3/foo/bar",
+                "{{TEMP_NATIVE}}{{SEP}}t3{{SEP}}foo{{SEP}}bar/b",
+                "{{TEMP_NATIVE}}{{SEP}}t3{{SEP}}foo{{SEP}}bar",
                 "{{TEMP}}/t3/foo",
                 "{{TEMP}}/t4/foo/a",
-                "{{TEMP}}/t4/foo/bar/b",
-                "{{TEMP}}/t4/foo/bar",
+                "{{TEMP_NATIVE}}{{SEP}}t4{{SEP}}foo{{SEP}}bar/b",
+                "{{TEMP_NATIVE}}{{SEP}}t4{{SEP}}foo{{SEP}}bar",
                 "{{TEMP}}/t4/foo",
                 "{{TEMP}}/t5/foo/a",
-                "{{TEMP}}/t5/foo/bar/b",
-                "{{TEMP}}/t5/foo/bar",
+                "{{TEMP_NATIVE}}{{SEP}}t5{{SEP}}foo{{SEP}}bar/b",
+                "{{TEMP_NATIVE}}{{SEP}}t5{{SEP}}foo{{SEP}}bar",
                 "{{TEMP}}/t5/foo",
                 "{{TEMP}}/t6/foo/a",
-                "{{TEMP}}/t6/foo/bar/b",
-                "{{TEMP}}/t6/foo/bar",
+                "{{TEMP_NATIVE}}{{SEP}}t6{{SEP}}foo{{SEP}}bar/b",
+                "{{TEMP_NATIVE}}{{SEP}}t6{{SEP}}foo{{SEP}}bar",
                 "{{TEMP}}/t6/foo",
                 "{{TEMP}}/t7/foo/a",
-                "{{TEMP}}/t7/foo/bar/b",
-                "{{TEMP}}/t7/foo/bar",
+                "{{TEMP_NATIVE}}{{SEP}}t7{{SEP}}foo{{SEP}}bar/b",
+                "{{TEMP_NATIVE}}{{SEP}}t7{{SEP}}foo{{SEP}}bar",
                 "{{TEMP}}/t7/foo"
               ]
             },
@@ -340,7 +341,8 @@
               "t6/foo",
               "t7/foo"
             ]
-          }
+          },
+          "note": "`rm -rv` prints nested directories by their native path and files as dir + \"/\" + name"
         }
       ]
     },

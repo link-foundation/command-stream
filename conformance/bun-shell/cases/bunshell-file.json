@@ -20,8 +20,9 @@
           },
           "languages": ["js"],
           "expect": {
-            "stdout": "{{TEMP}}/test.ts\n"
-          }
+            "stdout": "{{TEMP_NATIVE}}{{SEP}}test.ts\n"
+          },
+          "note": "A file reference interpolates as its native path"
         },
         {
           "id": "bunshell-file/path-string-arg-prints-path",

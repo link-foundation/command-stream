@@ -34,9 +34,9 @@
         {
           "id": "lex/var-edgecase-verbatim",
           "template": ["$PWD/test.txt"],
-          "note": "Verbatim upstream script: the variable and trailing text form ONE word used as command name.",
+          "note": "Verbatim upstream script: the variable and trailing text form ONE word used as command name. On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes",
           "expect": {
-            "stderr": "bun: command not found: {{TEMP}}/test.txt\n",
+            "stderr": "bun: command not found: {{TEMP_NATIVE}}/test.txt\n",
             "exitCode": 1
           }
         },
@@ -44,8 +44,9 @@
           "id": "lex/var-edgecase-echo",
           "template": ["echo $PWD/test.txt"],
           "expect": {
-            "stdout": "{{TEMP}}/test.txt\n"
-          }
+            "stdout": "{{TEMP_NATIVE}}/test.txt\n"
+          },
+          "note": "On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes"
         }
       ],
       "note": "The upstream test compares a private lexer token dump (shellInternals.lex); the token shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
@@ -585,9 +586,9 @@
           "env": {
             "FOO": "pwd"
           },
-          "note": "With FOO=pwd in the environment the substitution runs `pwd` (the prefix assignment does not affect the expansion).",
+          "note": "With FOO=pwd in the environment the substitution runs `pwd` (the prefix assignment does not affect the expansion). On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes",
           "expect": {
-            "stdout": "{{TEMP}}\n"
+            "stdout": "{{TEMP_NATIVE}}\n"
           }
         }
       ],
@@ -612,8 +613,9 @@
             "FOO": "pwd"
           },
           "expect": {
-            "stdout": "{{TEMP}}NICE\n"
-          }
+            "stdout": "{{TEMP_NATIVE}}NICE\n"
+          },
+          "note": "On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes"
         }
       ],
       "note": "The upstream test compares a private lexer token dump (shellInternals.lex); the token shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
@@ -669,9 +671,9 @@
           "env": {
             "FOO": "foo"
           },
-          "note": "Template contains a real newline character (statement separator). `ls` replaced by `pwd` for deterministic output.",
+          "note": "Template contains a real newline character (statement separator). `ls` replaced by `pwd` for deterministic output. On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes",
           "expect": {
-            "stdout": "foo\n{{TEMP}}\n"
+            "stdout": "foo\n{{TEMP_NATIVE}}\n"
           }
         },
         {
@@ -703,9 +705,9 @@
           "env": {
             "FOO": "pwd"
           },
-          "note": "`b` replaced by the cat builtin.",
+          "note": "`b` replaced by the cat builtin. On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes",
           "expect": {
-            "stdout": "{{TEMP}}\n"
+            "stdout": "{{TEMP_NATIVE}}\n"
           }
         },
         {
@@ -714,9 +716,9 @@
           "env": {
             "FOO": "pwd"
           },
-          "note": "`b` replaced by the cat builtin.",
+          "note": "`b` replaced by the cat builtin. On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes",
           "expect": {
-            "stdout": "{{TEMP}}\n"
+            "stdout": "{{TEMP_NATIVE}}\n"
           }
         },
         {
@@ -772,9 +774,9 @@
           "env": {
             "FOO": "echo"
           },
-          "note": "`b` replaced by pwd.",
+          "note": "`b` replaced by pwd. On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes",
           "expect": {
-            "stdout": "\n{{TEMP}}\n"
+            "stdout": "\n{{TEMP_NATIVE}}\n"
           }
         },
         {
@@ -789,9 +791,9 @@
         {
           "id": "lex/delimit-semicolon-after-closing-quote-echo",
           "template": ["\"echo\";pwd"],
-          "note": "`a` -> echo, `b` -> pwd.",
+          "note": "`a` -> echo, `b` -> pwd. On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes",
           "expect": {
-            "stdout": "\n{{TEMP}}\n"
+            "stdout": "\n{{TEMP_NATIVE}}\n"
           }
         },
         {
@@ -806,9 +808,9 @@
         {
           "id": "lex/delimit-semicolon-after-brace-group-echo",
           "template": ["{echo,a};pwd"],
-          "note": "`a` -> echo, `c` -> pwd.",
+          "note": "`a` -> echo, `c` -> pwd. On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes",
           "expect": {
-            "stdout": "a\n{{TEMP}}\n"
+            "stdout": "a\n{{TEMP_NATIVE}}\n"
           }
         },
         {
@@ -818,8 +820,9 @@
             "FOO": "pwd"
           },
           "expect": {
-            "stdout": "{{TEMP}}\n"
-          }
+            "stdout": "{{TEMP_NATIVE}}\n"
+          },
+          "note": "On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes"
         },
         {
           "id": "lex/delimit-end-of-input-after-variable-unset",

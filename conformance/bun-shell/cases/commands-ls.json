@@ -92,10 +92,19 @@
           },
           "expect": {
             "stdout": {
-              "sortedLines": ["./foo:", "a", "a", "b", "b", "c", "c", "foo"]
+              "sortedLines": [
+                ".{{SEP}}foo:",
+                "a",
+                "a",
+                "b",
+                "b",
+                "c",
+                "c",
+                "foo"
+              ]
             }
           },
-          "note": "Bun lists the top-level directory without a '.:' header; subdirectory headers are './foo:'. Entry order is readdir/concurrency dependent, hence sortedLines."
+          "note": "Bun lists the top-level directory without a '.:' header; subdirectory headers are './foo:'. Entry order is readdir/concurrency dependent, hence sortedLines. `ls -R` joins directory headers with the native separator"
         }
       ]
     },
@@ -387,14 +396,14 @@
                 "..",
                 ".hidden",
                 "sub",
-                "./sub:",
+                ".{{SEP}}sub:",
                 ".",
                 "..",
                 ".hidden-sub"
               ]
             }
           },
-          "note": "-R with -a does not recurse into . and .."
+          "note": "-R with -a does not recurse into . and .. `ls -R` joins directory headers with the native separator"
         }
       ]
     },
@@ -412,9 +421,10 @@
           },
           "expect": {
             "stdout": {
-              "sortedLines": [".hidden", "sub", "./sub:", ".hidden-sub"]
+              "sortedLines": [".hidden", "sub", ".{{SEP}}sub:", ".hidden-sub"]
             }
-          }
+          },
+          "note": "`ls -R` joins directory headers with the native separator"
         }
       ]
     },

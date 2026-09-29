@@ -335,10 +335,13 @@
           },
           "expect": {
             "stdout": {
-              "regex": "^src/\\*\\.ts src/\\*\\.tsx (?:src/util\\.tsx src/app\\.ts|src/app\\.ts src/util\\.tsx)\\n$"
+              "oneOf": [
+                "src/*.ts src/*.tsx src{{SEP}}app.ts src{{SEP}}util.tsx\n",
+                "src/*.ts src/*.tsx src{{SEP}}util.tsx src{{SEP}}app.ts\n"
+              ]
             }
           },
-          "note": "Bun 1.4.2 prints the literal brace variants (src/*.ts src/*.tsx) first, then the glob matches (observed order: src/util.tsx src/app.ts; match order depends on directory listing so either order is accepted). Upstream only asserts the four words are present (paths normalized to '/')."
+          "note": "Bun 1.4.2 prints the literal brace variants (src/*.ts src/*.tsx) first, then the glob matches (observed order: src/util.tsx src/app.ts; match order depends on directory listing so either order is accepted). Upstream only asserts the four words are present (paths normalized to '/'). Glob matches are joined with the native separator"
         }
       ]
     },
@@ -356,10 +359,13 @@
           },
           "expect": {
             "stdout": {
-              "regex": "^src/\\*\\.ts lib/\\*\\.ts (?:lib/b\\.ts src/a\\.ts|src/a\\.ts lib/b\\.ts)\\n$"
+              "oneOf": [
+                "src/*.ts lib/*.ts src{{SEP}}a.ts lib{{SEP}}b.ts\n",
+                "src/*.ts lib/*.ts lib{{SEP}}b.ts src{{SEP}}a.ts\n"
+              ]
             }
           },
-          "note": "Bun 1.4.2 prints the literal variants (src/*.ts lib/*.ts) then the glob matches (observed: lib/b.ts src/a.ts). Upstream only asserts src/a.ts and lib/b.ts are present."
+          "note": "Bun 1.4.2 prints the literal variants (src/*.ts lib/*.ts) then the glob matches (observed: lib/b.ts src/a.ts). Upstream only asserts src/a.ts and lib/b.ts are present. Glob matches are joined with the native separator"
         }
       ]
     },

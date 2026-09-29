@@ -100,7 +100,9 @@ EXPECT: TEXT (exact match), `{"contains": s|[s]}`, `{"notContains": s|[s]}`,
 `{"regex": "...", "flags": "s"}`, `{"startsWith": TEXT, "endsWith"?: TEXT, "length"?: N}`,
 `{"endsWith": TEXT}`, `{"length": N}`, `{"sortedLines": [...]}` (non-empty
 lines, compared after sorting), `{"lineCount": N}`, `{"any": true}`,
-`{"allOf": [...]}` or `{"oneOf": [...]}`.
+`{"allOf": [...]}`, `{"oneOf": [...]}` or `{"byPlatform": {"windows": EXPECT,
+"posix": EXPECT}}` (the entry for the exact platform, `linux`/`darwin`/`win32`,
+wins over the family, `windows`/`posix`, which wins over `default`).
 
 VALUE: `{"string": TEXT, "repeat"?: N}`, `{"number": 1}`, `{"bigint": "123"}`,
 `{"bool": true}`, `{"null": true}`, `{"undefined": true}`, `{"raw": "..."}`
@@ -116,6 +118,8 @@ These can appear in templates, string values, env values, file contents and
 expectations:
 
 - `{{TEMP}}`: the absolute temp dir, with forward slashes.
+- `{{TEMP_NATIVE}}`: the absolute temp dir, with the platform separator. On
+  Windows, Bun prints the shell's cwd (`pwd`, `$PWD`) this way.
 - `{{NODE}}`: the absolute path of a Node-compatible JS runtime. Upstream uses
   `bun -e`/`bunExe()`; the corpus rewrites those scripts to plain node-compatible
   `-e`/`-p` code.

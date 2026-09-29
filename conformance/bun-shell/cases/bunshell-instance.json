@@ -343,8 +343,18 @@
           },
           "languages": ["js"],
           "expect": {
-            "error": "Blobs are immutable, and cannot be used for stdout/stderr"
-          }
+            "error": {
+              "byPlatform": {
+                "windows": {
+                  "contains": "Cannot redirect stdout/stderr to an immutable blob. Expected a file"
+                },
+                "posix": {
+                  "contains": "Blobs are immutable, and cannot be used for stdout/stderr"
+                }
+              }
+            }
+          },
+          "note": "Bun words this error differently on Windows"
         },
         {
           "id": "bunshell-instance/stdout-redirect-to-response-throws",
@@ -365,8 +375,18 @@
           },
           "languages": ["js"],
           "expect": {
-            "error": "Blobs are immutable, and cannot be used for stdout/stderr"
-          }
+            "error": {
+              "byPlatform": {
+                "windows": {
+                  "contains": "Cannot redirect stdout/stderr to an immutable blob. Expected a file"
+                },
+                "posix": {
+                  "contains": "Blobs are immutable, and cannot be used for stdout/stderr"
+                }
+              }
+            }
+          },
+          "note": "Bun words this error differently on Windows"
         }
       ]
     }

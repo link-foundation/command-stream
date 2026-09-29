@@ -105,8 +105,14 @@
           "template": ["echo \"should fail\" > /dev/null/invalid/path"],
           "expect": {
             "exitCode": 1,
-            "stderr": "bun: Not a directory: /dev/null/invalid/path"
-          }
+            "stderr": {
+              "byPlatform": {
+                "windows": "bun: No such file or directory: /dev/null/invalid/path",
+                "posix": "bun: Not a directory: /dev/null/invalid/path"
+              }
+            }
+          },
+          "note": "Windows has no /dev/null directory entry, so the error is ENOENT"
         }
       ],
       "note": "upstream only checks stderr contains \"directory: /dev/null/invalid/path\"; Bun 1.4.2 prints exactly \"bun: Not a directory: /dev/null/invalid/path\" with NO trailing newline"
@@ -456,9 +462,10 @@
             "stdout": "",
             "stderr": "",
             "files": {
-              "pwd_output.txt": "{{TEMP}}\n"
+              "pwd_output.txt": "{{TEMP_NATIVE}}\n"
             }
-          }
+          },
+          "note": "On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes"
         }
       ],
       "note": "upstream only checks exitCode 0 (regression: EBADF double close); file content {{TEMP}}\\n added from real Bun"
@@ -489,9 +496,10 @@
           "template": ["pwd &>> append_output.txt"],
           "expect": {
             "files": {
-              "append_output.txt": "{{TEMP}}\n"
+              "append_output.txt": "{{TEMP_NATIVE}}\n"
             }
-          }
+          },
+          "note": "On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes"
         },
         {
           "id": "file-io/pwd-and-append-redirect-existing-file",
@@ -499,10 +507,10 @@
           "files": {
             "append_output.txt": "before\n"
           },
-          "note": "extra: &>> appends to existing content",
+          "note": "extra: &>> appends to existing content. On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes",
           "expect": {
             "files": {
-              "append_output.txt": "before\n{{TEMP}}\n"
+              "append_output.txt": "before\n{{TEMP_NATIVE}}\n"
             }
           }
         }
