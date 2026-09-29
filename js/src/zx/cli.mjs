@@ -249,6 +249,8 @@ async function readScriptFromHttp(remote) {
   if (!res.ok) {
     console.error(`Error: Can't get ${remote}`);
     process.exitCode = 1;
+    // An unread native fetch body holds the socket and keeps Node alive.
+    await res.body?.cancel();
     throw new Fail(`Failed to fetch remote script: ${remote} (${res.status})`);
   }
   return res.text();
