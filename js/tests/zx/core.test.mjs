@@ -39,6 +39,17 @@ import {
 import { noop } from '../../src/zx/util.mjs';
 import { EventEmitter } from 'node:events';
 
+// `Promise.withResolvers()` (used upstream) arrived in Node 22; the zx layer
+// also runs on Node 20.
+const withResolvers = () => {
+  let resolve, reject;
+  const promise = new Promise((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+};
+
 const isBun = Boolean(process.versions.bun);
 // Bun exposes child stdio as plain stream.Readable objects, not net.Socket.
 const ChildStdio = isBun ? Readable : Socket;
@@ -584,7 +595,7 @@ describe('core', () => {
       });
 
       it('[zx:test/core.test.js:585:7:registration] all transitions', async () => {
-        const { promise, resolve, reject } = Promise.withResolvers();
+        const { promise, resolve, reject } = withResolvers();
         const p = new ProcessPromise(noop);
         ProcessPromise.disarm(p, false);
         assert.equal(p.stage, 'initial');
@@ -1405,7 +1416,9 @@ describe('core', () => {
 
     describe('timeout()', () => {
       test('[zx:test/core.test.js:1388:7:registration] expiration works', async () => {
-        await $`sleep 1`.timeout(1000);
+        // Upstream runs `sleep 1` under a 1000 ms timeout, which races the
+        // process start-up: slow CI runners (macOS) hit the timeout first.
+        await $`sleep 0.5`.timeout(1000);
         let exitCode, signal;
         try {
           await $`sleep 1`.timeout(200);

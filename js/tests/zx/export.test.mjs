@@ -3,6 +3,7 @@
 
 import assert from 'node:assert';
 import { test, describe } from 'node:test';
+import nodeFs from 'node:fs';
 import * as core from '../../src/zx/core.mjs';
 import * as cli from '../../src/zx/cli.mjs';
 import * as index from '../../src/zx/index.mjs';
@@ -235,7 +236,8 @@ describe('index', () => {
     assert.equal(typeof index.fs.FileWriteStream, 'function', 'index.fs.FileWriteStream')
     assert.equal(typeof index.fs.ReadStream, 'function', 'index.fs.ReadStream')
     assert.equal(typeof index.fs.Stats, 'function', 'index.fs.Stats')
-    assert.equal(typeof index.fs.Utf8Stream, 'function', 'index.fs.Utf8Stream')
+    // Re-exported from node:fs, which added it in Node 24 (upstream's snapshot).
+    assert.equal(typeof index.fs.Utf8Stream, typeof nodeFs.Utf8Stream, 'index.fs.Utf8Stream')
     assert.equal(typeof index.fs.WriteStream, 'function', 'index.fs.WriteStream')
     assert.equal(typeof index.fs._toUnixTimestamp, 'function', 'index.fs._toUnixTimestamp')
     assert.equal(typeof index.fs.access, 'function', 'index.fs.access')
