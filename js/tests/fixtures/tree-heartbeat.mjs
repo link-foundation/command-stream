@@ -2,7 +2,8 @@ import { spawn } from 'node:child_process';
 import { appendFileSync, existsSync } from 'node:fs';
 import { setTimeout as sleep } from 'node:timers/promises';
 
-const heartbeat = process.argv[3];
+const heartbeat =
+  process.argv[2] === 'child' ? process.argv[3] : process.argv[2];
 
 if (process.argv[2] === 'child') {
   setInterval(() => appendFileSync(heartbeat, 'x'), 20);
