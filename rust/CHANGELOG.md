@@ -173,6 +173,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [1.2.0] - 2026-09-29
+
+### Added
+
+- `command_stream::bun_shell`: a port of Bun Shell (`Bun.$`) with the same
+  template-literal API shape (`shell(&["echo ", ""], vec![name.into()])`,
+  `ShellCommand::quiet/nothrow/cwd/env/text`, `ShellOutput`, `ShellError`),
+  checked against the shared `conformance/bun-shell` corpus
+  (`cargo test --test bun_shell_conformance -- --ignored`).
+
 ## [1.1.1] - 2026-09-28
 
 ### Fixed
