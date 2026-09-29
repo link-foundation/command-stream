@@ -78,8 +78,12 @@ jobs:
         env:
           TARGET: ${{ matrix.target }}
         run: |
+          # Bun 1.4.2 itself can crash on Windows; trace one case at a time so
+          # the log names the case that crashed it.
+          ref_args=()
+          if [ "$RUNNER_OS" = Windows ]; then ref_args=(--trace --concurrency 1); fi
           case "$TARGET" in
-            'Bun.$ reference') bun conformance/bun-shell/run-bun-reference.mjs ;;
+            'Bun.$ reference') bun conformance/bun-shell/run-bun-reference.mjs "${ref_args[@]}" ;;
             'port on Bun') bun conformance/bun-shell/run-js.mjs ;;
             'port on Node.js') node conformance/bun-shell/run-js.mjs ;;
             'port on Deno') deno run -A conformance/bun-shell/run-js.mjs ;;

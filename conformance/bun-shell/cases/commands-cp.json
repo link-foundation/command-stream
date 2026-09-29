@@ -213,14 +213,14 @@
               "any": true
             },
             "stderr": {
-              "contains": "lmao2/"
+              "contains": "lmao2"
             },
             "exitCode": 1,
             "absent": ["lmao2"]
           },
           "platforms": ["posix"],
           "requires": ["cp"],
-          "note": "Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. This variant runs the external cp and only asserts implementation-neutral results (files, exit status; messages loosely)."
+          "note": "Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. This variant runs the external cp and only asserts implementation-neutral results (files, exit status; messages loosely). GNU cp says \"cannot create regular file 'lmao2/'\", BSD cp (macOS) \"lmao2: No such file or directory\""
         }
       ]
     },

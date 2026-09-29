@@ -539,8 +539,11 @@
             "b.txt": ""
           },
           "expect": {
-            "stdout": "foo a.txt b.txt\n"
-          }
+            "stdout": {
+              "oneOf": ["foo a.txt b.txt\n", "foo b.txt a.txt\n"]
+            }
+          },
+          "note": "`ls` lists entries in directory order, which differs between file systems."
         }
       ],
       "note": "The upstream test compares a private lexer token dump (shellInternals.lex); the token shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."

@@ -3,7 +3,11 @@
 // prints a PASS/FAIL/SKIP line per case.
 //
 // Options (from argv): [--filter substr] [--file name] [--concurrency N]
-//   [--node /path/to/node] [--verbose]
+//   [--node /path/to/node] [--verbose] [--trace]
+//
+// Results are printed once every case has finished. `--trace` also prints
+// `RUN <id>` to stderr as each case starts, which locates a case that crashes
+// the runtime itself (with `--concurrency 1`, the last line is the culprit).
 
 import fs from 'node:fs';
 import os from 'node:os';
@@ -48,6 +52,7 @@ export async function runCorpus({
   const fileFilter = opt('--file');
   const concurrency = Number(opt('--concurrency', '8'));
   const verbose = argv.includes('--verbose');
+  const trace = argv.includes('--trace');
   const node = opt('--node', defaultNode);
 
   let cases = allCases();
@@ -150,6 +155,9 @@ export async function runCorpus({
     while (next < cases.length) {
       const i = next++;
       const t0 = Date.now();
+      if (trace) {
+        process.stderr.write(`RUN ${cases[i].id}\n`);
+      }
       let r = await runOne(cases[i]);
       // Cases marked oracleFlaky hit a known intermittent Bun 1.4.2 bug; the
       // oracle gets a few more attempts (implementations get none).

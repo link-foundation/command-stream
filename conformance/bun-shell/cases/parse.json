@@ -260,8 +260,11 @@
             "foo/y": ""
           },
           "expect": {
-            "stdout": "x y\nnice\n"
-          }
+            "stdout": {
+              "oneOf": ["x y\nnice\n", "y x\nnice\n"]
+            }
+          },
+          "note": "`ls` lists entries in directory order, which differs between file systems."
         }
       ],
       "note": "The upstream test compares a private AST JSON dump (shellInternals.parse); the AST shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."

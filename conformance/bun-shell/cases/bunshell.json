@@ -7324,12 +7324,12 @@
           },
           "envReplace": true,
           "requires": ["node"],
-          "note": "child env must be exactly the replaced env plus the command-local assignment plus PWD (Bun 1.4.2 exports PWD=<shell cwd> to children when .cwd() is set); key order not significant",
+          "note": "child env must be exactly the replaced env plus the command-local assignment plus PWD (Bun 1.4.2 exports PWD=<shell cwd> to children when .cwd() is set); key order not significant. macOS adds __CF_USER_TEXT_ENCODING to every child environment",
           "expect": {
             "stdout": {
               "allOf": [
                 {
-                  "regex": "^\\{(\"[A-Z_]+\":\"[^\"]*\",?){3}\\}\\n$"
+                  "regex": "^\\{(\"[A-Z_]+\":\"[^\"]*\",?){3}(\"__CF_USER_TEXT_ENCODING\":\"[^\"]*\")?\\}\\n$"
                 },
                 {
                   "contains": [
@@ -7358,12 +7358,12 @@
           },
           "envReplace": true,
           "requires": ["node"],
-          "note": "upstream repeats the same block twice",
+          "note": "upstream repeats the same block twice. macOS adds __CF_USER_TEXT_ENCODING to every child environment",
           "expect": {
             "stdout": {
               "allOf": [
                 {
-                  "regex": "^\\{(\"[A-Z_]+\":\"[^\"]*\",?){3}\\}\\n$"
+                  "regex": "^\\{(\"[A-Z_]+\":\"[^\"]*\",?){3}(\"__CF_USER_TEXT_ENCODING\":\"[^\"]*\")?\\}\\n$"
                 },
                 {
                   "contains": [
@@ -9227,9 +9227,17 @@
           ],
           "expect": {
             "stdout": "quux\n",
-            "stderr": "bun: command not found: !\nbun: command not found: !\nbun: command not found: wait\n",
-            "exitCode": 1
-          }
+            "stderr": {
+              "oneOf": [
+                "bun: command not found: !\nbun: command not found: !\nbun: command not found: wait\n",
+                "bun: command not found: !\nbun: command not found: !\n"
+              ]
+            },
+            "exitCode": {
+              "oneOf": [1, 0]
+            }
+          },
+          "note": "macOS ships /usr/bin/wait, so there `wait` runs and exits 0"
         }
       ],
       "note": "upstream todo (\"! not supported\"). upstream expects stdout \"foo\\nbaz\\nquux\\n\", stderr unchecked, exitCode 0; Bun 1.4.2 actually prints stdout \"quux\\n\", stderr \"bun: command not found: !\\nbun: command not found: !\\nbun: command not found: wait\\n\", exit 1"
