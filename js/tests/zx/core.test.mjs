@@ -806,11 +806,12 @@ describe('core', () => {
         test('[zx:test/core.test.js:787:9:registration] several $ halted > $ halted', async () => {
           const $h = $({ halt: true });
           const p1 = $`echo foo`;
-          const p2 = $h`echo a && sleep 0.1 && echo c && sleep 0.2 && echo e`;
-          const p3 = $h`sleep 0.05 && echo b && sleep 0.1 && echo d`;
-          // p4 starts now, p2 only at `p5.run()` after `await p1`: upstream's
-          // `sleep 0.4` leaves 100 ms for that, too little on slow runners.
-          const p4 = $`sleep 1 && echo bar`;
+          // Upstream spaces the lines 50 ms apart and sleeps 0.4 s in p4; both
+          // orderings raced on loaded runners, so the gaps are doubled here.
+          const p2 = $h`echo a && sleep 0.2 && echo c && sleep 0.4 && echo e`;
+          const p3 = $h`sleep 0.1 && echo b && sleep 0.2 && echo d`;
+          // p4 starts now, p2 only at `p5.run()` after `await p1`.
+          const p4 = $`sleep 1.5 && echo bar`;
           const p5 = $h`cat`;
 
           await p1;

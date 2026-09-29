@@ -12,6 +12,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '../..');
 const cli = path.join(root, 'src/zx/cli.mjs');
 
+// npm installs take well over the default timeout on Windows runners.
+const INSTALL = { timeout: 120_000 };
+
 describe('deps', () => {
   describe('installDeps()', () => {
     const pkgjson = tmpfile(
@@ -23,48 +26,66 @@ describe('deps', () => {
     const load = (dep) =>
       fs.readJsonSync(path.join(cwd, 'node_modules', dep, 'package.json'));
 
-    test('[zx:test/deps.test.js:35:5:registration] loader works via JS API', async () => {
-      await installDeps(
-        {
-          cpy: '9.0.1',
-          'lodash-es': '4.17.21',
-        },
-        cwd
-      );
-      assert(load('cpy').name === 'cpy');
-      assert(load('lodash-es').name === 'lodash-es');
-    });
+    test(
+      '[zx:test/deps.test.js:35:5:registration] loader works via JS API',
+      INSTALL,
+      async () => {
+        await installDeps(
+          {
+            cpy: '9.0.1',
+            'lodash-es': '4.17.21',
+          },
+          cwd
+        );
+        assert(load('cpy').name === 'cpy');
+        assert(load('lodash-es').name === 'lodash-es');
+      }
+    );
 
-    test('[zx:test/deps.test.js:47:5:registration] loader works via JS API with custom npm registry URL', async () => {
-      await installDeps(
-        {
-          '@jsr/std__internal': '1.0.5',
-        },
-        cwd,
-        'https://npm.jsr.io'
-      );
+    test(
+      '[zx:test/deps.test.js:47:5:registration] loader works via JS API with custom npm registry URL',
+      INSTALL,
+      async () => {
+        await installDeps(
+          {
+            '@jsr/std__internal': '1.0.5',
+          },
+          cwd,
+          'https://npm.jsr.io'
+        );
 
-      assert(load('@jsr/std__internal').name === '@jsr/std__internal');
-    });
+        assert(load('@jsr/std__internal').name === '@jsr/std__internal');
+      }
+    );
 
-    test('[zx:test/deps.test.js:59:5:registration] loader works via CLI', async () => {
-      const out =
-        await t$`node ${cli} --install <<< 'import _ from "lodash" /* @4.17.15 */; console.log(_.VERSION)'`;
-      assert.match(out.stdout, /4.17.15/);
-    });
+    test(
+      '[zx:test/deps.test.js:59:5:registration] loader works via CLI',
+      INSTALL,
+      async () => {
+        const out =
+          await t$`node ${cli} --install <<< 'import _ from "lodash" /* @4.17.15 */; console.log(_.VERSION)'`;
+        assert.match(out.stdout, /4.17.15/);
+      }
+    );
 
-    test('[zx:test/deps.test.js:65:5:registration] loader works via CLI with custom npm registry URL', async () => {
-      const code =
-        'import { diff } from "@jsr/std__internal";console.log(diff instanceof Function)';
-      const file = tmpfile('index.mjs', code);
+    test(
+      '[zx:test/deps.test.js:65:5:registration] loader works via CLI with custom npm registry URL',
+      INSTALL,
+      async () => {
+        const code =
+          'import { diff } from "@jsr/std__internal";console.log(diff instanceof Function)';
+        const file = tmpfile('index.mjs', code);
 
-      let out = await t$`node ${cli} --i --registry=https://npm.jsr.io ${file}`;
-      fs.remove(file);
-      assert.match(out.stdout, /true/);
+        let out =
+          await t$`node ${cli} --i --registry=https://npm.jsr.io ${file}`;
+        fs.remove(file);
+        assert.match(out.stdout, /true/);
 
-      out = await t$`node ${cli}  -i --registry=https://npm.jsr.io <<< ${code}`;
-      assert.match(out.stdout, /true/);
-    });
+        out =
+          await t$`node ${cli}  -i --registry=https://npm.jsr.io <<< ${code}`;
+        assert.match(out.stdout, /true/);
+      }
+    );
 
     test('[zx:test/deps.test.js:78:5:registration] throws on invalid installer type', async () => {
       await assert.rejects(
