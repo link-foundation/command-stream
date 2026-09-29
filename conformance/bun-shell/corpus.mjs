@@ -90,27 +90,35 @@ function toSlash(p) {
  * Replace {{TEMP}}, {{TEMP_NATIVE}}, {{TEMP_NATIVE_JSON}}, {{NODE}} and
  * {{SEP}} inside a string.
  */
-export function subst(str, ctx, map = (v) => v) {
-  if (typeof str !== 'string') {
-    return str;
-  }
-  const nativeJson = JSON.stringify(ctx.tempDirNative).slice(1, -1);
-  return str
-    .replaceAll('{{TEMP}}', map(ctx.tempDir))
-    .replaceAll('{{TEMP_NATIVE_JSON}}', map(nativeJson))
-    .replaceAll('{{TEMP_NATIVE}}', map(ctx.tempDirNative))
-    .replaceAll('{{NODE}}', map(ctx.node))
-    .replaceAll('{{SEP}}', map(ctx.sep));
-}
-
-/** Escape the regex metacharacters of a literal string. */
-function escapeRegex(str) {
-  return str.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
+export function subst(str, ctx) {
+  return typeof str === 'string' ? fill(str, placeholderValues(ctx)) : str;
 }
 
 /** `subst` for a regex source: the substituted values match literally. */
 export function substRegex(source, ctx) {
-  return subst(source, ctx, escapeRegex);
+  const values = placeholderValues(ctx);
+  const escaped = {};
+  for (const [key, value] of Object.entries(values)) {
+    escaped[key] = value.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
+  }
+  return fill(source, escaped);
+}
+
+function placeholderValues(ctx) {
+  return {
+    TEMP: ctx.tempDir,
+    TEMP_NATIVE_JSON: JSON.stringify(ctx.tempDirNative).slice(1, -1),
+    TEMP_NATIVE: ctx.tempDirNative,
+    NODE: ctx.node,
+    SEP: ctx.sep,
+  };
+}
+
+function fill(str, values) {
+  return str.replace(
+    /\{\{(TEMP|TEMP_NATIVE_JSON|TEMP_NATIVE|NODE|SEP)\}\}/g,
+    (_, key) => values[key]
+  );
 }
 
 /**
