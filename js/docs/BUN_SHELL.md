@@ -92,6 +92,11 @@ try {
 | `$.escape(str)`, `$.braces(pattern)`              | Escape a string for the shell, and expand `{a,b}` patterns.                                                           |
 | `$.file(path)`                                    | Portable `Bun.file()`: `exists()`, `text()`, `json()`, `bytes()`, `arrayBuffer()`, `size`. Interpolates as its path.  |
 
+`$.preferLocal()` and ``$`cmd`.preferLocal()`` are command-stream extensions
+that search the current project's `node_modules/.bin` before `PATH`. Pass a
+directory or an ordered array of directories to search those projects instead.
+The default `$`, the zx layer, and the Rust APIs use the same resolver.
+
 ## Shell language and builtins
 
 The interpreter implements the Bun Shell language:

@@ -887,6 +887,38 @@
               "node": "# ansi-utils — ANSI and control character helpers\nstripAnsi removes the colours: \"red and green\"\nstripControlChars keeps text readable: \"beepboop\"\nstripAll does both: \"[31mred[0m\"\ncleanForProcessing handles buffers: \"[31mred[0m and [32mgreen[0m\"\ndefault config: {\"preserveAnsi\":true,\"preserveControlChars\":true}\nprocessOutput with preserveAnsi disabled: \"red and green\"\nconfig restored: {\"preserveAnsi\":true,\"preserveControlChars\":true}",
               "bun": "# ansi-utils — ANSI and control character helpers\nstripAnsi removes the colours: \"red and green\"\nstripControlChars keeps text readable: \"beepboop\"\nstripAll does both: \"[31mred[0m\"\ncleanForProcessing handles buffers: \"[31mred[0m and [32mgreen[0m\"\ndefault config: {\"preserveAnsi\":true,\"preserveControlChars\":true}\nprocessOutput with preserveAnsi disabled: \"red and green\"\nconfig restored: {\"preserveAnsi\":true,\"preserveControlChars\":true}"
             }
+          },
+          {
+            "id": "zx-compat",
+            "title": "zx compatibility mode",
+            "category": "Running commands",
+            "summary": "`$.zx` (also `command-stream/zx`) runs zx scripts unchanged: zx quoting, ProcessPromise/ProcessOutput, pipes, `within`, `cd`, `nothrow` and the zx goods.",
+            "file": "js/examples/features/zx-compat.mjs",
+            "api": ["$.zx", "command-stream/zx", "within", "ProcessOutput"],
+            "alternatives": {
+              "bun-shell": {
+                "unsupported": "Bun Shell has its own API; zx scripts need rewriting"
+              },
+              "zx": "import { $, within } from \"zx\"; await $`echo ${words}`;",
+              "execa": {
+                "unsupported": "execa has its own API; zx scripts need rewriting"
+              },
+              "shelljs": {
+                "unsupported": "ShellJS has its own API; zx scripts need rewriting"
+              },
+              "child_process": {
+                "unsupported": "no zx layer; quote and spawn by hand"
+              }
+            },
+            "source": "// zx compatibility mode: `$.zx` (or `command-stream/zx`) runs scripts written\n// for google/zx unchanged - same quoting, ProcessPromise/ProcessOutput, pipes,\n// `within`, `nothrow` and the rest of the zx surface.\nimport fs from 'node:fs';\nimport os from 'node:os';\nimport path from 'node:path';\nimport { $ } from '../../src/$.mjs';\nimport { $ as zx$, within, ProcessOutput } from '../../src/zx/index.mjs';\nimport { example } from './_harness.mjs';\n\nawait example(\n  { id: 'zx-compat', title: 'zx compatibility mode' },\n  async ({ record }) => {\n    record('$.zx is the zx $', $.zx === zx$);\n\n    // Interpolated values are quoted the zx way, so spaces survive.\n    const words = 'hello world';\n    const greeting = await $.zx`echo ${words}`;\n    record('interpolation', greeting.stdout);\n    record('ProcessOutput', greeting instanceof ProcessOutput);\n\n    // Failing commands reject with a ProcessOutput, unless `nothrow` is set.\n    try {\n      await $.zx`exit 2`;\n    } catch (error) {\n      record('rejected exit code', error.exitCode);\n    }\n    record(\n      'nothrow exit code',\n      (await $.zx({ nothrow: true })`exit 3`).exitCode\n    );\n\n    record('pipe', (await $.zx`printf 'b\\na\\n'`.pipe($.zx`sort`)).lines());\n\n    // `within` scopes settings such as the working directory.\n    const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'zx-')));\n    try {\n      const inside = await within(async () => {\n        $.zx.cwd = dir;\n        return (await $.zx`pwd`).stdout.trim() === dir;\n      });\n      record('within cwd', inside);\n      record('cwd restored', $.zx.cwd === undefined);\n    } finally {\n      fs.rmSync(dir, { recursive: true, force: true });\n    }\n  }\n);",
+            "rustApi": ["zx!", "zx::Shell", "zx::within", "zx::ProcessOutput"],
+            "rustSource": "async fn zx_compat() -> ExampleResult {\n    // Interpolated values are quoted the zx way, so spaces survive.\n    let words = \"hello world\";\n    let greeting = zx!(\"echo {}\", words).await?;\n\n    // Failing commands return Err(ProcessOutput), unless `nothrow` is set.\n    let rejected = zx!(\"exit 2\").await.unwrap_err();\n    let tolerated = zx!(zx::Shell::new().nothrow(true), \"exit 3\").await?;\n\n    let sorted = zx!(\"printf 'b\\\\na\\\\n'\").pipe(zx!(\"sort\")).await?;\n\n    // `within` scopes settings such as the working directory.\n    let dir = std::env::temp_dir().canonicalize()?;\n    let inside = zx::within(async {\n        zx::configure(|options| options.cwd = Some(dir.clone()));\n        zx!(\"pwd\").await\n    })\n    .await?;\n\n    Ok(vec![\n        observation(\"interpolation\", greeting.stdout),\n        observation(\"rejected exit code\", rejected.exit_code),\n        observation(\"nothrow exit code\", tolerated.exit_code),\n        observation(\"pipe\", sorted.lines()),\n        observation(\"within cwd\", inside.stdout.trim() == dir.to_string_lossy()),\n        observation(\"cwd restored\", zx::current_options().cwd.is_none()),\n    ])\n}",
+            "rustOutput": "# zx-compat — Rust\ninterpolation: \"hello world\\n\"\nrejected exit code: 2\nnothrow exit code: 3\npipe: [\"a\",\"b\"]\nwithin cwd: true\ncwd restored: true",
+            "identicalOutput": true,
+            "output": {
+              "node": "# zx-compat — zx compatibility mode\n$.zx is the zx $: true\ninterpolation: \"hello world\\n\"\nProcessOutput: true\nrejected exit code: 2\nnothrow exit code: 3\npipe: [\"a\",\"b\"]\nwithin cwd: true\ncwd restored: true",
+              "bun": "# zx-compat — zx compatibility mode\n$.zx is the zx $: true\ninterpolation: \"hello world\\n\"\nProcessOutput: true\nrejected exit code: 2\nnothrow exit code: 3\npipe: [\"a\",\"b\"]\nwithin cwd: true\ncwd restored: true"
+            }
           }
         ]
       }

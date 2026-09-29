@@ -19,6 +19,15 @@ const packageConfigurations = [
     minimalImport: `import { exec } from './src/$.mjs'; globalThis.__benchmark = exec`,
   },
   {
+    // The zx-compatible layer ships in the same package; its bundles are the
+    // like-for-like comparison with zx.
+    name: 'command-stream/zx',
+    root: jsDirectory,
+    importUrl: pathToFileURL(join(jsDirectory, 'src', 'zx', 'index.mjs')).href,
+    fullImport: `import * as api from './src/zx/index.mjs'; globalThis.__benchmark = api`,
+    minimalImport: `import { $ } from './src/zx/core.mjs'; globalThis.__benchmark = $`,
+  },
+  {
     name: 'execa',
     fullImport: `import * as api from 'execa'; globalThis.__benchmark = api`,
     minimalImport: `import { execa as api } from 'execa'; globalThis.__benchmark = api`,

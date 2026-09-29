@@ -35,7 +35,6 @@ import {
 import { effectiveCwd, effectiveEnv } from './$.process-context.mjs';
 
 const isBun = typeof globalThis.Bun !== 'undefined';
-
 /** Check for shell operators in command. */
 function hasShellOperators(command) {
   return (
@@ -1092,7 +1091,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
     this.started = true;
     this._mode = 'async';
     this._effectiveCwd = this.options.cwd;
-    this._effectiveEnv = this.options.env;
+    this._effectiveEnv = effectiveEnv(this);
 
     if (this._cancelled) {
       return (
@@ -1440,7 +1439,8 @@ export function attachExecutionMethods(ProcessRunner, deps) {
     this._mode = 'sync';
     const shellSettings = { ...globalShellSettings };
 
-    const { cwd, env, stdin } = this.options;
+    const { cwd, stdin } = this.options;
+    const env = effectiveEnv(this);
     const shellArgv = isShellArgvSpec(this.spec);
     const argv = buildCommandArgv(this.spec, env);
 

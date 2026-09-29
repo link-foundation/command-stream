@@ -11405,6 +11405,7 @@
         },
         {
           "id": "bunshell/stdin-redirect-pipe-outlives-process-blob",
+          "oracleFlaky": "Bun 1.4.2 can also leave the Blob variant pending under corpus concurrency",
           "template": ["sh -c ", " < ", ""],
           "values": [
             {

@@ -118,6 +118,21 @@ summary-level assertion.
 | `programmatic-pipeline`       | Source stdout becomes destination stdin.                                                         |
 | `spawn-error-result`          | Sync and async unavailable executables produce results instead of uncaught errors.               |
 | `abort-signal`                | An external `AbortSignal` terminates a running child.                                            |
+| `zx-compatible-api`           | Every zx unit runs one-to-one against the zx-compatible layer, `command-stream/zx`.              |
+
+### zx-compatible layer
+
+All 291 zx units (287 registrations and 4 files without one) are ported
+individually rather than collapsed into invariants: `js/tests/zx/*.test.mjs`
+mirrors zx's `test/` tree against `command-stream/zx`, and every test title
+carries its unit ID, such as `[zx:test/core.test.js:55:5:registration]`. The
+`zx-compatible-api` case fails if a zx unit has no titled port or a title names
+an unknown unit. These ports reuse zx's test vectors (Apache-2.0, at the pinned
+commit) as data; the implementation under `js/src/zx` is original. The Rust
+crate's `command_stream::zx` module ports the applicable units in
+`rust/tests/zx_*.rs`, whose comments carry the same IDs. The missing-feature
+entries below still describe the core `$` API; their zx counterparts are
+available through `command-stream/zx`.
 
 The source-path samples attached to each case in the manifest identify where
 the invariant appears upstream. Existing focused command-stream suites continue
@@ -166,7 +181,10 @@ or verbose output hooks beyond command-stream's typed chunk stream.
 ### local-binary-resolution
 
 Execa and zx can resolve project-local binaries and prefer local executables.
-command-stream currently follows the supplied executable and environment path.
+The default JavaScript and Rust runners now support `preferLocal`/`prefer_local`
+using the same resolver as their zx and Bun Shell compatibility layers. Execa's
+dedicated `preferLocal` options and `node` binary resolution still need separate
+audit.
 
 ### windows-shebang-and-pathext-resolution
 
@@ -256,7 +274,7 @@ directory.
   subclasses, and implementation-specific call order.
 - **Runtime-only behavior:** Bun and Deno conformance unrelated to starting or
   communicating with a command.
-- **Unrelated utilities:** zx helpers, most ShellJS filesystem utilities,
+- **Unrelated utilities:** most ShellJS filesystem utilities,
   GitHub Actions tool-cache behavior, and Dax HTTP or console helpers.
 - **Harness mechanics:** upstream fixture self-tests, snapshots, permissions,
   CI probes, and test-runner integration.
@@ -278,4 +296,5 @@ directory.
    and duplication checks.
 
 The local tests contain original fixture code and API-neutral assertions; they
-do not vendor competitor implementation code or fixture data.
+do not vendor competitor implementation code or fixture data. The zx ports are
+the one exception for data: they reuse zx's test vectors, as noted above.

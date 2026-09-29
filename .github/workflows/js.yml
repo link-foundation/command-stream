@@ -232,6 +232,13 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: choco install jq -y
 
+      # The zx compatibility suite (issue #26) runs a Deno smoke test and a
+      # `deno publish --dry-run`; both skip when Deno is missing.
+      - name: Setup Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+        with:
+          deno-version: v2.x
+
       - name: Install dependencies (Bun)
         if: matrix.runtime == 'bun'
         working-directory: js
@@ -277,6 +284,14 @@ jobs:
           node --test js/tests/node-commonjs-entry.mjs
           node --test js/tests/node-process-regressions.mjs
           node --test js/tests/github-cli-body.test.mjs
+
+      # The zx-compatible API (issue #26) ports google/zx's own test suite; the
+      # files run one at a time because several upstream cases are timing based.
+      - name: Run zx compatibility suite (Node)
+        if: matrix.runtime == 'node'
+        timeout-minutes: 15
+        shell: bash
+        run: node --test --test-concurrency=1 js/tests/zx/*.test.mjs
 
   release:
     name: Release JavaScript package

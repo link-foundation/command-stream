@@ -98,6 +98,18 @@ pub fn run(benchmark_directory: &Path) -> BenchmarkResult<Value> {
             "dependencyClosureBytes": dependency_closure_bytes,
             "dependencyCount": closure_ids.len().saturating_sub(1),
         }));
+        // The zx compatibility module ships inside the crate and adds no
+        // dependencies; report its own source share next to the whole crate.
+        if *crate_name == "command-stream" {
+            results.push(json!({
+                "name": "command-stream::zx",
+                "crate": crate_name,
+                "version": package["version"],
+                "sourceBytes": directory_size(&root.join("src").join("zx"), false)?,
+                "dependencyClosureBytes": dependency_closure_bytes,
+                "dependencyCount": closure_ids.len().saturating_sub(1),
+            }));
+        }
     }
     results.push(json!({
         "name": "std::process",

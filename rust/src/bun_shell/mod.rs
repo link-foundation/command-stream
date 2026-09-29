@@ -260,6 +260,7 @@ impl std::error::Error for ShellError {}
 pub struct Shell {
     cwd: Option<PathBuf>,
     env: Option<HashMap<String, String>>,
+    prefer_local: crate::PreferLocal,
     throws: bool,
 }
 
@@ -274,6 +275,7 @@ impl Shell {
         Self {
             cwd: None,
             env: None,
+            prefer_local: crate::PreferLocal::Off,
             throws: true,
         }
     }
@@ -287,6 +289,12 @@ impl Shell {
     /// Default environment (`None`: the process environment).
     pub fn env(&mut self, env: Option<HashMap<String, String>>) -> &mut Self {
         self.env = env;
+        self
+    }
+
+    /// Prefer project-local executables (a command-stream extension).
+    pub fn prefer_local(&mut self, preference: crate::PreferLocal) -> &mut Self {
+        self.prefer_local = preference;
         self
     }
 
@@ -315,6 +323,7 @@ impl Shell {
         if let Some(env) = &self.env {
             cmd = cmd.env(env.clone());
         }
+        cmd = cmd.prefer_local(self.prefer_local.clone());
         Ok(cmd)
     }
 }
@@ -330,6 +339,7 @@ pub struct ShellCommand {
     script: ParsedScript,
     cwd: Option<PathBuf>,
     env: HashMap<String, String>,
+    prefer_local: crate::PreferLocal,
     quiet: bool,
     throws: bool,
 }
@@ -344,6 +354,7 @@ impl fmt::Debug for ShellCommand {
             .field("script", &self.script)
             .field("cwd", &self.cwd)
             .field("env", &env)
+            .field("prefer_local", &self.prefer_local)
             .field("quiet", &self.quiet)
             .field("throws", &self.throws)
             .finish()
@@ -375,6 +386,7 @@ impl ShellCommand {
             },
             cwd: None,
             env: std::env::vars().collect(),
+            prefer_local: crate::PreferLocal::Off,
             quiet: false,
             throws: true,
         })
@@ -398,6 +410,12 @@ impl ShellCommand {
         self
     }
 
+    /// Prefer project-local executables (a command-stream extension).
+    pub fn prefer_local(mut self, preference: crate::PreferLocal) -> Self {
+        self.prefer_local = preference;
+        self
+    }
+
     /// Capture output only, without echoing it to the process stdout/stderr.
     pub fn quiet(mut self) -> Self {
         self.quiet = true;
@@ -416,7 +434,17 @@ impl ShellCommand {
     }
 
     /// Run the script to completion.
-    pub async fn run(self) -> Result<ShellOutput, ShellError> {
+    pub async fn run(mut self) -> Result<ShellOutput, ShellError> {
+        let cwd = self
+            .cwd
+            .clone()
+            .or_else(|| std::env::current_dir().ok())
+            .unwrap_or_else(|| PathBuf::from("."));
+        if let Some((key, path)) =
+            crate::local_bin::preferred_path(Some(&self.env), &cwd, &self.prefer_local)
+        {
+            self.env.insert(key, path);
+        }
         // Sorted, so the child environment does not depend on hash order.
         let mut env: Vec<(String, String)> = self.env.into_iter().collect();
         env.sort_unstable_by(|a, b| a.0.cmp(&b.0));

@@ -545,6 +545,30 @@ export const features = [
       child_process: { unsupported: 'no helper; strip the codes yourself' },
     },
   },
+  {
+    id: 'zx-compat',
+    title: 'zx compatibility mode',
+    category: 'Running commands',
+    summary:
+      '`$.zx` (also `command-stream/zx`) runs zx scripts unchanged: zx quoting, ProcessPromise/ProcessOutput, pipes, `within`, `cd`, `nothrow` and the zx goods.',
+    file: 'js/examples/features/zx-compat.mjs',
+    api: ['$.zx', 'command-stream/zx', 'within', 'ProcessOutput'],
+    alternatives: {
+      'bun-shell': {
+        unsupported: 'Bun Shell has its own API; zx scripts need rewriting',
+      },
+      zx: 'import { $, within } from "zx"; await $`echo ${words}`;',
+      execa: {
+        unsupported: 'execa has its own API; zx scripts need rewriting',
+      },
+      shelljs: {
+        unsupported: 'ShellJS has its own API; zx scripts need rewriting',
+      },
+      child_process: {
+        unsupported: 'no zx layer; quote and spawn by hand',
+      },
+    },
+  },
 ];
 
 export const featuresById = new Map(
@@ -605,5 +629,6 @@ export const rustApiByFeature = new Map(
       'unset_shell_option',
     ],
     'ansi-utils': ['AnsiUtils', 'AnsiConfig'],
+    'zx-compat': ['zx!', 'zx::Shell', 'zx::within', 'zx::ProcessOutput'],
   })
 );

@@ -15,5 +15,11 @@
     "types": ["node"],
     "noEmit": true
   },
-  "include": ["./*.ts", "./*.cts", "../../types/*", "../../examples/*.ts"]
+  "include": [
+    "./*.ts",
+    "./*.cts",
+    "../../types/*",
+    "../../examples/*.ts",
+    "../zx/fixtures/smoke/ts.ts"
+  ]
 }
