@@ -45,5 +45,5 @@ text = text.replace(
   "import '../../src/zx/$1.mjs'"
 );
 const header = `// Port of zx ${rel} (issue #26). Test vectors come from google/zx\n// (Apache-2.0) at the pinned corpus commit.\n\n`;
-fs.writeFileSync(out, header + text.replace(/\)\n$/, ')\n'));
+fs.writeFileSync(out, header + text);
 console.log(`${out}: tagged ${tagged}/${ids.length}`);
