@@ -20,8 +20,9 @@ describe('global', () => {
       nativePath((await $`pwd`).toString().trim()),
       nativePath(path.resolve('/'))
     );
-    cd(cwd);
-    assert.equal((await $`pwd`).toString().trim(), cwd);
+    // Git Bash prints `/d/a`, which Node's chdir cannot resolve.
+    cd(nativePath(cwd));
+    assert.equal(nativePath((await $`pwd`).toString().trim()), nativePath(cwd));
   });
 
   test('[zx:test/global.test.js:35:3:registration] injects zx index to global', () => {

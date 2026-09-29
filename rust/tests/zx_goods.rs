@@ -208,10 +208,14 @@ async fn spinner_stops_on_error() {
 fn tempdir_creates_temporary_folders() {
     let dir = tempdir(None).unwrap();
     assert!(dir.is_dir());
-    assert!(dir.to_string_lossy().contains("/zx-"));
+    assert!(dir
+        .to_string_lossy()
+        .contains(&format!("{}zx-", std::path::MAIN_SEPARATOR)));
     let named = tempdir(Some("zx-rs-goods-foo")).unwrap();
     assert!(named.is_dir());
-    assert!(named.to_string_lossy().ends_with("/zx-rs-goods-foo"));
+    assert!(named
+        .to_string_lossy()
+        .ends_with(&format!("{}zx-rs-goods-foo", std::path::MAIN_SEPARATOR)));
     std::fs::remove_dir_all(dir).unwrap();
 }
 
@@ -234,10 +238,14 @@ fn tempfile_creates_temporary_files() {
         .unwrap()
         .to_string_lossy();
     assert!(parent.starts_with("zx-"));
-    assert!(named.to_string_lossy().ends_with("/foo.txt"));
+    assert!(named
+        .to_string_lossy()
+        .ends_with(&format!("{}foo.txt", std::path::MAIN_SEPARATOR)));
 
     let tf = tempfile(Some("bar.txt"), Some(b"bar")).unwrap();
-    assert!(tf.to_string_lossy().ends_with("/bar.txt"));
+    assert!(tf
+        .to_string_lossy()
+        .ends_with(&format!("{}bar.txt", std::path::MAIN_SEPARATOR)));
     assert_eq!(std::fs::read_to_string(&tf).unwrap(), "bar");
 
     std::fs::remove_file(plain).unwrap();
