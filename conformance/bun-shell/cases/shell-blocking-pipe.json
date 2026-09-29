@@ -1,0 +1,135 @@
+{
+  "source": "test/js/bun/shell/shell-blocking-pipe.test.ts",
+  "units": [
+    {
+      "line": 9,
+      "upstream": "writing > send buffer size doesn't block the main thread",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "shell-blocking-pipe/raw-1mb-echo-to-system-cat",
+          "template": ["", ""],
+          "values": [
+            {
+              "raw": {
+                "concat": [
+                  "echo ",
+                  {
+                    "repeat": "bun!",
+                    "count": 262144
+                  },
+                  " | $(which cat)"
+                ]
+              }
+            }
+          ],
+          "expect": {
+            "stdout": {
+              "concat": [
+                {
+                  "repeat": "bun!",
+                  "count": 262144
+                },
+                "\n"
+              ]
+            }
+          },
+          "platforms": ["posix"],
+          "requires": ["cat"],
+          "timeoutMs": 15000,
+          "note": "upstream builds the raw script with Bun.which('cat') (system cat); here `$(which cat)` resolves the external cat. generateHeapSnapshot part is Bun-internal."
+        },
+        {
+          "id": "shell-blocking-pipe/raw-1mb-echo-to-builtin-cat",
+          "template": ["", ""],
+          "values": [
+            {
+              "raw": {
+                "concat": [
+                  "echo ",
+                  {
+                    "repeat": "bun!",
+                    "count": 262144
+                  },
+                  " | cat"
+                ]
+              }
+            }
+          ],
+          "expect": {
+            "stdout": {
+              "concat": [
+                {
+                  "repeat": "bun!",
+                  "count": 262144
+                },
+                "\n"
+              ]
+            }
+          },
+          "platforms": ["posix"],
+          "note": "same with the builtin cat"
+        }
+      ]
+    },
+    {
+      "line": 26,
+      "upstream": "writing > send buffer size (with a variable) doesn't block the main thread",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "shell-blocking-pipe/var-1mb-echo-to-system-cat",
+          "template": ["echo ", " | $(which cat)"],
+          "values": [
+            {
+              "string": {
+                "repeat": "bun!",
+                "count": 262144
+              }
+            }
+          ],
+          "expect": {
+            "stdout": {
+              "concat": [
+                {
+                  "repeat": "bun!",
+                  "count": 262144
+                },
+                "\n"
+              ]
+            }
+          },
+          "platforms": ["posix"],
+          "requires": ["cat"],
+          "timeoutMs": 15000,
+          "note": "upstream interpolates Bun.which('cat'); `$(which cat)` resolves the external cat"
+        },
+        {
+          "id": "shell-blocking-pipe/var-1mb-echo-to-builtin-cat",
+          "template": ["echo ", " | cat"],
+          "values": [
+            {
+              "string": {
+                "repeat": "bun!",
+                "count": 262144
+              }
+            }
+          ],
+          "expect": {
+            "stdout": {
+              "concat": [
+                {
+                  "repeat": "bun!",
+                  "count": 262144
+                },
+                "\n"
+              ]
+            }
+          },
+          "platforms": ["posix"],
+          "note": "same with the builtin cat"
+        }
+      ]
+    }
+  ]
+}

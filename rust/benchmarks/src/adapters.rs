@@ -1,11 +1,13 @@
 use crate::model::AdapterMetadata;
 use crate::BenchmarkResult;
+use command_stream::bun_shell::{shell, ShellValue};
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::Output;
 
 pub const EXPECTED_ADAPTERS: &[&str] = &[
     "command-stream",
+    "command-stream/bun",
     "std::process",
     "Tokio process",
     "async-process",
@@ -17,6 +19,7 @@ pub const EXPECTED_ADAPTERS: &[&str] = &[
 #[derive(Debug, Clone, Copy)]
 pub enum Adapter {
     CommandStream,
+    CommandStreamBun,
     StdProcess,
     TokioProcess,
     AsyncProcess,
@@ -36,6 +39,7 @@ impl Adapter {
     pub fn all() -> Vec<Self> {
         vec![
             Self::CommandStream,
+            Self::CommandStreamBun,
             Self::StdProcess,
             Self::TokioProcess,
             Self::AsyncProcess,
@@ -48,6 +52,7 @@ impl Adapter {
     pub fn name(self) -> &'static str {
         match self {
             Self::CommandStream => "command-stream",
+            Self::CommandStreamBun => "command-stream/bun",
             Self::StdProcess => "std::process",
             Self::TokioProcess => "Tokio process",
             Self::AsyncProcess => "async-process",
@@ -59,7 +64,7 @@ impl Adapter {
 
     pub fn version(self) -> String {
         match self {
-            Self::CommandStream => command_stream_version(),
+            Self::CommandStream | Self::CommandStreamBun => command_stream_version(),
             Self::StdProcess => format!("{} standard library", rustc_version()),
             Self::TokioProcess => "1.53.1".to_string(),
             Self::AsyncProcess => "2.5.0".to_string(),
@@ -96,6 +101,24 @@ impl Adapter {
                     exit_code: result.code,
                     stdout,
                     stderr,
+                })
+            }
+            Self::CommandStreamBun => {
+                // The same `${file} ${args}` template as the JavaScript
+                // `command-stream/bun` adapter.
+                let args = arguments.into_iter().map(ShellValue::from).collect();
+                let output = shell(
+                    &["", " ", ""],
+                    vec![program.into(), ShellValue::Array(args)],
+                )?
+                .quiet()
+                .nothrow()
+                .run()
+                .await?;
+                Ok(Execution {
+                    exit_code: output.exit_code,
+                    stdout: output.stdout,
+                    stderr: output.stderr,
                 })
             }
             Self::TokioProcess => {

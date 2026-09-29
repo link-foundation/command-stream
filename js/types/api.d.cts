@@ -21,6 +21,7 @@ import type {
   SpawnSyncReturns,
 } from 'node:child_process';
 import type { Readable, Writable } from 'node:stream';
+import type { BunShell } from './bun.cjs';
 
 // ---------------------------------------------------------------------------
 // Options
@@ -446,6 +447,8 @@ export interface Dollar extends CommandTag {
   spawn: CrossSpawn;
   /** zx compatibility mode: the `$` of `command-stream/zx`. */
   readonly zx: typeof import('./zx-api.cjs').$;
+  /** The Bun.$-compatible shell (the same as `command-stream/bun`). */
+  bun: BunShell;
 }
 
 export declare const $: Dollar;

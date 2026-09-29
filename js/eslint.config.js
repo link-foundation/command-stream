@@ -59,6 +59,7 @@ export default [
         ReadableStream: 'readonly',
         WritableStream: 'readonly',
         TransformStream: 'readonly',
+        Blob: 'readonly',
       },
     },
     rules: {
@@ -153,7 +154,12 @@ export default [
   },
   {
     // Test files have different requirements
-    files: ['**/tests/**/*.{js,mjs}', '**/*.test.{js,mjs}'],
+    files: [
+      '**/tests/**/*.{js,mjs}',
+      '**/*.test.{js,mjs}',
+      // The Bun Shell conformance corpus runner and checkers are test tooling.
+      'conformance/**/*.mjs',
+    ],
     rules: {
       'no-unused-vars': 'off', // Tests often have unused vars for demonstration or intentional non-use
       'require-await': 'off', // Async functions without await are common in tests
@@ -202,6 +208,18 @@ export default [
       'require-await': 'off', // Commands must be async to match interface even if they don't await
       complexity: 'off', // Commands can be complex due to argument parsing and validation
       'max-depth': 'off', // Commands can have deeper nesting due to flag parsing
+    },
+  },
+  {
+    // Bun Shell port: lexer/parser/interpreter state machines mirror Bun's
+    // source one-to-one so they can be diffed against upstream.
+    files: ['**/src/bun-shell/**/*.mjs'],
+    rules: {
+      complexity: 'off',
+      'max-depth': 'off',
+      'max-lines-per-function': 'off',
+      'max-statements': 'off',
+      'max-params': 'off',
     },
   },
   {

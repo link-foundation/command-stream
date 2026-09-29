@@ -63,6 +63,7 @@
 
 // Modular utility modules (following JavaScript modular pattern)
 pub mod ansi;
+pub mod bun_shell;
 pub mod events;
 #[doc(hidden)]
 pub mod macros;

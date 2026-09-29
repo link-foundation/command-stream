@@ -14,6 +14,7 @@ import { join } from 'node:path';
 import { PACKAGE_ROOT } from './commonjs-sandbox.mjs';
 import * as esm from '../src/$.mjs';
 import * as processRunnerModule from '../src/process-runner.mjs';
+import * as bunModule from '../src/bun.mjs';
 
 const read = (path) =>
   readFileSync(join(PACKAGE_ROOT, path), 'utf8').replace(/\r\n/g, '\n');
@@ -21,6 +22,7 @@ const apiDts = read('types/api.d.cts');
 const indexDts = read('types/index.d.ts');
 const indexDcts = read('types/index.d.cts');
 const processRunnerDts = read('types/process-runner.d.ts');
+const bunDts = read('types/bun.d.cts');
 const packageJson = JSON.parse(read('package.json'));
 
 const sorted = (values) => [...new Set(values)].sort();
@@ -94,6 +96,17 @@ describe('TypeScript declarations match the runtime API', () => {
     expect(sorted(declared)).toEqual(sorted(Object.keys(processRunnerModule)));
   });
 
+  test('./bun subpath exports are all declared (ESM and CommonJS)', () => {
+    const declared = [
+      ...bunDts.matchAll(/^export declare (?:const|class) ([\w$]+)/gm),
+    ].map((match) => match[1]);
+    expect(bunDts).toMatch(/^export default \$;$/m);
+    const expected = sorted([...declared, 'default']);
+    expect(expected).toEqual(sorted(Object.keys(bunModule)));
+    const require = createRequire(import.meta.url);
+    expect(expected).toEqual(sorted(Object.keys(require('../src/bun.cjs'))));
+  });
+
   test('every public ProcessRunner member is declared', () => {
     const { ProcessRunner } = esm;
     const runner = new ProcessRunner({ mode: 'shell', command: 'true' });
@@ -147,6 +160,8 @@ describe('package.json points at the declarations', () => {
       exports['.'].import,
       exports['.'].require,
       exports['./process-runner'],
+      exports['./bun'].import,
+      exports['./bun'].require,
     ]) {
       expect(Object.keys(entry)[0]).toBe('types');
       expect(entry.types).toMatch(/\.d\.c?ts$/);

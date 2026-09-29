@@ -33,6 +33,11 @@ cargo run --release --locked --manifest-path benchmarks/Cargo.toml -- \
   --suite crate-size,features
 ```
 
+The `command-stream/bun` adapter runs the same workloads through
+`command_stream::bun_shell`, the Rust port of Bun Shell
+([issue 27](https://github.com/link-foundation/command-stream/issues/27)),
+as a `${file} ${args}` template. The JavaScript suite has a matching adapter.
+
 Reports are written to `benchmarks/results/benchmark-results.json` and
 `benchmark-report.html`. CI uploads both. Once the suite exists on the base
 branch, pull requests also benchmark base and head with the same smoke profile

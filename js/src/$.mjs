@@ -400,6 +400,7 @@ import yesCommand from './commands/$.yes.mjs';
 import seqCommand from './commands/$.seq.mjs';
 import teeCommand from './commands/$.tee.mjs';
 import testCommand from './commands/$.test.mjs';
+import { $ as bunShell } from './bun-shell/shell.mjs';
 
 // Built-in commands that match Bun.$ functionality
 function registerBuiltins() {
@@ -434,6 +435,8 @@ function registerBuiltins() {
 
 // Initialize built-in commands
 $tagged.spawn = crossSpawn;
+// `$.bun`: the Bun.$-compatible shell (also `command-stream/bun`).
+$tagged.bun = bunShell;
 
 // `$.zx` is the zx compatibility mode (issue #26): the `$` of
 // `command-stream/zx`. It is loaded on first access through `require(esm)`,

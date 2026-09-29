@@ -154,3 +154,6 @@ reports/
 
 # Rust build artifacts
 rust/target/
+
+# Local CI log downloads
+/ci-logs/

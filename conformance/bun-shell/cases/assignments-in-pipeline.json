@@ -1,0 +1,631 @@
+{
+  "source": "test/js/bun/shell/assignments-in-pipeline.test.ts",
+  "units": [
+    {
+      "line": 12,
+      "upstream": "should not crash with multiple assignments (issue #15714)",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-not-crash-with-multiple-assignments",
+          "template": ["FOO=bar BAR=baz | echo hi"],
+          "expect": {
+            "stdout": "hi\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 18,
+      "upstream": "should handle multiple assignments",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-multiple-assignments",
+          "template": ["A=1 B=2 C=3 | echo test"],
+          "expect": {
+            "stdout": "test\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 24,
+      "upstream": "should handle single assignment",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-single-assignment",
+          "template": ["FOO=bar | echo single"],
+          "expect": {
+            "stdout": "single\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 30,
+      "upstream": "should handle assignments in middle of pipeline",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-assignments-in-middle-of-pipeline",
+          "template": ["echo start | FOO=bar BAR=baz | echo end"],
+          "expect": {
+            "stdout": "end\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 39,
+      "upstream": "should handle many assignments (10+) in pipeline",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-many-assignments-in-pipeline",
+          "template": ["A=1 B=2 C=3 D=4 E=5 F=6 G=7 H=8 I=9 J=10 | echo many"],
+          "expect": {
+            "stdout": "many\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 46,
+      "upstream": "should handle empty assignment values",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-empty-assignment-values",
+          "template": ["EMPTY= ALSO_EMPTY= | echo empty"],
+          "expect": {
+            "stdout": "empty\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 53,
+      "upstream": "should handle assignments with quoted values containing spaces",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-assignments-with-quoted-values-containing-spac",
+          "template": ["FOO=\"bar baz\" HELLO=\"world test\" | echo quoted"],
+          "expect": {
+            "stdout": "quoted\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 60,
+      "upstream": "should handle assignments with special characters in single quotes",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-assignments-with-special-characters-in-single",
+          "template": ["VAR='$HOME' OTHER='$(echo test)' | echo special"],
+          "expect": {
+            "stdout": "special\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 67,
+      "upstream": "should handle assignments scattered throughout complex pipeline",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-assignments-scattered-throughout-complex-pipel",
+          "template": [
+            "A=1 | B=2 C=3 | echo first | D=4 | echo second | E=5 F=6 | echo third"
+          ],
+          "expect": {
+            "stdout": "third\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 74,
+      "upstream": "should handle pipeline with only assignments followed by true",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-pipeline-with-only-assignments-followed-by-tru",
+          "template": ["FOO=bar BAR=baz | QUX=quux | true"],
+          "expect": {
+            "stdout": "",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 82,
+      "upstream": "should handle very long assignment values",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-very-long-assignment-values",
+          "template": ["LONG=\"", "\" | echo long"],
+          "values": [
+            {
+              "string": {
+                "repeat": "x",
+                "count": 1000
+              }
+            }
+          ],
+          "expect": {
+            "stdout": "long\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 89,
+      "upstream": "should handle equals signs in assignment values",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-equals-signs-in-assignment-values",
+          "template": ["EQUATION=\"a=b+c\" FORMULA=\"x=y*z\" | echo math"],
+          "expect": {
+            "stdout": "math\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 96,
+      "upstream": "should handle unicode characters in assignments",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-unicode-characters-in-assignments",
+          "template": ["EMOJI=\"🚀\" CHINESE=\"你好\" | echo unicode"],
+          "expect": {
+            "stdout": "unicode\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 103,
+      "upstream": "should handle variable expansions in assignments",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-variable-expansions-in-assignments",
+          "template": ["HOME_BACKUP=$HOME USER_BACKUP=$USER | echo expand"],
+          "expect": {
+            "stdout": "expand\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 110,
+      "upstream": "should handle assignments in chained pipelines with &&",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-assignments-in-chained-pipelines-with-and",
+          "template": ["A=1 | echo first && B=2 | echo second"],
+          "expect": {
+            "stdout": "first\nsecond\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 116,
+      "upstream": "should handle assignments in fallback pipeline with ||",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-assignments-in-fallback-pipeline-with-or",
+          "template": ["false || X=fail | echo fallback"],
+          "expect": {
+            "stdout": "fallback\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 123,
+      "upstream": "should handle nested command substitution with assignments",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-nested-command-substitution-with-assignments",
+          "template": ["VAR=$(echo FOO=bar | cat) | echo nested"],
+          "expect": {
+            "stdout": "nested\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 130,
+      "upstream": "should handle glob patterns in assignments without expansion",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-glob-patterns-in-assignments-without-expansion",
+          "template": ["PATTERN=\"*.txt\" GLOB=\"[a-z]*\" | echo glob"],
+          "expect": {
+            "stdout": "glob\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 137,
+      "upstream": "should handle backslashes and escape sequences in assignments",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-backslashes-and-escape-sequences-in-assignment",
+          "template": [
+            "PATH_WIN=\"C:\\\\Users\\\\test\" NEWLINE=\"line1\\nline2\" | echo escape"
+          ],
+          "expect": {
+            "stdout": "escape\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 144,
+      "upstream": "should handle assignments after regular commands in pipeline",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-assignments-after-regular-commands-in-pipeline",
+          "template": ["echo before | A=1 B=2 | echo after"],
+          "expect": {
+            "stdout": "after\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 151,
+      "upstream": "should handle long pipeline with alternating assignments and commands",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-long-pipeline-with-alternating-assignments-and",
+          "template": [
+            "A=1 | echo a | B=2 | echo b | C=3 | echo c | D=4 | echo d | E=5 | echo e"
+          ],
+          "expect": {
+            "stdout": "e\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 158,
+      "upstream": "should handle command substitution containing assignments",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-command-substitution-containing-assignments",
+          "template": ["RESULT=$(X=1 Y=2 echo done) | echo subshell"],
+          "expect": {
+            "stdout": "subshell\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 165,
+      "upstream": "should handle semicolon-separated assignments before pipeline",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-semicolon-separated-assignments-before-pipelin",
+          "template": ["A=1; B=2; C=3 | echo semicolon"],
+          "expect": {
+            "stdout": "semicolon\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 172,
+      "upstream": "should handle assignments with underscore-prefixed numeric names",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-assignments-with-underscore-prefixed-numeric-n",
+          "template": ["_1=first _2=second _3=third | echo numeric"],
+          "expect": {
+            "stdout": "numeric\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 179,
+      "upstream": "should pass through stdin when assignments are in pipeline",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-pass-through-stdin-when-assignments-are-in-pipeline",
+          "template": ["echo \"test\" | A=1 B=2 | cat"],
+          "expect": {
+            "stdout": "test\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 186,
+      "upstream": "should handle assignments with underscores and numbers",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-assignments-with-underscores-and-numbers",
+          "template": ["ARR_0=a ARR_1=b | echo array"],
+          "expect": {
+            "stdout": "array\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 193,
+      "upstream": "should handle pipeline with multiple assignments ending with true",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-pipeline-with-multiple-assignments-ending-with",
+          "template": ["A=1 | B=2 | C=3 | D=4 | E=5 | true"],
+          "expect": {
+            "stdout": "",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 200,
+      "upstream": "should handle mixed quoting styles in assignments",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-mixed-quoting-styles-in-assignments",
+          "template": [
+            "A=\"hello world\" B='single quotes' C=no_quotes | echo mixed"
+          ],
+          "expect": {
+            "stdout": "mixed\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 207,
+      "upstream": "should handle assignments with foreground processes",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-assignments-with-foreground-processes",
+          "template": ["A=1 | echo fg | B=2"],
+          "expect": {
+            "stdout": "fg\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 214,
+      "upstream": "should handle assignments that shadow command names",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-assignments-that-shadow-command-names",
+          "template": ["echo=notecho ls=notls | echo real"],
+          "expect": {
+            "stdout": "real\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 221,
+      "upstream": "should handle assignments in subshells within pipelines",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-assignments-in-subshells-within-pipelines",
+          "template": ["(A=1 | echo inner) | B=2 | echo outer"],
+          "expect": {
+            "stdout": "outer\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 229,
+      "upstream": "should handle multi-line assignment values",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-multi-line-assignment-values",
+          "template": ["MULTI=\"line1 \\\n    line2\" | echo multiline"],
+          "expect": {
+            "stdout": "multiline\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 236,
+      "upstream": "should distinguish between assignment and assignment-like echo output",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-distinguish-between-assignment-and-assignment-like-ec",
+          "template": ["echo A=1 | B=2 | cat"],
+          "expect": {
+            "stdout": "A=1\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 243,
+      "upstream": "should not persist assignment variables in pipeline to shell environment",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-not-persist-assignment-variables-in-pipeline-to-shell",
+          "template": ["TEST_VAR=should_not_persist | echo $TEST_VAR"],
+          "expect": {
+            "stdout": "\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 250,
+      "upstream": "should handle percent signs and dollar signs in assignments",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-percent-signs-and-dollar-signs-in-assignments",
+          "template": ["PERCENT=\"100%\" DOLLAR=\"$100\" | echo special_chars"],
+          "expect": {
+            "stdout": "special_chars\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 257,
+      "upstream": "should continue pipeline even when command fails with assignments present",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-continue-pipeline-even-when-command-fails-with-assign",
+          "template": ["A=1 B=2 | false | C=3 | echo continue"],
+          "expect": {
+            "stdout": "continue\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 264,
+      "upstream": "should handle single character variable names",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-single-character-variable-names",
+          "template": [
+            "A=a B=b C=c D=d E=e F=f G=g H=h I=i J=j | echo singles"
+          ],
+          "expect": {
+            "stdout": "singles\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 271,
+      "upstream": "should handle tabs and spaces in assignment values",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "assignments-in-pipeline/should-handle-tabs-and-spaces-in-assignment-values",
+          "template": ["TAB=\"\t\" SPACE=\" \" | echo whitespace"],
+          "expect": {
+            "stdout": "whitespace\n",
+            "stderr": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    }
+  ]
+}
