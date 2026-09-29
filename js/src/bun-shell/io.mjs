@@ -10,7 +10,7 @@
 //   {kind: 'ignore'}                discard
 // Input kinds (Bun's `InKind`): {kind: 'fd', reader} or {kind: 'ignore'}.
 
-import fs from 'node:fs';
+import fs from './fs.mjs';
 import os from 'node:os';
 import { errnoMessage } from './errno.mjs';
 

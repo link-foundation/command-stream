@@ -8,7 +8,7 @@
 // trailing slash); an absolute operand is used as written. Errors always
 // report that full path.
 
-import fs from 'node:fs';
+import fs from '../fs.mjs';
 import path from 'node:path';
 import { sysErrorFromNode } from '../io.mjs';
 

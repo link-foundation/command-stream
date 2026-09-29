@@ -8,7 +8,7 @@
 // readdir order (the most common order Bun produces for small trees).
 // Entries within a directory are in readdir order (unsorted), like Bun.
 
-import fs from 'node:fs';
+import fs from '../fs.mjs';
 import path from 'node:path';
 import { sysErrorFromNode } from '../io.mjs';
 

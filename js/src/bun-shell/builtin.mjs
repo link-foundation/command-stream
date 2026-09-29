@@ -17,7 +17,7 @@
 // the shell's buffered stdout/stderr, `arraybuf` fills a JS buffer and fails
 // with ENOSPC once full, `blob`/`ignore` discard).
 
-import fs from 'node:fs';
+import fs from './fs.mjs';
 import path from 'node:path';
 import { errnoMessage } from './errno.mjs';
 import { RedirectFlags } from './lexer.mjs';

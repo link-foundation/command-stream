@@ -9,7 +9,7 @@
 // all of its subdirectories are done, and an error in one task stops the
 // work of the tasks that run after it (Bun shares the error signal).
 
-import fs from 'node:fs';
+import fs from '../fs.mjs';
 import path from 'node:path';
 import { USAGE } from '../builtin.mjs';
 import { ShellSysError, sysErrorFromNode } from '../io.mjs';

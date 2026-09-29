@@ -1,7 +1,7 @@
 // Shell execution environment, ported from Bun's `ShellExecEnv` and `EnvMap`
 // (src/runtime/shell/interpreter.rs, EnvMap.rs).
 
-import fs from 'node:fs';
+import fs from './fs.mjs';
 import path from 'node:path';
 import { ByteList, ShellSysError, sysErrorFromNode } from './io.mjs';
 

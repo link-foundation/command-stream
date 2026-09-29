@@ -13,7 +13,7 @@
 // This port reproduces that behavior. One exception: when stdout is an fd,
 // Bun hangs on the file-operand case, and this port exits with 1 instead.
 
-import fs from 'node:fs';
+import fs from '../fs.mjs';
 import path from 'node:path';
 import { Reader, sysErrorFromNode } from '../io.mjs';
 

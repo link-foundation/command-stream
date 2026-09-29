@@ -2,8 +2,8 @@ name: Bun Shell conformance
 
 # Runs the language-neutral Bun Shell corpus (conformance/bun-shell/) on every
 # OS: against Bun.$ itself (the oracle the corpus was recorded from) and
-# against command-stream's portable port (js/src/bun-shell/) on Bun and
-# Node.js. The Rust port runs the same corpus from `cargo test` (rust.yml).
+# against command-stream's portable port (js/src/bun-shell/) on Bun,
+# Node.js and Deno. The Rust port runs the same corpus from `cargo test` (rust.yml).
 
 on:
   push:
@@ -40,7 +40,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        target: [Bun.$ reference, port on Bun, port on Node.js]
+        target: [Bun.$ reference, port on Bun, port on Node.js, port on Deno]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -67,6 +67,12 @@ jobs:
         with:
           node-version: '24.x'
 
+      - name: Setup Deno
+        if: matrix.target == 'port on Deno'
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+        with:
+          deno-version: v2.x
+
       - name: Run the corpus
         shell: bash
         env:
@@ -76,4 +82,5 @@ jobs:
             'Bun.$ reference') bun conformance/bun-shell/run-bun-reference.mjs ;;
             'port on Bun') bun conformance/bun-shell/run-js.mjs ;;
             'port on Node.js') node conformance/bun-shell/run-js.mjs ;;
+            'port on Deno') deno run -A conformance/bun-shell/run-js.mjs ;;
           esac

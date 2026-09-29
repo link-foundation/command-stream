@@ -10,7 +10,7 @@
 // argument order. Within a directory it creates all the directories first,
 // then copies the files in scan order.
 
-import fs from 'node:fs';
+import fs from '../fs.mjs';
 import path from 'node:path';
 import { USAGE } from '../builtin.mjs';
 import { ShellSysError, sysErrorFromNode } from '../io.mjs';

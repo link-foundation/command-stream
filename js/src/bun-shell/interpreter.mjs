@@ -8,7 +8,7 @@
 // (`jsobjs`); errors Bun throws into JS (invalid JS redirect targets) reject
 // the run, everything else is reported on stderr with an exit code.
 
-import fs from 'node:fs';
+import fs from './fs.mjs';
 import path from 'node:path';
 import { inspect } from 'node:util';
 import {

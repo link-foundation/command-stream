@@ -8,7 +8,7 @@
 // current time (millisecond precision), a missing one is created (0664 before
 // the umask) without touching its times.
 
-import fs from 'node:fs';
+import fs from '../fs.mjs';
 import path from 'node:path';
 import { sysErrorFromNode } from '../io.mjs';
 

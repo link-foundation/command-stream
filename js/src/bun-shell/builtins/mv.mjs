@@ -8,7 +8,7 @@
 // Paths are resolved against the cwd like `openat(cwd, p)`: they are joined
 // but not normalized.
 
-import fs from 'node:fs';
+import fs from '../fs.mjs';
 import path from 'node:path';
 import { USAGE } from '../builtin.mjs';
 import { errnoMessage } from '../errno.mjs';

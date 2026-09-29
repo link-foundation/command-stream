@@ -2,7 +2,7 @@
 // `Bun.file(path)`: interpolated into a script, a file reference becomes its
 // path, so `cmd > ${$.file('out.txt')}` writes to out.txt on every runtime.
 
-import fs from 'node:fs';
+import fs from './fs.mjs';
 
 /** Symbol under which a file reference stores its path. */
 export const FILE_PATH = Symbol.for('command-stream.bun-shell.file-path');

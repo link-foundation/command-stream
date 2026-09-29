@@ -13,7 +13,7 @@
 // Copyright (c) 2023 Devon Govett, (c) 2023 Stephen Gregoratto,
 // (c) 2024 shulaoda.
 
-import fs from 'node:fs';
+import fs from './fs.mjs';
 import os from 'node:os';
 import nodePath from 'node:path';
 import util from 'node:util';
