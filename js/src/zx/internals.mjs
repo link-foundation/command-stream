@@ -18,7 +18,11 @@ function wrap(name, api) {
   return new Proxy(api, {
     get(_target, key) {
       const current = store.get(name);
-      return current[key] || current?.default?.[key];
+      return current[key] ?? current?.default?.[key];
+    },
+    set(_target, key, value) {
+      store.get(name)[key] = value;
+      return true;
     },
     apply(_target, self, args) {
       return store.get(name).apply(self, args);

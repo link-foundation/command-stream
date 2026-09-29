@@ -684,4 +684,5 @@ export class ProcessPromise extends Promise {
   }
 
   static bus = bus;
+  static promisifyStream = promisifyStream;
 }

@@ -30,3 +30,5 @@ js/tests/competitor-dispositions.jsonl
 js/tests/competitor-decisions.jsonl
 rust/tests/competitor_dispositions.jsonl
 rust/tests/competitor_decisions.jsonl
+# zx port fixtures are byte-exact test vectors (issue #26).
+js/tests/zx/fixtures

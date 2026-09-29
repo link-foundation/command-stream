@@ -1009,14 +1009,16 @@ describe('core', () => {
 
     describe('unpipe()', () => {
       it('[zx:test/core.test.js:1008:7:registration] disables piping', async () => {
-        const p1 = $`echo foo && sleep 0.2 && echo bar && sleep 0.3 && echo baz && sleep 0.4 && echo qux`;
-        const p2 = $`echo 1 && sleep 0.3 && echo 2 && sleep 0.2 && echo 3`;
+        // Upstream spaces the events 100ms apart, which flakes under a loaded
+        // runner; the port keeps the same sequence with 400ms+ margins.
+        const p1 = $`echo foo && sleep 0.2 && echo bar && sleep 1 && echo baz && sleep 0.4 && echo qux`;
+        const p2 = $`sleep 0.1 && echo 1 && sleep 0.8 && echo 2 && sleep 0.2 && echo 3`;
         const p3 = $`cat`;
 
         p1.pipe(p3);
         p2.pipe(p3);
 
-        setTimeout(() => p1.unpipe(p3), 300);
+        setTimeout(() => p1.unpipe(p3), 700);
 
         const { stdout } = await p3;
         assert.equal(stdout, 'foo\n1\nbar\n2\n3\n');
