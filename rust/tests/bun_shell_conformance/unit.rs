@@ -65,16 +65,14 @@ fn text_expands_generators() {
 
 #[test]
 fn node_join_normalizes_like_node_path_join() {
-    let sep = SEP;
-    assert_eq!(node_join("/tmp/q", "f.txt"), format!("/tmp/q{sep}f.txt"));
-    assert_eq!(
-        node_join("/tmp/q", "sub/../f.txt"),
-        format!("/tmp/q{sep}f.txt")
-    );
-    assert_eq!(node_join("/tmp/q", "d/./e"), format!("/tmp/q{sep}d{sep}e"));
-    assert_eq!(node_join("/tmp/q", "."), "/tmp/q".replace('/', sep));
-    assert_eq!(node_join("/tmp/q", "a/"), format!("/tmp/q{sep}a{sep}"));
-    assert_eq!(node_join("/tmp/q", "../../../x"), format!("{sep}x"));
+    // Like Node's `path.join`: on Windows every `/` becomes `\`.
+    let p = |s: &str| s.replace('/', SEP);
+    assert_eq!(node_join("/tmp/q", "f.txt"), p("/tmp/q/f.txt"));
+    assert_eq!(node_join("/tmp/q", "sub/../f.txt"), p("/tmp/q/f.txt"));
+    assert_eq!(node_join("/tmp/q", "d/./e"), p("/tmp/q/d/e"));
+    assert_eq!(node_join("/tmp/q", "."), p("/tmp/q"));
+    assert_eq!(node_join("/tmp/q", "a/"), p("/tmp/q/a/"));
+    assert_eq!(node_join("/tmp/q", "../../../x"), p("/x"));
     assert_eq!(node_join("a", "../.."), "..");
     assert_eq!(node_join("", ""), ".");
     #[cfg(windows)]

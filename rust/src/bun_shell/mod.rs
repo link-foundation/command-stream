@@ -28,7 +28,8 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 mod braces;
-#[cfg_attr(not(test), allow(dead_code))]
+// The walker is for the interpreter's glob expansion, which is not ported yet.
+#[cfg_attr(not(test), allow(dead_code, unused_imports))]
 pub(crate) mod glob;
 mod lexer;
 // The AST helpers are for the interpreter, which is not ported yet.
