@@ -393,6 +393,7 @@ function waitForClose(child) {
  * @param {import('./env.mjs').ShellExecEnv} opts.shell
  * @param {() => void} [opts.onSpawn] called once the child has started (the
  *   caller can close the redirect fds it handed over)
+ * @param {typeof spawn} [opts.spawnChild] process launcher (test seam)
  * @returns {Promise<{exitCode: number} | {spawnError: Error}>}
  */
 export async function runSubprocess({
@@ -405,6 +406,7 @@ export async function runSubprocess({
   dup = null,
   shell,
   onSpawn,
+  spawnChild = spawn,
 }) {
   const plans = [
     planIn(io.stdin, overrides.stdin),
@@ -428,7 +430,7 @@ export async function runSubprocess({
 
   let child;
   try {
-    child = spawn(target.file, target.args, {
+    child = spawnChild(target.file, target.args, {
       cwd,
       env: IS_WINDOWS ? withRequiredWindowsEnv(env) : env,
       stdio: plans.map((p) => p.stdio),
@@ -450,6 +452,10 @@ export async function runSubprocess({
         }, 3000)
       : null;
   slowTimer?.unref?.();
+  // A short-lived child can exit before the spawn event's awaited promise
+  // resumes (observed with Bun's child_process shim on macOS). Subscribe to
+  // exit/close immediately so those events cannot be lost.
+  const closed = waitForClose(child);
   const spawnError = await new Promise((resolve) => {
     child.once('spawn', () => resolve(null));
     child.once('error', resolve);
@@ -465,7 +471,6 @@ export async function runSubprocess({
 
   phase = 'close event';
   let done = false;
-  const closed = waitForClose(child);
   feedStdin(child.stdin, plans[0], () => done);
   drainOutput(child.stdout, plans[1], child);
   drainOutput(child.stderr, plans[2], child);
