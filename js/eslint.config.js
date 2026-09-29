@@ -211,6 +211,18 @@ export default [
     },
   },
   {
+    // Bun Shell port: lexer/parser/interpreter state machines mirror Bun's
+    // source one-to-one so they can be diffed against upstream.
+    files: ['**/src/bun-shell/**/*.mjs'],
+    rules: {
+      complexity: 'off',
+      'max-depth': 'off',
+      'max-lines-per-function': 'off',
+      'max-statements': 'off',
+      'max-params': 'off',
+    },
+  },
+  {
     // CommonJS compatibility (some files use require() for dynamic imports)
     files: ['**/*.js', '**/*.mjs'],
     languageOptions: {
