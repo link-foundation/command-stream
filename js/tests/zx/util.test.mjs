@@ -88,7 +88,7 @@ describe('zx util', () => {
 
   // Upstream keeps this test commented out: multiline template pieces are
   // passed to the shell verbatim rather than being whitespace-normalized.
-  test('[zx:test/util.test.js:103:3:registration] normalizeMultilinePieces()', async () => {
+  test('[zx:test/util.test.js:103:6:registration] normalizeMultilinePieces()', async () => {
     const pieces = Object.assign([' a ', 'b    c    d', ' e'], {
       raw: [' a ', 'b    c    d', ' e'],
     });

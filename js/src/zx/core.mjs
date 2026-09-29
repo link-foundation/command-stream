@@ -113,8 +113,12 @@ export function within(callback) {
   return storage.run({ ...getStore() }, callback);
 }
 
-const OWN_DIR_URL = new URL('.', import.meta.url).href;
-const OWN_DIR = path.dirname(fileURLToPath(import.meta.url));
+// A CJS/IIFE bundle (esbuild, webpack) leaves `import.meta.url` undefined; its
+// frames all point at the bundle, so there is no package directory to skip.
+const OWN_URL = import.meta.url;
+const OWN_DIRS = OWN_URL
+  ? [new URL('.', OWN_URL).href, path.dirname(fileURLToPath(OWN_URL))]
+  : [];
 const INTERNAL_FRAME =
   /\((node|native)[:)]|^\s*at (node|native):|\[native code\]|^\s*at unknown$/;
 
@@ -124,9 +128,7 @@ function callerLocation() {
   const frames = (new Error('zx error').stack || '').split('\n').slice(1);
   const frame = frames.find(
     (line) =>
-      !line.includes(OWN_DIR_URL) &&
-      !line.includes(OWN_DIR) &&
-      !INTERNAL_FRAME.test(line)
+      !OWN_DIRS.some((dir) => line.includes(dir)) && !INTERNAL_FRAME.test(line)
   );
   return frame ? frame.trim().replace(/^at\s+/, '') : Fail.getCallerLocation();
 }
