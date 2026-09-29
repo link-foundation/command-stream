@@ -438,18 +438,32 @@ export async function runSubprocess({
   } catch (e) {
     return { spawnError: e };
   }
+  // Bun's child_process shim has occasionally left macOS conformance cases
+  // pending. Trace the blocked phase when explicitly requested by CI.
+  let phase = 'spawn event';
+  const slowTimer =
+    process.env.COMMAND_STREAM_TRACE_SUBPROCESS === '1'
+      ? setTimeout(() => {
+          process.emitWarning(
+            `bun-shell: slow subprocess in ${phase} (${argv[0]}, pid ${child.pid ?? 'none'})`
+          );
+        }, 3000)
+      : null;
+  slowTimer?.unref?.();
   const spawnError = await new Promise((resolve) => {
     child.once('spawn', () => resolve(null));
     child.once('error', resolve);
   });
   onSpawn?.();
   if (spawnError) {
+    clearTimeout(slowTimer);
     for (const s of child.stdio) {
       s?.destroy();
     }
     return { spawnError };
   }
 
+  phase = 'close event';
   let done = false;
   const closed = waitForClose(child);
   feedStdin(child.stdin, plans[0], () => done);
@@ -457,6 +471,7 @@ export async function runSubprocess({
   drainOutput(child.stderr, plans[2], child);
 
   const { code, signal } = await closed;
+  phase = 'output flush';
   done = true;
   let exitCode = code ?? signalExitCode(signal);
   for (const plan of [plans[1], plans[2]]) {
@@ -469,5 +484,6 @@ export async function runSubprocess({
     }
     plan.capture?.append(plan.sink.slice());
   }
+  clearTimeout(slowTimer);
   return { exitCode };
 }

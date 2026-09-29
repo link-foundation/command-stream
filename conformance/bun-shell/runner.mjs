@@ -169,6 +169,9 @@ export async function runCorpus({
         r = await runOne(cases[i]);
       }
       results[i] = { ...r, ms: Date.now() - t0 };
+      if (trace) {
+        process.stderr.write(`DONE ${cases[i].id}: ${r.status}\n`);
+      }
     }
   }
   await Promise.all(Array.from({ length: Math.max(1, concurrency) }, worker));
