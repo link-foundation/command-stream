@@ -348,6 +348,34 @@ export function withRequiredWindowsEnv(env, parentEnv = process.env) {
   return out;
 }
 
+// How long to wait for 'close' once the child has exited. 'close' also waits
+// for the stdio pipes, and Bun occasionally never emits it on macOS (the
+// conformance run hung on a plain `cat`); after this grace period the exit
+// status is used as is.
+const CLOSE_GRACE_MS = 2000;
+
+/** The child's `{code, signal}`: from 'close', or from 'exit' plus a grace. */
+function waitForClose(child) {
+  return new Promise((resolve) => {
+    let timer;
+    child.once('close', (code, signal) => {
+      clearTimeout(timer);
+      resolve({ code, signal });
+    });
+    child.once('exit', (code, signal) => {
+      timer = setTimeout(() => {
+        if (process.env.COMMAND_STREAM_TRACE_SUBPROCESS === '1') {
+          process.emitWarning(
+            `bun-shell: no 'close' ${CLOSE_GRACE_MS}ms after exit (pid ${child.pid})`
+          );
+        }
+        resolve({ code, signal });
+      }, CLOSE_GRACE_MS);
+      timer.unref?.();
+    });
+  });
+}
+
 /**
  * Spawn `args` (args[0] is the resolved executable) and wait until it has
  * exited and its output pipes are closed.
@@ -423,9 +451,7 @@ export async function runSubprocess({
   }
 
   let done = false;
-  const closed = new Promise((resolve) =>
-    child.once('close', (code, signal) => resolve({ code, signal }))
-  );
+  const closed = waitForClose(child);
   feedStdin(child.stdin, plans[0], () => done);
   drainOutput(child.stdout, plans[1], child);
   drainOutput(child.stderr, plans[2], child);
