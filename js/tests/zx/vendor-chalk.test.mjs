@@ -133,12 +133,16 @@ describe('vendor/chalk', () => {
     const pipe = { isTTY: false };
     const detect = (stream, env, argv = []) =>
       detectColorLevel(stream, env, argv);
+    // Like supports-color, Windows raises a forced level to what its console
+    // supports (a TTY without overrides reports that level).
+    const forcedAs = (level) =>
+      process.platform === 'win32' ? Math.max(level, detect(tty, {})) : level;
 
     test('honours FORCE_COLOR', () => {
       assert.strictEqual(detect(pipe, { FORCE_COLOR: '0' }), 0);
       assert.strictEqual(detect(pipe, { FORCE_COLOR: 'false' }), 0);
-      assert.strictEqual(detect(pipe, { FORCE_COLOR: '' }), 1);
-      assert.strictEqual(detect(pipe, { FORCE_COLOR: 'true' }), 1);
+      assert.strictEqual(detect(pipe, { FORCE_COLOR: '' }), forcedAs(1));
+      assert.strictEqual(detect(pipe, { FORCE_COLOR: 'true' }), forcedAs(1));
       assert.ok(detect(pipe, { FORCE_COLOR: '1' }) >= 1);
       assert.ok(detect(pipe, { FORCE_COLOR: '2' }) >= 2);
       assert.strictEqual(detect(pipe, { FORCE_COLOR: '3' }), 3);
@@ -147,8 +151,8 @@ describe('vendor/chalk', () => {
 
     test('honours --color / --no-color flags', () => {
       assert.strictEqual(detect(tty, { TERM: 'xterm' }, ['--no-color']), 0);
-      assert.strictEqual(detect(pipe, {}, ['--color']), 1);
-      assert.strictEqual(detect(pipe, {}, ['--color=256']), 2);
+      assert.strictEqual(detect(pipe, {}, ['--color']), forcedAs(1));
+      assert.strictEqual(detect(pipe, {}, ['--color=256']), forcedAs(2));
       assert.strictEqual(detect(pipe, {}, ['--', '--color']), 0);
       assert.strictEqual(detect(pipe, { FORCE_COLOR: '3' }, ['--no-color']), 3);
     });

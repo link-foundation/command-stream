@@ -436,7 +436,8 @@ ENV5=v5 # comment
           throw new Error('unreachable');
         } catch (e) {
           assert.equal(e.code, 'ENOENT');
-          assert.equal(e.errno, -2);
+          // libuv's UV_ENOENT is -4058 on Windows.
+          assert.equal(e.errno, process.platform === 'win32' ? -4058 : -2);
         }
       });
     });
@@ -467,19 +468,22 @@ ENV5=v5 # comment
   });
 
   describe('temp*', () => {
+    // The upstream patterns use `/`; Windows paths use `\`.
+    const slash = (p) => p.split(path.sep).join('/');
+
     test('[zx:test/goods.test.ts:452:5:registration] tempdir() creates temporary folders', () => {
       assert.equal(tmpdir, tempdir);
-      assert.match(tempdir(), /\/zx-/);
-      assert.match(tempdir('foo'), /\/foo$/);
+      assert.match(slash(tempdir()), /\/zx-/);
+      assert.match(slash(tempdir('foo')), /\/foo$/);
     });
 
     test('[zx:test/goods.test.ts:458:5:registration] tempfile() creates temporary files', () => {
       assert.equal(tmpfile, tempfile);
-      assert.match(tempfile(), /\/zx-.+/);
-      assert.match(tempfile('foo.txt'), /\/zx-.+\/foo\.txt$/);
+      assert.match(slash(tempfile()), /\/zx-.+/);
+      assert.match(slash(tempfile('foo.txt')), /\/zx-.+\/foo\.txt$/);
 
       const tf = tempfile('bar.txt', 'bar');
-      assert.match(tf, /\/zx-.+\/bar\.txt$/);
+      assert.match(slash(tf), /\/zx-.+\/bar\.txt$/);
       assert.equal(fs.readFileSync(tf, 'utf-8'), 'bar');
     });
   });

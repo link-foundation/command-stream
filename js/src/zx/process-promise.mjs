@@ -3,6 +3,7 @@
 
 import { Buffer } from 'node:buffer';
 import fs from 'node:fs';
+import process from 'node:process';
 import { EOL as OS_EOL } from 'node:os';
 import { Fail } from './error.mjs';
 import { DLMTR, ProcessOutput } from './process-output.mjs';
@@ -128,6 +129,7 @@ export class ProcessPromise extends Promise {
   _zurk = null;
   _output = null;
   _breakerData = undefined;
+  _winKillSignal = undefined;
   writable = true;
 
   constructor(executor) {
@@ -256,8 +258,12 @@ export class ProcessPromise extends Promise {
     const snap = this._snapshot;
     const { store } = data.ctx;
     const breaker = this._breakerData || {};
-    const signal = breaker.signal ?? data.signal ?? null;
-    const code = breaker.exitCode ?? data.status ?? null;
+    // Windows has no signals: `taskkill /f` ends the tree with exit code 1.
+    // Report the signal that was asked for, as Node does for `child.kill()`.
+    const killed = this._winKillSignal && !data.signal && data.status === 1;
+    const signal =
+      breaker.signal ?? (killed ? this._winKillSignal : data.signal) ?? null;
+    const code = breaker.exitCode ?? (killed ? null : data.status) ?? null;
     const error = breaker.cause ?? data.error ?? null;
     const { duration } = data;
     const output = new ProcessOutput({
@@ -343,10 +349,11 @@ export class ProcessPromise extends Promise {
     if (!this.pid) {
       throw new Fail('The process pid is undefined.');
     }
-    return $.kill(
-      this.pid,
-      signal || this._snapshot.killSignal || $.killSignal
-    );
+    const sig = signal || this._snapshot.killSignal || $.killSignal;
+    if (process.platform === 'win32') {
+      this._winKillSignal = sig;
+    }
+    return $.kill(this.pid, sig);
   }
 
   // Configurators

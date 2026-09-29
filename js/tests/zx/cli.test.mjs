@@ -451,7 +451,11 @@ console.log(a);
         );
         assert.throw();
       } catch (e) {
-        assert.ok(['EACCES', 'ENOENT'].includes(e.code));
+        // Windows rejects the drive-less URL before touching the disk.
+        assert.ok(
+          ['EACCES', 'ENOENT', 'ERR_INVALID_FILE_URL_PATH'].includes(e.code),
+          `${e.code}: ${e.message}`
+        );
       }
     });
 

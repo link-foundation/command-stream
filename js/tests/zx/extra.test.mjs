@@ -13,7 +13,8 @@ import { globby, fs, path } from '../../src/zx/index.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ZX_SRC = path.resolve(__dirname, '../../src/zx');
-const HEADER = /^(#!.*\n)?\/\/ \S.*\n/;
+// `\r?`: Windows checkouts have CRLF line endings.
+const HEADER = /^(#!.*\r?\n)?\/\/ \S.*\r?\n/;
 
 describe('extra', () => {
   test('[zx:test/extra.test.js:22:3:registration] every file should have a license', async () => {
