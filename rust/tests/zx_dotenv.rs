@@ -120,7 +120,8 @@ fn load_merges_files_with_earlier_precedence() {
 #[test]
 fn load_fails_on_missing_file() {
     let err = load(&["./.env.definitely-missing"]).unwrap_err();
-    assert!(err.message().contains("No such file or directory"));
+    // ENOENT and Windows' ERROR_FILE_NOT_FOUND are both 2; the text differs.
+    assert!(err.message().contains("(os error 2)"), "{}", err.message());
 }
 
 // zx:test/goods.test.ts:432:7:registration
@@ -142,6 +143,19 @@ fn config_overlays_process_env_without_mutating_it() {
     .unwrap();
     let env = config(&[&file]);
     assert_eq!(env[key], "value1");
-    assert_ne!(env["PATH"], "nope", "process env wins over the file");
+    // Windows spells it `Path`: env names are case-insensitive there.
+    let path: Vec<&str> = env
+        .iter()
+        .filter(|(k, _)| {
+            if cfg!(windows) {
+                k.eq_ignore_ascii_case("PATH")
+            } else {
+                *k == "PATH"
+            }
+        })
+        .map(|(_, v)| v.as_str())
+        .collect();
+    assert_eq!(path.len(), 1, "one PATH entry: {path:?}");
+    assert_ne!(path[0], "nope", "process env wins over the file");
     assert!(std::env::var_os(key).is_none());
 }

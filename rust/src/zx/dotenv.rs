@@ -182,7 +182,15 @@ pub fn load_safe<P: AsRef<Path>>(files: &[P]) -> BTreeMap<String, String> {
 pub fn config<P: AsRef<Path>>(files: &[P]) -> HashMap<String, String> {
     let mut env: HashMap<String, String> = std::env::vars().collect();
     for (k, v) in load_safe(files) {
-        env.entry(k).or_insert(v);
+        // Windows env names are case-insensitive: a file `PATH` is `Path`.
+        let taken = if cfg!(windows) {
+            env.keys().any(|e| e.eq_ignore_ascii_case(&k))
+        } else {
+            env.contains_key(&k)
+        };
+        if !taken {
+            env.insert(k, v);
+        }
     }
     env
 }
