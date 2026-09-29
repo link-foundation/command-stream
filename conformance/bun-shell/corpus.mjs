@@ -90,19 +90,27 @@ function toSlash(p) {
  * Replace {{TEMP}}, {{TEMP_NATIVE}}, {{TEMP_NATIVE_JSON}}, {{NODE}} and
  * {{SEP}} inside a string.
  */
-export function subst(str, ctx) {
+export function subst(str, ctx, map = (v) => v) {
   if (typeof str !== 'string') {
     return str;
   }
+  const nativeJson = JSON.stringify(ctx.tempDirNative).slice(1, -1);
   return str
-    .replaceAll('{{TEMP}}', ctx.tempDir)
-    .replaceAll(
-      '{{TEMP_NATIVE_JSON}}',
-      JSON.stringify(ctx.tempDirNative).slice(1, -1)
-    )
-    .replaceAll('{{TEMP_NATIVE}}', ctx.tempDirNative)
-    .replaceAll('{{NODE}}', ctx.node)
-    .replaceAll('{{SEP}}', ctx.sep);
+    .replaceAll('{{TEMP}}', map(ctx.tempDir))
+    .replaceAll('{{TEMP_NATIVE_JSON}}', map(nativeJson))
+    .replaceAll('{{TEMP_NATIVE}}', map(ctx.tempDirNative))
+    .replaceAll('{{NODE}}', map(ctx.node))
+    .replaceAll('{{SEP}}', map(ctx.sep));
+}
+
+/** Escape the regex metacharacters of a literal string. */
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
+}
+
+/** `subst` for a regex source: the substituted values match literally. */
+export function substRegex(source, ctx) {
+  return subst(source, ctx, escapeRegex);
 }
 
 /**
@@ -346,7 +354,7 @@ export function matchText(actual, exp, ctx) {
     return null;
   }
   if ('regex' in exp) {
-    const re = new RegExp(subst(exp.regex, ctx), exp.flags || '');
+    const re = new RegExp(substRegex(exp.regex, ctx), exp.flags || '');
     return re.test(actual)
       ? null
       : `expected to match /${exp.regex}/${exp.flags || ''}, got ${show(actual)}`;

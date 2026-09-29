@@ -297,15 +297,22 @@ pub fn to_slash(p: &str) -> String {
 /// Replace `{{TEMP}}`, `{{TEMP_NATIVE}}`, `{{TEMP_NATIVE_JSON}}`, `{{NODE}}`
 /// and `{{SEP}}` inside a string.
 pub fn subst(s: &str, ctx: &Context) -> String {
+    subst_with(s, ctx, str::to_string)
+}
+
+/// `subst` for a regex source: the substituted values match literally.
+pub fn subst_regex(s: &str, ctx: &Context) -> String {
+    subst_with(s, ctx, |v| fancy_regex::escape(v).into_owned())
+}
+
+fn subst_with(s: &str, ctx: &Context, map: impl Fn(&str) -> String) -> String {
     let native_json = Value::String(ctx.temp_dir_native.clone()).to_string();
-    s.replace("{{TEMP}}", &ctx.temp_dir)
-        .replace(
-            "{{TEMP_NATIVE_JSON}}",
-            &native_json[1..native_json.len() - 1],
-        )
-        .replace("{{TEMP_NATIVE}}", &ctx.temp_dir_native)
-        .replace("{{NODE}}", &ctx.node)
-        .replace("{{SEP}}", &ctx.sep)
+    let native_json = &native_json[1..native_json.len() - 1];
+    s.replace("{{TEMP}}", &map(&ctx.temp_dir))
+        .replace("{{TEMP_NATIVE_JSON}}", &map(native_json))
+        .replace("{{TEMP_NATIVE}}", &map(&ctx.temp_dir_native))
+        .replace("{{NODE}}", &map(&ctx.node))
+        .replace("{{SEP}}", &map(&ctx.sep))
 }
 
 /// `subst` for a JSON value that is expected to be a string (non-strings are

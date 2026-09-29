@@ -8,6 +8,7 @@ import {
   makeContext,
   matchText,
   subst,
+  substRegex,
 } from '../../conformance/bun-shell/corpus.mjs';
 
 describe('corpus harness', () => {
@@ -18,6 +19,14 @@ describe('corpus harness', () => {
     );
     const posix = makeContext({ tempDir: '/t/x', sep: '/' });
     expect(subst('{{TEMP_NATIVE}}', posix)).toBe('/t/x');
+  });
+
+  test('regex placeholders match their values literally', () => {
+    const ctx = makeContext({ tempDir: 'C:\\t.x(1)', sep: '\\' });
+    const re = new RegExp(substRegex('^{{TEMP_NATIVE}}{{SEP}}a$', ctx));
+    expect(re.test('C:\\t.x(1)\\a')).toBe(true);
+    expect(re.test('C:\\tXx(1)\\a')).toBe(false);
+    expect(matchText('C:/t.x(1)/b', { regex: '^{{TEMP}}/b$' }, ctx)).toBeNull();
   });
 
   test('{{TEMP_NATIVE_JSON}} is the native temp dir escaped for JSON', () => {

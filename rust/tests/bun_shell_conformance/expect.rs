@@ -74,7 +74,7 @@ pub fn match_text(actual: &str, exp: Option<&Value>, ctx: &Context) -> Result<()
     if let Some(re) = o.get("regex") {
         let source = js_string(re);
         let flags = o.get("flags").map(js_string).unwrap_or_default();
-        let regex = js_regex(&subst(&source, ctx), &flags)?;
+        let regex = js_regex(&subst_regex(&source, ctx), &flags)?;
         return match regex.is_match(actual) {
             Ok(true) => Ok(()),
             Ok(false) => Err(format!(

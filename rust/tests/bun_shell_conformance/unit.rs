@@ -36,6 +36,9 @@ fn context_uses_forward_slashes_and_subst_replaces_every_placeholder() {
     );
     assert_eq!(subst("{{TEMP_NATIVE}}{{SEP}}a/b", &c), r"C:\t\x\a/b");
     assert_eq!(subst("{{TEMP_NATIVE_JSON}}", &c), r"C:\\t\\x");
+    assert_eq!(subst_regex("^{{TEMP}}.+$", &c), r"^C:/t/x.+$");
+    let dotted = make_context(r"C:\t.x", "node", r"\");
+    assert_eq!(subst_regex("{{TEMP_NATIVE}}", &dotted), r"C:\\t\.x");
     assert_eq!(subst("{{TEMP_NATIVE}}", &ctx()), "C:/t/x");
 }
 
