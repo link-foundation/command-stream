@@ -28,6 +28,8 @@ checked for feature parity against the same expectations
 | `cases/<name>.json`     | One file per upstream test file (`commands/echo.test.ts` becomes `cases/commands-echo.json`).                                                      |
 | `corpus.mjs`            | Dependency-free helpers (Node >= 20 or Bun): `loadCorpus()`, `allCases()`, `setupFiles()`, `materialize()`, `checkExpectations()`, `skipReason()`. |
 | `run-bun-reference.mjs` | Runs every case with the real `Bun.$` and prints PASS/FAIL/SKIP.                                                                                   |
+| `run-js.mjs`            | Runs every case with command-stream's JavaScript port (`js/src/bun-shell/`) on Node.js, Bun or Deno.                                               |
+| `runner.mjs`            | The case loop shared by both runners.                                                                                                              |
 | `inventory.mjs`         | Re-scans the upstream tests for test sites and checks that every site has exactly one unit in the corpus, with no stale units.                     |
 
 ## Schema
@@ -125,6 +127,14 @@ expectations:
 # Validate the corpus against the real Bun.$ (the oracle)
 bun conformance/bun-shell/run-bun-reference.mjs [--filter id-substring] [--file commands-echo] [--concurrency 8] [--verbose]
 
+# The JavaScript port (command-stream/bun), on each runtime; same options
+node conformance/bun-shell/run-js.mjs
+bun conformance/bun-shell/run-js.mjs
+deno run -A conformance/bun-shell/run-js.mjs
+
+# The Rust port (command_stream::bun_shell); filter with BUN_SHELL_FILTER / BUN_SHELL_FILE
+(cd rust && cargo test --test bun_shell_conformance -- --ignored --nocapture)
+
 # Check completeness against an upstream bun checkout
 node conformance/bun-shell/inventory.mjs --bun-root /path/to/bun [--table]
 ```
@@ -138,7 +148,9 @@ each case:
 4. Compare the result with `checkExpectations`.
 
 Reference result (Bun 1.4.2, Linux x64): `Total 1256: 1216 passed, 0 failed,
-40 skipped` in about 6 s. The skipped cases are Windows-only, or they need
+40 skipped` in about 6 s. The JavaScript port gets the same result on Node.js
+24, Bun 1.4.2 and Deno 2.9 (`.github/workflows/bun-shell.yml` runs all four
+targets on Linux, macOS and Windows). The skipped cases are Windows-only, or they need
 a non-root user or a missing tool (see each case's `platforms`/`requires`).
 
 `js-api` units are not executable data. They describe JS-surface behaviour that
