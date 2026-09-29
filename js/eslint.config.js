@@ -59,6 +59,7 @@ export default [
         ReadableStream: 'readonly',
         WritableStream: 'readonly',
         TransformStream: 'readonly',
+        Blob: 'readonly',
       },
     },
     rules: {
@@ -153,7 +154,12 @@ export default [
   },
   {
     // Test files have different requirements
-    files: ['**/tests/**/*.{js,mjs}', '**/*.test.{js,mjs}'],
+    files: [
+      '**/tests/**/*.{js,mjs}',
+      '**/*.test.{js,mjs}',
+      // The Bun Shell conformance corpus runner and checkers are test tooling.
+      'conformance/**/*.mjs',
+    ],
     rules: {
       'no-unused-vars': 'off', // Tests often have unused vars for demonstration or intentional non-use
       'require-await': 'off', // Async functions without await are common in tests

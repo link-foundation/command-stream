@@ -1,0 +1,1195 @@
+{
+  "source": "test/js/bun/shell/commands/cp.test.ts",
+  "units": [
+    {
+      "line": 21,
+      "upstream": "file -> file",
+      "disposition": "case",
+      "note": "testMini exec variant not reproduced (requires bun run of .bun.sh)",
+      "cases": [
+        {
+          "id": "commands-cp/file-to-file-windows",
+          "template": ["cat ", " > lmao.txt; cp -v lmao.txt lmao2.txt"],
+          "values": [
+            {
+              "path": "fixture/cp.test.ts"
+            }
+          ],
+          "files": {
+            "fixture/cp.test.ts": "import { $ } from \"bun\";\n// cp fixture (stands in for upstream import.meta.filename)\nconsole.log(\"hello from cp.test.ts\");\n"
+          },
+          "expect": {
+            "stdout": {
+              "regex": "^.+[\\\\/]lmao\\.txt -> .+[\\\\/]lmao2\\.txt\\n$"
+            },
+            "files": {
+              "lmao2.txt": "import { $ } from \"bun\";\n// cp fixture (stands in for upstream import.meta.filename)\nconsole.log(\"hello from cp.test.ts\");\n"
+            }
+          },
+          "platforms": ["windows"],
+          "note": "Builtin cp behaviour from upstream (exact messages). Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. Not verifiable on the Linux oracle."
+        },
+        {
+          "id": "commands-cp/file-to-file-posix",
+          "template": ["cat ", " > lmao.txt; cp -v lmao.txt lmao2.txt"],
+          "values": [
+            {
+              "path": "fixture/cp.test.ts"
+            }
+          ],
+          "files": {
+            "fixture/cp.test.ts": "import { $ } from \"bun\";\n// cp fixture (stands in for upstream import.meta.filename)\nconsole.log(\"hello from cp.test.ts\");\n"
+          },
+          "expect": {
+            "stdout": {
+              "contains": ["lmao.txt", " -> ", "lmao2.txt"]
+            },
+            "files": {
+              "lmao2.txt": "import { $ } from \"bun\";\n// cp fixture (stands in for upstream import.meta.filename)\nconsole.log(\"hello from cp.test.ts\");\n"
+            }
+          },
+          "platforms": ["posix"],
+          "requires": ["cp"],
+          "note": "Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. This variant runs the external cp and only asserts implementation-neutral results (files, exit status; messages loosely)."
+        }
+      ]
+    },
+    {
+      "line": 28,
+      "upstream": "file -> existing file replaces contents",
+      "disposition": "case",
+      "note": "testMini exec variant not reproduced (requires bun run of .bun.sh)",
+      "cases": [
+        {
+          "id": "commands-cp/file-to-existing-file-windows",
+          "template": [
+            "cat ",
+            " > lmao.txt; touch lmao2.txt; cp -v lmao.txt lmao2.txt"
+          ],
+          "values": [
+            {
+              "path": "fixture/cp.test.ts"
+            }
+          ],
+          "files": {
+            "fixture/cp.test.ts": "import { $ } from \"bun\";\n// cp fixture (stands in for upstream import.meta.filename)\nconsole.log(\"hello from cp.test.ts\");\n"
+          },
+          "expect": {
+            "stdout": {
+              "regex": "^.+[\\\\/]lmao\\.txt -> .+[\\\\/]lmao2\\.txt\\n$"
+            },
+            "files": {
+              "lmao2.txt": "import { $ } from \"bun\";\n// cp fixture (stands in for upstream import.meta.filename)\nconsole.log(\"hello from cp.test.ts\");\n"
+            }
+          },
+          "platforms": ["windows"],
+          "note": "Builtin cp behaviour from upstream (exact messages). Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. Not verifiable on the Linux oracle."
+        },
+        {
+          "id": "commands-cp/file-to-existing-file-posix",
+          "template": [
+            "cat ",
+            " > lmao.txt; touch lmao2.txt; cp -v lmao.txt lmao2.txt"
+          ],
+          "values": [
+            {
+              "path": "fixture/cp.test.ts"
+            }
+          ],
+          "files": {
+            "fixture/cp.test.ts": "import { $ } from \"bun\";\n// cp fixture (stands in for upstream import.meta.filename)\nconsole.log(\"hello from cp.test.ts\");\n"
+          },
+          "expect": {
+            "stdout": {
+              "contains": ["lmao.txt", " -> ", "lmao2.txt"]
+            },
+            "files": {
+              "lmao2.txt": "import { $ } from \"bun\";\n// cp fixture (stands in for upstream import.meta.filename)\nconsole.log(\"hello from cp.test.ts\");\n"
+            }
+          },
+          "platforms": ["posix"],
+          "requires": ["cp"],
+          "note": "Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. This variant runs the external cp and only asserts implementation-neutral results (files, exit status; messages loosely)."
+        }
+      ]
+    },
+    {
+      "line": 35,
+      "upstream": "file -> dir",
+      "disposition": "case",
+      "note": "testMini exec variant not reproduced (requires bun run of .bun.sh)",
+      "cases": [
+        {
+          "id": "commands-cp/file-to-dir-windows",
+          "template": [
+            "cat ",
+            " > lmao.txt; mkdir lmao2; cp -v lmao.txt lmao2"
+          ],
+          "values": [
+            {
+              "path": "fixture/cp.test.ts"
+            }
+          ],
+          "files": {
+            "fixture/cp.test.ts": "import { $ } from \"bun\";\n// cp fixture (stands in for upstream import.meta.filename)\nconsole.log(\"hello from cp.test.ts\");\n"
+          },
+          "expect": {
+            "stdout": {
+              "regex": "^.+[\\\\/]lmao\\.txt -> .+[\\\\/]lmao2[\\\\/]lmao\\.txt\\n$"
+            },
+            "files": {
+              "lmao2/lmao.txt": "import { $ } from \"bun\";\n// cp fixture (stands in for upstream import.meta.filename)\nconsole.log(\"hello from cp.test.ts\");\n"
+            }
+          },
+          "platforms": ["windows"],
+          "note": "Builtin cp behaviour from upstream (exact messages). Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. Not verifiable on the Linux oracle."
+        },
+        {
+          "id": "commands-cp/file-to-dir-posix",
+          "template": [
+            "cat ",
+            " > lmao.txt; mkdir lmao2; cp -v lmao.txt lmao2"
+          ],
+          "values": [
+            {
+              "path": "fixture/cp.test.ts"
+            }
+          ],
+          "files": {
+            "fixture/cp.test.ts": "import { $ } from \"bun\";\n// cp fixture (stands in for upstream import.meta.filename)\nconsole.log(\"hello from cp.test.ts\");\n"
+          },
+          "expect": {
+            "stdout": {
+              "contains": ["lmao.txt", " -> ", "lmao2/lmao.txt"]
+            },
+            "files": {
+              "lmao2/lmao.txt": "import { $ } from \"bun\";\n// cp fixture (stands in for upstream import.meta.filename)\nconsole.log(\"hello from cp.test.ts\");\n"
+            }
+          },
+          "platforms": ["posix"],
+          "requires": ["cp"],
+          "note": "Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. This variant runs the external cp and only asserts implementation-neutral results (files, exit status; messages loosely)."
+        }
+      ]
+    },
+    {
+      "line": 42,
+      "upstream": "file -> non-existent dir fails",
+      "disposition": "case",
+      "note": "testMini exec variant not reproduced (requires bun run of .bun.sh)",
+      "cases": [
+        {
+          "id": "commands-cp/file-to-missing-dir-fails-windows",
+          "template": ["cat ", " > lmao.txt; cp -v lmao.txt lmao2/"],
+          "values": [
+            {
+              "path": "fixture/cp.test.ts"
+            }
+          ],
+          "files": {
+            "fixture/cp.test.ts": "import { $ } from \"bun\";\n// cp fixture (stands in for upstream import.meta.filename)\nconsole.log(\"hello from cp.test.ts\");\n"
+          },
+          "expect": {
+            "stderr": "cp: lmao2/ is not a directory\n",
+            "exitCode": 1,
+            "absent": ["lmao2"]
+          },
+          "platforms": ["windows"],
+          "note": "Builtin cp behaviour from upstream (exact messages). Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. Not verifiable on the Linux oracle."
+        },
+        {
+          "id": "commands-cp/file-to-missing-dir-fails-posix",
+          "template": ["cat ", " > lmao.txt; cp -v lmao.txt lmao2/"],
+          "values": [
+            {
+              "path": "fixture/cp.test.ts"
+            }
+          ],
+          "files": {
+            "fixture/cp.test.ts": "import { $ } from \"bun\";\n// cp fixture (stands in for upstream import.meta.filename)\nconsole.log(\"hello from cp.test.ts\");\n"
+          },
+          "expect": {
+            "stdout": {
+              "any": true
+            },
+            "stderr": {
+              "contains": "lmao2/"
+            },
+            "exitCode": 1,
+            "absent": ["lmao2"]
+          },
+          "platforms": ["posix"],
+          "requires": ["cp"],
+          "note": "Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. This variant runs the external cp and only asserts implementation-neutral results (files, exit status; messages loosely)."
+        }
+      ]
+    },
+    {
+      "line": 54,
+      "upstream": "file+ -> dir",
+      "disposition": "case",
+      "note": "testMini exec variant not reproduced (requires bun run of .bun.sh)",
+      "cases": [
+        {
+          "id": "commands-cp/files-to-dir-windows",
+          "template": [
+            "cat ",
+            " > lmao.txt; cat ",
+            " > lmao2.txt; mkdir lmao3; cp -v lmao.txt lmao2.txt lmao3"
+          ],
+          "values": [
+            {
+              "path": "fixture/cp.test.ts"
+            },
+            {
+              "path": "fixture/cp.test.ts"
+            }
+          ],
+          "files": {
+            "fixture/cp.test.ts": "import { $ } from \"bun\";\n// cp fixture (stands in for upstream import.meta.filename)\nconsole.log(\"hello from cp.test.ts\");\n"
+          },
+          "expect": {
+            "stdout": {
+              "allOf": [
+                {
+                  "lineCount": 2
+                },
+                {
+                  "regex": "(^|\\n).+[\\\\/]lmao\\.txt -> .+[\\\\/]lmao3[\\\\/]lmao\\.txt\\n"
+                },
+                {
+                  "regex": "(^|\\n).+[\\\\/]lmao2\\.txt -> .+[\\\\/]lmao3[\\\\/]lmao2\\.txt\\n"
+                }
+              ]
+            },
+            "files": {
+              "lmao3/lmao.txt": "import { $ } from \"bun\";\n// cp fixture (stands in for upstream import.meta.filename)\nconsole.log(\"hello from cp.test.ts\");\n",
+              "lmao3/lmao2.txt": "import { $ } from \"bun\";\n// cp fixture (stands in for upstream import.meta.filename)\nconsole.log(\"hello from cp.test.ts\");\n"
+            }
+          },
+          "platforms": ["windows"],
+          "note": "Builtin cp behaviour from upstream (exact messages). Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. Not verifiable on the Linux oracle."
+        },
+        {
+          "id": "commands-cp/files-to-dir-posix",
+          "template": [
+            "cat ",
+            " > lmao.txt; cat ",
+            " > lmao2.txt; mkdir lmao3; cp -v lmao.txt lmao2.txt lmao3"
+          ],
+          "values": [
+            {
+              "path": "fixture/cp.test.ts"
+            },
+            {
+              "path": "fixture/cp.test.ts"
+            }
+          ],
+          "files": {
+            "fixture/cp.test.ts": "import { $ } from \"bun\";\n// cp fixture (stands in for upstream import.meta.filename)\nconsole.log(\"hello from cp.test.ts\");\n"
+          },
+          "expect": {
+            "stdout": {
+              "allOf": [
+                {
+                  "lineCount": 2
+                },
+                {
+                  "contains": ["lmao.txt", " -> ", "lmao3/lmao.txt"]
+                },
+                {
+                  "contains": ["lmao2.txt", " -> ", "lmao3/lmao2.txt"]
+                }
+              ]
+            },
+            "files": {
+              "lmao3/lmao.txt": "import { $ } from \"bun\";\n// cp fixture (stands in for upstream import.meta.filename)\nconsole.log(\"hello from cp.test.ts\");\n",
+              "lmao3/lmao2.txt": "import { $ } from \"bun\";\n// cp fixture (stands in for upstream import.meta.filename)\nconsole.log(\"hello from cp.test.ts\");\n"
+            }
+          },
+          "platforms": ["posix"],
+          "requires": ["cp"],
+          "note": "Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. This variant runs the external cp and only asserts implementation-neutral results (files, exit status; messages loosely)."
+        }
+      ]
+    },
+    {
+      "line": 61,
+      "upstream": "dir -> ? fails without -R",
+      "disposition": "case",
+      "note": "testMini exec variant not reproduced (requires bun run of .bun.sh)",
+      "cases": [
+        {
+          "id": "commands-cp/dirs-without-recursive-fails-windows",
+          "template": ["mkdir lmao; mkdir lmao2; cp -v lmao lmao2 lmao3"],
+          "expect": {
+            "stderr": {
+              "sortedLines": [
+                "cp: lmao is a directory (not copied)",
+                "cp: lmao2 is a directory (not copied)"
+              ]
+            },
+            "exitCode": 1,
+            "absent": ["lmao3"]
+          },
+          "platforms": ["windows"],
+          "note": "Builtin cp behaviour from upstream (exact messages). Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. Not verifiable on the Linux oracle."
+        },
+        {
+          "id": "commands-cp/dirs-without-recursive-fails-posix",
+          "template": ["mkdir lmao; mkdir lmao2; cp -v lmao lmao2 lmao3"],
+          "expect": {
+            "stdout": {
+              "any": true
+            },
+            "stderr": {
+              "any": true
+            },
+            "exitCode": 1,
+            "absent": ["lmao3"]
+          },
+          "platforms": ["posix"],
+          "requires": ["cp"],
+          "note": "Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. This variant runs the external cp and only asserts implementation-neutral results (files, exit status; messages loosely)."
+        }
+      ]
+    },
+    {
+      "line": 72,
+      "upstream": "EBUSY windows: doesn't fail on EBUSY when copying multiple files that are the same",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-cp/same-file-many-times-to-dir-windows",
+          "template": [
+            "\n    echo hi! > hello.txt\n    mkdir somedir \n    cp ",
+            " somedir \n    "
+          ],
+          "values": [
+            {
+              "raw": {
+                "concat": [
+                  {
+                    "repeat": "hello.txt ",
+                    "count": 49
+                  },
+                  "hello.txt"
+                ]
+              }
+            }
+          ],
+          "expect": {
+            "files": {
+              "somedir/hello.txt": "hi!\n"
+            }
+          },
+          "platforms": ["windows"],
+          "note": "Builtin cp behaviour from upstream (exact messages). Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. Not verifiable on the Linux oracle."
+        },
+        {
+          "id": "commands-cp/same-file-many-times-to-dir-posix",
+          "template": [
+            "\n    echo hi! > hello.txt\n    mkdir somedir \n    cp ",
+            " somedir \n    "
+          ],
+          "values": [
+            {
+              "raw": {
+                "concat": [
+                  {
+                    "repeat": "hello.txt ",
+                    "count": 49
+                  },
+                  "hello.txt"
+                ]
+              }
+            }
+          ],
+          "expect": {
+            "stderr": {
+              "any": true
+            },
+            "files": {
+              "somedir/hello.txt": "hi!\n"
+            }
+          },
+          "platforms": ["posix"],
+          "requires": ["cp"],
+          "note": "Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. This variant runs the external cp and only asserts implementation-neutral results (files, exit status; messages loosely)."
+        }
+      ]
+    },
+    {
+      "line": 121,
+      "upstream": "uutils ported: cp_cp",
+      "disposition": "case",
+      "note": "testMini exec variant not reproduced (requires bun run of .bun.sh)",
+      "cases": [
+        {
+          "id": "commands-cp/uutils-cp-windows",
+          "template": ["cp ", " ", ""],
+          "values": [
+            {
+              "string": "hello_world.txt"
+            },
+            {
+              "string": "copy_of_hello_world.txt"
+            }
+          ],
+          "files": {
+            "hello_world.txt": "Hello, World!",
+            "existing_file.txt": "Cogito ergo sum.",
+            "how_are_you.txt": "How are you?",
+            "hello_dir/hello.txt": "",
+            "hello_dir_with_file/hello_world.txt": "Hello, World!",
+            "dir_with_10_files/0": "",
+            "dir_with_10_files/1": "",
+            "dir_with_10_files/2": "",
+            "dir_with_10_files/3": "",
+            "dir_with_10_files/4": "",
+            "dir_with_10_files/5": "",
+            "dir_with_10_files/6": "",
+            "dir_with_10_files/7": "",
+            "dir_with_10_files/8": "",
+            "dir_with_10_files/9": ""
+          },
+          "expect": {
+            "files": {
+              "copy_of_hello_world.txt": "Hello, World!"
+            }
+          },
+          "note": "Builtin cp behaviour from upstream (exact messages). Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. Not verifiable on the Linux oracle. Upstream runs all uutils tests in one shared tempDirWithFiles directory; each case here gets a fresh copy of that tree.",
+          "platforms": ["windows"]
+        },
+        {
+          "id": "commands-cp/uutils-cp-posix",
+          "template": ["cp ", " ", ""],
+          "values": [
+            {
+              "string": "hello_world.txt"
+            },
+            {
+              "string": "copy_of_hello_world.txt"
+            }
+          ],
+          "files": {
+            "hello_world.txt": "Hello, World!",
+            "existing_file.txt": "Cogito ergo sum.",
+            "how_are_you.txt": "How are you?",
+            "hello_dir/hello.txt": "",
+            "hello_dir_with_file/hello_world.txt": "Hello, World!",
+            "dir_with_10_files/0": "",
+            "dir_with_10_files/1": "",
+            "dir_with_10_files/2": "",
+            "dir_with_10_files/3": "",
+            "dir_with_10_files/4": "",
+            "dir_with_10_files/5": "",
+            "dir_with_10_files/6": "",
+            "dir_with_10_files/7": "",
+            "dir_with_10_files/8": "",
+            "dir_with_10_files/9": ""
+          },
+          "expect": {
+            "files": {
+              "copy_of_hello_world.txt": "Hello, World!"
+            }
+          },
+          "note": "Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. This variant runs the external cp and only asserts implementation-neutral results (files, exit status; messages loosely). Upstream runs all uutils tests in one shared tempDirWithFiles directory; each case here gets a fresh copy of that tree.",
+          "platforms": ["posix"],
+          "requires": ["cp"]
+        }
+      ]
+    },
+    {
+      "line": 127,
+      "upstream": "uutils ported: cp_existing_target",
+      "disposition": "case",
+      "note": "testMini exec variant not reproduced (requires bun run of .bun.sh)",
+      "cases": [
+        {
+          "id": "commands-cp/uutils-existing-target-windows",
+          "template": ["cp ", " ", ""],
+          "values": [
+            {
+              "string": "hello_world.txt"
+            },
+            {
+              "string": "existing_file.txt"
+            }
+          ],
+          "files": {
+            "hello_world.txt": "Hello, World!",
+            "existing_file.txt": "Cogito ergo sum.",
+            "how_are_you.txt": "How are you?",
+            "hello_dir/hello.txt": "",
+            "hello_dir_with_file/hello_world.txt": "Hello, World!",
+            "dir_with_10_files/0": "",
+            "dir_with_10_files/1": "",
+            "dir_with_10_files/2": "",
+            "dir_with_10_files/3": "",
+            "dir_with_10_files/4": "",
+            "dir_with_10_files/5": "",
+            "dir_with_10_files/6": "",
+            "dir_with_10_files/7": "",
+            "dir_with_10_files/8": "",
+            "dir_with_10_files/9": ""
+          },
+          "expect": {
+            "files": {
+              "existing_file.txt": "Hello, World!"
+            }
+          },
+          "note": "Builtin cp behaviour from upstream (exact messages). Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. Not verifiable on the Linux oracle. Upstream runs all uutils tests in one shared tempDirWithFiles directory; each case here gets a fresh copy of that tree.",
+          "platforms": ["windows"]
+        },
+        {
+          "id": "commands-cp/uutils-existing-target-posix",
+          "template": ["cp ", " ", ""],
+          "values": [
+            {
+              "string": "hello_world.txt"
+            },
+            {
+              "string": "existing_file.txt"
+            }
+          ],
+          "files": {
+            "hello_world.txt": "Hello, World!",
+            "existing_file.txt": "Cogito ergo sum.",
+            "how_are_you.txt": "How are you?",
+            "hello_dir/hello.txt": "",
+            "hello_dir_with_file/hello_world.txt": "Hello, World!",
+            "dir_with_10_files/0": "",
+            "dir_with_10_files/1": "",
+            "dir_with_10_files/2": "",
+            "dir_with_10_files/3": "",
+            "dir_with_10_files/4": "",
+            "dir_with_10_files/5": "",
+            "dir_with_10_files/6": "",
+            "dir_with_10_files/7": "",
+            "dir_with_10_files/8": "",
+            "dir_with_10_files/9": ""
+          },
+          "expect": {
+            "files": {
+              "existing_file.txt": "Hello, World!"
+            }
+          },
+          "note": "Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. This variant runs the external cp and only asserts implementation-neutral results (files, exit status; messages loosely). Upstream runs all uutils tests in one shared tempDirWithFiles directory; each case here gets a fresh copy of that tree.",
+          "platforms": ["posix"],
+          "requires": ["cp"]
+        }
+      ]
+    },
+    {
+      "line": 133,
+      "upstream": "uutils ported: cp_duplicate_files",
+      "disposition": "case",
+      "note": "testMini exec variant not reproduced (requires bun run of .bun.sh)",
+      "cases": [
+        {
+          "id": "commands-cp/uutils-duplicate-files-windows",
+          "template": ["cp ", " ", " ", ""],
+          "values": [
+            {
+              "string": "hello_world.txt"
+            },
+            {
+              "string": "hello_world.txt"
+            },
+            {
+              "string": "hello_dir/"
+            }
+          ],
+          "files": {
+            "hello_world.txt": "Hello, World!",
+            "existing_file.txt": "Hello, World!\n",
+            "how_are_you.txt": "How are you?",
+            "hello_dir/hello.txt": "",
+            "hello_dir_with_file/hello_world.txt": "Hello, World!",
+            "dir_with_10_files/0": "",
+            "dir_with_10_files/1": "",
+            "dir_with_10_files/2": "",
+            "dir_with_10_files/3": "",
+            "dir_with_10_files/4": "",
+            "dir_with_10_files/5": "",
+            "dir_with_10_files/6": "",
+            "dir_with_10_files/7": "",
+            "dir_with_10_files/8": "",
+            "dir_with_10_files/9": ""
+          },
+          "expect": {
+            "files": {
+              "hello_dir/hello_world.txt": "Hello, World!"
+            }
+          },
+          "note": "Builtin cp behaviour from upstream (exact messages). Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. Not verifiable on the Linux oracle. Upstream runs all uutils tests in one shared tempDirWithFiles directory; each case here gets a fresh copy of that tree. GNU cp warns 'source file specified more than once' on stderr.",
+          "platforms": ["windows"]
+        },
+        {
+          "id": "commands-cp/uutils-duplicate-files-posix",
+          "template": ["cp ", " ", " ", ""],
+          "values": [
+            {
+              "string": "hello_world.txt"
+            },
+            {
+              "string": "hello_world.txt"
+            },
+            {
+              "string": "hello_dir/"
+            }
+          ],
+          "files": {
+            "hello_world.txt": "Hello, World!",
+            "existing_file.txt": "Hello, World!\n",
+            "how_are_you.txt": "How are you?",
+            "hello_dir/hello.txt": "",
+            "hello_dir_with_file/hello_world.txt": "Hello, World!",
+            "dir_with_10_files/0": "",
+            "dir_with_10_files/1": "",
+            "dir_with_10_files/2": "",
+            "dir_with_10_files/3": "",
+            "dir_with_10_files/4": "",
+            "dir_with_10_files/5": "",
+            "dir_with_10_files/6": "",
+            "dir_with_10_files/7": "",
+            "dir_with_10_files/8": "",
+            "dir_with_10_files/9": ""
+          },
+          "expect": {
+            "stderr": {
+              "any": true
+            },
+            "files": {
+              "hello_dir/hello_world.txt": "Hello, World!"
+            }
+          },
+          "note": "Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. This variant runs the external cp and only asserts implementation-neutral results (files, exit status; messages loosely). Upstream runs all uutils tests in one shared tempDirWithFiles directory; each case here gets a fresh copy of that tree. GNU cp warns 'source file specified more than once' on stderr.",
+          "platforms": ["posix"],
+          "requires": ["cp"]
+        }
+      ]
+    },
+    {
+      "line": 140,
+      "upstream": "uutils ported: cp_same_file",
+      "disposition": "case",
+      "note": "testMini exec variant not reproduced (requires bun run of .bun.sh)",
+      "cases": [
+        {
+          "id": "commands-cp/uutils-same-file-windows",
+          "template": ["touch a; cp a a"],
+          "files": {
+            "hello_world.txt": "Hello, World!",
+            "existing_file.txt": "Cogito ergo sum.",
+            "how_are_you.txt": "How are you?",
+            "hello_dir/hello.txt": "",
+            "hello_dir_with_file/hello_world.txt": "Hello, World!",
+            "dir_with_10_files/0": "",
+            "dir_with_10_files/1": "",
+            "dir_with_10_files/2": "",
+            "dir_with_10_files/3": "",
+            "dir_with_10_files/4": "",
+            "dir_with_10_files/5": "",
+            "dir_with_10_files/6": "",
+            "dir_with_10_files/7": "",
+            "dir_with_10_files/8": "",
+            "dir_with_10_files/9": ""
+          },
+          "expect": {
+            "stderr": {
+              "contains": "cp: a and a are identical (not copied)\n"
+            },
+            "exitCode": 1
+          },
+          "note": "Builtin cp behaviour from upstream (exact messages). Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. Not verifiable on the Linux oracle. Upstream runs all uutils tests in one shared tempDirWithFiles directory; each case here gets a fresh copy of that tree.",
+          "platforms": ["windows"]
+        },
+        {
+          "id": "commands-cp/uutils-same-file-posix",
+          "template": ["touch a; cp a a"],
+          "files": {
+            "hello_world.txt": "Hello, World!",
+            "existing_file.txt": "Cogito ergo sum.",
+            "how_are_you.txt": "How are you?",
+            "hello_dir/hello.txt": "",
+            "hello_dir_with_file/hello_world.txt": "Hello, World!",
+            "dir_with_10_files/0": "",
+            "dir_with_10_files/1": "",
+            "dir_with_10_files/2": "",
+            "dir_with_10_files/3": "",
+            "dir_with_10_files/4": "",
+            "dir_with_10_files/5": "",
+            "dir_with_10_files/6": "",
+            "dir_with_10_files/7": "",
+            "dir_with_10_files/8": "",
+            "dir_with_10_files/9": ""
+          },
+          "expect": {
+            "stderr": {
+              "any": true
+            },
+            "exitCode": 1
+          },
+          "note": "Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. This variant runs the external cp and only asserts implementation-neutral results (files, exit status; messages loosely). Upstream runs all uutils tests in one shared tempDirWithFiles directory; each case here gets a fresh copy of that tree.",
+          "platforms": ["posix"],
+          "requires": ["cp"]
+        }
+      ]
+    },
+    {
+      "line": 147,
+      "upstream": "uutils ported: cp_multiple_files_target_is_file",
+      "disposition": "case",
+      "note": "testMini exec variant not reproduced (requires bun run of .bun.sh)",
+      "cases": [
+        {
+          "id": "commands-cp/uutils-multiple-files-target-is-file-windows",
+          "template": ["cp ", " ", " ", ""],
+          "values": [
+            {
+              "string": "hello_world.txt"
+            },
+            {
+              "string": "hello_world.txt"
+            },
+            {
+              "string": "existing_file.txt"
+            }
+          ],
+          "files": {
+            "hello_world.txt": "Hello, World!",
+            "existing_file.txt": "Cogito ergo sum.",
+            "how_are_you.txt": "How are you?",
+            "hello_dir/hello.txt": "",
+            "hello_dir_with_file/hello_world.txt": "Hello, World!",
+            "dir_with_10_files/0": "",
+            "dir_with_10_files/1": "",
+            "dir_with_10_files/2": "",
+            "dir_with_10_files/3": "",
+            "dir_with_10_files/4": "",
+            "dir_with_10_files/5": "",
+            "dir_with_10_files/6": "",
+            "dir_with_10_files/7": "",
+            "dir_with_10_files/8": "",
+            "dir_with_10_files/9": ""
+          },
+          "expect": {
+            "stderr": {
+              "contains": "cp: existing_file.txt is not a directory\n"
+            },
+            "exitCode": 1,
+            "files": {
+              "existing_file.txt": "Cogito ergo sum."
+            }
+          },
+          "note": "Builtin cp behaviour from upstream (exact messages). Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. Not verifiable on the Linux oracle. Upstream runs all uutils tests in one shared tempDirWithFiles directory; each case here gets a fresh copy of that tree.",
+          "platforms": ["windows"]
+        },
+        {
+          "id": "commands-cp/uutils-multiple-files-target-is-file-posix",
+          "template": ["cp ", " ", " ", ""],
+          "values": [
+            {
+              "string": "hello_world.txt"
+            },
+            {
+              "string": "hello_world.txt"
+            },
+            {
+              "string": "existing_file.txt"
+            }
+          ],
+          "files": {
+            "hello_world.txt": "Hello, World!",
+            "existing_file.txt": "Cogito ergo sum.",
+            "how_are_you.txt": "How are you?",
+            "hello_dir/hello.txt": "",
+            "hello_dir_with_file/hello_world.txt": "Hello, World!",
+            "dir_with_10_files/0": "",
+            "dir_with_10_files/1": "",
+            "dir_with_10_files/2": "",
+            "dir_with_10_files/3": "",
+            "dir_with_10_files/4": "",
+            "dir_with_10_files/5": "",
+            "dir_with_10_files/6": "",
+            "dir_with_10_files/7": "",
+            "dir_with_10_files/8": "",
+            "dir_with_10_files/9": ""
+          },
+          "expect": {
+            "stderr": {
+              "contains": "existing_file.txt"
+            },
+            "exitCode": 1,
+            "files": {
+              "existing_file.txt": "Cogito ergo sum."
+            }
+          },
+          "note": "Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. This variant runs the external cp and only asserts implementation-neutral results (files, exit status; messages loosely). Upstream runs all uutils tests in one shared tempDirWithFiles directory; each case here gets a fresh copy of that tree.",
+          "platforms": ["posix"],
+          "requires": ["cp"]
+        }
+      ]
+    },
+    {
+      "line": 154,
+      "upstream": "uutils ported: cp_directory_not_recursive",
+      "disposition": "case",
+      "note": "testMini exec variant not reproduced (requires bun run of .bun.sh)",
+      "cases": [
+        {
+          "id": "commands-cp/uutils-directory-not-recursive-windows",
+          "template": ["cp ", " ", ""],
+          "values": [
+            {
+              "string": "hello_dir/"
+            },
+            {
+              "string": "copy_of_hello_world.txt"
+            }
+          ],
+          "files": {
+            "hello_world.txt": "Hello, World!",
+            "existing_file.txt": "Cogito ergo sum.",
+            "how_are_you.txt": "How are you?",
+            "hello_dir/hello.txt": "",
+            "hello_dir_with_file/hello_world.txt": "Hello, World!",
+            "dir_with_10_files/0": "",
+            "dir_with_10_files/1": "",
+            "dir_with_10_files/2": "",
+            "dir_with_10_files/3": "",
+            "dir_with_10_files/4": "",
+            "dir_with_10_files/5": "",
+            "dir_with_10_files/6": "",
+            "dir_with_10_files/7": "",
+            "dir_with_10_files/8": "",
+            "dir_with_10_files/9": ""
+          },
+          "expect": {
+            "stderr": {
+              "contains": "cp: hello_dir/ is a directory (not copied)\n"
+            },
+            "exitCode": 1,
+            "absent": ["copy_of_hello_world.txt"]
+          },
+          "note": "Builtin cp behaviour from upstream (exact messages). Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. Not verifiable on the Linux oracle. Upstream runs all uutils tests in one shared tempDirWithFiles directory; each case here gets a fresh copy of that tree.",
+          "platforms": ["windows"]
+        },
+        {
+          "id": "commands-cp/uutils-directory-not-recursive-posix",
+          "template": ["cp ", " ", ""],
+          "values": [
+            {
+              "string": "hello_dir/"
+            },
+            {
+              "string": "copy_of_hello_world.txt"
+            }
+          ],
+          "files": {
+            "hello_world.txt": "Hello, World!",
+            "existing_file.txt": "Cogito ergo sum.",
+            "how_are_you.txt": "How are you?",
+            "hello_dir/hello.txt": "",
+            "hello_dir_with_file/hello_world.txt": "Hello, World!",
+            "dir_with_10_files/0": "",
+            "dir_with_10_files/1": "",
+            "dir_with_10_files/2": "",
+            "dir_with_10_files/3": "",
+            "dir_with_10_files/4": "",
+            "dir_with_10_files/5": "",
+            "dir_with_10_files/6": "",
+            "dir_with_10_files/7": "",
+            "dir_with_10_files/8": "",
+            "dir_with_10_files/9": ""
+          },
+          "expect": {
+            "stderr": {
+              "contains": "hello_dir/"
+            },
+            "exitCode": 1,
+            "absent": ["copy_of_hello_world.txt"]
+          },
+          "note": "Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. This variant runs the external cp and only asserts implementation-neutral results (files, exit status; messages loosely). Upstream runs all uutils tests in one shared tempDirWithFiles directory; each case here gets a fresh copy of that tree.",
+          "platforms": ["posix"],
+          "requires": ["cp"]
+        }
+      ]
+    },
+    {
+      "line": 161,
+      "upstream": "uutils ported: cp_multiple_files",
+      "disposition": "case",
+      "note": "testMini exec variant not reproduced (requires bun run of .bun.sh)",
+      "cases": [
+        {
+          "id": "commands-cp/uutils-multiple-files-windows",
+          "template": ["cp ", " ", " ", ""],
+          "values": [
+            {
+              "string": "hello_world.txt"
+            },
+            {
+              "string": "how_are_you.txt"
+            },
+            {
+              "string": "hello_dir/"
+            }
+          ],
+          "files": {
+            "hello_world.txt": "Hello, World!",
+            "existing_file.txt": "Cogito ergo sum.",
+            "how_are_you.txt": "How are you?",
+            "hello_dir/hello.txt": "",
+            "hello_dir_with_file/hello_world.txt": "Hello, World!",
+            "dir_with_10_files/0": "",
+            "dir_with_10_files/1": "",
+            "dir_with_10_files/2": "",
+            "dir_with_10_files/3": "",
+            "dir_with_10_files/4": "",
+            "dir_with_10_files/5": "",
+            "dir_with_10_files/6": "",
+            "dir_with_10_files/7": "",
+            "dir_with_10_files/8": "",
+            "dir_with_10_files/9": ""
+          },
+          "expect": {
+            "files": {
+              "hello_dir/hello_world.txt": "Hello, World!",
+              "hello_dir/how_are_you.txt": "How are you?"
+            }
+          },
+          "note": "Builtin cp behaviour from upstream (exact messages). Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. Not verifiable on the Linux oracle. Upstream runs all uutils tests in one shared tempDirWithFiles directory; each case here gets a fresh copy of that tree.",
+          "platforms": ["windows"]
+        },
+        {
+          "id": "commands-cp/uutils-multiple-files-posix",
+          "template": ["cp ", " ", " ", ""],
+          "values": [
+            {
+              "string": "hello_world.txt"
+            },
+            {
+              "string": "how_are_you.txt"
+            },
+            {
+              "string": "hello_dir/"
+            }
+          ],
+          "files": {
+            "hello_world.txt": "Hello, World!",
+            "existing_file.txt": "Cogito ergo sum.",
+            "how_are_you.txt": "How are you?",
+            "hello_dir/hello.txt": "",
+            "hello_dir_with_file/hello_world.txt": "Hello, World!",
+            "dir_with_10_files/0": "",
+            "dir_with_10_files/1": "",
+            "dir_with_10_files/2": "",
+            "dir_with_10_files/3": "",
+            "dir_with_10_files/4": "",
+            "dir_with_10_files/5": "",
+            "dir_with_10_files/6": "",
+            "dir_with_10_files/7": "",
+            "dir_with_10_files/8": "",
+            "dir_with_10_files/9": ""
+          },
+          "expect": {
+            "files": {
+              "hello_dir/hello_world.txt": "Hello, World!",
+              "hello_dir/how_are_you.txt": "How are you?"
+            }
+          },
+          "note": "Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. This variant runs the external cp and only asserts implementation-neutral results (files, exit status; messages loosely). Upstream runs all uutils tests in one shared tempDirWithFiles directory; each case here gets a fresh copy of that tree.",
+          "platforms": ["posix"],
+          "requires": ["cp"]
+        }
+      ]
+    },
+    {
+      "line": 166,
+      "upstream": "uutils ported: cp_multiple_files (followed by && bun -e)",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-cp/uutils-multiple-files-then-node-windows",
+          "template": ["cp ", " ", " ", " && ", " -e ", ""],
+          "values": [
+            {
+              "string": "hello_world.txt"
+            },
+            {
+              "string": "how_are_you.txt"
+            },
+            {
+              "string": "hello_dir/"
+            },
+            {
+              "string": "{{NODE}}"
+            },
+            {
+              "string": "console.log(\"HI\")"
+            }
+          ],
+          "files": {
+            "hello_world.txt": "Hello, World!",
+            "existing_file.txt": "Cogito ergo sum.",
+            "how_are_you.txt": "How are you?",
+            "hello_dir/hello.txt": "",
+            "hello_dir_with_file/hello_world.txt": "Hello, World!",
+            "dir_with_10_files/0": "",
+            "dir_with_10_files/1": "",
+            "dir_with_10_files/2": "",
+            "dir_with_10_files/3": "",
+            "dir_with_10_files/4": "",
+            "dir_with_10_files/5": "",
+            "dir_with_10_files/6": "",
+            "dir_with_10_files/7": "",
+            "dir_with_10_files/8": "",
+            "dir_with_10_files/9": ""
+          },
+          "requires": ["node"],
+          "expect": {
+            "stdout": "HI\n",
+            "files": {
+              "hello_dir/hello_world.txt": "Hello, World!",
+              "hello_dir/how_are_you.txt": "How are you?"
+            }
+          },
+          "note": "Builtin cp behaviour from upstream (exact messages). Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. Not verifiable on the Linux oracle. Upstream runs all uutils tests in one shared tempDirWithFiles directory; each case here gets a fresh copy of that tree. Upstream runs bunExe() -e; replaced by {{NODE}}.",
+          "platforms": ["windows"]
+        },
+        {
+          "id": "commands-cp/uutils-multiple-files-then-node-posix",
+          "template": ["cp ", " ", " ", " && ", " -e ", ""],
+          "values": [
+            {
+              "string": "hello_world.txt"
+            },
+            {
+              "string": "how_are_you.txt"
+            },
+            {
+              "string": "hello_dir/"
+            },
+            {
+              "string": "{{NODE}}"
+            },
+            {
+              "string": "console.log(\"HI\")"
+            }
+          ],
+          "files": {
+            "hello_world.txt": "Hello, World!",
+            "existing_file.txt": "Cogito ergo sum.",
+            "how_are_you.txt": "How are you?",
+            "hello_dir/hello.txt": "",
+            "hello_dir_with_file/hello_world.txt": "Hello, World!",
+            "dir_with_10_files/0": "",
+            "dir_with_10_files/1": "",
+            "dir_with_10_files/2": "",
+            "dir_with_10_files/3": "",
+            "dir_with_10_files/4": "",
+            "dir_with_10_files/5": "",
+            "dir_with_10_files/6": "",
+            "dir_with_10_files/7": "",
+            "dir_with_10_files/8": "",
+            "dir_with_10_files/9": ""
+          },
+          "requires": ["cp", "node"],
+          "expect": {
+            "stdout": "HI\n",
+            "files": {
+              "hello_dir/hello_world.txt": "Hello, World!",
+              "hello_dir/how_are_you.txt": "How are you?"
+            }
+          },
+          "note": "Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. This variant runs the external cp and only asserts implementation-neutral results (files, exit status; messages loosely). Upstream runs all uutils tests in one shared tempDirWithFiles directory; each case here gets a fresh copy of that tree. Upstream runs bunExe() -e; replaced by {{NODE}}.",
+          "platforms": ["posix"]
+        }
+      ]
+    },
+    {
+      "line": 172,
+      "upstream": "uutils ported: cp_recurse",
+      "disposition": "case",
+      "note": "testMini exec variant not reproduced (requires bun run of .bun.sh)",
+      "cases": [
+        {
+          "id": "commands-cp/uutils-recurse-windows",
+          "template": ["cp -R ", " ", ""],
+          "values": [
+            {
+              "string": "hello_dir_with_file/"
+            },
+            {
+              "string": "hello_dir_new"
+            }
+          ],
+          "files": {
+            "hello_world.txt": "Hello, World!",
+            "existing_file.txt": "Cogito ergo sum.",
+            "how_are_you.txt": "How are you?",
+            "hello_dir/hello.txt": "",
+            "hello_dir_with_file/hello_world.txt": "Hello, World!",
+            "dir_with_10_files/0": "",
+            "dir_with_10_files/1": "",
+            "dir_with_10_files/2": "",
+            "dir_with_10_files/3": "",
+            "dir_with_10_files/4": "",
+            "dir_with_10_files/5": "",
+            "dir_with_10_files/6": "",
+            "dir_with_10_files/7": "",
+            "dir_with_10_files/8": "",
+            "dir_with_10_files/9": ""
+          },
+          "expect": {
+            "files": {
+              "hello_dir_new/hello_world.txt": "Hello, World!"
+            }
+          },
+          "note": "Builtin cp behaviour from upstream (exact messages). Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. Not verifiable on the Linux oracle. Upstream runs all uutils tests in one shared tempDirWithFiles directory; each case here gets a fresh copy of that tree.",
+          "platforms": ["windows"]
+        },
+        {
+          "id": "commands-cp/uutils-recurse-posix",
+          "template": ["cp -R ", " ", ""],
+          "values": [
+            {
+              "string": "hello_dir_with_file/"
+            },
+            {
+              "string": "hello_dir_new"
+            }
+          ],
+          "files": {
+            "hello_world.txt": "Hello, World!",
+            "existing_file.txt": "Cogito ergo sum.",
+            "how_are_you.txt": "How are you?",
+            "hello_dir/hello.txt": "",
+            "hello_dir_with_file/hello_world.txt": "Hello, World!",
+            "dir_with_10_files/0": "",
+            "dir_with_10_files/1": "",
+            "dir_with_10_files/2": "",
+            "dir_with_10_files/3": "",
+            "dir_with_10_files/4": "",
+            "dir_with_10_files/5": "",
+            "dir_with_10_files/6": "",
+            "dir_with_10_files/7": "",
+            "dir_with_10_files/8": "",
+            "dir_with_10_files/9": ""
+          },
+          "expect": {
+            "files": {
+              "hello_dir_new/hello_world.txt": "Hello, World!"
+            }
+          },
+          "note": "Bun 1.4.2 disables the cp builtin on POSIX (upstream wraps the suite in describe.if(!builtinDisabled('cp')), so it only runs where the builtin is enabled, i.e. Windows); on Linux `cp` resolves to the system cp via PATH. This variant runs the external cp and only asserts implementation-neutral results (files, exit status; messages loosely). Upstream runs all uutils tests in one shared tempDirWithFiles directory; each case here gets a fresh copy of that tree.",
+          "platforms": ["posix"],
+          "requires": ["cp"]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "source": "test/js/bun/shell/shell-seq-condexpr.test.ts",
+  "units": [
+    {
+      "line": 4,
+      "upstream": "seq inf does not hang",
+      "disposition": "case",
+      "note": "upstream runs in a bun -e subprocess with a 10s timeout",
+      "cases": [
+        {
+          "id": "shell-seq-condexpr/seq-inf",
+          "template": ["seq inf"],
+          "expect": {
+            "stderr": "seq: invalid argument\n",
+            "exitCode": 1
+          }
+        }
+      ]
+    },
+    {
+      "line": 21,
+      "upstream": "seq nan does not hang",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "shell-seq-condexpr/seq-nan",
+          "template": ["seq nan"],
+          "expect": {
+            "stderr": "seq: invalid argument\n",
+            "exitCode": 1
+          }
+        }
+      ]
+    },
+    {
+      "line": 38,
+      "upstream": "seq -inf does not hang",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "shell-seq-condexpr/seq-neg-inf",
+          "template": ["seq -- -inf"],
+          "expect": {
+            "stderr": "seq: invalid argument\n",
+            "exitCode": 1
+          }
+        }
+      ]
+    },
+    {
+      "line": 55,
+      "upstream": "[[ -d \"\" ]] does not crash",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "shell-seq-condexpr/condexpr-d-empty",
+          "template": ["[[ -d \"\" ]]"],
+          "expect": {
+            "exitCode": 1
+          }
+        }
+      ]
+    },
+    {
+      "line": 71,
+      "upstream": "[[ -f \"\" ]] does not crash",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "shell-seq-condexpr/condexpr-f-empty",
+          "template": ["[[ -f \"\" ]]"],
+          "expect": {
+            "exitCode": 1
+          }
+        }
+      ]
+    }
+  ]
+}

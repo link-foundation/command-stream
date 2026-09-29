@@ -1,0 +1,866 @@
+{
+  "source": "test/js/bun/shell/brace.test.ts",
+  "units": [
+    {
+      "line": 6,
+      "upstream": "no-op",
+      "disposition": "js-api",
+      "api": "expect($.braces(\"echo 123\")).toEqual([\"echo 123\"])",
+      "cases": [
+        {
+          "id": "brace/no-op",
+          "template": ["echo 123"],
+          "expect": {
+            "stdout": "123\n"
+          }
+        }
+      ],
+      "note": "Behavioural case: the $.braces input is itself run as a shell command; the echo builtin prints the brace-expanded words."
+    },
+    {
+      "line": 11,
+      "upstream": "2",
+      "disposition": "js-api",
+      "api": "expect($.braces(\"echo {123,456}\")).toEqual([\"echo 123\",\"echo 456\"])",
+      "cases": [
+        {
+          "id": "brace/two-variants",
+          "template": ["echo {123,456}"],
+          "expect": {
+            "stdout": "123 456\n"
+          }
+        }
+      ],
+      "note": "Behavioural case: the $.braces input is itself run as a shell command; the echo builtin prints the brace-expanded words."
+    },
+    {
+      "line": 16,
+      "upstream": "3",
+      "disposition": "js-api",
+      "api": "expect($.braces(\"echo {123,456,789}\")).toEqual([\"echo 123\",\"echo 456\",\"echo 789\"])",
+      "cases": [
+        {
+          "id": "brace/three-variants",
+          "template": ["echo {123,456,789}"],
+          "expect": {
+            "stdout": "123 456 789\n"
+          }
+        }
+      ],
+      "note": "Behavioural case: the $.braces input is itself run as a shell command; the echo builtin prints the brace-expanded words."
+    },
+    {
+      "line": 21,
+      "upstream": "nested",
+      "disposition": "js-api",
+      "api": "expect($.braces(\"echo {123,{456,789}}\")).toEqual([\"echo 123\",\"echo 456\",\"echo 789\"])",
+      "cases": [
+        {
+          "id": "brace/nested",
+          "template": ["echo {123,{456,789}}"],
+          "expect": {
+            "stdout": "123 456 789\n"
+          }
+        }
+      ],
+      "note": "Behavioural case: the $.braces input is itself run as a shell command; the echo builtin prints the brace-expanded words."
+    },
+    {
+      "line": 26,
+      "upstream": "nested 2",
+      "disposition": "js-api",
+      "api": "expect($.braces(\"echo {123,{456,789},abc}\")).toEqual([\"echo 123\",\"echo 456\",\"echo 789\",\"echo abc\"])",
+      "cases": [
+        {
+          "id": "brace/nested-2",
+          "template": ["echo {123,{456,789},abc}"],
+          "expect": {
+            "stdout": "123 456 789 abc\n"
+          }
+        }
+      ],
+      "note": "Behavioural case: the $.braces input is itself run as a shell command; the echo builtin prints the brace-expanded words."
+    },
+    {
+      "line": 31,
+      "upstream": "nested sibling product",
+      "disposition": "js-api",
+      "api": "expect($.braces(\"{{d,e}{g,h}}\")).toEqual([\"{dg}\",\"{dh}\",\"{eg}\",\"{eh}\"])",
+      "cases": [
+        {
+          "id": "brace/nested-sibling-product",
+          "template": ["echo {{d,e}{g,h}}"],
+          "expect": {
+            "stdout": "{dg} {dh} {eg} {eh}\n"
+          }
+        }
+      ],
+      "note": "Behavioural case: `echo <pattern>` prints the brace-expanded words joined by spaces (empty variants become empty argv words)."
+    },
+    {
+      "line": 36,
+      "upstream": "nested sibling product with surrounding text",
+      "disposition": "js-api",
+      "api": "expect($.braces(\"pre{{a,b}{c,d}}post\")).toEqual([\"pre{ac}post\",\"pre{ad}post\",\"pre{bc}post\",\"pre{bd}post\"])",
+      "cases": [
+        {
+          "id": "brace/nested-sibling-product-with-surrounding-text",
+          "template": ["echo pre{{a,b}{c,d}}post"],
+          "expect": {
+            "stdout": "pre{ac}post pre{ad}post pre{bc}post pre{bd}post\n"
+          }
+        }
+      ],
+      "note": "Behavioural case: `echo <pattern>` prints the brace-expanded words joined by spaces (empty variants become empty argv words)."
+    },
+    {
+      "line": 40,
+      "upstream": "nested sibling product mixed with variants",
+      "disposition": "js-api",
+      "api": "expect($.braces(\"{a,{b,c}{d,e},f}\")).toEqual([\"a\",\"bd\",\"be\",\"cd\",\"ce\",\"f\"])",
+      "cases": [
+        {
+          "id": "brace/nested-sibling-product-mixed-with-variants",
+          "template": ["echo {a,{b,c}{d,e},f}"],
+          "expect": {
+            "stdout": "a bd be cd ce f\n"
+          }
+        }
+      ],
+      "note": "Behavioural case: `echo <pattern>` prints the brace-expanded words joined by spaces (empty variants become empty argv words)."
+    },
+    {
+      "line": 44,
+      "upstream": "nested sibling product triple",
+      "disposition": "js-api",
+      "api": "expect($.braces(\"{{a,b}{c,d}{e,f}}\")).toEqual([\"{ace}\",\"{acf}\",\"{ade}\",\"{adf}\",\"{bce}\",\"{bcf}\",\"{bde}\",\"{bdf}\"])",
+      "cases": [
+        {
+          "id": "brace/nested-sibling-product-triple",
+          "template": ["echo {{a,b}{c,d}{e,f}}"],
+          "expect": {
+            "stdout": "{ace} {acf} {ade} {adf} {bce} {bcf} {bde} {bdf}\n"
+          }
+        }
+      ],
+      "note": "Behavioural case: `echo <pattern>` prints the brace-expanded words joined by spaces (empty variants become empty argv words)."
+    },
+    {
+      "line": 61,
+      "upstream": "nested with empty variant (test.each, 10 generated tests named by pattern)",
+      "disposition": "js-api",
+      "api": "For each [pattern, expected]: expect($.braces(pattern)).toEqual(expected) with $.braces(\"{x,a{,}b}\") -> [\"x\",\"ab\",\"ab\"]; $.braces(\"{x,{a,}}z\") -> [\"xz\",\"az\",\"z\"]; $.braces(\"{x,{,a}}z\") -> [\"xz\",\"z\",\"az\"]; $.braces(\"{x,{,}}z\") -> [\"xz\",\"z\",\"z\"]; $.braces(\"a{b,c{d,}}e\") -> [\"abe\",\"acde\",\"ace\"]; $.braces(\"a{b,c{,d}}e\") -> [\"abe\",\"ace\",\"acde\"]; $.braces(\"{x,{a,,b}}\") -> [\"x\",\"a\",\"\",\"b\"]; $.braces(\"{x,{a,b,}}\") -> [\"x\",\"a\",\"b\",\"\"]; $.braces(\"{{a,},x}\") -> [\"a\",\"\",\"x\"]; $.braces(\"p{q,{r,}{s,}}t\") -> [\"pqt\",\"prst\",\"prt\",\"pst\",\"pt\"]",
+      "cases": [
+        {
+          "id": "brace/nested-empty-variant-ox_ao_cbc",
+          "template": ["echo {x,a{,}b}"],
+          "expect": {
+            "stdout": "x ab ab\n"
+          }
+        },
+        {
+          "id": "brace/nested-empty-variant-ox_oa_ccz",
+          "template": ["echo {x,{a,}}z"],
+          "expect": {
+            "stdout": "xz az z\n"
+          }
+        },
+        {
+          "id": "brace/nested-empty-variant-ox_o_accz",
+          "template": ["echo {x,{,a}}z"],
+          "expect": {
+            "stdout": "xz z az\n"
+          }
+        },
+        {
+          "id": "brace/nested-empty-variant-ox_o_ccz",
+          "template": ["echo {x,{,}}z"],
+          "expect": {
+            "stdout": "xz z z\n"
+          }
+        },
+        {
+          "id": "brace/nested-empty-variant-aob_cod_cce",
+          "template": ["echo a{b,c{d,}}e"],
+          "expect": {
+            "stdout": "abe acde ace\n"
+          }
+        },
+        {
+          "id": "brace/nested-empty-variant-aob_co_dcce",
+          "template": ["echo a{b,c{,d}}e"],
+          "expect": {
+            "stdout": "abe ace acde\n"
+          }
+        },
+        {
+          "id": "brace/nested-empty-variant-ox_oa__bcc",
+          "template": ["echo {x,{a,,b}}"],
+          "expect": {
+            "stdout": "x a  b\n"
+          }
+        },
+        {
+          "id": "brace/nested-empty-variant-ox_oa_b_cc",
+          "template": ["echo {x,{a,b,}}"],
+          "expect": {
+            "stdout": "x a b \n"
+          }
+        },
+        {
+          "id": "brace/nested-empty-variant-ooa_c_xc",
+          "template": ["echo {{a,},x}"],
+          "expect": {
+            "stdout": "a  x\n"
+          }
+        },
+        {
+          "id": "brace/nested-empty-variant-poq_or_cos_cct",
+          "template": ["echo p{q,{r,}{s,}}t"],
+          "expect": {
+            "stdout": "pqt prst prt pst pt\n"
+          }
+        }
+      ],
+      "note": "One behavioural case per generated test: `echo <pattern>` prints the expansion; empty variants appear as empty argv words (double/trailing spaces)."
+    },
+    {
+      "line": 77,
+      "upstream": "very deeply nested",
+      "disposition": "js-api",
+      "api": "expect($.braces(\"{1,{2,{3,{4,{5,{6,{7,{8,{9,{10,{11,{12,{13,{14,{15,{16,{17}}}}}}}}}}}}}}}}}\")).toEqual([\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"7\",\"8\",\"9\",\"10\",\"11\",\"12\",\"13\",\"14\",\"15\",\"16\",\"{17}\"])",
+      "cases": [
+        {
+          "id": "brace/very-deeply-nested",
+          "template": [
+            "echo {1,{2,{3,{4,{5,{6,{7,{8,{9,{10,{11,{12,{13,{14,{15,{16,{17}}}}}}}}}}}}}}}}}"
+          ],
+          "expect": {
+            "stdout": "1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 {17}\n"
+          }
+        }
+      ],
+      "note": "Behavioural case: `echo <pattern>` prints the brace-expanded words joined by spaces (empty variants become empty argv words)."
+    },
+    {
+      "line": 101,
+      "upstream": "literal outer group around hundreds of nested groups",
+      "disposition": "js-api",
+      "api": "const input = \"{\" + \"{a,\".repeat(256) + \"b\" + \"}\".repeat(256); expect($.braces(input)).toEqual([...Array(256).fill(\"{a\"), \"{b\"]) (upstream runs it in a bun -e subprocess and compares JSON.stringify output; exit code 0).",
+      "cases": [
+        {
+          "id": "brace/literal-outer-group-around-256-nested-groups",
+          "template": ["echo ", ""],
+          "values": [
+            {
+              "raw": {
+                "concat": [
+                  "{",
+                  {
+                    "repeat": "{a,",
+                    "count": 256
+                  },
+                  "b",
+                  {
+                    "repeat": "}",
+                    "count": 256
+                  }
+                ]
+              }
+            }
+          ],
+          "expect": {
+            "stdout": {
+              "concat": [
+                {
+                  "repeat": "{a ",
+                  "count": 256
+                },
+                "{b\n"
+              ]
+            }
+          }
+        }
+      ],
+      "note": "Behavioural case: the same word passed as a {raw} interpolation to echo prints 256 '{a' words then '{b'."
+    },
+    {
+      "line": 119,
+      "upstream": "empty string",
+      "disposition": "js-api",
+      "api": "expect($.braces(\"\")).toEqual([\"\"]); expect(typeof $.braces(\"\", { parse: true })).toBe(\"string\"); expect(typeof $.braces(\"\", { tokenize: true })).toBe(\"string\") (Bun 1.4.2 returns a JSON AST dump / token dump string; content not asserted).",
+      "cases": [
+        {
+          "id": "brace/empty-string",
+          "template": ["echo ", ""],
+          "values": [
+            {
+              "raw": ""
+            }
+          ],
+          "expect": {
+            "stdout": "\n"
+          }
+        }
+      ],
+      "note": "Behavioural case: an empty raw word after echo expands to nothing; echo prints just a newline."
+    },
+    {
+      "line": 125,
+      "upstream": "unicode",
+      "disposition": "js-api",
+      "api": "expect($.braces(\"lol {😂,🫵,🤣}\")).toEqual([\"lol 😂\",\"lol 🫵\",\"lol 🤣\"])",
+      "cases": [
+        {
+          "id": "brace/unicode",
+          "template": ["echo lol {😂,🫵,🤣}"],
+          "expect": {
+            "stdout": "lol 😂 🫵 🤣\n"
+          }
+        }
+      ],
+      "note": "Behavioural case: `echo lol {😂,🫵,🤣}` -> 'lol' is a separate argv word, the brace word expands to three emoji words."
+    },
+    {
+      "line": 135,
+      "upstream": "src/*.{ts,tsx} globs after brace expansion",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "brace/brace-then-glob-suffix",
+          "template": ["echo src/*.{ts,tsx}"],
+          "files": {
+            "src/app.ts": "",
+            "src/util.tsx": ""
+          },
+          "expect": {
+            "stdout": {
+              "regex": "^src/\\*\\.ts src/\\*\\.tsx (?:src/util\\.tsx src/app\\.ts|src/app\\.ts src/util\\.tsx)\\n$"
+            }
+          },
+          "note": "Bun 1.4.2 prints the literal brace variants (src/*.ts src/*.tsx) first, then the glob matches (observed order: src/util.tsx src/app.ts; match order depends on directory listing so either order is accepted). Upstream only asserts the four words are present (paths normalized to '/')."
+        }
+      ]
+    },
+    {
+      "line": 151,
+      "upstream": "{src,lib}/*.ts composes a brace prefix with a glob",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "brace/brace-prefix-then-glob",
+          "template": ["echo {src,lib}/*.ts"],
+          "files": {
+            "src/a.ts": "",
+            "lib/b.ts": ""
+          },
+          "expect": {
+            "stdout": {
+              "regex": "^src/\\*\\.ts lib/\\*\\.ts (?:lib/b\\.ts src/a\\.ts|src/a\\.ts lib/b\\.ts)\\n$"
+            }
+          },
+          "note": "Bun 1.4.2 prints the literal variants (src/*.ts lib/*.ts) then the glob matches (observed: lib/b.ts src/a.ts). Upstream only asserts src/a.ts and lib/b.ts are present."
+        }
+      ]
+    },
+    {
+      "line": 162,
+      "upstream": "an interpolated comma inside a brace group is one literal branch",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "brace/interpolated-comma-in-brace-group-is-literal",
+          "template": ["echo *.{ts,", "}"],
+          "values": [
+            {
+              "string": ",foo"
+            }
+          ],
+          "files": {
+            "x.ts": "",
+            "x.,foo": "",
+            "x.]foo": ""
+          },
+          "expect": {
+            "stdout": {
+              "allOf": [
+                {
+                  "regex": "^\\*\\.ts \\*\\.,foo (?:x\\.ts x\\.,foo|x\\.,foo x\\.ts)\\n$"
+                },
+                {
+                  "notContains": "]foo"
+                }
+              ]
+            }
+          },
+          "note": "The interpolated string ',foo' is one literal brace branch (not split at its comma). Bun 1.4.2 prints the literal variants '*.ts *.,foo' then the glob matches 'x.ts x.,foo'; 'x.]foo' must not match."
+        }
+      ]
+    },
+    {
+      "line": 186,
+      "upstream": "rejects a word with an excessive number of brace groups instead of crashing",
+      "disposition": "js-api",
+      "api": "In a subprocess (bun -e): const deep = \"{,\".repeat(100000) + \"}\".repeat(50000); expect(() => Bun.$.braces(deep)).toThrow() with e.message === \"Too many braces in brace expansion\"; const literal = \"{\".repeat(50000) + \"}\".repeat(50000); expect(Bun.$.braces(literal)).toEqual([literal]); expect(Bun.$.braces(\"echo {a,b}\")).toEqual([\"echo a\", \"echo b\"]); process exits 0.",
+      "cases": [
+        {
+          "id": "brace/too-many-braces-rejected-in-shell",
+          "template": ["echo ", ""],
+          "values": [
+            {
+              "raw": {
+                "concat": [
+                  {
+                    "repeat": "{,",
+                    "count": 2000
+                  },
+                  {
+                    "repeat": "}",
+                    "count": 1000
+                  }
+                ]
+              }
+            }
+          ],
+          "expect": {
+            "stderr": "bun: too many braces in brace expansion\n",
+            "exitCode": 1
+          },
+          "note": "Through the shell (not $.braces), Bun 1.4.2 does not throw: the command fails with exit code 1 and stderr 'bun: too many braces in brace expansion' (lowercase 'too', unlike the $.braces error message). Input reduced from upstream's '{,'x100000 + '}'x50000 to '{,'x2000 + '}'x1000 (same error) because Bun 1.4.2 takes ~85 s on the full-size input (the brace lexer is quadratic before the bound is hit)."
+        },
+        {
+          "id": "brace/256-nested-groups-within-bound",
+          "template": ["echo ", ""],
+          "values": [
+            {
+              "raw": {
+                "concat": [
+                  {
+                    "repeat": "{a,",
+                    "count": 256
+                  },
+                  "b",
+                  {
+                    "repeat": "}",
+                    "count": 256
+                  }
+                ]
+              }
+            }
+          ],
+          "expect": {
+            "stdout": {
+              "concat": [
+                {
+                  "repeat": "a ",
+                  "count": 256
+                },
+                "b\n"
+              ]
+            }
+          },
+          "note": "Boundary probe (not in upstream): Bun 1.4.2 accepts 256 nested brace groups."
+        },
+        {
+          "id": "brace/257-nested-groups-rejected",
+          "template": ["echo ", ""],
+          "values": [
+            {
+              "raw": {
+                "concat": [
+                  {
+                    "repeat": "{a,",
+                    "count": 257
+                  },
+                  "b",
+                  {
+                    "repeat": "}",
+                    "count": 257
+                  }
+                ]
+              }
+            }
+          ],
+          "expect": {
+            "stderr": "bun: too many braces in brace expansion\n",
+            "exitCode": 1
+          },
+          "note": "Boundary probe (not in upstream): Bun 1.4.2 rejects 257 nested brace groups with the same error."
+        },
+        {
+          "id": "brace/comma-less-50000-braces-is-literal",
+          "template": ["echo ", ""],
+          "values": [
+            {
+              "raw": {
+                "concat": [
+                  {
+                    "repeat": "{",
+                    "count": 50000
+                  },
+                  {
+                    "repeat": "}",
+                    "count": 50000
+                  }
+                ]
+              }
+            }
+          ],
+          "expect": {
+            "stdout": {
+              "concat": [
+                {
+                  "repeat": "{",
+                  "count": 50000
+                },
+                {
+                  "repeat": "}",
+                  "count": 50000
+                },
+                "\n"
+              ]
+            }
+          }
+        },
+        {
+          "id": "brace/reasonable-pattern-still-expands",
+          "template": ["echo {a,b}"],
+          "expect": {
+            "stdout": "a b\n"
+          }
+        }
+      ],
+      "note": "Upstream input size makes $.braces take tens of seconds in Bun 1.4.2 (quadratic scan before the bound); a hand-written JS test may use a smaller input such as '{,'.repeat(2000)+'}'.repeat(1000), which throws the same message."
+    },
+    {
+      "line": 240,
+      "upstream": "exactly 65536 variants: shell word with 16 flat groups (2^16)",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "brace/65536-variants-16-flat-groups",
+          "template": ["echo ", ""],
+          "values": [
+            {
+              "raw": {
+                "repeat": "{a,b}",
+                "count": 16
+              }
+            }
+          ],
+          "expect": {
+            "stdout": {
+              "startsWith": "aaaaaaaaaaaaaaaa ",
+              "endsWith": " bbbbbbbbbbbbbbbb\n",
+              "length": 1114112
+            }
+          },
+          "note": "Upstream runs this in a bun -e subprocess and checks [words.length, first, last] = [65536, 'a'*16, 'b'*16], empty stderr and exit 0; here: 65536 words of 16 chars separated by spaces + newline = 1114112 bytes."
+        }
+      ]
+    },
+    {
+      "line": 253,
+      "upstream": "exactly 65536 variants: $.braces() with 8 nested groups (4^8)",
+      "disposition": "js-api",
+      "api": "const out = Bun.$.braces(\"{{a,b},{c,d}}\".repeat(8)); expect(out.length).toBe(65536); expect(out[0]).toBe(\"aaaaaaaa\"); expect(out.at(-1)).toBe(\"dddddddd\") (upstream in a subprocess: stdout JSON [65536,\"aaaaaaaa\",\"dddddddd\"], empty stderr, exit 0).",
+      "cases": [
+        {
+          "id": "brace/65536-variants-8-nested-groups",
+          "template": ["echo ", ""],
+          "values": [
+            {
+              "raw": {
+                "repeat": "{{a,b},{c,d}}",
+                "count": 8
+              }
+            }
+          ],
+          "expect": {
+            "stdout": {
+              "startsWith": "aaaaaaaa aaaaaaab ",
+              "endsWith": " dddddddc dddddddd\n",
+              "length": 589824
+            }
+          },
+          "note": "Behavioural case: the same word echoed through the shell prints 65536 words of 8 chars (589824 bytes)."
+        }
+      ]
+    },
+    {
+      "line": 292,
+      "upstream": "comma-less brace group is literal: `$.braces(${JSON.stringify(input)})` (for-loop, 12 generated tests)",
+      "disposition": "js-api",
+      "api": "For each [input, expected]: expect($.braces(input)).toEqual(expected) with $.braces(\"x{a,{}}y\") -> [\"xay\",\"x{}y\"]; $.braces(\"p{q{},r}s\") -> [\"pq{}s\",\"prs\"]; $.braces(\"{a,b{}}z\") -> [\"az\",\"b{}z\"]; $.braces(\"{a,{}}z\") -> [\"az\",\"{}z\"]; $.braces(\"a{{,}}b\") -> [\"a{}b\",\"a{}b\"]; $.braces(\"{a,{b}}\") -> [\"a\",\"{b}\"]; $.braces(\"{a{b,c}}\") -> [\"{ab}\",\"{ac}\"]; $.braces(\"{{a,}{b,}}\") -> [\"{ab}\",\"{a}\",\"{b}\",\"{}\"]; $.braces(\"{foo},x\") -> [\"{foo},x\"]; $.braces(\"{a},{b}\") -> [\"{a},{b}\"]; $.braces(\"a{b,{c,d}}e\") -> [\"abe\",\"ace\",\"ade\"]; $.braces(\"{a,b}\") -> [\"a\",\"b\"]",
+      "cases": [
+        {
+          "id": "brace/literal-group-xoa_occy",
+          "template": ["echo x{a,{}}y"],
+          "expect": {
+            "stdout": "xay x{}y\n"
+          }
+        },
+        {
+          "id": "brace/literal-group-poqoc_rcs",
+          "template": ["echo p{q{},r}s"],
+          "expect": {
+            "stdout": "pq{}s prs\n"
+          }
+        },
+        {
+          "id": "brace/literal-group-oa_boccz",
+          "template": ["echo {a,b{}}z"],
+          "expect": {
+            "stdout": "az b{}z\n"
+          }
+        },
+        {
+          "id": "brace/literal-group-oa_occz",
+          "template": ["echo {a,{}}z"],
+          "expect": {
+            "stdout": "az {}z\n"
+          }
+        },
+        {
+          "id": "brace/literal-group-aoo_ccb",
+          "template": ["echo a{{,}}b"],
+          "expect": {
+            "stdout": "a{}b a{}b\n"
+          }
+        },
+        {
+          "id": "brace/literal-group-oa_obcc",
+          "template": ["echo {a,{b}}"],
+          "expect": {
+            "stdout": "a {b}\n"
+          }
+        },
+        {
+          "id": "brace/literal-group-oaob_ccc",
+          "template": ["echo {a{b,c}}"],
+          "expect": {
+            "stdout": "{ab} {ac}\n"
+          }
+        },
+        {
+          "id": "brace/literal-group-ooa_cob_cc",
+          "template": ["echo {{a,}{b,}}"],
+          "expect": {
+            "stdout": "{ab} {a} {b} {}\n"
+          }
+        },
+        {
+          "id": "brace/literal-group-ofooc_x",
+          "template": ["echo {foo},x"],
+          "expect": {
+            "stdout": "{foo},x\n"
+          }
+        },
+        {
+          "id": "brace/literal-group-oac_obc",
+          "template": ["echo {a},{b}"],
+          "expect": {
+            "stdout": "{a},{b}\n"
+          }
+        },
+        {
+          "id": "brace/literal-group-aob_oc_dcce",
+          "template": ["echo a{b,{c,d}}e"],
+          "expect": {
+            "stdout": "abe ace ade\n"
+          }
+        },
+        {
+          "id": "brace/literal-group-oa_bc",
+          "template": ["echo {a,b}"],
+          "expect": {
+            "stdout": "a b\n"
+          }
+        }
+      ],
+      "note": "One behavioural case per generated test with the pattern written directly in the template."
+    },
+    {
+      "line": 297,
+      "upstream": "shell: literal {} inside an expanding group keeps the tail",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "brace/shell-raw-literal-group-xoa_occy",
+          "template": ["echo ", ""],
+          "values": [
+            {
+              "raw": "x{a,{}}y"
+            }
+          ],
+          "expect": {
+            "stdout": "xay x{}y\n"
+          }
+        },
+        {
+          "id": "brace/shell-raw-literal-group-poqoc_rcs",
+          "template": ["echo ", ""],
+          "values": [
+            {
+              "raw": "p{q{},r}s"
+            }
+          ],
+          "expect": {
+            "stdout": "pq{}s prs\n"
+          }
+        },
+        {
+          "id": "brace/shell-raw-literal-group-oa_boccz",
+          "template": ["echo ", ""],
+          "values": [
+            {
+              "raw": "{a,b{}}z"
+            }
+          ],
+          "expect": {
+            "stdout": "az b{}z\n"
+          }
+        },
+        {
+          "id": "brace/shell-raw-literal-group-oa_occz",
+          "template": ["echo ", ""],
+          "values": [
+            {
+              "raw": "{a,{}}z"
+            }
+          ],
+          "expect": {
+            "stdout": "az {}z\n"
+          }
+        },
+        {
+          "id": "brace/shell-raw-literal-group-aoo_ccb",
+          "template": ["echo ", ""],
+          "values": [
+            {
+              "raw": "a{{,}}b"
+            }
+          ],
+          "expect": {
+            "stdout": "a{}b a{}b\n"
+          }
+        },
+        {
+          "id": "brace/shell-raw-literal-group-oa_obcc",
+          "template": ["echo ", ""],
+          "values": [
+            {
+              "raw": "{a,{b}}"
+            }
+          ],
+          "expect": {
+            "stdout": "a {b}\n"
+          }
+        },
+        {
+          "id": "brace/shell-raw-literal-group-oaob_ccc",
+          "template": ["echo ", ""],
+          "values": [
+            {
+              "raw": "{a{b,c}}"
+            }
+          ],
+          "expect": {
+            "stdout": "{ab} {ac}\n"
+          }
+        },
+        {
+          "id": "brace/shell-raw-literal-group-ooa_cob_cc",
+          "template": ["echo ", ""],
+          "values": [
+            {
+              "raw": "{{a,}{b,}}"
+            }
+          ],
+          "expect": {
+            "stdout": "{ab} {a} {b} {}\n"
+          }
+        },
+        {
+          "id": "brace/shell-raw-literal-group-ofooc_x",
+          "template": ["echo ", ""],
+          "values": [
+            {
+              "raw": "{foo},x"
+            }
+          ],
+          "expect": {
+            "stdout": "{foo},x\n"
+          }
+        },
+        {
+          "id": "brace/shell-raw-literal-group-oac_obc",
+          "template": ["echo ", ""],
+          "values": [
+            {
+              "raw": "{a},{b}"
+            }
+          ],
+          "expect": {
+            "stdout": "{a},{b}\n"
+          }
+        },
+        {
+          "id": "brace/shell-raw-literal-group-aob_oc_dcce",
+          "template": ["echo ", ""],
+          "values": [
+            {
+              "raw": "a{b,{c,d}}e"
+            }
+          ],
+          "expect": {
+            "stdout": "abe ace ade\n"
+          }
+        },
+        {
+          "id": "brace/shell-raw-literal-group-oa_bc",
+          "template": ["echo ", ""],
+          "values": [
+            {
+              "raw": "{a,b}"
+            }
+          ],
+          "expect": {
+            "stdout": "a b\n"
+          }
+        },
+        {
+          "id": "brace/shell-raw-literal-group-co_",
+          "template": ["echo ", ""],
+          "values": [
+            {
+              "raw": "}{,"
+            }
+          ],
+          "expect": {
+            "stdout": "}{,\n"
+          }
+        }
+      ],
+      "note": "Upstream runs all inputs in one bun -e subprocess (with $.nothrow) as echo ${{raw: input}} and compares stdout minus trailing newline to expected.join(' '); exit 0. One case per input here."
+    },
+    {
+      "line": 324,
+      "upstream": "a word with a comma-less brace group and a glob keeps its pattern",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "brace/comma-less-group-with-glob-no-matches",
+          "template": ["echo {x},*.txt"],
+          "files": {
+            "a.txt": ""
+          },
+          "expect": {
+            "stderr": "bun: no matches found: {x},*.txt\n",
+            "exitCode": 1
+          }
+        }
+      ]
+    }
+  ]
+}

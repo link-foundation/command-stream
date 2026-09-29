@@ -1,0 +1,374 @@
+{
+  "source": "test/js/bun/shell/bunshell-instance.test.ts",
+  "units": [
+    {
+      "line": 6,
+      "upstream": "new $.Shell() inherits process.env and throws on non-zero exit by default",
+      "disposition": "js-api",
+      "api": "In a fresh process with env BUN_SHELL_INSTANCE_MARKER=hello: const inst = new $.Shell(); (await $`echo $BUN_SHELL_INSTANCE_MARKER`.quiet()).stdout.toString().trim() === \"hello\" and (await inst`echo $BUN_SHELL_INSTANCE_MARKER`.quiet()).stdout.toString().trim() === \"hello\" (a new instance inherits process.env); `await $`false`.quiet()` and `await inst`false`.quiet()` both reject with an error that is instanceof $.ShellError and has exitCode 1 (both default to throwing); stderr of the process is empty and it exits 0.",
+      "cases": [
+        {
+          "id": "bunshell-instance/inherits-process-env",
+          "template": ["echo $BUN_SHELL_INSTANCE_MARKER"],
+          "env": {
+            "BUN_SHELL_INSTANCE_MARKER": "hello"
+          },
+          "expect": {
+            "stdout": "hello\n"
+          }
+        },
+        {
+          "id": "bunshell-instance/false-throws-by-default",
+          "template": ["false"],
+          "throws": true,
+          "expect": {
+            "error": "Failed with exit code 1",
+            "exitCode": 1,
+            "stdout": "",
+            "stderr": ""
+          }
+        }
+      ]
+    },
+    {
+      "line": 39,
+      "upstream": "$$",
+      "disposition": "js-api",
+      "api": "const $$ = new $.Shell(); $$.env({BUN: \"bun\"}); (await $$`echo $BUN`).stdout.toString() === \"bun\\n\"; the parent is unaffected: (await $`echo $BUN`).stdout.toString() === \"\\n\"; then $.env({BUN: \"bun2\"}) on the default instance does not affect $$: (await $$`echo $BUN`) -> \"bun\\n\", while (await $`echo $BUN`) -> \"bun2\\n\". Each Shell instance has its own env; .env() on an instance replaces that instance's env only.",
+      "cases": [
+        {
+          "id": "bunshell-instance/env-var-set",
+          "template": ["echo $BUN"],
+          "env": {
+            "BUN": "bun"
+          },
+          "expect": {
+            "stdout": "bun\n"
+          }
+        },
+        {
+          "id": "bunshell-instance/env-var-unset-expands-empty",
+          "template": ["echo $BUN"],
+          "env": {
+            "PATH": "/usr/bin:/bin"
+          },
+          "envReplace": true,
+          "expect": {
+            "stdout": "\n"
+          }
+        },
+        {
+          "id": "bunshell-instance/env-var-set-other-value",
+          "template": ["echo $BUN"],
+          "env": {
+            "BUN": "bun2"
+          },
+          "expect": {
+            "stdout": "bun2\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 56,
+      "upstream": "$.text",
+      "disposition": "js-api",
+      "api": "await $`echo hello`.text() === \"hello\\n\" (ShellPromise.text() resolves to stdout decoded as utf-8).",
+      "cases": [
+        {
+          "id": "bunshell-instance/text",
+          "template": ["echo hello"],
+          "expect": {
+            "stdout": "hello\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 60,
+      "upstream": "$.json",
+      "disposition": "js-api",
+      "api": "await $`echo '{\"hello\": 123}'`.json() deep-equals {hello: 123} (ShellPromise.json() parses stdout).",
+      "cases": [
+        {
+          "id": "bunshell-instance/json",
+          "template": ["echo '{\"hello\": 123}'"],
+          "expect": {
+            "stdout": "{\"hello\": 123}\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 64,
+      "upstream": "$.json (duplicate test)",
+      "disposition": "js-api",
+      "api": "Identical duplicate of the previous test: await $`echo '{\"hello\": 123}'`.json() deep-equals {hello: 123}.",
+      "cases": [
+        {
+          "id": "bunshell-instance/json-duplicate",
+          "template": ["echo '{\"hello\": 123}'"],
+          "expect": {
+            "stdout": "{\"hello\": 123}\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 68,
+      "upstream": "$.lines",
+      "disposition": "js-api",
+      "api": "await Array.fromAsync(await $`echo hello`.lines()) deep-equals [\"hello\", \"\"]; and iterating `for await (const line of $`echo hello`.lines())` (without awaiting the promise first) yields exactly [\"hello\", \"\"] (split on \"\\n\", keeping the trailing empty string).",
+      "cases": [
+        {
+          "id": "bunshell-instance/lines",
+          "template": ["echo hello"],
+          "expect": {
+            "stdout": "hello\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 79,
+      "upstream": "$.arrayBuffer",
+      "disposition": "js-api",
+      "api": "await $`echo hello`.arrayBuffer() equals new TextEncoder().encode(\"hello\\n\").buffer (an ArrayBuffer of 6 bytes).",
+      "cases": [
+        {
+          "id": "bunshell-instance/array-buffer",
+          "template": ["echo hello"],
+          "expect": {
+            "stdout": "hello\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 83,
+      "upstream": "$.bytes",
+      "disposition": "js-api",
+      "api": "await $`echo hello`.bytes() equals new TextEncoder().encode(\"hello\\n\") (a Uint8Array of 6 bytes).",
+      "cases": [
+        {
+          "id": "bunshell-instance/bytes",
+          "template": ["echo hello"],
+          "expect": {
+            "stdout": "hello\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 87,
+      "upstream": "$.blob",
+      "disposition": "js-api",
+      "api": "await $`echo hello`.blob() equals new Blob([new TextEncoder().encode(\"hello\\n\")]).",
+      "cases": [
+        {
+          "id": "bunshell-instance/blob",
+          "template": ["echo hello"],
+          "expect": {
+            "stdout": "hello\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 100,
+      "upstream": "$(cat < ${data.constructor.name}).text() for Blob, Buffer, Uint8Array, Response",
+      "disposition": "case",
+      "note": "upstream generates one test per input type with expected = \"hello world!\".repeat(9000); Uint8Array is TextEncoder output (the corpus \"bytes\" value is a Buffer, which is a Uint8Array)",
+      "cases": [
+        {
+          "id": "bunshell-instance/stdin-redirect-from-blob",
+          "template": ["cat < ", ""],
+          "values": [
+            {
+              "blob": {
+                "repeat": "hello world!",
+                "count": 9000
+              }
+            }
+          ],
+          "languages": ["js"],
+          "expect": {
+            "stdout": {
+              "repeat": "hello world!",
+              "count": 9000
+            }
+          }
+        },
+        {
+          "id": "bunshell-instance/stdin-redirect-from-buffer",
+          "template": ["cat < ", ""],
+          "values": [
+            {
+              "bytes": {
+                "repeat": "hello world!",
+                "count": 9000
+              }
+            }
+          ],
+          "expect": {
+            "stdout": {
+              "repeat": "hello world!",
+              "count": 9000
+            }
+          }
+        },
+        {
+          "id": "bunshell-instance/stdin-redirect-from-uint8array",
+          "template": ["cat < ", ""],
+          "values": [
+            {
+              "bytes": {
+                "repeat": "hello world!",
+                "count": 9000
+              }
+            }
+          ],
+          "expect": {
+            "stdout": {
+              "repeat": "hello world!",
+              "count": 9000
+            }
+          }
+        },
+        {
+          "id": "bunshell-instance/stdin-redirect-from-response",
+          "template": ["cat < ", ""],
+          "values": [
+            {
+              "response": {
+                "repeat": "hello world!",
+                "count": 9000
+              }
+            }
+          ],
+          "languages": ["js"],
+          "expect": {
+            "stdout": {
+              "repeat": "hello world!",
+              "count": 9000
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 105,
+      "upstream": "$(cat hello > ${data.constructor.name}).text() passes (Buffer, Uint8Array)",
+      "disposition": "case",
+      "note": "upstream cats its own test file into a Buffer/Uint8Array of 108000 bytes and checks data.subarray(0, out.byteLength) equals the file bytes; here a 3300-byte file is used",
+      "cases": [
+        {
+          "id": "bunshell-instance/stdout-redirect-to-buffer",
+          "template": ["cat src.txt > ", ""],
+          "values": [
+            {
+              "outBuffer": {
+                "id": "b1",
+                "size": 108000
+              }
+            }
+          ],
+          "files": {
+            "src.txt": {
+              "repeat": "the quick brown fox jumps over the lazy dog 0123456789\n",
+              "count": 60
+            }
+          },
+          "expect": {
+            "stdout": "",
+            "buffers": {
+              "b1": {
+                "repeat": "the quick brown fox jumps over the lazy dog 0123456789\n",
+                "count": 60
+              }
+            }
+          }
+        },
+        {
+          "id": "bunshell-instance/stdout-redirect-to-uint8array",
+          "template": ["cat src.txt > ", ""],
+          "values": [
+            {
+              "outBuffer": {
+                "id": "b1",
+                "size": 108000
+              }
+            }
+          ],
+          "files": {
+            "src.txt": {
+              "repeat": "the quick brown fox jumps over the lazy dog 0123456789\n",
+              "count": 60
+            }
+          },
+          "expect": {
+            "stdout": "",
+            "buffers": {
+              "b1": {
+                "repeat": "the quick brown fox jumps over the lazy dog 0123456789\n",
+                "count": 60
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 113,
+      "upstream": "$(cat hello > ${data.constructor.name}).text() fails (Blob, Response)",
+      "disposition": "case",
+      "note": "Blob and Response are immutable and cannot be used as a stdout redirect target; Bun 1.4.2 throws TypeError \"Blobs are immutable, and cannot be used for stdout/stderr\" for both",
+      "cases": [
+        {
+          "id": "bunshell-instance/stdout-redirect-to-blob-throws",
+          "template": ["cat src.txt > ", ""],
+          "values": [
+            {
+              "blob": {
+                "repeat": "hello world!",
+                "count": 9000
+              }
+            }
+          ],
+          "files": {
+            "src.txt": {
+              "repeat": "the quick brown fox jumps over the lazy dog 0123456789\n",
+              "count": 60
+            }
+          },
+          "languages": ["js"],
+          "expect": {
+            "error": "Blobs are immutable, and cannot be used for stdout/stderr"
+          }
+        },
+        {
+          "id": "bunshell-instance/stdout-redirect-to-response-throws",
+          "template": ["cat src.txt > ", ""],
+          "values": [
+            {
+              "response": {
+                "repeat": "hello world!",
+                "count": 9000
+              }
+            }
+          ],
+          "files": {
+            "src.txt": {
+              "repeat": "the quick brown fox jumps over the lazy dog 0123456789\n",
+              "count": 60
+            }
+          },
+          "languages": ["js"],
+          "expect": {
+            "error": "Blobs are immutable, and cannot be used for stdout/stderr"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,176 @@
+{
+  "source": "test/js/bun/shell/shell-worker-terminate-leak.test.ts",
+  "units": [
+    {
+      "line": 49,
+      "upstream": "worker.terminate() with a live Bun.$ subprocess does not leak its pipe readers",
+      "disposition": "case",
+      "note": "Upstream starts this command inside a Worker, waits for the child's flag file, then terminates the worker and checks (ASAN/LSan) for leaks with the child still running `sleep 100`. Worker termination and leak detection are Bun-internal; the case runs the same command to completion with the sleep shortened to 0.1s.",
+      "cases": [
+        {
+          "id": "shell-worker-terminate-leak/subprocess-pipe-readers",
+          "template": ["sh -c \"echo ok > flag.txt && exec sleep 0.1\""],
+          "platforms": ["posix"],
+          "requires": ["sh", "sleep"],
+          "expect": {
+            "files": {
+              "flag.txt": "ok\n"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 67,
+      "upstream": "worker.terminate() with a live Bun.$ subprocess does not leak a pending buffer-stdin writer",
+      "disposition": "case",
+      "note": "Upstream starts this command inside a Worker, waits for the child's flag file, then terminates the worker and checks (ASAN/LSan) for leaks with the child still running `sleep 100`. Worker termination and leak detection are Bun-internal; the case runs the same command to completion with the sleep shortened to 0.1s. The 1 MiB stdin buffer is larger than the pipe capacity and never read by the child; the command must still finish.",
+      "cases": [
+        {
+          "id": "shell-worker-terminate-leak/unread-1mb-buffer-stdin",
+          "template": ["sh -c \"echo ok > flag.txt && exec sleep 0.1\" < ", ""],
+          "values": [
+            {
+              "bytes": {
+                "repeat": "x",
+                "count": 1048576
+              }
+            }
+          ],
+          "platforms": ["posix"],
+          "requires": ["sh", "sleep"],
+          "expect": {
+            "files": {
+              "flag.txt": "ok\n"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 87,
+      "upstream": "worker.terminate() with a live Bun.$ pipeline does not leak either subprocess",
+      "disposition": "case",
+      "note": "Upstream starts this command inside a Worker, waits for the child's flag file, then terminates the worker and checks (ASAN/LSan) for leaks with the child still running `sleep 100`. Worker termination and leak detection are Bun-internal; the case runs the same command to completion with the sleep shortened to 0.1s.",
+      "cases": [
+        {
+          "id": "shell-worker-terminate-leak/pipeline-two-subprocesses",
+          "template": [
+            "sh -c \"echo ok > flag1.txt && exec sleep 0.1\" | sh -c \"echo ok > flag2.txt && exec sleep 0.1\""
+          ],
+          "platforms": ["posix"],
+          "requires": ["sh", "sleep"],
+          "expect": {
+            "files": {
+              "flag1.txt": "ok\n",
+              "flag2.txt": "ok\n"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 106,
+      "upstream": "worker.terminate() with a live Bun.$ file redirect does not leak the redirection fd",
+      "disposition": "case",
+      "note": "Upstream starts this command inside a Worker, waits for the child's flag file, then terminates the worker and checks (ASAN/LSan) for leaks with the child still running `sleep 100`. Worker termination and leak detection are Bun-internal; the case runs the same command to completion with the sleep shortened to 0.1s.",
+      "cases": [
+        {
+          "id": "shell-worker-terminate-leak/file-redirect",
+          "template": [
+            "sh -c \"echo ok > flag.txt && exec sleep 0.1\" > out.txt"
+          ],
+          "platforms": ["posix"],
+          "requires": ["sh", "sleep"],
+          "expect": {
+            "files": {
+              "flag.txt": "ok\n",
+              "out.txt": ""
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 124,
+      "upstream": "worker.terminate() with a live Bun.$ arraybuffer redirect does not leak the pinned buffer",
+      "disposition": "case",
+      "note": "Upstream starts this command inside a Worker, waits for the child's flag file, then terminates the worker and checks (ASAN/LSan) for leaks with the child still running `sleep 100`. Worker termination and leak detection are Bun-internal; the case runs the same command to completion with the sleep shortened to 0.1s. Upstream target is a Uint8Array(65536); represented by a zeroed Buffer.",
+      "cases": [
+        {
+          "id": "shell-worker-terminate-leak/arraybuffer-redirect",
+          "template": ["sh -c \"echo ok > flag.txt && exec sleep 0.1\" > ", ""],
+          "values": [
+            {
+              "outBuffer": {
+                "id": "out",
+                "size": 65536
+              }
+            }
+          ],
+          "platforms": ["posix"],
+          "requires": ["sh", "sleep"],
+          "expect": {
+            "files": {
+              "flag.txt": "ok\n"
+            },
+            "buffers": {
+              "out": ""
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 142,
+      "upstream": "worker.terminate() with a live Bun.$ arraybuffer redirect does not unpin a finalized ArrayBuffer",
+      "disposition": "case",
+      "note": "Upstream starts this command inside a Worker, waits for the child's flag file, then terminates the worker and checks (ASAN/LSan) for leaks with the child still running `sleep 100`. Worker termination and leak detection are Bun-internal; the case runs the same command to completion with the sleep shortened to 0.1s. (Malloc=1 variant of the previous test.)",
+      "cases": [
+        {
+          "id": "shell-worker-terminate-leak/arraybuffer-redirect-malloc",
+          "template": ["sh -c \"echo ok > flag.txt && exec sleep 0.1\" > ", ""],
+          "values": [
+            {
+              "outBuffer": {
+                "id": "out",
+                "size": 65536
+              }
+            }
+          ],
+          "platforms": ["posix"],
+          "requires": ["sh", "sleep"],
+          "expect": {
+            "files": {
+              "flag.txt": "ok\n"
+            },
+            "buffers": {
+              "out": ""
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 168,
+      "upstream": "worker.terminate() kills a live Bun.$ subprocess",
+      "disposition": "case",
+      "note": "Upstream checks via /proc that terminating the worker SIGKILLs the live `sleep 100` child (worker termination is not reproducible). The case runs the same command (sleep shortened to 0.1s): `$$` inside single quotes reaches sh unexpanded, so pid.txt holds sh's pid.",
+      "cases": [
+        {
+          "id": "shell-worker-terminate-leak/pid-file-single-quoted-dollar",
+          "template": ["sh -c 'echo $$ > pid.txt && exec sleep 0.1'"],
+          "platforms": ["linux"],
+          "requires": ["sh", "sleep"],
+          "expect": {
+            "files": {
+              "pid.txt": {
+                "regex": "^[0-9]+\\n$"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

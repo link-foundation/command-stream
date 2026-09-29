@@ -1,0 +1,825 @@
+{
+  "source": "test/js/bun/shell/commands/rm.test.ts",
+  "units": [
+    {
+      "line": 31,
+      "upstream": "node_modules (runAsTest)",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-rm/node-modules",
+          "template": ["rm -rf node_modules/"],
+          "files": {
+            "package.json": "{\"name\":\"dummy\"}\n",
+            "node_modules/.package-lock.json": "{}\n",
+            "node_modules/.bin/tsc": {
+              "symlink": "../typescript/bin/tsc"
+            },
+            "node_modules/typescript/package.json": "{}\n",
+            "node_modules/typescript/bin/tsc": "#!/usr/bin/env node\n",
+            "node_modules/typescript/lib/typescript.js": "",
+            "node_modules/typescript/lib/tsc.js": "",
+            "node_modules/react/package.json": "{}\n",
+            "node_modules/react/index.js": "",
+            "node_modules/react/cjs/react.development.js": "",
+            "node_modules/react/cjs/react.production.min.js": "",
+            "node_modules/@types/react/index.d.ts": "",
+            "node_modules/@types/react/package.json": "{}\n",
+            "node_modules/esbuild/.npmignore": "",
+            "node_modules/esbuild/install.js": ""
+          },
+          "expect": {
+            "absent": ["node_modules"],
+            "exists": ["package.json"]
+          },
+          "note": "upstream first runs `echo <package.json> > package.json; bun install --linker hoisted &> /dev/null` (network) and then `rm -rf node_modules/`; reproduced with a synthetic node_modules tree (dot files, scoped package dir, symlink)"
+        }
+      ]
+    },
+    {
+      "line": 33,
+      "upstream": "force",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-rm/force-nonexistent",
+          "template": ["rm -f ", "/non_existent.txt"],
+          "values": [
+            {
+              "string": "{{TEMP}}"
+            }
+          ],
+          "files": {
+            "existent.txt": ""
+          },
+          "expect": {
+            "exitCode": 0
+          }
+        },
+        {
+          "id": "commands-rm/nonexistent-error",
+          "template": ["rm ", "/non_existent.txt"],
+          "values": [
+            {
+              "string": "{{TEMP}}"
+            }
+          ],
+          "files": {
+            "existent.txt": ""
+          },
+          "expect": {
+            "stderr": "rm: {{TEMP}}/non_existent.txt: No such file or directory\n",
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "commands-rm/verbose-file",
+          "template": ["rm -v ", "/existent.txt"],
+          "values": [
+            {
+              "string": "{{TEMP}}"
+            }
+          ],
+          "files": {
+            "existent.txt": ""
+          },
+          "expect": {
+            "stdout": "{{TEMP}}/existent.txt\n",
+            "absent": ["existent.txt"]
+          }
+        }
+      ]
+    },
+    {
+      "line": 56,
+      "upstream": "recursive",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-rm/recursive-verbose-file",
+          "template": ["rm -rv ", "/existent.txt"],
+          "values": [
+            {
+              "string": "{{TEMP}}"
+            }
+          ],
+          "files": {
+            "existent.txt": ""
+          },
+          "expect": {
+            "stdout": "{{TEMP}}/existent.txt\n",
+            "stderr": "",
+            "absent": ["existent.txt"]
+          }
+        },
+        {
+          "id": "commands-rm/recursive-verbose-dir",
+          "template": ["rm -rv ", ""],
+          "values": [
+            {
+              "path": "folder"
+            }
+          ],
+          "files": {
+            "folder/sub/file.txt": "test"
+          },
+          "expect": {
+            "stdout": {
+              "sortedLines": [
+                "{{TEMP}}/folder/sub/file.txt",
+                "{{TEMP}}/folder/sub",
+                "{{TEMP}}/folder"
+              ]
+            },
+            "absent": ["folder"]
+          },
+          "note": "-v prints every removed path (children before their directory); order across siblings is not guaranteed, hence sortedLines. The temp dir itself must survive."
+        },
+        {
+          "id": "commands-rm/recursive-verbose-cwd-trailing-slash",
+          "template": [
+            "mkdir foo; touch ./foo/lol ./foo/nice ./foo/lmao; mkdir foo/bar; touch ./foo/bar/great; touch ./foo/bar/wow; rm -rfv foo/"
+          ],
+          "expect": {
+            "stdout": {
+              "sortedLines": [
+                "foo/lol",
+                "foo/nice",
+                "foo/lmao",
+                "foo/bar",
+                "foo/bar/great",
+                "foo/bar/wow",
+                "foo/"
+              ]
+            },
+            "absent": ["foo"]
+          },
+          "note": "paths are printed relative, as given: the operand keeps its trailing slash ('foo/') and children are joined without doubling it ('foo/lol')"
+        }
+      ]
+    },
+    {
+      "line": 117,
+      "upstream": "dir",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-rm/d-file",
+          "template": ["rm -d ", "/existent.txt"],
+          "values": [
+            {
+              "string": "{{TEMP}}"
+            }
+          ],
+          "files": {
+            "existent.txt": ""
+          },
+          "dirs": ["sub_dir"],
+          "expect": {
+            "absent": ["existent.txt"]
+          }
+        },
+        {
+          "id": "commands-rm/d-empty-dir",
+          "template": ["rm -d ", "/sub_dir"],
+          "values": [
+            {
+              "string": "{{TEMP}}"
+            }
+          ],
+          "dirs": ["sub_dir"],
+          "expect": {
+            "absent": ["sub_dir"]
+          }
+        },
+        {
+          "id": "commands-rm/d-nonempty-dir",
+          "template": ["rm -d ", "/sub_dir_files"],
+          "values": [
+            {
+              "string": "{{TEMP}}"
+            }
+          ],
+          "files": {
+            "sub_dir_files/file.txt": ""
+          },
+          "expect": {
+            "stderr": "rm: {{TEMP}}/sub_dir_files: Directory not empty\n",
+            "exitCode": 1,
+            "exists": ["sub_dir_files", "sub_dir_files/file.txt"]
+          }
+        }
+      ]
+    },
+    {
+      "line": 154,
+      "upstream": "recursive rm never hangs on the DirTask hand-off",
+      "disposition": "case",
+      "note": "upstream is a stress probe (a bun -e child running 100 iterations x 8 concurrent `rm -rfv <d>/foo` on a dir with exactly one subdirectory, 10s watchdog, expects every exitCode 0 and stdout 'ok 800'). The race/hang aspect is not reproducible as a corpus case; the cases cover the observable behaviour of the minimal trigger tree (a dir with one subdirectory), single and with 8 operands.",
+      "cases": [
+        {
+          "id": "commands-rm/handoff-single",
+          "template": ["rm -rfv ", "/foo"],
+          "values": [
+            {
+              "path": "t0"
+            }
+          ],
+          "files": {
+            "t0/foo/a": "",
+            "t0/foo/bar/b": ""
+          },
+          "expect": {
+            "stdout": {
+              "sortedLines": [
+                "{{TEMP}}/t0/foo/a",
+                "{{TEMP}}/t0/foo/bar/b",
+                "{{TEMP}}/t0/foo/bar",
+                "{{TEMP}}/t0/foo"
+              ]
+            },
+            "absent": ["t0/foo"],
+            "exists": ["t0"]
+          }
+        },
+        {
+          "id": "commands-rm/handoff-eight",
+          "template": ["rm -rfv ", ""],
+          "values": [
+            {
+              "array": [
+                {
+                  "path": "t0/foo"
+                },
+                {
+                  "path": "t1/foo"
+                },
+                {
+                  "path": "t2/foo"
+                },
+                {
+                  "path": "t3/foo"
+                },
+                {
+                  "path": "t4/foo"
+                },
+                {
+                  "path": "t5/foo"
+                },
+                {
+                  "path": "t6/foo"
+                },
+                {
+                  "path": "t7/foo"
+                }
+              ]
+            }
+          ],
+          "files": {
+            "t0/foo/a": "",
+            "t0/foo/bar/b": "",
+            "t1/foo/a": "",
+            "t1/foo/bar/b": "",
+            "t2/foo/a": "",
+            "t2/foo/bar/b": "",
+            "t3/foo/a": "",
+            "t3/foo/bar/b": "",
+            "t4/foo/a": "",
+            "t4/foo/bar/b": "",
+            "t5/foo/a": "",
+            "t5/foo/bar/b": "",
+            "t6/foo/a": "",
+            "t6/foo/bar/b": "",
+            "t7/foo/a": "",
+            "t7/foo/bar/b": ""
+          },
+          "expect": {
+            "stdout": {
+              "sortedLines": [
+                "{{TEMP}}/t0/foo/a",
+                "{{TEMP}}/t0/foo/bar/b",
+                "{{TEMP}}/t0/foo/bar",
+                "{{TEMP}}/t0/foo",
+                "{{TEMP}}/t1/foo/a",
+                "{{TEMP}}/t1/foo/bar/b",
+                "{{TEMP}}/t1/foo/bar",
+                "{{TEMP}}/t1/foo",
+                "{{TEMP}}/t2/foo/a",
+                "{{TEMP}}/t2/foo/bar/b",
+                "{{TEMP}}/t2/foo/bar",
+                "{{TEMP}}/t2/foo",
+                "{{TEMP}}/t3/foo/a",
+                "{{TEMP}}/t3/foo/bar/b",
+                "{{TEMP}}/t3/foo/bar",
+                "{{TEMP}}/t3/foo",
+                "{{TEMP}}/t4/foo/a",
+                "{{TEMP}}/t4/foo/bar/b",
+                "{{TEMP}}/t4/foo/bar",
+                "{{TEMP}}/t4/foo",
+                "{{TEMP}}/t5/foo/a",
+                "{{TEMP}}/t5/foo/bar/b",
+                "{{TEMP}}/t5/foo/bar",
+                "{{TEMP}}/t5/foo",
+                "{{TEMP}}/t6/foo/a",
+                "{{TEMP}}/t6/foo/bar/b",
+                "{{TEMP}}/t6/foo/bar",
+                "{{TEMP}}/t6/foo",
+                "{{TEMP}}/t7/foo/a",
+                "{{TEMP}}/t7/foo/bar/b",
+                "{{TEMP}}/t7/foo/bar",
+                "{{TEMP}}/t7/foo"
+              ]
+            },
+            "absent": [
+              "t0/foo",
+              "t1/foo",
+              "t2/foo",
+              "t3/foo",
+              "t4/foo",
+              "t5/foo",
+              "t6/foo",
+              "t7/foo"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "line": 248,
+      "upstream": "recursive rm does not follow a directory entry replaced by a symlink during deletion",
+      "disposition": "case",
+      "note": "upstream races renames (dir -> symlink to the victim dir) against the recursive walk, 10 iterations x 64 entries; the race itself is not reproducible deterministically. The case captures the invariant with entries that already are symlinks to the victim dir: they are unlinked, never followed.",
+      "cases": [
+        {
+          "id": "commands-rm/does-not-follow-dir-symlink",
+          "template": ["rm -rf ", ""],
+          "values": [
+            {
+              "path": "target"
+            }
+          ],
+          "files": {
+            "victim/keep.txt": "important",
+            "stash/.keep": "",
+            "target/d0/f0.txt": "",
+            "target/d0/f1.txt": "",
+            "target/d0/f2.txt": "",
+            "target/d0/f3.txt": "",
+            "target/d0/f4.txt": "",
+            "target/d0/f5.txt": "",
+            "target/d0/f6.txt": "",
+            "target/d0/f7.txt": "",
+            "target/d1/f0.txt": "",
+            "target/d1/f1.txt": "",
+            "target/d1/f2.txt": "",
+            "target/d1/f3.txt": "",
+            "target/d1/f4.txt": "",
+            "target/d1/f5.txt": "",
+            "target/d1/f6.txt": "",
+            "target/d1/f7.txt": "",
+            "target/d2/f0.txt": "",
+            "target/d2/f1.txt": "",
+            "target/d2/f2.txt": "",
+            "target/d2/f3.txt": "",
+            "target/d2/f4.txt": "",
+            "target/d2/f5.txt": "",
+            "target/d2/f6.txt": "",
+            "target/d2/f7.txt": "",
+            "target/d3/f0.txt": "",
+            "target/d3/f1.txt": "",
+            "target/d3/f2.txt": "",
+            "target/d3/f3.txt": "",
+            "target/d3/f4.txt": "",
+            "target/d3/f5.txt": "",
+            "target/d3/f6.txt": "",
+            "target/d3/f7.txt": "",
+            "target/d4": {
+              "symlink": "{{TEMP}}/victim"
+            },
+            "target/d5": {
+              "symlink": "{{TEMP}}/victim"
+            },
+            "target/d6": {
+              "symlink": "{{TEMP}}/victim"
+            },
+            "target/d7": {
+              "symlink": "{{TEMP}}/victim"
+            }
+          },
+          "platforms": ["posix"],
+          "expect": {
+            "absent": ["target"],
+            "files": {
+              "victim/keep.txt": "important"
+            },
+            "exists": ["victim", "stash/.keep"]
+          }
+        }
+      ]
+    },
+    {
+      "line": 299,
+      "upstream": "recursive rm reports an entry deeper than PATH_MAX instead of crashing",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-rm/deeper-than-path-max-file",
+          "template": ["rm -rf ", ""],
+          "values": [
+            {
+              "path": "file"
+            }
+          ],
+          "files": {
+            "mk.cjs": "const fs = require('fs');\nconst path = require('path');\nconst tag = process.argv[2];\nconst PATH_MAX = process.platform === 'linux' ? 4096 : 1024;\nconst base = process.cwd();\nconst deepLength = PATH_MAX - 64;\nconst component = 'd'.repeat(100);\nlet dir = path.join(base, tag);\nwhile (Buffer.byteLength(dir) + 1 + component.length <= deepLength) dir = path.join(dir, component);\nconst rest = deepLength - Buffer.byteLength(dir) - 1;\nif (rest > 0) dir = path.join(dir, 'e'.repeat(rest));\nfs.mkdirSync(dir, { recursive: true });\nprocess.chdir(dir);\nif (tag === 'file') fs.writeFileSync('f'.repeat(100), '');\nelse fs.mkdirSync('s'.repeat(100));\n"
+          },
+          "setup": [
+            {
+              "template": ["", " mk.cjs file"],
+              "values": [
+                {
+                  "string": "{{NODE}}"
+                }
+              ]
+            }
+          ],
+          "platforms": ["posix"],
+          "requires": ["node"],
+          "expect": {
+            "stderr": {
+              "allOf": [
+                {
+                  "startsWith": "rm: {{TEMP}}/file/"
+                },
+                {
+                  "regex": "^rm: /\\S+/f{100}: File name too long\\n$"
+                }
+              ]
+            },
+            "exitCode": 1,
+            "exists": ["file"]
+          },
+          "note": "setup builds <TEMP>/file/ddd.../eee (absolute length PATH_MAX-64; PATH_MAX 4096 on Linux, 1024 elsewhere) containing a 100-char file 'fff...', so that entry's full path is >= PATH_MAX. rm must report exactly that entry as 'File name too long' (upstream also checks its byte length >= PATH_MAX) and keep its directory. Runners may be unable to delete the leftover tree with path-based APIs."
+        },
+        {
+          "id": "commands-rm/deeper-than-path-max-dir",
+          "template": ["rm -rf ", ""],
+          "values": [
+            {
+              "path": "dir"
+            }
+          ],
+          "files": {
+            "mk.cjs": "const fs = require('fs');\nconst path = require('path');\nconst tag = process.argv[2];\nconst PATH_MAX = process.platform === 'linux' ? 4096 : 1024;\nconst base = process.cwd();\nconst deepLength = PATH_MAX - 64;\nconst component = 'd'.repeat(100);\nlet dir = path.join(base, tag);\nwhile (Buffer.byteLength(dir) + 1 + component.length <= deepLength) dir = path.join(dir, component);\nconst rest = deepLength - Buffer.byteLength(dir) - 1;\nif (rest > 0) dir = path.join(dir, 'e'.repeat(rest));\nfs.mkdirSync(dir, { recursive: true });\nprocess.chdir(dir);\nif (tag === 'file') fs.writeFileSync('f'.repeat(100), '');\nelse fs.mkdirSync('s'.repeat(100));\n"
+          },
+          "setup": [
+            {
+              "template": ["", " mk.cjs dir"],
+              "values": [
+                {
+                  "string": "{{NODE}}"
+                }
+              ]
+            }
+          ],
+          "platforms": ["posix"],
+          "requires": ["node"],
+          "expect": {
+            "stderr": {
+              "allOf": [
+                {
+                  "startsWith": "rm: {{TEMP}}/dir/"
+                },
+                {
+                  "regex": "^rm: /\\S+/s{100}: File name too long\\n$"
+                }
+              ]
+            },
+            "exitCode": 1,
+            "exists": ["dir"]
+          },
+          "note": "same as the file variant but the too-deep entry is a 100-char directory 'sss...'"
+        },
+        {
+          "id": "commands-rm/deeper-than-path-max-plain",
+          "template": ["rm -rf ", ""],
+          "values": [
+            {
+              "path": "plain"
+            }
+          ],
+          "dirs": ["plain/sub"],
+          "platforms": ["posix"],
+          "expect": {
+            "absent": ["plain"]
+          }
+        }
+      ]
+    },
+    {
+      "line": 386,
+      "upstream": "relative operands are resolved against the shell cwd, not the process cwd",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-rm/rm-rf-dot-shell-cwd",
+          "template": ["rm -rf ."],
+          "cwd": "work",
+          "files": {
+            "work/file.txt": "content",
+            "work/sub/inner.txt": "content",
+            "keep.txt": "keep"
+          },
+          "platforms": ["posix"],
+          "expect": {
+            "stderr": {
+              "regex": "^rm: \\.: "
+            },
+            "exitCode": 1,
+            "exists": ["work", "keep.txt"]
+          },
+          "note": "HAZARD: an implementation that resolves '.' against the PROCESS cwd would wipe it; run the corpus from a scratch process cwd. Upstream runs the $ with .cwd(work) from a child whose process cwd is '/'."
+        },
+        {
+          "id": "commands-rm/rm-rf-dot-shell-cwd-linux",
+          "template": ["rm -rf ."],
+          "cwd": "work",
+          "files": {
+            "work/file.txt": "content",
+            "work/sub/inner.txt": "content",
+            "keep.txt": "keep"
+          },
+          "platforms": ["linux"],
+          "expect": {
+            "stderr": "rm: .: Invalid argument\n",
+            "exitCode": 1,
+            "exists": ["work", "keep.txt"],
+            "absent": ["work/file.txt", "work/sub"]
+          },
+          "note": "Linux only: children of '.' are removed, then removing '.' itself fails with EINVAL (exact message is Bun 1.4.2 on Linux; upstream only checks /^rm: \\.: /). HAZARD as above."
+        }
+      ]
+    },
+    {
+      "line": 431,
+      "upstream": "operands longer than the path scratch buffers are reported, not a crash",
+      "disposition": "case",
+      "note": "upstream runs the $ calls inside a bun -e child (crash isolation) with cwd = temp dir; the observable behaviour is reproduced directly. Windows variants (errno chosen by the OS, only the 'rm: ' prefix is checked) are not validated by the Linux oracle run.",
+      "cases": [
+        {
+          "id": "commands-rm/long-relative",
+          "template": ["rm ", ""],
+          "values": [
+            {
+              "string": {
+                "repeat": "a",
+                "count": 1100
+              }
+            }
+          ],
+          "files": {
+            "short.txt": ""
+          },
+          "platforms": ["posix"],
+          "expect": {
+            "stderr": {
+              "concat": [
+                "rm: ",
+                {
+                  "repeat": "a",
+                  "count": 1100
+                },
+                ": File name too long\n"
+              ]
+            },
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "commands-rm/long-absolute",
+          "template": ["rm ", ""],
+          "values": [
+            {
+              "string": {
+                "concat": [
+                  "{{TEMP}}/",
+                  {
+                    "repeat": "a",
+                    "count": 1100
+                  }
+                ]
+              }
+            }
+          ],
+          "files": {
+            "short.txt": ""
+          },
+          "platforms": ["posix"],
+          "expect": {
+            "stderr": {
+              "concat": [
+                "rm: ",
+                "{{TEMP}}/",
+                {
+                  "repeat": "a",
+                  "count": 1100
+                },
+                ": File name too long\n"
+              ]
+            },
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "commands-rm/long-over-join-buffer",
+          "template": ["rm ", ""],
+          "values": [
+            {
+              "string": {
+                "repeat": "b",
+                "count": 8192
+              }
+            }
+          ],
+          "files": {
+            "short.txt": ""
+          },
+          "platforms": ["posix"],
+          "expect": {
+            "stderr": {
+              "concat": [
+                "rm: ",
+                {
+                  "repeat": "b",
+                  "count": 8192
+                },
+                ": File name too long\n"
+              ]
+            },
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "commands-rm/long-mixed",
+          "template": ["rm ", ""],
+          "values": [
+            {
+              "array": [
+                {
+                  "string": {
+                    "repeat": "a",
+                    "count": 1100
+                  }
+                },
+                {
+                  "string": "short.txt"
+                }
+              ]
+            }
+          ],
+          "files": {
+            "short.txt": ""
+          },
+          "platforms": ["posix"],
+          "expect": {
+            "stderr": {
+              "concat": [
+                "rm: ",
+                {
+                  "repeat": "a",
+                  "count": 1100
+                },
+                ": File name too long\n"
+              ]
+            },
+            "exitCode": 1,
+            "absent": ["short.txt"]
+          }
+        },
+        {
+          "id": "commands-rm/up-to-root",
+          "template": ["rm ", ""],
+          "values": [
+            {
+              "string": {
+                "repeat": "../",
+                "count": 2000
+              }
+            }
+          ],
+          "files": {
+            "short.txt": ""
+          },
+          "platforms": ["posix"],
+          "expect": {
+            "stderr": "rm: \"/\" may not be removed\n",
+            "exitCode": 1,
+            "exists": ["short.txt"]
+          },
+          "note": "6000-byte operand that normalizes to '/': refused by the preserve-root check (no -r, so nothing could be removed anyway)"
+        },
+        {
+          "id": "commands-rm/long-relative-windows",
+          "template": ["rm ", ""],
+          "values": [
+            {
+              "string": {
+                "repeat": "a",
+                "count": 1100
+              }
+            }
+          ],
+          "files": {
+            "short.txt": ""
+          },
+          "platforms": ["windows"],
+          "expect": {
+            "stderr": {
+              "startsWith": "rm: "
+            },
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "commands-rm/long-absolute-windows",
+          "template": ["rm ", ""],
+          "values": [
+            {
+              "string": {
+                "concat": [
+                  "{{TEMP}}/",
+                  {
+                    "repeat": "a",
+                    "count": 1100
+                  }
+                ]
+              }
+            }
+          ],
+          "files": {
+            "short.txt": ""
+          },
+          "platforms": ["windows"],
+          "expect": {
+            "stderr": {
+              "startsWith": "rm: "
+            },
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "commands-rm/long-over-join-buffer-windows",
+          "template": ["rm ", ""],
+          "values": [
+            {
+              "string": {
+                "repeat": "b",
+                "count": 8192
+              }
+            }
+          ],
+          "files": {
+            "short.txt": ""
+          },
+          "platforms": ["windows"],
+          "expect": {
+            "stderr": {
+              "startsWith": "rm: "
+            },
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "commands-rm/long-mixed-windows",
+          "template": ["rm ", ""],
+          "values": [
+            {
+              "array": [
+                {
+                  "string": {
+                    "repeat": "a",
+                    "count": 1100
+                  }
+                },
+                {
+                  "string": "short.txt"
+                }
+              ]
+            }
+          ],
+          "files": {
+            "short.txt": ""
+          },
+          "platforms": ["windows"],
+          "expect": {
+            "stderr": {
+              "startsWith": "rm: "
+            },
+            "exitCode": 1,
+            "absent": ["short.txt"]
+          }
+        }
+      ]
+    }
+  ]
+}

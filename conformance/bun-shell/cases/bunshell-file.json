@@ -1,0 +1,44 @@
+{
+  "source": "test/js/bun/shell/bunshell-file.test.ts",
+  "units": [
+    {
+      "line": 4,
+      "upstream": "$ with Bun.file prints the path",
+      "disposition": "case",
+      "note": "upstream interpolates Bun.file(import.meta.path) and the plain path string; both must print the absolute path",
+      "cases": [
+        {
+          "id": "bunshell-file/bun-file-arg-prints-path",
+          "template": ["echo ", ""],
+          "values": [
+            {
+              "jsfile": "test.ts"
+            }
+          ],
+          "files": {
+            "test.ts": "export {};\n"
+          },
+          "languages": ["js"],
+          "expect": {
+            "stdout": "{{TEMP}}/test.ts\n"
+          }
+        },
+        {
+          "id": "bunshell-file/path-string-arg-prints-path",
+          "template": ["echo ", ""],
+          "values": [
+            {
+              "path": "test.ts"
+            }
+          ],
+          "files": {
+            "test.ts": "export {};\n"
+          },
+          "expect": {
+            "stdout": "{{TEMP}}/test.ts\n"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "source": "test/js/bun/shell/shelloutput.test.ts",
+  "units": [
+    {
+      "line": 7,
+      "upstream": "output",
+      "disposition": "js-api",
+      "api": "ShellOutput accessors on a resolved result: (await $`echo hi`).text() === \"hi\\n\"; (await $`echo '{\"hello\": 123}'`).json() deep-equals {hello: 123}; (await $`echo hello`).blob() equals new Blob([new TextEncoder().encode(\"hello\")]) (bun:test Blob equality; the actual blob holds \"hello\\n\").",
+      "cases": [
+        {
+          "id": "shelloutput/output-text",
+          "template": ["echo hi"],
+          "expect": {
+            "stdout": "hi\n"
+          }
+        },
+        {
+          "id": "shelloutput/output-json",
+          "template": ["echo '{\"hello\": 123}'"],
+          "expect": {
+            "stdout": "{\"hello\": 123}\n"
+          }
+        },
+        {
+          "id": "shelloutput/output-blob-source",
+          "template": ["echo hello"],
+          "expect": {
+            "stdout": "hello\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 16,
+      "upstream": "error",
+      "disposition": "js-api",
+      "api": "With $.throws(true), the rejected ShellError exposes the same output accessors as ShellOutput: for $`echo hi; ls oogabooga` err.stderr.toString() === \"ls: oogabooga: No such file or directory\\n\" and err.text() === \"hi\\n\"; for $`echo '{\"hello\": 123}'; ls oogabooga` err.json() deep-equals {hello: 123}; for $`echo hello; ls oogabooga` err.blob() equals new Blob([new TextEncoder().encode(\"hello\")]). The error must be defined (the promise rejects).",
+      "cases": [
+        {
+          "id": "shelloutput/error-text",
+          "template": ["echo hi; ls oogabooga"],
+          "throws": true,
+          "expect": {
+            "error": "Failed with exit code 1",
+            "exitCode": 1,
+            "stdout": "hi\n",
+            "stderr": "ls: oogabooga: No such file or directory\n"
+          }
+        },
+        {
+          "id": "shelloutput/error-json",
+          "template": ["echo '{\"hello\": 123}'; ls oogabooga"],
+          "throws": true,
+          "expect": {
+            "error": "Failed with exit code 1",
+            "exitCode": 1,
+            "stdout": "{\"hello\": 123}\n",
+            "stderr": "ls: oogabooga: No such file or directory\n"
+          }
+        },
+        {
+          "id": "shelloutput/error-blob-source",
+          "template": ["echo hello; ls oogabooga"],
+          "throws": true,
+          "expect": {
+            "error": "Failed with exit code 1",
+            "exitCode": 1,
+            "stdout": "hello\n",
+            "stderr": "ls: oogabooga: No such file or directory\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 37,
+      "upstream": "a capture of 2^32 + 1 bytes rejects with the RangeError that new ArrayBuffer(2 ** 32 + 1) throws",
+      "disposition": "js-api",
+      "api": "Only when posix and total memory >= 16 GiB (upstream describe.skipIf): in a child process, `await Bun.$`head -c ${String(2 ** 32 + 1)} /dev/zero`.quiet()` must REJECT (not crash/abort) with an error that is `instanceof RangeError` and has message \"Out of memory\"; the child prints that and exits 0 with empty stderr and no signal. Captured stdout larger than the max Buffer length (2^32 bytes) cannot be handed to JS.",
+      "note": "crash regression at the JS Buffer length limit; needs 4-8 GiB RAM and a 2 min timeout, so not turned into a corpus case"
+    }
+  ],
+  "nonUnitSites": [
+    {
+      "line": 32,
+      "reason": "comment text (\"... behind it (the interpreter's `reject`\") matched the it( regex"
+    }
+  ]
+}

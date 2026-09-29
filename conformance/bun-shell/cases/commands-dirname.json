@@ -1,0 +1,148 @@
+{
+  "source": "test/js/bun/shell/commands/dirname.test.ts",
+  "units": [
+    {
+      "line": 6,
+      "upstream": "shows usage",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-dirname/usage",
+          "template": ["dirname"],
+          "expect": {
+            "stderr": "usage: dirname string\n",
+            "exitCode": 1
+          }
+        }
+      ]
+    },
+    {
+      "line": 12,
+      "upstream": "works relative",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-dirname/relative",
+          "template": ["dirname js/bun/shell/commands/dirname.test.ts"],
+          "expect": {
+            "stdout": "js/bun/shell/commands\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 18,
+      "upstream": "works absolute",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-dirname/absolute",
+          "template": ["dirname /home/tux/example.txt"],
+          "expect": {
+            "stdout": "/home/tux\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 24,
+      "upstream": "works multiple",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-dirname/multiple",
+          "template": [
+            "dirname /usr/share/aclocal/pkg.m4 /var/log/bar/file.txt"
+          ],
+          "expect": {
+            "stdout": "/usr/share/aclocal\n/var/log/bar\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 30,
+      "upstream": "works windows",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-dirname/windows-style-path",
+          "template": ["dirname C:/Documents/Newsletters/Summer2018.pdf"],
+          "expect": {
+            "stdout": "C:/Documents/Newsletters\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 32,
+      "upstream": "leading slash",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-dirname/trailing-slash",
+          "template": ["dirname /catalog/"],
+          "expect": {
+            "stdout": "/\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 34,
+      "upstream": "at root",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-dirname/at-root",
+          "template": ["dirname /catalog"],
+          "expect": {
+            "stdout": "/\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 36,
+      "upstream": "root is idempotent",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-dirname/root",
+          "template": ["dirname /"],
+          "expect": {
+            "stdout": "/\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 44,
+      "upstream": "works relative without stdout",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-dirname/relative-command-substitution",
+          "template": ["echo $(dirname js/bun/shell/commands/dirname.test.ts)"],
+          "expect": {
+            "stdout": "js/bun/shell/commands\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 50,
+      "upstream": "works absolute without stdout",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-dirname/absolute-command-substitution",
+          "template": ["echo $(dirname /home/tux/example.txt)"],
+          "expect": {
+            "stdout": "/home/tux\n"
+          }
+        }
+      ]
+    }
+  ]
+}
