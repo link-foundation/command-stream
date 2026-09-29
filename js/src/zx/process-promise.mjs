@@ -259,7 +259,15 @@ export class ProcessPromise extends Promise {
       from: snap.from,
     });
     const verbose = this.isVerbose();
-    snap.log({ kind: 'end', signal, exitCode: code, duration, error, verbose });
+    snap.log({
+      kind: 'end',
+      signal,
+      exitCode: code,
+      duration,
+      error,
+      verbose,
+      id: this.id,
+    });
     // Make sure the echoed output ends with a line break.
     for (const kind of ['stdout', 'stderr']) {
       if (store[kind].length && getLast(getLast(store[kind])) !== BR_CC) {
