@@ -4,6 +4,7 @@ import shelljs from 'shelljs';
 import { $ as zxShell } from 'zx';
 import { readFileSync } from 'node:fs';
 import { exec as commandStreamExec } from '../../src/$.mjs';
+import { $ as commandStreamBunShell } from '../../src/bun.mjs';
 
 const manifest = JSON.parse(
   readFileSync(new URL('../../package.json', import.meta.url), 'utf8')
@@ -16,6 +17,7 @@ const packageVersion = (name) =>
 
 export const EXPECTED_ADAPTERS = [
   'command-stream',
+  'command-stream/bun',
   'execa',
   'cross-spawn',
   'ShellJS',
@@ -88,6 +90,25 @@ function runWithShellJs(file, args, options) {
   });
 }
 
+/**
+ * Run through a Bun.$-style tagged template (Bun.$ itself, or its portable
+ * port `command-stream/bun`). Input is passed as a `< ${buffer}` redirect.
+ */
+async function runBunStyle(shell, file, args, options) {
+  let command =
+    options.input === undefined
+      ? shell`${file} ${args}`
+      : shell`${file} ${args} < ${Buffer.from(options.input)}`;
+  command = command.quiet().nothrow();
+  if (options.cwd) {
+    command = command.cwd(options.cwd);
+  }
+  if (options.env) {
+    command = command.env(options.env);
+  }
+  return normalizedResult(await command);
+}
+
 async function createBunAdapter() {
   if (typeof globalThis.Bun === 'undefined') {
     return null;
@@ -96,19 +117,8 @@ async function createBunAdapter() {
   return {
     name: 'Bun.$',
     version: globalThis.Bun.version,
-    async run(file, args, options = {}) {
-      if (options.input !== undefined) {
-        throw new Error('Bun.$ adapter does not support stdin workloads');
-      }
-      let command = bunShell`${file} ${args}`.quiet().nothrow();
-      if (options.cwd) {
-        command = command.cwd(options.cwd);
-      }
-      if (options.env) {
-        command = command.env(options.env);
-      }
-      return normalizedResult(await command);
-    },
+    run: (file, args, options = {}) =>
+      runBunStyle(bunShell, file, args, options),
   };
 }
 
@@ -128,6 +138,12 @@ export async function loadCompetitorAdapters() {
           })
         );
       },
+    },
+    {
+      name: 'command-stream/bun',
+      version: packageVersion('command-stream'),
+      run: (file, args, options = {}) =>
+        runBunStyle(commandStreamBunShell, file, args, options),
     },
     {
       name: 'execa',
