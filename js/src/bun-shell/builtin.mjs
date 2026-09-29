@@ -97,20 +97,37 @@ export function redirectOpenFlags(redirect) {
 
 /** Open a redirect target relative to the shell cwd (throws ShellSysError). */
 export function openRedirectFile(cwd, file, redirect) {
-  let target = file;
-  if (IS_WINDOWS && target === '/dev/null') {
-    // The device namespace path: Deno does not map a bare `NUL`.
-    target = '\\\\.\\NUL';
+  if (IS_WINDOWS && file === '/dev/null') {
+    return openNulDevice(redirect);
   }
   try {
     return fs.openSync(
-      path.resolve(cwd, target),
+      path.resolve(cwd, file),
       redirectOpenFlags(redirect),
       0o666
     );
   } catch (e) {
     throw sysErrorFromNode(e, file);
   }
+}
+
+/**
+ * Bun maps /dev/null to the NUL device on Windows. It is opened without
+ * create/truncate, trying the device namespace path first: Deno reports
+ * EISDIR for a bare `NUL` with O_CREAT|O_TRUNC.
+ */
+function openNulDevice(redirect) {
+  // 'r+' is O_RDWR: writable without O_CREAT/O_TRUNC.
+  const flags = redirect & RedirectFlags.STDIN ? 'r' : 'r+';
+  let firstError;
+  for (const target of ['\\\\.\\NUL', 'NUL']) {
+    try {
+      return fs.openSync(target, flags);
+    } catch (e) {
+      firstError ??= e;
+    }
+  }
+  throw sysErrorFromNode(firstError, '/dev/null');
 }
 
 /** Bun's `bun_sys::is_executable_file_path`. */
