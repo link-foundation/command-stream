@@ -30,6 +30,12 @@ async fn default_runner_resolves_project_local_command() {
         },
     )
     .unwrap();
+    // npm installs a POSIX shim beside its .cmd shim on Windows. The default
+    // and streaming runners use Git Bash; the Bun shell uses the .cmd shim.
+    let posix_shim = bin.join(name);
+    if cfg!(windows) {
+        fs::write(&posix_shim, "#!/bin/sh\nprintf 'local-command-found\\n'\n").unwrap();
+    }
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -46,7 +52,12 @@ async fn default_runner_resolves_project_local_command() {
         .run()
         .await
         .unwrap();
-    assert_eq!(result.stdout.to_string().trim(), "local-command-found");
+    assert_eq!(
+        result.stdout.to_string().trim(),
+        "local-command-found",
+        "stderr: {}",
+        result.stderr
+    );
     let result = ProcessRunner::new(
         name,
         RunOptions {
@@ -58,6 +69,16 @@ async fn default_runner_resolves_project_local_command() {
     .await
     .unwrap();
     assert_eq!(result.stdout.to_string().trim(), "local-command-found");
+    let result = StreamingRunner::new(name)
+        .cwd(dir.clone())
+        .prefer_local(command_stream::PreferLocal::Cwd)
+        .collect()
+        .await
+        .unwrap();
+    assert_eq!(result.stdout.trim(), "local-command-found");
+    if cfg!(windows) {
+        fs::remove_file(posix_shim).unwrap();
+    }
     let result = command_stream::bun_shell::shell(&[name], vec![])
         .unwrap()
         .cwd(dir.clone())
@@ -67,13 +88,6 @@ async fn default_runner_resolves_project_local_command() {
         .await
         .unwrap();
     assert_eq!(result.text().trim(), "local-command-found");
-    let result = StreamingRunner::new(name)
-        .cwd(dir.clone())
-        .prefer_local(command_stream::PreferLocal::Cwd)
-        .collect()
-        .await
-        .unwrap();
-    assert_eq!(result.stdout.trim(), "local-command-found");
     let mut bun = command_stream::bun_shell::Shell::new();
     bun.cwd(Some(dir.clone()))
         .prefer_local(command_stream::PreferLocal::Cwd);

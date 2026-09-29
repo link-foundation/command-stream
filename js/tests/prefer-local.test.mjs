@@ -24,6 +24,15 @@ test('the default API resolves project-local commands through the shared zx reso
         ? '@echo off\r\necho local-command-found\r\n'
         : '#!/bin/sh\nprintf "local-command-found\\n"\n'
     );
+    // npm packages install a POSIX shim alongside the .cmd shim on Windows.
+    // The default runner uses Git Bash there; the Bun shell uses the .cmd shim.
+    const posixShim = path.join(bin, name);
+    if (process.platform === 'win32') {
+      await writeFile(
+        posixShim,
+        '#!/bin/sh\nprintf "local-command-found\\n"\n'
+      );
+    }
     if (process.platform !== 'win32') {
       await chmod(executable, 0o755);
     }
@@ -35,9 +44,11 @@ test('the default API resolves project-local commands through the shared zx reso
       mirror: false,
       env: { ...process.env },
     };
+    const defaultResult = await run(name, options);
     assert.equal(
-      (await run(name, options)).stdout.toString().trim(),
-      'local-command-found'
+      defaultResult.stdout.toString().trim(),
+      'local-command-found',
+      defaultResult.stderr.toString()
     );
     assert.equal(
       $(options)`command-stream-local-only`.sync().stdout.toString().trim(),
@@ -49,6 +60,9 @@ test('the default API resolves project-local commands through the shared zx reso
         .trim(),
       'local-command-found'
     );
+    if (process.platform === 'win32') {
+      await rm(posixShim);
+    }
     const bunLocal = new bun$.Shell().cwd(dir).preferLocal();
     assert.equal(
       (await bunLocal`command-stream-local-only`.text()).trim(),
