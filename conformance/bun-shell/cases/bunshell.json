@@ -7348,10 +7348,12 @@
                   }
                 },
                 {
-                  "contains": [
-                    "\"FOO\":\"bar\"",
-                    "\"BUN_TEST_VAR\":\"1\"",
-                    "\"PWD\":\"{{TEMP}}\""
+                  "contains": ["\"FOO\":\"bar\"", "\"BUN_TEST_VAR\":\"1\""]
+                },
+                {
+                  "oneOf": [
+                    { "contains": "\"PWD\":\"{{TEMP}}\"" },
+                    { "contains": "\"PWD\":\"{{TEMP_NATIVE_JSON}}\"" }
                   ]
                 }
               ]
@@ -7389,10 +7391,12 @@
                   }
                 },
                 {
-                  "contains": [
-                    "\"FOO\":\"bar\"",
-                    "\"BUN_TEST_VAR\":\"1\"",
-                    "\"PWD\":\"{{TEMP}}\""
+                  "contains": ["\"FOO\":\"bar\"", "\"BUN_TEST_VAR\":\"1\""]
+                },
+                {
+                  "oneOf": [
+                    { "contains": "\"PWD\":\"{{TEMP}}\"" },
+                    { "contains": "\"PWD\":\"{{TEMP_NATIVE_JSON}}\"" }
                   ]
                 }
               ]

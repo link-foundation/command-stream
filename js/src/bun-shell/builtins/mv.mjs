@@ -295,11 +295,11 @@ function moveDirAcrossDevices(st, src, srcName, dst, dstName) {
 }
 
 /**
- * The POSIX `rename()` error for a failed Windows rename: ENOTDIR for a
- * directory onto a non-directory, EISDIR for the reverse. Bun's Windows
- * `renameat` errors carry no path.
+ * The POSIX `rename()` type conflict: ENOTDIR for a directory onto a
+ * non-directory, EISDIR for the reverse. Windows lets a directory replace a
+ * file, so this runs before the rename there.
  */
-function windowsRenameError(e, src, dst) {
+function windowsRenameConflict(src, dst) {
   const kind = (p) => {
     try {
       return fs.lstatSync(p).isDirectory() ? 'dir' : 'other';
@@ -314,17 +314,22 @@ function windowsRenameError(e, src, dst) {
       : s === 'other' && d === 'dir'
         ? 'EISDIR'
         : null;
-  return code ? new ShellSysError(code, { syscall: 'rename' }) : sysErr(e, '');
+  return code ? new ShellSysError(code, { syscall: 'rename' }) : null;
 }
 
 /** `renameat()`, falling back to a copy on EXDEV. Errors carry `srcName`. */
 function doRename(src, srcName, dst, dstName) {
+  const conflict = IS_WINDOWS && windowsRenameConflict(src, dst);
+  if (conflict) {
+    return conflict;
+  }
   try {
     fs.renameSync(src, dst);
     return null;
   } catch (e) {
     if (IS_WINDOWS) {
-      return windowsRenameError(e, src, dst);
+      // Bun's Windows `renameat` errors carry no path.
+      return sysErr(e, '');
     }
     if (e.code !== 'EXDEV') {
       return sysErr(e, srcName);

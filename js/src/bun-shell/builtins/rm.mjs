@@ -83,6 +83,24 @@ function bunJoin(parts) {
   return joined.length === 0 ? '.' : path.posix.normalize(joined);
 }
 
+/**
+ * Bun's `resolve_path::joinZ` for an absolute subdirectory. On Windows it
+ * normalizes with the native separator (`C:\t\dir\sub`).
+ */
+function dirJoin(parent, name) {
+  return IS_WINDOWS
+    ? path.win32.normalize(`${parent}\\${name}`)
+    : bunJoin([parent, name]);
+}
+
+/**
+ * The path of a file inside `dir`. Bun on Windows appends it with `/` without
+ * normalizing (`C:\t\dir\sub/file.txt`).
+ */
+function fileJoin(dir, name) {
+  return IS_WINDOWS ? concatJoin(dir, name) : bunJoin([dir, name]);
+}
+
 /** `ShellRmTask::join` for relative paths: plain concatenation. */
 function concatJoin(parent, name) {
   const sep = parent.endsWith('/') || (IS_WINDOWS && parent.endsWith('\\'));
@@ -206,7 +224,7 @@ class RmTask {
       return;
     }
     const p = isAbsolute
-      ? bunJoin([parent.path, name])
+      ? dirJoin(parent.path, name)
       : concatJoin(parent.path, name);
     this.enqueueNoJoin(parent, p, kindHint);
   }
@@ -431,7 +449,7 @@ class RmTask {
           continue;
         }
         try {
-          const filePath = bunJoin([p, ent.name]);
+          const filePath = fileJoin(p, ent.name);
           this.removeEntryFile(task, filePath, isAbsolute, handler);
         } catch (e) {
           return e;

@@ -35,6 +35,7 @@ fn context_uses_forward_slashes_and_subst_replaces_every_placeholder() {
         r"C:/t/x/a C:/t/x/b C:/node/node.exe x\y {{OTHER}}"
     );
     assert_eq!(subst("{{TEMP_NATIVE}}{{SEP}}a/b", &c), r"C:\t\x\a/b");
+    assert_eq!(subst("{{TEMP_NATIVE_JSON}}", &c), r"C:\\t\\x");
     assert_eq!(subst("{{TEMP_NATIVE}}", &ctx()), "C:/t/x");
 }
 

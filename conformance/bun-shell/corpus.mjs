@@ -86,13 +86,20 @@ function toSlash(p) {
   return String(p).replaceAll('\\', '/');
 }
 
-/** Replace {{TEMP}}, {{TEMP_NATIVE}}, {{NODE}} and {{SEP}} inside a string. */
+/**
+ * Replace {{TEMP}}, {{TEMP_NATIVE}}, {{TEMP_NATIVE_JSON}}, {{NODE}} and
+ * {{SEP}} inside a string.
+ */
 export function subst(str, ctx) {
   if (typeof str !== 'string') {
     return str;
   }
   return str
     .replaceAll('{{TEMP}}', ctx.tempDir)
+    .replaceAll(
+      '{{TEMP_NATIVE_JSON}}',
+      JSON.stringify(ctx.tempDirNative).slice(1, -1)
+    )
     .replaceAll('{{TEMP_NATIVE}}', ctx.tempDirNative)
     .replaceAll('{{NODE}}', ctx.node)
     .replaceAll('{{SEP}}', ctx.sep);

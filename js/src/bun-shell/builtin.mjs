@@ -99,7 +99,8 @@ export function redirectOpenFlags(redirect) {
 export function openRedirectFile(cwd, file, redirect) {
   let target = file;
   if (IS_WINDOWS && target === '/dev/null') {
-    target = 'NUL';
+    // The device namespace path: Deno does not map a bare `NUL`.
+    target = '\\\\.\\NUL';
   }
   try {
     return fs.openSync(
@@ -136,22 +137,27 @@ function whichWindows(pathEnv, cwd, bin) {
   );
   const candidates = (base) =>
     hasExt ? [base] : [base, ...WIN_EXTENSIONS.map((e) => `${base}.${e}`)];
-  const dirs = [];
   if (/[\\/]/.test(bin) || path.win32.isAbsolute(bin)) {
-    for (const c of candidates(path.win32.resolve(cwd, bin))) {
+    // Absolute paths are reported as given, relative ones against the cwd.
+    const base = path.win32.isAbsolute(bin)
+      ? bin
+      : path.win32.resolve(cwd, bin);
+    for (const c of candidates(base)) {
       if (isExecutableFile(c)) {
         return c;
       }
     }
     return null;
   }
-  if (cwd) {
-    dirs.push(cwd);
-  }
+  // PATH wins over the cwd.
+  const dirs = [];
   for (const seg of pathEnv.split(';')) {
     if (seg) {
       dirs.push(path.win32.resolve(cwd, seg));
     }
+  }
+  if (cwd) {
+    dirs.push(cwd);
   }
   for (const dir of dirs) {
     for (const c of candidates(path.win32.join(dir, bin))) {

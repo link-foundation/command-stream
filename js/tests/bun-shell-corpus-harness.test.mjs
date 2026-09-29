@@ -20,6 +20,12 @@ describe('corpus harness', () => {
     expect(subst('{{TEMP_NATIVE}}', posix)).toBe('/t/x');
   });
 
+  test('{{TEMP_NATIVE_JSON}} is the native temp dir escaped for JSON', () => {
+    const win = makeContext({ tempDir: 'C:\\t\\x', sep: '\\' });
+    expect(subst('"{{TEMP_NATIVE_JSON}}"', win)).toBe('"C:\\\\t\\\\x"');
+    expect(JSON.parse(subst('"{{TEMP_NATIVE_JSON}}"', win))).toBe('C:\\t\\x');
+  });
+
   test('byPlatform picks the exact platform, then the family, then default', () => {
     const map = { win32: 'w', posix: 'p', default: 'd' };
     expect(forPlatform(map, 'win32')).toBe('w');

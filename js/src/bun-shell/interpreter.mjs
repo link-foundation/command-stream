@@ -296,6 +296,10 @@ export class Interpreter {
         if (first === '') {
           return 1;
         }
+        if (IS_WINDOWS && first === '/dev/null') {
+          // Bun maps /dev/null to the NUL character device.
+          return node.op === '-c' ? 0 : 1;
+        }
         let st;
         try {
           st = await fs.promises.stat(path.resolve(shell.cwd, first));
@@ -544,6 +548,12 @@ export class Interpreter {
       return;
     }
     if (isBodyValue(value)) {
+      if (wantsOut) {
+        // A builtin cannot write into a Response (Bun's builtin redirect).
+        throw new ShellJsError(
+          'Cannot redirect stdout/stderr to an immutable blob. Expected a file'
+        );
+      }
       const bytes = await bodyBytes(value);
       if (flags & RedirectFlags.STDIN) {
         b.stdin = { kind: 'blob', bytes };

@@ -15,6 +15,8 @@ import path from 'node:path';
 import { USAGE } from '../builtin.mjs';
 import { ShellSysError, sysErrorFromNode } from '../io.mjs';
 
+const IS_WINDOWS = process.platform === 'win32';
+
 const { O_RDONLY, O_WRONLY, O_CREAT, O_DIRECTORY, O_NOFOLLOW, O_NONBLOCK } =
   fs.constants;
 
@@ -345,7 +347,7 @@ function cpOne(opts, operands, rawSrc, rawTgt, cwd) {
     if (tgtIsDir.code !== 'ENOENT') {
       return { err: tgtIsDir, out };
     }
-    tgtIsDir = tgt.endsWith('/');
+    tgtIsDir = tgt.endsWith('/') || (IS_WINDOWS && tgt.endsWith('\\'));
     tgtExists = false;
   }
   if (!srcIsDir && !tgtIsDir && operands === 2) {

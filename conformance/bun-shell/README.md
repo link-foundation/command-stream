@@ -120,6 +120,8 @@ expectations:
 - `{{TEMP}}`: the absolute temp dir, with forward slashes.
 - `{{TEMP_NATIVE}}`: the absolute temp dir, with the platform separator. On
   Windows, Bun prints the shell's cwd (`pwd`, `$PWD`) this way.
+- `{{TEMP_NATIVE_JSON}}`: `{{TEMP_NATIVE}}` escaped for a JSON string (each
+  `\\` doubled), for output that a child prints with `JSON.stringify`.
 - `{{NODE}}`: the absolute path of a Node-compatible JS runtime. Upstream uses
   `bun -e`/`bunExe()`; the corpus rewrites those scripts to plain node-compatible
   `-e`/`-p` code.

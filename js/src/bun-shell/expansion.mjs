@@ -291,7 +291,8 @@ class Expansion {
       throw new ShellCustomError(`no matches found: ${this.currentOut}`);
     }
     for (const entry of entries) {
-      this.pushWord(entry);
+      // Bun's Windows glob walker joins matches with the native separator.
+      this.pushWord(IS_WINDOWS ? entry.replaceAll('/', '\\') : entry);
     }
   }
 

@@ -315,6 +315,39 @@ function signalExitCode(signal) {
   return typeof n === 'number' ? 128 + n : 1;
 }
 
+// The variables libuv copies from the parent into a Windows child's
+// environment when they are missing (uv_spawn's `required_vars`). Node.js
+// and Bun do this in libuv; Deno does not, and a Node.js child then aborts
+// on startup without SYSTEMROOT.
+const REQUIRED_WINDOWS_ENV = [
+  'HOMEDRIVE',
+  'HOMEPATH',
+  'LOGONSERVER',
+  'PATH',
+  'SYSTEMDRIVE',
+  'SYSTEMROOT',
+  'TEMP',
+  'USERDOMAIN',
+  'USERNAME',
+  'USERPROFILE',
+  'WINDIR',
+];
+
+/** `env` plus the libuv-required variables it lacks (case-insensitive). */
+export function withRequiredWindowsEnv(env, parentEnv = process.env) {
+  const have = new Set(Object.keys(env).map((k) => k.toUpperCase()));
+  const parent = new Map(
+    Object.entries(parentEnv).map(([k, v]) => [k.toUpperCase(), v])
+  );
+  const out = { ...env };
+  for (const name of REQUIRED_WINDOWS_ENV) {
+    if (!have.has(name) && parent.get(name) !== undefined) {
+      out[name] = parent.get(name);
+    }
+  }
+  return out;
+}
+
 /**
  * Spawn `args` (args[0] is the resolved executable) and wait until it has
  * exited and its output pipes are closed.
@@ -369,7 +402,7 @@ export async function runSubprocess({
   try {
     child = spawn(target.file, target.args, {
       cwd,
-      env,
+      env: IS_WINDOWS ? withRequiredWindowsEnv(env) : env,
       stdio: plans.map((p) => p.stdio),
       windowsHide: true,
       windowsVerbatimArguments: target.verbatim,

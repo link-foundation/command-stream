@@ -294,10 +294,15 @@ pub fn to_slash(p: &str) -> String {
     p.replace('\\', "/")
 }
 
-/// Replace `{{TEMP}}`, `{{TEMP_NATIVE}}`, `{{NODE}}` and `{{SEP}}` inside a
-/// string.
+/// Replace `{{TEMP}}`, `{{TEMP_NATIVE}}`, `{{TEMP_NATIVE_JSON}}`, `{{NODE}}`
+/// and `{{SEP}}` inside a string.
 pub fn subst(s: &str, ctx: &Context) -> String {
+    let native_json = Value::String(ctx.temp_dir_native.clone()).to_string();
     s.replace("{{TEMP}}", &ctx.temp_dir)
+        .replace(
+            "{{TEMP_NATIVE_JSON}}",
+            &native_json[1..native_json.len() - 1],
+        )
         .replace("{{TEMP_NATIVE}}", &ctx.temp_dir_native)
         .replace("{{NODE}}", &ctx.node)
         .replace("{{SEP}}", &ctx.sep)
