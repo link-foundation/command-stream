@@ -75,7 +75,8 @@ async fn variables_and_positionals() {
 
 #[tokio::test]
 async fn tilde_and_braces() {
-    let env = [("HOME", "/home/me")];
+    // On Windows `~` expands to $USERPROFILE.
+    let env = [("HOME", "/home/me"), ("USERPROFILE", "/home/me")];
     assert_eq!(expand_word("~/x", &env).await, ["/home/me/x"]);
     assert_eq!(expand_word("'~/x'", &env).await, ["~/x"]);
     assert_eq!(expand_word("a{b,c}d", &env).await, ["abd", "acd"]);
