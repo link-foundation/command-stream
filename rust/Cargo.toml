@@ -40,6 +40,10 @@ vt100 = "0.15"
 tokio-test = "0.4"
 tempfile = "3.14"
 assert_cmd = "2.0"
+# JS-compatible regexes (backreferences) for the Bun Shell conformance corpus.
+fancy-regex = "0.19"
+# The corpus nests some values deeper than serde_json's default limit of 128.
+serde_json = { version = "1.0", features = ["unbounded_depth"] }
 
 [features]
 default = []
