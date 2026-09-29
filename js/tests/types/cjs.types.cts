@@ -32,3 +32,13 @@ export async function commonJs(): Promise<void> {
 
   use(quiet, created, direct, shResult, settings, quoted);
 }
+
+import bun = require('command-stream/bun');
+
+export async function commonJsBun(): Promise<void> {
+  expectType<Equal<typeof bun.$, bun.BunShell>>();
+  expectType<Equal<typeof bun.default, bun.BunShell>>();
+  expectType<Equal<typeof $.bun, bun.BunShell>>();
+  const text: string = await bun.$`echo hi`.text();
+  use(text);
+}
