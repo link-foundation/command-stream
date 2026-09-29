@@ -2,6 +2,7 @@
 // Part of the modular ProcessRunner architecture
 
 import os from 'os';
+import { spawnSync } from 'node:child_process';
 import { trace } from './$.trace.mjs';
 import { createResult } from './$.result.mjs';
 
@@ -24,6 +25,25 @@ function sendSignalToProcess(pid, sig, runtime) {
   const operations = [];
   const prefix = runtime === 'Bun' ? 'Bun ' : '';
 
+  if (process.platform === 'win32') {
+    // Windows does not support negative PIDs for process groups. Stop the
+    // complete tree before the direct child exits and its descendants lose
+    // their parent relationship.
+    const result = spawnSync('taskkill', ['/PID', String(pid), '/T', '/F'], {
+      stdio: 'ignore',
+      windowsHide: true,
+    });
+    if (result.status === 0) {
+      operations.push('taskkill tree');
+      return operations;
+    }
+    trace(
+      'ProcessRunner',
+      () =>
+        `taskkill failed for process ${pid}: ${result.error?.message || `exit ${result.status}`}`
+    );
+  }
+
   try {
     process.kill(pid, sig);
     trace('ProcessRunner', () => `Sent ${sig} to ${prefix}process ${pid}`);
@@ -33,6 +53,10 @@ function sendSignalToProcess(pid, sig, runtime) {
       'ProcessRunner',
       () => `Error sending ${sig} to ${prefix}process: ${err.message}`
     );
+  }
+
+  if (process.platform === 'win32') {
+    return operations;
   }
 
   try {
