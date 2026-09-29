@@ -557,8 +557,15 @@ async fn within_isolates_nested_context_and_returns_result() {
     .await;
 }
 
+// Upstream stubs `which.sync`; here the preset resolves the real executable
+// (`C:\...\pwsh.exe` on Windows), so compare the file stem.
 fn assert_powershell(opts: &Options, shell: &str) {
-    assert!(opts.shell.as_deref().unwrap().ends_with(shell));
+    let stem = |path: &str| {
+        std::path::Path::new(path)
+            .file_stem()
+            .map(|stem| stem.to_string_lossy().to_ascii_lowercase())
+    };
+    assert_eq!(stem(opts.shell.as_deref().unwrap()), stem(shell));
     assert_eq!(opts.prefix, "");
     assert_eq!(opts.postfix, POWERSHELL_POSTFIX);
     assert_eq!((opts.quote)("it's"), quote_powershell("it's"));
