@@ -6,8 +6,6 @@
 //! Windows error translation follows libuv's `uv_translate_sys_error`
 //! (`src/win/error.c`, MIT), which Node (and so the JavaScript port) uses.
 
-#![allow(dead_code)]
-
 fn lookup(table: &'static [(&'static str, &'static str)], code: &str) -> Option<&'static str> {
     table.iter().find(|(k, _)| *k == code).map(|(_, v)| *v)
 }
@@ -308,6 +306,7 @@ pub(crate) fn errno_of(code: &str) -> i32 {
 }
 
 /// The code name for an errno number as returned by [`errno_of`].
+#[cfg_attr(not(any(unix, test)), allow(dead_code))]
 pub(crate) fn code_of(errno: i32) -> Option<&'static str> {
     code_table().find(|(_, n)| *n == errno).map(|(k, _)| *k)
 }

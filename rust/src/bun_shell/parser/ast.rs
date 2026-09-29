@@ -101,6 +101,8 @@ pub(crate) enum BinaryOp {
 }
 
 impl BinaryOp {
+    /// The JS AST spelling (used by the parser corpus tests).
+    #[cfg(test)]
     pub(crate) fn as_str(self) -> &'static str {
         match self {
             BinaryOp::And => "and",
@@ -181,6 +183,8 @@ impl CondExprOp {
         })
     }
 
+    /// The operator's spelling (used by the parser corpus tests).
+    #[cfg(test)]
     pub(crate) fn as_str(self) -> &'static str {
         match self {
             Self::IsFile => "-f",
@@ -191,11 +195,6 @@ impl CondExprOp {
             Self::Eq => "==",
             Self::NotEq => "!=",
         }
-    }
-
-    /// Unary operators take one argument, the others two.
-    pub(crate) fn is_unary(self) -> bool {
-        !matches!(self, Self::Eq | Self::NotEq)
     }
 }
 
@@ -310,13 +309,6 @@ impl Atom {
 
     pub(crate) fn has_brace_expansion(&self) -> bool {
         matches!(self, Atom::Compound(c) if c.brace_expansion_hint)
-    }
-
-    pub(crate) fn atoms_len(&self) -> usize {
-        match self {
-            Atom::Simple(_) => 1,
-            Atom::Compound(c) => c.atoms.len(),
-        }
     }
 
     /// The simple atoms of this word, in order.

@@ -17,6 +17,8 @@
 //!
 //! Input kinds ([`InKind`]): `Fd(Reader)` or `Ignore`.
 
+// Some helpers (the `Ignore` kinds, buffer and reader utilities) serve the
+// ls/rm/mkdir/touch/mv/cat/cp builtins, which are not ported yet.
 #![allow(dead_code)]
 
 use std::collections::VecDeque;

@@ -24,8 +24,6 @@
 //! [`BuiltinKind::from_argv0`]; the interpreter checks [`implemented`] and
 //! runs the external command of the same name instead.
 
-#![allow(dead_code)]
-
 use super::builtin::{Builtin, BuiltinKind};
 use super::io::Which;
 

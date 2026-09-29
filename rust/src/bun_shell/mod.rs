@@ -36,12 +36,10 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 mod braces;
-// The walker is for the interpreter's glob expansion, which is not ported yet.
-#[cfg_attr(not(test), allow(dead_code, unused_imports))]
+mod expansion;
 pub(crate) mod glob;
+mod interpreter;
 mod lexer;
-// The AST helpers are for the interpreter, which is not ported yet.
-#[allow(dead_code)]
 mod parser;
 mod template;
 
@@ -354,10 +352,11 @@ impl fmt::Debug for ShellCommand {
 
 /// The parsed form of a template.
 #[derive(Debug)]
-#[allow(dead_code)]
 pub(crate) struct ParsedScript {
     pub(crate) ast: parser::Script,
-    /// Strings referenced by `\x08__bunstr_N\x08` placeholders.
+    /// Strings referenced by `\x08__bunstr_N\x08` placeholders (already
+    /// substituted into the AST by the parser; kept for inspection).
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) jsstrings: Vec<String>,
     /// Values referenced by `\x08__bun_N\x08` placeholders (buffers).
     pub(crate) jsobjs: Vec<ShellValue>,
@@ -418,10 +417,26 @@ impl ShellCommand {
 
     /// Run the script to completion.
     pub async fn run(self) -> Result<ShellOutput, ShellError> {
-        let _ = (&self.script, self.quiet);
-        Err(ShellError::system(
-            "bun_shell: interpreter not implemented yet",
-        ))
+        // Sorted, so the child environment does not depend on hash order.
+        let mut env: Vec<(String, String)> = self.env.into_iter().collect();
+        env.sort_unstable_by(|a, b| a.0.cmp(&b.0));
+        let (interp, mut root) = interpreter::Interpreter::new(interpreter::InterpreterOptions {
+            jsobjs: self.script.jsobjs,
+            env: env.into_iter().collect(),
+            cwd: self.cwd.map(|p| p.to_string_lossy().into_owned()),
+            quiet: self.quiet,
+            argv: std::env::args().collect(),
+        })?;
+        let out = interp.run(&self.script.ast, &mut root).await?;
+        let output = ShellOutput {
+            stdout: out.stdout,
+            stderr: out.stderr,
+            exit_code: out.exit_code,
+        };
+        if self.throws && output.exit_code != 0 {
+            return Err(ShellError::exit(output));
+        }
+        Ok(output)
     }
 
     /// Run quietly and return stdout as text.

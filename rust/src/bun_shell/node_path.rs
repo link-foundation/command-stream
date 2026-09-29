@@ -6,6 +6,8 @@
 //! Strings are handled as UTF-8; every character the algorithms look at is
 //! ASCII, so byte indices are always char boundaries.
 
+// `normalize` and `SEP` serve the ls/rm/mkdir/touch/mv builtins, which are
+// not ported yet.
 #![allow(dead_code)]
 
 /// The platform path separator (`path.sep`).

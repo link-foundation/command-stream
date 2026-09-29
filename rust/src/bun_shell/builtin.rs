@@ -14,6 +14,9 @@
 //!   JS-style fixed buffer and fails with ENOSPC once full, `Blob`/`Ignore`
 //!   discard.
 
+// Parts of the framework (flag parsing, the Blob/Ignore outputs, the
+// ArrayBuf helpers) serve the ls/rm/mkdir/touch/mv/cat/cp builtins, which are
+// not ported yet.
 #![allow(dead_code)]
 
 use std::fs::{File, OpenOptions};

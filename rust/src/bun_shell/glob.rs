@@ -552,12 +552,17 @@ pub(crate) fn match_bytes(glob: &[u8], path: &[u8]) -> MatchResult {
 /// `[a-z]`, `[!ab]`/`[^ab]`, `{a,b}` (nested up to 10 deep), leading `!`
 /// (negation, repeatable) and `\` escapes (`\n`, `\t`, `\r`, `\b` are
 /// control characters).
+///
+/// The shell itself only walks directories ([`walk`]); this matcher (and
+/// [`has_glob_syntax`]) back the conformance tests of the glob engine.
+#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn glob_match(pattern: &str, path: &str) -> bool {
     match_bytes(pattern.as_bytes(), path.as_bytes()).matches
 }
 
 /// Port of glob/lib.rs `detect_glob_syntax`: true when `pattern` contains an
 /// unescaped `*`, `{`, `[` or `?`, or starts with `!`.
+#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn has_glob_syntax(pattern: &str) -> bool {
     let bytes = pattern.as_bytes();
     if bytes.first() == Some(&b'!') {

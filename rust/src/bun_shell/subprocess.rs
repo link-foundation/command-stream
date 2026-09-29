@@ -23,8 +23,6 @@
 //! Stdin comes from a file handle, the inherited process stdin, `< ${bytes}`
 //! (fed through a pipe) or a pipeline channel (pumped until the child exits).
 
-#![allow(dead_code)]
-
 use std::fs::File;
 use std::io;
 use std::process::Stdio;
@@ -415,6 +413,7 @@ async fn feed_stdin(stdin: Option<ChildStdin>, plan: Option<InPlan>) {
 // ---------------------------------------------------------------------------
 
 /// Whether JavaScript's `\s` matches `c`.
+#[cfg_attr(not(any(windows, test)), allow(dead_code))]
 fn is_js_space(c: char) -> bool {
     matches!(
         c,
@@ -431,6 +430,7 @@ fn is_js_space(c: char) -> bool {
 
 /// Quote an argument for a `cmd.exe /s /c "..."` line (the JS
 /// `quoteWindowsArg`).
+#[cfg_attr(not(any(windows, test)), allow(dead_code))]
 pub(crate) fn quote_windows_arg(arg: &str) -> String {
     if !arg.is_empty() && !arg.chars().any(|c| is_js_space(c) || c == '"') {
         return arg.to_string();
@@ -466,6 +466,7 @@ pub(crate) fn is_batch_file(argv0: &str) -> bool {
 }
 
 /// The `cmd.exe` line for a batch file: `/d /s /c "<quoted argv>"`.
+#[cfg_attr(not(any(windows, test)), allow(dead_code))]
 pub(crate) fn batch_command_line(args: &[String]) -> String {
     let line: Vec<String> = args.iter().map(|a| quote_windows_arg(a)).collect();
     format!("\"{}\"", line.join(" "))

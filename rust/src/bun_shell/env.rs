@@ -3,8 +3,6 @@
 //! Oven-sh / Jarred Sumner), ported by way of `js/src/bun-shell/env.mjs` and
 //! the `envObject` helper of `js/src/bun-shell/interpreter.mjs`.
 
-#![allow(dead_code)]
-
 use std::collections::HashMap;
 
 use super::io::{OutKind, SharedBuf, ShellIO, ShellSysError};
@@ -40,6 +38,7 @@ impl EnvMap {
             .map(|&i| self.entries[i].1.as_str())
     }
 
+    #[cfg(test)]
     pub(crate) fn has(&self, key: &str) -> bool {
         self.index.contains_key(&norm_key(key))
     }
@@ -61,12 +60,9 @@ impl EnvMap {
         self.entries.iter().map(|(k, v)| (k.as_str(), v.as_str()))
     }
 
+    #[cfg(test)]
     pub(crate) fn len(&self) -> usize {
         self.entries.len()
-    }
-
-    pub(crate) fn is_empty(&self) -> bool {
-        self.entries.is_empty()
     }
 }
 
@@ -84,7 +80,6 @@ impl<K: Into<String>, V: Into<String>> FromIterator<(K, V)> for EnvMap {
 /// buffered output is shared with the parent).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum EnvKind {
-    Normal,
     CmdSubst,
     Subshell,
     Pipeline,
@@ -247,21 +242,20 @@ impl ShellExecEnv {
         env.sort_by_key(|(k, _)| js_array_index(k).map_or((1, 0), |n| (0, n)));
         env
     }
+}
 
-    /// `PATH` of the child environment (case-insensitive on Windows).
-    pub(crate) fn path_env(&self) -> String {
-        self.child_env()
-            .into_iter()
-            .find(|(k, _)| {
-                if cfg!(windows) {
-                    k.to_uppercase() == "PATH"
-                } else {
-                    k == "PATH"
-                }
-            })
-            .map(|(_, v)| v)
-            .unwrap_or_default()
-    }
+/// `PATH` of a child environment (case-insensitive on Windows).
+pub(crate) fn path_env(env: &[(String, String)]) -> &str {
+    env.iter()
+        .find(|(k, _)| {
+            if cfg!(windows) {
+                k.to_uppercase() == "PATH"
+            } else {
+                k == "PATH"
+            }
+        })
+        .map(|(_, v)| v.as_str())
+        .unwrap_or("")
 }
 
 /// A canonical JavaScript array index (`"0"`, `"42"`, below 2^32 - 1), which
@@ -321,7 +315,7 @@ mod tests {
         let keys: Vec<_> = env.iter().map(|(k, _)| k.as_str()).collect();
         assert_eq!(keys, ["2", "10", "PATH", "X", "Y"]);
         assert_eq!(env[3].1, "2");
-        assert_eq!(sh.path_env(), "/bin");
+        assert_eq!(path_env(&env), "/bin");
         assert_eq!(sh.get_var("Z"), Some("shell"));
         assert_eq!(sh.get_var("X"), Some("1"));
     }
@@ -338,7 +332,7 @@ mod tests {
         assert!(!sub.buffered_stdout.ptr_eq(&sh.buffered_stdout));
         let cap = SharedBuf::new();
         let fd = io(OutKind::fd(Writer::stdout(), Some(cap.clone())));
-        let sub = sh.dupe_for_subshell(&fd, EnvKind::Normal);
+        let sub = sh.dupe_for_subshell(&fd, EnvKind::CmdSubst);
         assert!(sub.buffered_stdout.ptr_eq(&cap));
         let sub = sh.dupe_for_subshell(&io(OutKind::Ignore), EnvKind::Subshell);
         assert!(!sub.buffered_stdout.ptr_eq(&sh.buffered_stdout));
