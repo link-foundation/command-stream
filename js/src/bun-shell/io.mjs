@@ -13,6 +13,7 @@
 import fs from './fs.mjs';
 import os from 'node:os';
 import { errnoMessage } from './errno.mjs';
+import { LINUX_ERRNO } from './errno-linux.mjs';
 
 /** Growable byte buffer (Bun's `Vec<u8>` used for buffered stdout/stderr). */
 export class ByteList {
@@ -51,9 +52,13 @@ export function toBytes(data) {
   return typeof data === 'string' ? Buffer.from(data, 'utf8') : data;
 }
 
-/** Numeric (positive) errno for a Node error code such as 'ENOENT'. */
-export function errnoOf(code) {
-  const n = os.constants.errno[code];
+/**
+ * Numeric (positive) errno for a Node error code such as 'ENOENT'. Bun
+ * numbers errors the Linux way on Windows (ENOENT is 2, ENOTEMPTY 39), where
+ * Node reports libuv's codes (-4058) and os.constants has the MSVC ones.
+ */
+export function errnoOf(code, platform = process.platform) {
+  const n = platform === 'win32' ? LINUX_ERRNO[code] : os.constants.errno[code];
   return typeof n === 'number' ? Math.abs(n) : 0;
 }
 
@@ -84,12 +89,15 @@ export function sysErrorFromNode(err, path) {
     return err;
   }
   const code = err?.code ?? 'EIO';
+  const native = typeof err?.errno === 'number' ? Math.abs(err.errno) : 0;
   const errno =
-    typeof err?.errno === 'number' ? Math.abs(err.errno) : errnoOf(code);
+    process.platform === 'win32'
+      ? errnoOf(code) || native
+      : native || errnoOf(code);
   return new ShellSysError(code, {
     path: path ?? err?.path ?? '',
     syscall: err?.syscall ?? '',
-    errno: errno || errnoOf(code),
+    errno,
   });
 }
 

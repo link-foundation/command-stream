@@ -1,0 +1,88 @@
+FAIL brace/brace-then-glob-suffix  (test/js/bun/shell/brace.test.ts:135, 3ms)
+     - stdout: expected to match /^src/\*\.ts src/\*\.tsx (?:src/util\.tsx src/app\.ts|src/app\.ts src/util\.tsx)\n$/, got "src/*.ts src/*.tsx src\\app.ts src\\util.tsx\n"
+FAIL brace/brace-prefix-then-glob  (test/js/bun/shell/brace.test.ts:151, 3ms)
+     - stdout: expected to match /^src/\*\.ts lib/\*\.ts (?:lib/b\.ts src/a\.ts|src/a\.ts lib/b\.ts)\n$/, got "src/*.ts lib/*.ts src\\a.ts lib\\b.ts\n"
+FAIL bunshell-file/bun-file-arg-prints-path  (test/js/bun/shell/bunshell-file.test.ts:4, 2ms)
+     - stdout: expected "C:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-HQCIvq/test.ts\n", got "C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\bunshell-conf-HQCIvq\\test.ts\n"
+FAIL bunshell-instance/stdout-redirect-to-blob-throws  (test/js/bun/shell/bunshell-instance.test.ts:113, 2ms)
+     - error message: expected to contain "Blobs are immutable, and cannot be used for stdout/stderr", got "Cannot redirect stdout/stderr to an immutable blob. Expected a file"
+FAIL bunshell-instance/stdout-redirect-to-response-throws  (test/js/bun/shell/bunshell-instance.test.ts:113, 2ms)
+     - error message: expected to contain "Blobs are immutable, and cannot be used for stdout/stderr", got "Cannot redirect stdout/stderr to an immutable blob. Expected a file"
+FAIL bunshell/exit-codes/mv-missing  (test/js/bun/shell/bunshell.test.ts:89, 2ms)
+     - stderr: expected "mv: lskdjflskdjf: No such file or directory\n", got "mv: No such file or directory\n"
+FAIL bunshell/glob/literal-double-star  (test/js/bun/shell/bunshell.test.ts:1023, 3ms)
+     - stdout: expected to contain "sub/b.txt", got "a.txt sub\\b.txt\n"
+FAIL bunshell/cd-dash  (test/js/bun/shell/bunshell.test.ts:1226, 1ms)
+     - stdout: expected "C:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-4Q04OF/d\nC:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-4Q04OF\n", got "C:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-4Q04OF/d\nC:\\Us
+FAIL bunshell/cd-no-args-home  (test/js/bun/shell/bunshell.test.ts:1231, 2ms)
+     - stdout: expected "C:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-KfcRlk\nC:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-KfcRlk/home\n", got "C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\bunshell-conf-KfcRlk\
+FAIL bunshell/pwd-cd-subdir-and-back  (test/js/bun/shell/bunshell.test.ts:1891, 3ms)
+     - stdout: expected "C:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-OiZ780\nC:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-OiZ780\\sub_dir\nC:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-OiZ780\n", got "C
+FAIL bunshell/change-env-child-process-env  (test/js/bun/shell/bunshell.test.ts:1894, 57ms)
+     - stdout: expected to match /^\{("[A-Z_]+":"[^"]*",?){3}("__CF_USER_TEXT_ENCODING":"[^"]*")?\}\n$/, got "{\"BUN_TEST_VAR\":\"1\",\"FOO\":\"bar\",\"HOMEDRIVE\":\"C:\",\"HOMEPATH\":\"\\\\Users\\\\runneradmin\",\"LOGON
+FAIL bunshell/change-env-child-process-env-again  (test/js/bun/shell/bunshell.test.ts:1894, 52ms)
+     - stdout: expected to match /^\{("[A-Z_]+":"[^"]*",?){3}("__CF_USER_TEXT_ENCODING":"[^"]*")?\}\n$/, got "{\"BUN_TEST_VAR\":\"1\",\"FOO\":\"bar\",\"HOMEDRIVE\":\"C:\",\"HOMEPATH\":\"\\\\Users\\\\runneradmin\",\"LOGON
+FAIL bunshell/subshell-sharp-script-shell-part  (test/js/bun/shell/bunshell.test.ts:2893, 2ms)
+     - stdout: expected "C:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-huxsKR/sharp-test\n", got "C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\bunshell-conf-huxsKR\\sharp-test\n"
+FAIL bunshell/subshell-does-not-change-cwd  (test/js/bun/shell/bunshell.test.ts:2931, 2ms)
+     - stdout: expected "C:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-WUvi5U\nC:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-WUvi5U\\foo\nC:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-WUvi5U\n", got "C:\\U
+FAIL bunshell/subshell-pipeline-in-subshell  (test/js/bun/shell/bunshell.test.ts:2960, 2ms)
+     - stdout: expected "C:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-47ABU3\\dir\nC:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-47ABU3\n", got "C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\bunshell-conf-47ABU3\
+FAIL bunshell/subshell-in-pipeline  (test/js/bun/shell/bunshell.test.ts:2970, 2ms)
+     - stdout: expected "C:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-6f7upa\nC:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-6f7upa\\dir\nC:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-6f7upa\n", got "C:\\U
+FAIL bunshell/subshell-in-pipeline-2  (test/js/bun/shell/bunshell.test.ts:2980, 3ms)
+     - stdout: expected "C:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-jXuxEs\nC:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-jXuxEs\\dir\nC:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-jXuxEs\n", got "C:\\U
+FAIL bunshell/subshell-imbricated-pipelines  (test/js/bun/shell/bunshell.test.ts:2989, 2ms)
+     - stdout: expected "C:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-jXqNHy\\foo\n", got "C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\bunshell-conf-jXqNHy\\foo\n"
+FAIL commands-ls/recursive-basic  (test/js/bun/shell/commands/ls.test.ts:79, 4ms)
+     - stdout: expected sorted lines ["./foo:","a","a","b","b","c","c","foo"], got [".\\foo:","a","a","b","b","c","c","foo"]
+FAIL commands-ls/flag-Ra  (test/js/bun/shell/commands/ls.test.ts:203, 3ms)
+     - stdout: expected sorted lines [".",".","..","..","./sub:",".hidden",".hidden-sub","sub"], got [".",".","..","..",".\\sub:",".hidden",".hidden-sub","sub"]
+FAIL commands-ls/flag-RA  (test/js/bun/shell/commands/ls.test.ts:213, 2ms)
+     - stdout: expected sorted lines ["./sub:",".hidden",".hidden-sub","sub"], got [".\\sub:",".hidden",".hidden-sub","sub"]
+FAIL commands-rm/recursive-verbose-dir  (test/js/bun/shell/commands/rm.test.ts:56, 3ms)
+     - stdout: expected sorted lines ["C:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-MXLqKP/folder","C:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-MXLqKP/folder/sub","C:/Users/RUNNER~1/AppData/Local/Temp/bunshe
+FAIL commands-rm/handoff-single  (test/js/bun/shell/commands/rm.test.ts:154, 3ms)
+     - stdout: expected sorted lines ["C:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-c0iXY8/t0/foo","C:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-c0iXY8/t0/foo/a","C:/Users/RUNNER~1/AppData/Local/Temp/bunshell
+FAIL commands-rm/handoff-eight  (test/js/bun/shell/commands/rm.test.ts:154, 14ms)
+     - stdout: expected sorted lines ["C:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-bgM84P/t0/foo","C:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-bgM84P/t0/foo/a","C:/Users/RUNNER~1/AppData/Local/Temp/bunshell
+FAIL file-io/write-to-invalid-path  (test/js/bun/shell/file-io.test.ts:42, 1ms)
+     - stderr: expected "bun: Not a directory: /dev/null/invalid/path", got "bun: No such file or directory: /dev/null/invalid/path"
+FAIL file-io/pwd-and-redirect  (test/js/bun/shell/file-io.test.ts:228, 2ms)
+     - file pwd_output.txt: expected "C:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-paydih\n", got "C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\bunshell-conf-paydih\n"
+FAIL file-io/pwd-and-append-redirect-new-file  (test/js/bun/shell/file-io.test.ts:235, 2ms)
+     - file append_output.txt: expected "C:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-4QLsXX\n", got "C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\bunshell-conf-4QLsXX\n"
+FAIL file-io/pwd-and-append-redirect-existing-file  (test/js/bun/shell/file-io.test.ts:235, 1ms)
+     - file append_output.txt: expected "before\nC:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-niwOhl\n", got "before\nC:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\bunshell-conf-niwOhl\n"
+FAIL lex/var-edgecase-verbatim  (test/js/bun/shell/lex.test.ts:18, 1ms)
+     - stderr: expected "bun: command not found: C:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-CKsiPs/test.txt\n", got "bun: command not found: C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\bunshell-conf-CKsiPs/test.tx
+FAIL lex/var-edgecase-echo  (test/js/bun/shell/lex.test.ts:18, 1ms)
+     - stdout: expected "C:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-q7jnKD/test.txt\n", got "C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\bunshell-conf-q7jnKD/test.txt\n"
+FAIL lex/cmd-sub-edgecase-set  (test/js/bun/shell/lex.test.ts:607, 1ms)
+     - stdout: expected "C:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-3OgcNA\n", got "C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\bunshell-conf-3OgcNA\n"
+FAIL lex/cmd-sub-combined-word-set  (test/js/bun/shell/lex.test.ts:643, 1ms)
+     - stdout: expected "C:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-a7lcjyNICE\n", got "C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\bunshell-conf-a7lcjyNICE\n"
+FAIL lex/delimit-newline-after-variable  (test/js/bun/shell/lex.test.ts:713, 1ms)
+     - stdout: expected "foo\nC:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-e7bWtq\n", got "foo\nC:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\bunshell-conf-e7bWtq\n"
+FAIL lex/delimit-operator-after-variable-cat  (test/js/bun/shell/lex.test.ts:713, 2ms)
+     - stdout: expected "C:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-8KgDaM\n", got "C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\bunshell-conf-8KgDaM\n"
+FAIL lex/delimit-operator-after-space  (test/js/bun/shell/lex.test.ts:713, 1ms)
+     - stdout: expected "C:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-V4lHsk\n", got "C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\bunshell-conf-V4lHsk\n"
+FAIL lex/delimit-semicolon-after-variable-pwd  (test/js/bun/shell/lex.test.ts:713, 1ms)
+     - stdout: expected "\nC:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-7iewok\n", got "\nC:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\bunshell-conf-7iewok\n"
+FAIL lex/delimit-semicolon-after-closing-quote-echo  (test/js/bun/shell/lex.test.ts:713, 1ms)
+     - stdout: expected "\nC:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-cIFE2j\n", got "\nC:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\bunshell-conf-cIFE2j\n"
+FAIL lex/delimit-semicolon-after-brace-group-echo  (test/js/bun/shell/lex.test.ts:713, 1ms)
+     - stdout: expected "a\nC:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-X4Sf3G\n", got "a\nC:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\bunshell-conf-X4Sf3G\n"
+FAIL lex/delimit-end-of-input-after-variable  (test/js/bun/shell/lex.test.ts:713, 1ms)
+     - stdout: expected "C:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-cYXDNS\n", got "C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\bunshell-conf-cYXDNS\n"
+FAIL parse/single-atom-tilde  (test/js/bun/shell/parse.test.ts:62, 1ms)
+     - stdout: expected "/home/xyz\n", got "C:\\Users\\runneradmin\n"
+FAIL parse/bad-syntax-cmd-subst-edgecase-set  (test/js/bun/shell/parse.test.ts:954, 1ms)
+     - stdout: expected "C:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-SdYsXl\n", got "C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\bunshell-conf-SdYsXl\n"
+FAIL pipeline_stack/cd-pwd-cd-doesn-t-affect-next-command-in-pipeline  (test/js/bun/shell/pipeline_stack.test.ts:80, 1ms)
+     - stdout: expected "C:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-fq9ohF\n", got "C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\bunshell-conf-fq9ohF\n"
+FAIL pipeline_stack/cd-cd-pwd-multiple-cd-s-don-t-affect  (test/js/bun/shell/pipeline_stack.test.ts:85, 3ms)
+     - stdout: expected "C:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-kUKI8r\n", got "C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\bunshell-conf-kUKI8r\n"
+FAIL pipeline_stack/pwd-cd-pwd-cd-in-middle-doesn-t-affect  (test/js/bun/shell/pipeline_stack.test.ts:93, 1ms)
+     - stdout: expected "C:/Users/RUNNER~1/AppData/Local/Temp/bunshell-conf-UUNY4O\n", got "C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\bunshell-conf-UUNY4O\n"

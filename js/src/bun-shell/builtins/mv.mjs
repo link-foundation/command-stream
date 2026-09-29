@@ -17,6 +17,7 @@ import { ShellSysError, sysErrorFromNode } from '../io.mjs';
 const { O_RDONLY, O_WRONLY, O_CREAT, O_TRUNC, O_DIRECTORY, O_NOFOLLOW } =
   fs.constants;
 const BATCH_SIZE = 5;
+const IS_WINDOWS = process.platform === 'win32';
 
 /** `openat(cwd, p)`: absolute paths as is, others joined onto the cwd. */
 function atPath(cwd, p) {
@@ -293,12 +294,38 @@ function moveDirAcrossDevices(st, src, srcName, dst, dstName) {
   }
 }
 
+/**
+ * The POSIX `rename()` error for a failed Windows rename: ENOTDIR for a
+ * directory onto a non-directory, EISDIR for the reverse. Bun's Windows
+ * `renameat` errors carry no path.
+ */
+function windowsRenameError(e, src, dst) {
+  const kind = (p) => {
+    try {
+      return fs.lstatSync(p).isDirectory() ? 'dir' : 'other';
+    } catch {
+      return null;
+    }
+  };
+  const [s, d] = [kind(src), kind(dst)];
+  const code =
+    s === 'dir' && d === 'other'
+      ? 'ENOTDIR'
+      : s === 'other' && d === 'dir'
+        ? 'EISDIR'
+        : null;
+  return code ? new ShellSysError(code, { syscall: 'rename' }) : sysErr(e, '');
+}
+
 /** `renameat()`, falling back to a copy on EXDEV. Errors carry `srcName`. */
 function doRename(src, srcName, dst, dstName) {
   try {
     fs.renameSync(src, dst);
     return null;
   } catch (e) {
+    if (IS_WINDOWS) {
+      return windowsRenameError(e, src, dst);
+    }
     if (e.code !== 'EXDEV') {
       return sysErr(e, srcName);
     }
@@ -325,11 +352,16 @@ function moveInDir(cwd, target, src) {
   return err;
 }
 
-/** ShellMvCheckTargetTask: true if the target opens as a directory. */
+/**
+ * ShellMvCheckTargetTask: true if the target opens as a directory. Windows
+ * has no O_DIRECTORY (Node opens any file there), so it checks the type.
+ */
 function targetIsDir(cwd, target) {
   try {
-    fs.closeSync(fs.openSync(atPath(cwd, target), O_RDONLY | O_DIRECTORY));
-    return true;
+    const fd = fs.openSync(atPath(cwd, target), O_RDONLY | O_DIRECTORY);
+    const dir = !IS_WINDOWS || fs.fstatSync(fd).isDirectory();
+    fs.closeSync(fd);
+    return dir;
   } catch (e) {
     if (e.code === 'ENOTDIR') {
       return false;
