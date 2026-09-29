@@ -22,6 +22,14 @@
 //! The conformance corpus in `conformance/bun-shell/` is the specification;
 //! `rust/tests/bun_shell_conformance.rs` runs it against this module.
 
+pub(crate) mod builtin;
+pub(crate) mod builtins;
+pub(crate) mod env;
+pub(crate) mod errno;
+pub(crate) mod io;
+pub(crate) mod node_path;
+pub(crate) mod subprocess;
+
 use std::collections::HashMap;
 use std::fmt;
 use std::path::PathBuf;
