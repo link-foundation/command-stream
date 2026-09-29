@@ -54,6 +54,20 @@ describe('cli', () => {
     assert.match(help.stdout, /zx/);
   });
 
+  test('help names the package version and the mirrored zx version', async () => {
+    const pkg = JSON.parse(
+      fs.readFileSync(path.join(PKG_ROOT, 'package.json'), 'utf8')
+    );
+    const { VERSION } = await import('../../src/zx/index.mjs');
+    const p = $`node ${CLI} -h`;
+    p.stdin.end();
+    const help = (await p).stdout.replace(/\u001B\[[\d;]*m/g, '');
+    assert.ok(
+      help.includes(`command-stream ${pkg.version} (zx ${VERSION} compatible)`),
+      help
+    );
+  });
+
   test('[zx:test/cli.test.js:63:3:registration] zx prints usage if no param passed', async () => {
     const p = $`node ${CLI}`;
     p.stdin.end();

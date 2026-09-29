@@ -94,9 +94,14 @@ export function autorun(meta) {
   });
 }
 
+// The package's own version; VERSION is the zx release this layer mirrors.
+const PKG_VERSION = createRequire(import.meta.url)(
+  '../../package.json'
+).version;
+
 export function printUsage() {
   console.log(`
- ${chalk.bold(`command-stream ${VERSION}`)} (zx ${VERSION} compatible)
+ ${chalk.bold(`command-stream ${PKG_VERSION}`)} (zx ${VERSION} compatible)
    A tool for writing better scripts
 
  ${chalk.bold('Usage')}
