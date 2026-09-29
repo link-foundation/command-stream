@@ -27,8 +27,28 @@ use std::fmt;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
+mod braces;
 #[cfg_attr(not(test), allow(dead_code))]
 pub(crate) mod glob;
+mod lexer;
+// The AST helpers are for the interpreter, which is not ported yet.
+#[allow(dead_code)]
+mod parser;
+mod template;
+
+pub use braces::BraceError;
+
+/// `$.braces(pattern)`: expand a brace pattern into words, e.g.
+/// `"echo {a,b}"` into `["echo a", "echo b"]`.
+pub fn braces(pattern: &str) -> Result<Vec<String>, BraceError> {
+    braces::braces(pattern)
+}
+
+/// `$.escape(s)`: escape a string for use in a script, quoting it when it
+/// contains special characters.
+pub fn escape(s: &str) -> String {
+    template::shell_escape(s)
+}
 
 /// A fixed-size byte buffer that receives output (`> ${buf}` in JavaScript,
 /// where `buf` is a `Uint8Array`). Output beyond its size is dropped.
@@ -308,19 +328,27 @@ pub struct ShellCommand {
     throws: bool,
 }
 
-/// The parsed form of a template (filled in by the parser port).
+/// The parsed form of a template.
 #[derive(Debug)]
-struct ParsedScript {
-    source: Vec<String>,
-    values: Vec<ShellValue>,
+#[allow(dead_code)]
+pub(crate) struct ParsedScript {
+    pub(crate) ast: parser::Script,
+    /// Strings referenced by `\x08__bunstr_N\x08` placeholders.
+    pub(crate) jsstrings: Vec<String>,
+    /// Values referenced by `\x08__bun_N\x08` placeholders (buffers).
+    pub(crate) jsobjs: Vec<ShellValue>,
 }
 
 impl ShellCommand {
     fn parse(strings: &[&str], values: Vec<ShellValue>) -> Result<Self, ShellError> {
+        let src = template::build_shell_source(strings, values).map_err(ShellError::parse)?;
+        let ast = parser::parse(&src.script, &src.jsstrings, src.jsobjs.len())
+            .map_err(ShellError::parse)?;
         Ok(Self {
             script: ParsedScript {
-                source: strings.iter().map(|s| s.to_string()).collect(),
-                values,
+                ast,
+                jsstrings: src.jsstrings,
+                jsobjs: src.jsobjs,
             },
             cwd: None,
             env: std::env::vars().collect(),
@@ -366,7 +394,7 @@ impl ShellCommand {
 
     /// Run the script to completion.
     pub async fn run(self) -> Result<ShellOutput, ShellError> {
-        let _ = (&self.script.source, &self.script.values, self.quiet);
+        let _ = (&self.script, self.quiet);
         Err(ShellError::system(
             "bun_shell: interpreter not implemented yet",
         ))
@@ -375,5 +403,56 @@ impl ShellCommand {
     /// Run quietly and return stdout as text.
     pub async fn text(self) -> Result<String, ShellError> {
         Ok(self.quiet().run().await?.text())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parse_error(strings: &[&str], values: Vec<ShellValue>) -> ShellError {
+        match shell(strings, values) {
+            Ok(_) => panic!("expected a parse error for {strings:?}"),
+            Err(e) => e,
+        }
+    }
+
+    #[test]
+    fn frontend_errors_are_parse_errors_with_the_js_message() {
+        let e = parse_error(&["echo ("], vec![]);
+        assert_eq!(e.kind, ShellErrorKind::Parse);
+        assert_eq!(e.message, "Unclosed subshell");
+        let e = parse_error(&["echo $(echo"], vec![]);
+        assert_eq!(e.message, "Unclosed command substitution");
+        let e = parse_error(&["echo hi &"], vec![]);
+        assert_eq!(
+            e.message,
+            "Background commands \"&\" are not supported yet."
+        );
+        let e = parse_error(&["echo ", ""], vec![ShellValue::Str("a\0b".into())]);
+        assert_eq!(e.kind, ShellErrorKind::Parse);
+    }
+
+    #[test]
+    fn parse_keeps_interpolated_strings_and_objects() {
+        let cmd = shell(
+            &["cat ", " < ", ""],
+            vec![ShellValue::from("a b"), ShellValue::Bytes(b"x".to_vec())],
+        )
+        .unwrap();
+        assert_eq!(cmd.script.jsstrings, ["a b"]);
+        assert_eq!(cmd.script.jsobjs.len(), 1);
+        assert_eq!(cmd.script.ast.stmts.len(), 1);
+    }
+
+    #[test]
+    fn braces_and_escape() {
+        assert_eq!(braces("x{a,b}").unwrap(), ["xa", "xb"]);
+        assert_eq!(
+            braces(&"{a,b}".repeat(17)).unwrap_err(),
+            BraceError::TooManyExpansions(131072)
+        );
+        assert_eq!(escape("a b"), "\"a b\"");
+        assert_eq!(escape("ab"), "ab");
     }
 }
