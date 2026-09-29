@@ -74,9 +74,7 @@ export class ShellSysError extends Error {
 
   /** Bun's `ShellErr::Sys` display: "bun: {message}: {path}". */
   display() {
-    return this.path
-      ? `bun: ${this.message}: ${this.path}`
-      : `bun: ${this.message}`;
+    return `bun: ${this.message}: ${this.path}`;
   }
 }
 
@@ -321,6 +319,25 @@ export class ChannelTarget {
   }
 }
 
+/** fs.read that waits out EAGAIN on non-blocking fds (a shared stdin). */
+function readRetrying(fd, buf) {
+  return new Promise((resolve, reject) => {
+    const step = () =>
+      fs.read(fd, buf, 0, buf.length, null, (err, bytes) => {
+        if (err?.code === 'EAGAIN') {
+          setTimeout(step, 5);
+        } else if (err?.code === 'EOF') {
+          resolve(0);
+        } else if (err) {
+          reject(err);
+        } else {
+          resolve(bytes);
+        }
+      });
+    step();
+  });
+}
+
 /**
  * IOReader: the read side of an input. Sources:
  *   {type: 'channel', channel}   a pipeline pipe
@@ -342,27 +359,15 @@ export class Reader {
       }
       return;
     }
-    if (src.type === 'fd') {
+    if (src.type === 'fd' || src.type === 'stdin') {
+      const fd = src.type === 'fd' ? src.fd : 0;
       const buf = Buffer.alloc(64 * 1024);
       for (;;) {
-        const n = await new Promise((resolve, reject) =>
-          fs.read(src.fd, buf, 0, buf.length, null, (err, bytes) =>
-            err ? reject(err) : resolve(bytes)
-          )
-        );
+        const n = await readRetrying(fd, buf);
         if (n === 0) {
           return;
         }
         yield Buffer.from(buf.subarray(0, n));
-      }
-    }
-    if (src.type === 'stdin') {
-      const stdin = globalThis.process?.stdin;
-      if (!stdin || stdin.isTTY === undefined) {
-        return;
-      }
-      for await (const c of stdin) {
-        yield Buffer.from(c);
       }
     }
   }
