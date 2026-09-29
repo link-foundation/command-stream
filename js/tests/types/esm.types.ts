@@ -115,6 +115,16 @@ export async function entryPoints(): Promise<void> {
   const syncResult = spawn.sync('node', ['--version']);
   expectType<Equal<typeof syncResult.status, number | null>>();
   use(child, same);
+
+  // `$.zx` is the zx-compatible `$` of `command-stream/zx`.
+  const zxOutput = await $.zx({ nothrow: true })`echo ${'hi'}`;
+  expectType<Equal<typeof zxOutput.exitCode, number | null>>();
+  const zxText: string = zxOutput.stdout;
+  const zxSync = $.zx.sync`echo hi`;
+  expectType<Equal<typeof zxSync.ok, boolean>>();
+  // @ts-expect-error - `$.zx` is read-only
+  $.zx = $.zx;
+  use(zxText);
 }
 
 export async function processRunner(runner: ProcessRunner): Promise<void> {

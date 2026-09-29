@@ -444,6 +444,8 @@ export interface CrossSpawn {
 export interface Dollar extends CommandTag {
   (options: ProcessOptions): CommandTag;
   spawn: CrossSpawn;
+  /** zx compatibility mode: the `$` of `command-stream/zx`. */
+  readonly zx: typeof import('./zx-api.cjs').$;
 }
 
 export declare const $: Dollar;
