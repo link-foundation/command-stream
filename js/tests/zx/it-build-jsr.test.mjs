@@ -37,6 +37,10 @@ describe(
         recursive: true,
       });
       fs.copyFileSync(
+        path.join(ROOT, 'src/$.local-bin.mjs'),
+        path.join(tmp, 'src/$.local-bin.mjs')
+      );
+      fs.copyFileSync(
         path.join(ROOT, 'README.md'),
         path.join(tmp, 'README.md')
       );

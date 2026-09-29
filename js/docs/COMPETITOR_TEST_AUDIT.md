@@ -181,7 +181,10 @@ or verbose output hooks beyond command-stream's typed chunk stream.
 ### local-binary-resolution
 
 Execa and zx can resolve project-local binaries and prefer local executables.
-command-stream currently follows the supplied executable and environment path.
+The default JavaScript and Rust runners now support `preferLocal`/`prefer_local`
+using the same resolver as their zx and Bun Shell compatibility layers. Execa's
+dedicated `preferLocal` options and `node` binary resolution still need separate
+audit.
 
 ### windows-shebang-and-pathext-resolution
 

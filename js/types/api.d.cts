@@ -51,6 +51,8 @@ export interface ProcessOptions {
   cwd?: string;
   /** Environment of the command (replaces `process.env`, not merged). */
   env?: NodeJS.ProcessEnv | Record<string, string | undefined>;
+  /** Resolve project executables from `<cwd>/node_modules/.bin` (or explicit directories) first. */
+  preferLocal?: boolean | string | string[];
   /** Pass the TTY through to the command when stdin/stdout/stderr are TTYs. */
   interactive?: boolean;
   /** Let the built-in parser handle `&&`, `||`, `;` and subshells. Default: `true`. */

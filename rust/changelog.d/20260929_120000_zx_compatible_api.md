@@ -11,3 +11,6 @@ bump: minor
   and the goods (`sleep`, `retry`, `exp_backoff`, `spinner`, `echo`,
   `tempdir`, `tempfile`, `which`, `glob`, `parse_argv`/`minimist`, `dotenv`,
   `transform_markdown`, `log`). Its tests port the zx unit vectors.
+- `RunOptions::prefer_local` uses the same project-local executable resolver
+  as the zx and Bun shells, so the default `ProcessRunner` and
+  `StreamingRunner` can find local binaries.

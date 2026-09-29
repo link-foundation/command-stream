@@ -20,8 +20,7 @@ use tokio::sync::{mpsc, watch};
 use super::error::{ZxError, DOCS_URL};
 use super::kill::{kill_tree, signal_name};
 use super::output::{ErrorInfo, ProcessOutput};
-use super::shell::{Options, PreferLocal};
-use super::util::{path_key, prefer_local_bin};
+use super::shell::Options;
 
 /// Which stream of a source command feeds a pipe.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -427,27 +426,7 @@ fn configure_command(
     if let Some(env) = &opts.env {
         command.env_clear().envs(env);
     }
-    let dirs = match &opts.prefer_local {
-        PreferLocal::Off => Vec::new(),
-        PreferLocal::Cwd => vec![cwd.to_path_buf()],
-        PreferLocal::Dirs(dirs) => dirs.clone(),
-    };
-    if !dirs.is_empty() {
-        let (key, current) = match &opts.env {
-            Some(env) => {
-                let key = path_key(env.keys());
-                let value = env.get(&key).cloned();
-                (key, value)
-            }
-            None => {
-                let vars: Vec<String> = std::env::vars().map(|(k, _)| k).collect();
-                let key = path_key(vars.iter());
-                let value = std::env::var(&key).ok();
-                (key, value)
-            }
-        };
-        command.env(key, prefer_local_bin(current.as_deref(), &dirs));
-    }
+    crate::local_bin::apply_prefer_local(&mut command, opts.env.as_ref(), cwd, &opts.prefer_local);
     #[cfg(unix)]
     command.process_group(0);
     command

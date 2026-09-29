@@ -81,6 +81,14 @@ echo(await $`pwd`);
 
 The zx layer is the entry point. The core `$` from `command-stream` adds:
 
+- **Project-local executables.** Pass `{ cwd: project, preferLocal: true }` to
+  the default `$` or `run()` to search `project/node_modules/.bin` before
+  `PATH`. `preferLocal` also accepts a directory or an ordered directory
+  array. The default runner and zx use the same local-bin resolver, so this
+  capability is available without switching to `$.zx`. Rust's default
+  `RunOptions { prefer_local: PreferLocal::Cwd, .. }`, `StreamingRunner`, and
+  `zx::Shell` likewise share the resolver. `$.bun.preferLocal()` and Rust's
+  `bun_shell::Shell` use it as well.
 - **Built-in commands.** `cat`, `ls`, `mkdir`, `rm`, `mv`, `cp`, `touch`,
   `basename`, `dirname`, `seq`, `tee`, `yes`, `cd`, `pwd`, `echo`, `sleep`,
   `true`, `false`, `which`, `exit`, `env` and `test` run in-process, so the same

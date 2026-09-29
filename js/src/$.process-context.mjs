@@ -1,3 +1,5 @@
+import { resolvePreferredEnv } from './$.local-bin.mjs';
+
 const PROCESS_CONTEXT_KEY = '_commandStreamProcessContext';
 
 export function effectiveCwd(runner) {
@@ -5,7 +7,8 @@ export function effectiveCwd(runner) {
 }
 
 export function effectiveEnv(runner) {
-  return runner._effectiveEnv ?? runner.options.env;
+  const { env, cwd, preferLocal } = runner.options;
+  return runner._effectiveEnv ?? resolvePreferredEnv(env, cwd, preferLocal);
 }
 
 export function applyVirtualProcessContext(runner, result) {

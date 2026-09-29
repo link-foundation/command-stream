@@ -16,23 +16,12 @@ use super::process::ProcessPromise;
 use super::util::{
     build_cmd, parse_bool, parse_duration, quote, quote_powershell, to_camel_case, QuoteFn, ZxArg,
 };
+pub use crate::local_bin::PreferLocal;
 
 /// Prefix used by bash so that failures inside pipelines are not hidden.
 pub const BASH_PREFIX: &str = "set -euo pipefail;";
 /// Postfix used by PowerShell so that the exit code is propagated.
 pub const POWERSHELL_POSTFIX: &str = "; exit $LastExitCode";
-
-/// Which directories get their `node_modules/.bin` prepended to `PATH`.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub enum PreferLocal {
-    /// Leave `PATH` untouched.
-    #[default]
-    Off,
-    /// Use the command's working directory.
-    Cwd,
-    /// Use the given directories (in order).
-    Dirs(Vec<PathBuf>),
-}
 
 /// Options controlling how commands are run (the fields of zx `$`).
 #[derive(Debug, Clone)]

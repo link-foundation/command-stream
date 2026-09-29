@@ -16,7 +16,7 @@ export async function commonJs(): Promise<void> {
   // The module is the `$` function with every named export attached.
   expectType<Equal<typeof $.$, typeof $>>();
   expectType<Equal<typeof $.default, typeof $>>();
-  const quiet: $.CommandTag = $({ mirror: false });
+  const quiet: $.CommandTag = $({ mirror: false, preferLocal: ['./local'] });
   const created: $.CommandTag = $.create({ capture: true });
   const direct = new $.ProcessRunner({ mode: 'shell', command: 'true' });
   const shResult: Promise<$.StreamResult> = $.sh('echo hi');

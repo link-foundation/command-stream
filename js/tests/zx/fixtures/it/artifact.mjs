@@ -20,6 +20,7 @@ export const IT_TIMEOUT = 180_000;
 // Every module the `command-stream/zx/core` entry reaches, the counterpart of
 // the file list upstream's `zx@lite` package ships.
 export const LITE_FILES = [
+  'src/$.local-bin.mjs',
   'src/zx/core.cjs',
   'src/zx/core.mjs',
   'src/zx/error.mjs',

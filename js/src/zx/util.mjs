@@ -4,9 +4,9 @@
 // utility so scripts written for zx keep working unchanged, but the code is an
 // independent implementation that only relies on Node.js built-ins.
 
-import path from 'node:path';
-import process from 'node:process';
 import { Buffer } from 'node:buffer';
+
+export { pathKey, preferLocalBin } from '../$.local-bin.mjs';
 
 export const noop = () => {};
 
@@ -32,44 +32,6 @@ export const bufArrJoin = (chunks) =>
 export const getLast = (list) => list[list.length - 1];
 
 export const isPromiseLike = (value) => typeof value?.then === 'function';
-
-/**
- * Case-insensitive lookup of the PATH variable name (`Path` on Windows).
- *
- * @param {object} env Environment map.
- * @returns {string} The key that holds the search path.
- */
-export function pathKey(env) {
-  if (process.platform !== 'win32') {
-    return 'PATH';
-  }
-  return (
-    Object.keys(env)
-      .reverse()
-      .find((key) => key.toUpperCase() === 'PATH') || 'Path'
-  );
-}
-
-/**
- * Prepend `<dir>/node_modules/.bin` and `<dir>` for every directory to PATH.
- *
- * @param {object} env Environment map (not mutated).
- * @param {...string} dirs Directories that should win the binary lookup.
- * @returns {object} A new environment map.
- */
-export function preferLocalBin(env, ...dirs) {
-  const key = pathKey(env);
-  const value = dirs
-    .filter(Boolean)
-    .flatMap((dir) => [
-      path.resolve(dir, 'node_modules', '.bin'),
-      path.resolve(dir),
-    ])
-    .concat(env[key])
-    .filter(Boolean)
-    .join(path.delimiter);
-  return { ...env, [key]: value };
-}
 
 const SAFE_WORD = /^[\w/.\-+@:=,%]+$/;
 

@@ -6,6 +6,7 @@ use std::time::Duration;
 
 use super::error::ZxError;
 use super::output::ProcessOutput;
+pub use crate::local_bin::{path_key, prefer_local_bin, PATH_DELIMITER};
 
 /// Signature of the quoting function used to interpolate arguments.
 pub type QuoteFn = fn(&str) -> String;
@@ -128,54 +129,6 @@ pub fn parse_bool(value: &str) -> Option<bool> {
         "false" => Some(false),
         _ => None,
     }
-}
-
-/// Platform `PATH` list separator.
-pub const PATH_DELIMITER: &str = if cfg!(windows) { ";" } else { ":" };
-
-/// Name of the `PATH` variable inside `env` (Windows keys are case-insensitive).
-pub fn path_key<'a, I>(keys: I) -> String
-where
-    I: IntoIterator<Item = &'a String>,
-{
-    if cfg!(windows) {
-        keys.into_iter()
-            .find(|k| k.eq_ignore_ascii_case("path"))
-            .cloned()
-            .unwrap_or_else(|| "Path".to_string())
-    } else {
-        "PATH".to_string()
-    }
-}
-
-fn absolutize(dir: &Path) -> PathBuf {
-    if dir.is_absolute() {
-        dir.to_path_buf()
-    } else {
-        std::env::current_dir()
-            .map(|cwd| cwd.join(dir))
-            .unwrap_or_else(|_| dir.to_path_buf())
-    }
-}
-
-/// Build a `PATH` value that prefers `<dir>/node_modules/.bin` and `<dir>`
-/// for every directory in `dirs`, followed by the existing `path`.
-pub fn prefer_local_bin<P: AsRef<Path>>(path: Option<&str>, dirs: &[P]) -> String {
-    let mut parts: Vec<String> = Vec::new();
-    for dir in dirs {
-        let dir = absolutize(dir.as_ref());
-        parts.push(
-            dir.join("node_modules")
-                .join(".bin")
-                .to_string_lossy()
-                .into_owned(),
-        );
-        parts.push(dir.to_string_lossy().into_owned());
-    }
-    if let Some(path) = path {
-        parts.push(path.to_string());
-    }
-    parts.join(PATH_DELIMITER)
 }
 
 /// Random lower-case alphanumeric identifier (used for temp names and ids).
