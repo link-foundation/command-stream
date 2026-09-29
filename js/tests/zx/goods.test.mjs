@@ -190,18 +190,21 @@ describe('goods', () => {
     });
 
     test('[zx:test/goods.test.ts:189:5:registration] integration with expBackoff', async () => {
-      const now = Date.now();
       const p = await zx(`
+    const started = Date.now()
     try {
-      await retry(5, expBackoff('60s', 0), () => $\`exit 123\`)
+      await retry(5, expBackoff('60s', 2), () => $\`exit 123\`)
     } catch (e) {
       echo('exitCode:', e.exitCode)
     }
     echo('success')
+    echo('elapsed:', Date.now() - started)
 `);
       assert.ok(p.toString().includes('exitCode: 123'));
       assert.ok(p.toString().includes('success'));
-      assert.ok(Date.now() >= now + 2 + 4 + 8 + 16 + 32);
+      const elapsed = Number(p.toString().match(/elapsed: (\d+)/)?.[1]);
+      // Five sleeps total 62ms; allow some room for timer granularity.
+      assert.ok(elapsed >= 50, `expected backoff, got ${elapsed}ms`);
     });
   });
 
