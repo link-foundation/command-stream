@@ -4,7 +4,7 @@
 import assert from 'node:assert';
 import { test, describe, before, after, it } from 'node:test';
 import { inspect } from 'node:util';
-import { basename } from 'node:path';
+import path, { basename } from 'node:path';
 import { WriteStream } from 'node:fs';
 import { Readable, Transform, Writable } from 'node:stream';
 import { Socket } from 'node:net';
@@ -37,6 +37,7 @@ import {
   fetch,
 } from '../../src/zx/index.mjs';
 import { noop } from '../../src/zx/util.mjs';
+import { shellPath, slash, TMP } from './fixtures/paths.mjs';
 import { EventEmitter } from 'node:events';
 
 // `Promise.withResolvers()` (used upstream) arrived in Node 22; the zx layer
@@ -192,7 +193,7 @@ describe('core', () => {
       } catch {
         assert.unreachable();
       } finally {
-        await fs.rmdir(`/tmp/${name}`);
+        await fs.rmdir(`${TMP}/${name}`);
       }
     });
 
@@ -387,13 +388,19 @@ describe('core', () => {
       });
 
       test('[zx:test/core.test.js:382:7:registration] `preferLocal` preserves env', async () => {
+        // `<dir>/node_modules/.bin:<dir>` for each dir, as the shell spells
+        // them (Git Bash: `D:\foo` -> `/d/foo`).
+        const local = (...dirs) =>
+          dirs
+            .flatMap((d) => [
+              shellPath(path.resolve(d, 'node_modules', '.bin')),
+              shellPath(path.resolve(d)),
+            ])
+            .join(':');
         const cases = [
-          [true, `${process.cwd()}/node_modules/.bin:${process.cwd()}:`],
-          ['/foo', `/foo/node_modules/.bin:/foo:`],
-          [
-            ['/bar', '/baz'],
-            `/bar/node_modules/.bin:/bar:/baz/node_modules/.bin:/baz`,
-          ],
+          [true, `${local(process.cwd())}:`],
+          ['/foo', `${local('/foo')}:`],
+          [['/bar', '/baz'], local('/bar', '/baz')],
         ];
 
         for (const [preferLocal, expected] of cases) {
@@ -801,7 +808,9 @@ describe('core', () => {
           const p1 = $`echo foo`;
           const p2 = $h`echo a && sleep 0.1 && echo c && sleep 0.2 && echo e`;
           const p3 = $h`sleep 0.05 && echo b && sleep 0.1 && echo d`;
-          const p4 = $`sleep 0.4 && echo bar`;
+          // p4 starts now, p2 only at `p5.run()` after `await p1`: upstream's
+          // `sleep 0.4` leaves 100 ms for that, too little on slow runners.
+          const p4 = $`sleep 1 && echo bar`;
           const p5 = $h`cat`;
 
           await p1;
@@ -1612,21 +1621,21 @@ describe('core', () => {
     test('[zx:test/core.test.js:1578:5:registration] works with relative paths', async () => {
       const cwd = process.cwd();
       try {
-        fs.mkdirpSync('/tmp/zx-cd-test/one/two');
-        cd('/tmp/zx-cd-test/one/two');
+        fs.mkdirpSync(`${TMP}/zx-cd-test/one/two`);
+        cd(`${TMP}/zx-cd-test/one/two`);
         const p1 = $`pwd`;
         assert.equal($.cwd, undefined);
-        assert.ok(process.cwd().endsWith('/two'));
+        assert.ok(slash(process.cwd()).endsWith('/two'));
 
         cd('..');
         const p2 = $`pwd`;
         assert.equal($.cwd, undefined);
-        assert.ok(process.cwd().endsWith('/one'));
+        assert.ok(slash(process.cwd()).endsWith('/one'));
 
         cd('..');
         const p3 = $`pwd`;
         assert.equal($.cwd, undefined);
-        assert.ok(process.cwd().endsWith('/tmp/zx-cd-test'));
+        assert.ok(slash(process.cwd()).endsWith(`${slash(TMP)}/zx-cd-test`));
 
         const results = (await Promise.all([p1, p2, p3])).map((p) =>
           basename(p.stdout.trim())
@@ -1635,8 +1644,9 @@ describe('core', () => {
       } catch (e) {
         assert.ok(!e, e);
       } finally {
-        fs.rmSync('/tmp/zx-cd-test', { recursive: true });
+        // Leave the dir first: Windows cannot remove the working directory.
         cd(cwd);
+        fs.rmSync(`${TMP}/zx-cd-test`, { recursive: true });
       }
     });
 
@@ -1651,13 +1661,17 @@ describe('core', () => {
         syncProcessCwd();
         const cwd = process.cwd();
         try {
-          fs.mkdirpSync('/tmp/zx-cd-parallel/one/two');
+          fs.mkdirpSync(`${TMP}/zx-cd-parallel/one/two`);
           await Promise.all([
             within(async () => {
               assert.equal(process.cwd(), cwd);
-              cd('/tmp/zx-cd-parallel/one');
+              cd(`${TMP}/zx-cd-parallel/one`);
               await sleep(Math.random() * 15);
-              assert.ok(process.cwd().endsWith('/tmp/zx-cd-parallel/one'));
+              assert.ok(
+                slash(process.cwd()).endsWith(
+                  `${slash(TMP)}/zx-cd-parallel/one`
+                )
+              );
             }),
             within(async () => {
               assert.equal(process.cwd(), cwd);
@@ -1667,7 +1681,7 @@ describe('core', () => {
             within(async () => {
               assert.equal(process.cwd(), cwd);
               await sleep(Math.random() * 15);
-              $.cwd = '/tmp/zx-cd-parallel/one/two';
+              $.cwd = `${TMP}/zx-cd-parallel/one/two`;
               assert.equal(process.cwd(), cwd);
               assert.ok(
                 (await $`pwd`).stdout
@@ -1680,8 +1694,8 @@ describe('core', () => {
         } catch (e) {
           assert.ok(!e, e);
         } finally {
-          fs.rmSync('/tmp/zx-cd-parallel', { recursive: true });
           cd(cwd);
+          fs.rmSync(`${TMP}/zx-cd-parallel`, { recursive: true });
           syncProcessCwd(false);
         }
       }
@@ -1693,7 +1707,11 @@ describe('core', () => {
 
     test('[zx:test/core.test.js:1652:5:registration] accepts ProcessOutput in addition to string', async () => {
       await within(async () => {
-        const tmp = await $`mktemp -d`;
+        // Git Bash prints `/tmp/...`; hand Node the Windows spelling.
+        const tmp =
+          process.platform === 'win32'
+            ? await $`cygpath -w "$(mktemp -d)"`
+            : await $`mktemp -d`;
         cd(tmp);
         assert.equal(
           basename(process.cwd()),
@@ -1756,8 +1774,8 @@ describe('core', () => {
       const pwd = await $`pwd`;
 
       within(async () => {
-        cd('/tmp');
-        assert.ok(process.cwd().endsWith('/tmp'));
+        cd(TMP);
+        assert.ok(slash(process.cwd()).endsWith(slash(TMP)));
         assert.ok((await $`pwd`).stdout.trim().endsWith('/tmp'));
 
         setTimeout(async () => {

@@ -5,6 +5,7 @@ import assert from 'node:assert';
 import { test, describe } from 'node:test';
 import '../../src/zx/globals.mjs';
 import * as index from '../../src/zx/index.mjs';
+import { nativePath } from './fixtures/paths.mjs';
 /* global global, $, cd, path */
 
 // Upstream deletes the globals after the suite. Bun runs every test file in
@@ -15,7 +16,10 @@ describe('global', () => {
   test('[zx:test/global.test.js:27:3:registration] global cd()', async () => {
     const cwd = (await $`pwd`).toString().trim();
     cd('/');
-    assert.equal((await $`pwd`).toString().trim(), path.resolve('/'));
+    assert.equal(
+      nativePath((await $`pwd`).toString().trim()),
+      nativePath(path.resolve('/'))
+    );
     cd(cwd);
     assert.equal((await $`pwd`).toString().trim(), cwd);
   });

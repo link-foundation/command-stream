@@ -2,6 +2,7 @@
 import assert from 'assert';
 import 'command-stream/zx/globals';
 import { fakeServer } from '../server.mjs';
+import { isPwd } from '../paths.mjs';
 /* global $, within, tmpdir, ps, which */
 (async () => {
   // smoke test
@@ -31,17 +32,17 @@ import { fakeServer } from '../server.mjs';
         $.cwd = t3;
         assert.equal($.cwd, t3);
 
-        assert.ok((await $`pwd`).toString().trim().endsWith(t3));
+        assert.ok(isPwd((await $`pwd`).toString(), t3));
         assert.equal($.cwd, t3);
       });
 
       await $`pwd`;
-      assert.ok((await $`pwd`).toString().trim().endsWith(t1));
+      assert.ok(isPwd((await $`pwd`).toString(), t1));
       assert.equal($.cwd, t1);
-      assert.ok((await $`pwd`).toString().trim().endsWith(t1));
+      assert.ok(isPwd((await $`pwd`).toString(), t1));
 
       $.cwd = t3;
-      assert.ok((await $`pwd`).toString().trim().endsWith(t3));
+      assert.ok(isPwd((await $`pwd`).toString(), t3));
       assert.equal($.cwd, t3);
 
       await w;

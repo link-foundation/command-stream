@@ -75,9 +75,18 @@ export const runOk = async (bin, args, opts) => {
   return result;
 };
 
-/** Path of a dev tool installed in js/node_modules/.bin. */
-export const devBin = (name) =>
-  path.join(ROOT, 'node_modules', '.bin', IS_WIN ? `${name}.cmd` : name);
+/**
+ * Path of a dev tool installed in js/node_modules/.bin. On Windows npm writes
+ * `.cmd` shims there and `bun install` writes `.exe` ones.
+ */
+export const devBin = (name) => {
+  const bin = path.join(ROOT, 'node_modules', '.bin', name);
+  if (!IS_WIN) {
+    return bin;
+  }
+  const shims = [`${bin}.exe`, `${bin}.cmd`];
+  return shims.find((shim) => fs.existsSync(shim)) ?? shims[1];
+};
 
 const readString = (buf, start, length) =>
   buf.toString('utf8', start, start + length).replace(/\0[\s\S]*$/, '');

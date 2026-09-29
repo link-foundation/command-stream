@@ -8,6 +8,7 @@ import assert from 'node:assert';
 import { test, describe } from 'node:test';
 import { $, within, tmpdir } from '../../src/zx/index.mjs';
 import '../../src/zx/cli.mjs';
+import { isPwd } from './fixtures/paths.mjs';
 
 describe('bun', () => {
   test('[zx:test/smoke/bun.test.js:21:3:registration] smoke test', async () => {
@@ -37,17 +38,17 @@ describe('bun', () => {
         $.cwd = t3;
         assert.equal($.cwd, t3);
 
-        assert.ok((await $`pwd`).toString().trim().endsWith(t3));
+        assert.ok(isPwd((await $`pwd`).toString(), t3));
         assert.equal($.cwd, t3);
       });
 
       await $`pwd`;
-      assert.ok((await $`pwd`).toString().trim().endsWith(t1));
+      assert.ok(isPwd((await $`pwd`).toString(), t1));
       assert.equal($.cwd, t1);
-      assert.ok((await $`pwd`).toString().trim().endsWith(t1));
+      assert.ok(isPwd((await $`pwd`).toString(), t1));
 
       $.cwd = t3;
-      assert.ok((await $`pwd`).toString().trim().endsWith(t3));
+      assert.ok(isPwd((await $`pwd`).toString(), t3));
       assert.equal($.cwd, t3);
 
       await w;

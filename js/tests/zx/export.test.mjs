@@ -294,8 +294,10 @@ describe('index', () => {
     assert.equal(typeof index.fs.ftruncateSync, 'function', 'index.fs.ftruncateSync')
     assert.equal(typeof index.fs.futimes, 'function', 'index.fs.futimes')
     assert.equal(typeof index.fs.futimesSync, 'function', 'index.fs.futimesSync')
-    assert.equal(typeof index.fs.glob, 'function', 'index.fs.glob')
-    assert.equal(typeof index.fs.globSync, 'function', 'index.fs.globSync')
+    // Re-exported from node:fs, which added it in Node 22.
+    assert.equal(typeof index.fs.glob, typeof nodeFs.glob, 'index.fs.glob')
+    // Re-exported from node:fs, which added it in Node 22.
+    assert.equal(typeof index.fs.globSync, typeof nodeFs.globSync, 'index.fs.globSync')
     assert.equal(typeof index.fs.gracefulify, 'function', 'index.fs.gracefulify')
     assert.equal(typeof index.fs.lchmod, 'function', 'index.fs.lchmod')
     assert.equal(typeof index.fs.lchmodSync, 'function', 'index.fs.lchmodSync')
@@ -314,7 +316,8 @@ describe('index', () => {
     assert.equal(typeof index.fs.mkdirs, 'function', 'index.fs.mkdirs')
     assert.equal(typeof index.fs.mkdirsSync, 'function', 'index.fs.mkdirsSync')
     assert.equal(typeof index.fs.mkdtemp, 'function', 'index.fs.mkdtemp')
-    assert.equal(typeof index.fs.mkdtempDisposableSync, 'function', 'index.fs.mkdtempDisposableSync')
+    // Re-exported from node:fs, which added it in Node 24.4.
+    assert.equal(typeof index.fs.mkdtempDisposableSync, typeof nodeFs.mkdtempDisposableSync, 'index.fs.mkdtempDisposableSync')
     assert.equal(typeof index.fs.mkdtempSync, 'function', 'index.fs.mkdtempSync')
     assert.equal(typeof index.fs.move, 'function', 'index.fs.move')
     assert.equal(typeof index.fs.moveSync, 'function', 'index.fs.moveSync')
