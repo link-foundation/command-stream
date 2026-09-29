@@ -452,10 +452,12 @@ export async function runSubprocess({
         }, 3000)
       : null;
   slowTimer?.unref?.();
-  // A short-lived child can exit before the spawn event's awaited promise
-  // resumes (observed with Bun's child_process shim on macOS). Subscribe to
-  // exit/close immediately so those events cannot be lost.
+  // A short-lived child can write and exit before the spawn event's awaited
+  // promise resumes (observed with Bun's child_process shim on macOS).
+  // Subscribe to output and exit/close immediately so neither is lost.
   const closed = waitForClose(child);
+  drainOutput(child.stdout, plans[1], child);
+  drainOutput(child.stderr, plans[2], child);
   const spawnError = await new Promise((resolve) => {
     child.once('spawn', () => resolve(null));
     child.once('error', resolve);
@@ -472,8 +474,6 @@ export async function runSubprocess({
   phase = 'close event';
   let done = false;
   feedStdin(child.stdin, plans[0], () => done);
-  drainOutput(child.stdout, plans[1], child);
-  drainOutput(child.stderr, plans[2], child);
 
   const { code, signal } = await closed;
   phase = 'output flush';
