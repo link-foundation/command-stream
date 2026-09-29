@@ -211,7 +211,7 @@ describe('competitor corpus integrity', () => {
           disposition.kind === 'inapplicable' &&
           disposition.id === 'competitor-api-shape'
       )
-    ).toHaveLength(70);
+    ).toHaveLength(57);
     for (const { id, disposition } of decisions) {
       expect(disposition).toEqual(manifestDecisions.get(id));
     }
@@ -728,5 +728,45 @@ describe('ported public process behavior', () => {
       expect(result.exitCode).toBe(result.code);
     },
     3000
+  );
+
+  port(
+    'zx-compatible-api',
+    'ports every zx unit against command-stream/zx',
+    async () => {
+      const zxUnits = readDispositionManifest().units.filter(
+        ({ source }) => source === 'zx'
+      );
+      const portedIds = new Set(
+        readdirSync(join(testDirectory, 'zx'), { recursive: true })
+          .filter((name) => /\.test\.mjs$/.test(name))
+          .flatMap((name) =>
+            [
+              ...readFileSync(join(testDirectory, 'zx', name), 'utf8').matchAll(
+                /\[(zx:test\/[^\]]+)\]/g
+              ),
+            ].map(([, id]) => id)
+          )
+      );
+
+      expect(zxUnits.length).toBe(291);
+      for (const unit of zxUnits) {
+        expect(unit.disposition).toEqual({
+          kind: 'ported',
+          id: 'zx-compatible-api',
+        });
+        expect(portedIds.has(unit.id)).toBe(true);
+      }
+      expect([...portedIds].sort()).toEqual(zxUnits.map(({ id }) => id).sort());
+
+      const { $: zx$ } = await import('../src/zx/index.mjs');
+      const args = ['two words', '$(echo injected)', ''];
+      const output = await zx$({
+        quiet: true,
+      })`${process.execPath} ${fixturePath} argv ${args}`;
+
+      expect(output.exitCode).toBe(0);
+      expect(JSON.parse(output.stdout)).toEqual(args);
+    }
   );
 });

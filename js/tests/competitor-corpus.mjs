@@ -488,6 +488,13 @@ export const portedCases = [
       'mod.test.ts',
     ],
   },
+  {
+    // Every zx unit is ported one-to-one under js/tests/zx against the
+    // zx-compatible layer (`command-stream/zx`, issue #26).
+    id: 'zx-compatible-api',
+    competitors: ['zx'],
+    upstream: ['test/core.test.js', 'test/cli.test.js', 'test/goods.test.ts'],
+  },
 ];
 
 export const missingFeatures = [
@@ -572,7 +579,7 @@ export const excludedTestClasses = [
   {
     id: 'unrelated-utilities',
     reason:
-      'zx utilities, ShellJS filesystem commands, GitHub Actions tool-cache behavior, and Dax HTTP/console helpers are outside process execution.',
+      'ShellJS filesystem commands, GitHub Actions tool-cache behavior, and Dax HTTP/console helpers are outside process execution.',
   },
   {
     id: 'platform-fixture-mechanics',
