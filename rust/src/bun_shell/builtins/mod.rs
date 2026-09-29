@@ -29,6 +29,7 @@
 use super::builtin::{Builtin, BuiltinKind};
 use super::io::Which;
 
+mod cat;
 pub(crate) mod small;
 
 /// Whether the Rust port implements `kind` (see the module docs).
@@ -40,7 +41,6 @@ pub(crate) fn implemented(kind: BuiltinKind) -> bool {
             | BuiltinKind::Mkdir
             | BuiltinKind::Touch
             | BuiltinKind::Mv
-            | BuiltinKind::Cat
             | BuiltinKind::Cp
     )
 }
@@ -62,12 +62,12 @@ pub(crate) async fn run(b: &mut Builtin<'_>) -> i32 {
         BuiltinKind::Yes => small::yes(b).await,
         BuiltinKind::Seq => small::seq(b).await,
         BuiltinKind::Which => small::which(b).await,
+        BuiltinKind::Cat => cat::cat(b).await,
         BuiltinKind::Ls
         | BuiltinKind::Rm
         | BuiltinKind::Mkdir
         | BuiltinKind::Touch
         | BuiltinKind::Mv
-        | BuiltinKind::Cat
         | BuiltinKind::Cp => {
             let msg = b.fmt_err("not implemented\n");
             let _ = b.write(Which::Stderr, msg).await;
