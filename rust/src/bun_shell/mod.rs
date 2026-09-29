@@ -328,13 +328,28 @@ pub fn shell(strings: &[&str], values: Vec<ShellValue>) -> Result<ShellCommand, 
 
 /// A parsed script plus its settings (Bun's `ShellPromise`). Nothing runs
 /// until [`ShellCommand::run`] is awaited.
-#[derive(Debug)]
 pub struct ShellCommand {
     script: ParsedScript,
     cwd: Option<PathBuf>,
     env: HashMap<String, String>,
     quiet: bool,
     throws: bool,
+}
+
+// Environment values often hold secrets (tokens, auth headers), so `Debug`
+// prints only the variable names.
+impl fmt::Debug for ShellCommand {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut env: Vec<&str> = self.env.keys().map(String::as_str).collect();
+        env.sort_unstable();
+        f.debug_struct("ShellCommand")
+            .field("script", &self.script)
+            .field("cwd", &self.cwd)
+            .field("env", &env)
+            .field("quiet", &self.quiet)
+            .field("throws", &self.throws)
+            .finish()
+    }
 }
 
 /// The parsed form of a template.
@@ -440,6 +455,15 @@ mod tests {
         );
         let e = parse_error(&["echo ", ""], vec![ShellValue::Str("a\0b".into())]);
         assert_eq!(e.kind, ShellErrorKind::Parse);
+    }
+
+    #[test]
+    fn debug_shows_env_names_but_not_values() {
+        let env = HashMap::from([("TOKEN".to_string(), "s3cret".to_string())]);
+        let cmd = shell(&["echo hi"], vec![]).unwrap().env(env);
+        let debug = format!("{cmd:?}");
+        assert!(debug.contains("TOKEN"), "{debug}");
+        assert!(!debug.contains("s3cret"), "{debug}");
     }
 
     #[test]
