@@ -5,7 +5,14 @@ import assert from 'node:assert';
 import { fileURLToPath } from 'node:url';
 import { test, describe, after } from 'node:test';
 import { Duplex, Writable } from 'node:stream';
-import { $, chalk, fs, path, dotenv } from '../../src/zx/index.mjs';
+import {
+  $,
+  chalk,
+  fs,
+  path,
+  dotenv,
+  ProcessOutput,
+} from '../../src/zx/index.mjs';
 import {
   echo,
   sleep,
@@ -25,6 +32,7 @@ import {
   versions,
 } from '../../src/zx/goods.mjs';
 import process from 'node:process';
+import { serveGitHubStub } from './fixtures/github-stub.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // The package root (js/): the suites run from the repo root as well.
@@ -341,20 +349,38 @@ describe('goods', () => {
   });
 
   test('[zx:test/goods.test.ts:351:3:registration] fetch()', async () => {
-    const req1 = fetch('https://github.com/');
-    const req2 = fetch('https://github.com/');
-    const req3 = fetch('https://github.com/', { method: 'OPTIONS' });
+    // Upstream requests https://github.com/; see fixtures/github-stub.mjs.
+    const github = await serveGitHubStub();
+    try {
+      const req1 = fetch(github.url);
+      const req2 = fetch(github.url);
+      const req3 = fetch(github.url, { method: 'OPTIONS' });
 
-    const p1 = (await req1.pipe`cat`).stdout;
-    const p2 = (await req2.pipe($`cat`)).stdout;
-    const p3 = (await req3.pipe`cat`).stdout;
+      const p1 = (await req1.pipe`cat`).stdout;
+      const p2 = (await req2.pipe($`cat`)).stdout;
+      const p3 = (await req3.pipe`cat`).stdout;
 
-    assert.equal((await req1).status, 200);
-    assert.equal((await req2).status, 200);
-    assert.equal((await req3).status, 404);
-    assert(p1.includes('GitHub'));
-    assert(p2.includes('GitHub'));
-    assert(p3.includes('GitHub'));
+      assert.equal((await req1).status, 200);
+      assert.equal((await req2).status, 200);
+      assert.equal((await req3).status, 404);
+      assert(p1.includes('GitHub'));
+      assert(p2.includes('GitHub'));
+      assert(p3.includes('GitHub'));
+    } finally {
+      await github.close();
+    }
+  });
+
+  // Upstream calls `abort()` on the halted command, which throws because no
+  // process was spawned, so the pipe never settles.
+  test('fetch().pipe rejects when the request fails', async () => {
+    const github = await serveGitHubStub();
+    await github.close();
+    await assert.rejects(fetch(github.url).pipe`cat`, (err) => {
+      assert(err instanceof ProcessOutput);
+      assert.match(err.message, /fetch failed|Unable to connect/i);
+      return true;
+    });
   });
 
   describe('dotenv', () => {

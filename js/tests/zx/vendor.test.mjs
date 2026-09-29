@@ -14,6 +14,7 @@ import {
   glob,
   nodeFetch as fetch,
 } from '../../src/zx/vendor.mjs';
+import { serveGitHubStub } from './fixtures/github-stub.mjs';
 
 describe('vendor API', () => {
   describe('YAML', () => {
@@ -72,10 +73,13 @@ Keeps formatting as‑is.
   });
 
   test('[zx:test/vendor.test.js:73:3:registration] fetch() works', async () => {
-    assert.match(
-      await fetch('https://github.com').then((res) => res.text()),
-      /GitHub/
-    );
+    // Upstream requests https://github.com; see fixtures/github-stub.mjs.
+    const github = await serveGitHubStub();
+    try {
+      assert.match(await fetch(github.url).then((res) => res.text()), /GitHub/);
+    } finally {
+      await github.close();
+    }
   });
 
   test('[zx:test/vendor.test.js:80:3:registration] which() available', async () => {

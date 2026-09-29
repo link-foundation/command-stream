@@ -5,7 +5,15 @@ import { Buffer } from 'node:buffer';
 import process from 'node:process';
 import { createInterface } from 'node:readline';
 import { Readable } from 'node:stream';
-import { $, Fail, os, path, ProcessOutput, within } from './core.mjs';
+import {
+  $,
+  Fail,
+  os,
+  path,
+  ProcessOutput,
+  ProcessPromise,
+  within,
+} from './core.mjs';
 import {
   getLast,
   identity,
@@ -135,7 +143,12 @@ export function fetch(url, init) {
         : dest;
       p.then(
         (r) => responseToReadable(r, rs).pipe(target.run?.()),
-        (err) => target.abort?.(err)
+        (err) =>
+          // A halted command has no process to abort: settle it with the
+          // request error instead (upstream's `abort()` throws and hangs).
+          target instanceof ProcessPromise && target.isHalted()
+            ? target.finalize(ProcessOutput.fromError(err))
+            : target.abort?.(err)
       );
       return target;
     },
