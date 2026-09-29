@@ -6,6 +6,16 @@ Execa, cross-spawn, ShellJS, zx, and Bun Shell. It uses deterministic fixtures,
 checks every result before accepting its timing, and records raw statistics and
 environment metadata in JSON.
 
+`command-stream/bun`, command-stream's portable port of Bun Shell
+([issue 27](https://github.com/link-foundation/command-stream/issues/27)), runs
+as its own adapter. It issues exactly the same `` $`${file} ${args}` `` calls
+as the `Bun.$` adapter, so under Bun the two rows compare the port with Bun's
+native shell directly:
+
+```bash
+bun benchmarks/cli.mjs --suite performance --adapter 'Bun.$,command-stream/bun'
+```
+
 The suite is a benchmark playground rather than a static claim about which
 library is universally fastest. Results are only comparable within one report:
 runtime, operating system, CPU load, package versions, and filesystem state all
@@ -97,7 +107,7 @@ const result = await exec('git', ['status', '--short'], {
 | cross-spawn    | `$.spawn(file, args, options)` for the native child; `exec()` to collect output |
 | ShellJS        | `sh(command, options)` for shell syntax, or `exec()` for exact args             |
 | zx             | `` $`command ${value}` ``; interpolation remains a single safe value            |
-| Bun Shell      | `` $`command ${value}` ``; result objects also expose async `.text()`           |
+| Bun Shell      | `import { $ } from 'command-stream/bun'`: the same API, on Node.js too          |
 
 There are two defaults to review during migration. Output is mirrored unless
 `mirror: false` is set, and non-zero exits are returned unless errexit is

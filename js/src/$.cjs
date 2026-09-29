@@ -80,6 +80,14 @@ for (const name of Object.keys(namespace)) {
   });
 }
 
+// `$.bun` is a property of the ESM `$`, not a named export; non-enumerable so
+// the enumerable keys stay exactly the named exports.
+Object.defineProperty($, 'bun', {
+  value: namespace.$.bun,
+  writable: true,
+  configurable: true,
+});
+
 Object.defineProperty($, '$', {
   value: $,
   enumerable: true,

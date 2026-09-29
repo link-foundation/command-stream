@@ -1,0 +1,103 @@
+{
+  "source": "test/js/bun/shell/shell-leak-args.test.ts",
+  "units": [
+    {
+      "line": 5,
+      "upstream": "shell parsing error does not leak emmory",
+      "disposition": "case",
+      "note": "RSS measurement over 200 iterations is Bun-internal; the parse error itself is reproduced",
+      "cases": [
+        {
+          "id": "shell-leak-args/parse-error-1mb-raw",
+          "template": ["", " <!INVALID ==== SYNTAX!>"],
+          "values": [
+            {
+              "raw": {
+                "repeat": "A",
+                "count": 1048576
+              }
+            }
+          ],
+          "expect": {
+            "error": "Redirection with no file"
+          }
+        }
+      ]
+    },
+    {
+      "line": 36,
+      "upstream": "shell execution doesn't leak argv",
+      "disposition": "case",
+      "note": "RSS measurement is Bun-internal; the 1 MiB-argument echo is reproduced",
+      "cases": [
+        {
+          "id": "shell-leak-args/echo-1mb-raw",
+          "template": ["", ""],
+          "values": [
+            {
+              "raw": {
+                "concat": [
+                  "echo ",
+                  {
+                    "repeat": "bun!",
+                    "count": 262144
+                  }
+                ]
+              }
+            }
+          ],
+          "quiet": true,
+          "expect": {
+            "stdout": {
+              "concat": [
+                {
+                  "repeat": "bun!",
+                  "count": 262144
+                },
+                "\n"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 61,
+      "upstream": "non-awaited shell command does not leak argv",
+      "disposition": "js-api",
+      "api": "Calling $`${{raw: 'echo <1 MiB>'}}`.quiet() 200 times WITHOUT awaiting must not throw and must not execute the command (lazy ShellPromise: no output, no side effects); the un-run promises must be garbage-collectable (upstream: RSS growth < 250 MiB).",
+      "note": "case shows the command's behaviour when it is awaited",
+      "cases": [
+        {
+          "id": "shell-leak-args/echo-1mb-raw-when-awaited",
+          "template": ["", ""],
+          "values": [
+            {
+              "raw": {
+                "concat": [
+                  "echo ",
+                  {
+                    "repeat": "bun!",
+                    "count": 262144
+                  }
+                ]
+              }
+            }
+          ],
+          "quiet": true,
+          "expect": {
+            "stdout": {
+              "concat": [
+                {
+                  "repeat": "bun!",
+                  "count": 262144
+                },
+                "\n"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

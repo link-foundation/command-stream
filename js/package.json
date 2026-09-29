@@ -22,6 +22,17 @@
       "types": "./types/process-runner.d.ts",
       "default": "./src/process-runner.mjs"
     },
+    "./bun": {
+      "import": {
+        "types": "./types/bun.d.ts",
+        "default": "./src/bun.mjs"
+      },
+      "require": {
+        "types": "./types/bun.d.cts",
+        "default": "./src/bun.cjs"
+      },
+      "default": "./src/bun.mjs"
+    },
     "./package.json": "./package.json"
   },
   "repository": {

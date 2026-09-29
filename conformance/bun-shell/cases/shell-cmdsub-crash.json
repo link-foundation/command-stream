@@ -1,0 +1,176 @@
+{
+  "source": "test/js/bun/shell/shell-cmdsub-crash.test.ts",
+  "units": [
+    {
+      "line": 18,
+      "upstream": "builtins in command substitution with errors should not crash > ls with errors in command substitution",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "shell-cmdsub-crash/ls-glob-abs-with-errors",
+          "template": [
+            "echo $(ls $TEST_DIR/* /nonexistent_path_1 /nonexistent_path_2)"
+          ],
+          "env": {
+            "TEST_DIR": "{{TEMP}}"
+          },
+          "files": {
+            "file0.txt": "content0",
+            "file1.txt": "content1",
+            "file2.txt": "content2",
+            "file3.txt": "content3",
+            "file4.txt": "content4",
+            "file5.txt": "content5",
+            "file6.txt": "content6",
+            "file7.txt": "content7",
+            "file8.txt": "content8",
+            "file9.txt": "content9",
+            "file10.txt": "content10",
+            "file11.txt": "content11",
+            "file12.txt": "content12",
+            "file13.txt": "content13",
+            "file14.txt": "content14",
+            "file15.txt": "content15",
+            "file16.txt": "content16",
+            "file17.txt": "content17",
+            "file18.txt": "content18",
+            "file19.txt": "content19",
+            "file20.txt": "content20",
+            "file21.txt": "content21",
+            "file22.txt": "content22",
+            "file23.txt": "content23",
+            "file24.txt": "content24",
+            "file25.txt": "content25",
+            "file26.txt": "content26",
+            "file27.txt": "content27",
+            "file28.txt": "content28",
+            "file29.txt": "content29",
+            "file30.txt": "content30",
+            "file31.txt": "content31",
+            "file32.txt": "content32",
+            "file33.txt": "content33",
+            "file34.txt": "content34",
+            "file35.txt": "content35",
+            "file36.txt": "content36",
+            "file37.txt": "content37",
+            "file38.txt": "content38",
+            "file39.txt": "content39",
+            "file40.txt": "content40",
+            "file41.txt": "content41",
+            "file42.txt": "content42",
+            "file43.txt": "content43",
+            "file44.txt": "content44",
+            "file45.txt": "content45",
+            "file46.txt": "content46",
+            "file47.txt": "content47",
+            "file48.txt": "content48",
+            "file49.txt": "content49"
+          },
+          "expect": {
+            "stdout": {
+              "allOf": [
+                {
+                  "regex": "^({{TEMP}}/file[0-9]+\\.txt )+{{TEMP}}/file[0-9]+\\.txt\\n$"
+                },
+                {
+                  "contains": ["{{TEMP}}/file0.txt", "{{TEMP}}/file49.txt"]
+                },
+                {
+                  "lineCount": 1
+                }
+              ]
+            },
+            "stderr": "",
+            "exitCode": 0
+          },
+          "platforms": ["posix"],
+          "note": "upstream runs it in a `bun -e` subprocess (ASAN use-after-poison regression) and asserts it finishes with exit 0. 50 files -> one word-split line of 50 absolute paths (Bun's ls does not sort). The ls errors for the missing paths do NOT appear in the captured stderr of the outer command in Bun 1.4.2, and echo exits 0."
+        },
+        {
+          "id": "shell-cmdsub-crash/ls-glob-rel-with-errors",
+          "template": [
+            "echo $(ls file*.txt /nonexistent_path_1 /nonexistent_path_2)"
+          ],
+          "files": {
+            "file0.txt": "content0",
+            "file1.txt": "content1",
+            "file2.txt": "content2",
+            "file3.txt": "content3",
+            "file4.txt": "content4",
+            "file5.txt": "content5",
+            "file6.txt": "content6",
+            "file7.txt": "content7",
+            "file8.txt": "content8",
+            "file9.txt": "content9",
+            "file10.txt": "content10",
+            "file11.txt": "content11",
+            "file12.txt": "content12",
+            "file13.txt": "content13",
+            "file14.txt": "content14",
+            "file15.txt": "content15",
+            "file16.txt": "content16",
+            "file17.txt": "content17",
+            "file18.txt": "content18",
+            "file19.txt": "content19",
+            "file20.txt": "content20",
+            "file21.txt": "content21",
+            "file22.txt": "content22",
+            "file23.txt": "content23",
+            "file24.txt": "content24",
+            "file25.txt": "content25",
+            "file26.txt": "content26",
+            "file27.txt": "content27",
+            "file28.txt": "content28",
+            "file29.txt": "content29",
+            "file30.txt": "content30",
+            "file31.txt": "content31",
+            "file32.txt": "content32",
+            "file33.txt": "content33",
+            "file34.txt": "content34",
+            "file35.txt": "content35",
+            "file36.txt": "content36",
+            "file37.txt": "content37",
+            "file38.txt": "content38",
+            "file39.txt": "content39",
+            "file40.txt": "content40",
+            "file41.txt": "content41",
+            "file42.txt": "content42",
+            "file43.txt": "content43",
+            "file44.txt": "content44",
+            "file45.txt": "content45",
+            "file46.txt": "content46",
+            "file47.txt": "content47",
+            "file48.txt": "content48",
+            "file49.txt": "content49"
+          },
+          "expect": {
+            "stdout": {
+              "allOf": [
+                {
+                  "regex": "^(file[0-9]+\\.txt )+file[0-9]+\\.txt\\n$"
+                },
+                {
+                  "length": 540
+                }
+              ]
+            },
+            "stderr": "",
+            "exitCode": 0
+          },
+          "platforms": ["posix"],
+          "note": "relative-glob variant: 50 names (490 chars) + 49 spaces + newline = 540"
+        },
+        {
+          "id": "shell-cmdsub-crash/ls-only-errors",
+          "template": ["echo $(ls /nonexistent_path_1 /nonexistent_path_2)"],
+          "expect": {
+            "stdout": "\n",
+            "stderr": "",
+            "exitCode": 0
+          },
+          "platforms": ["posix"]
+        }
+      ]
+    }
+  ]
+}
