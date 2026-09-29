@@ -165,7 +165,11 @@ export function once(fn) {
 export function proxyOverride(origin, ...fallbacks) {
   return new Proxy(origin, {
     get(target, key) {
-      const source = fallbacks.find((fallback) => key in fallback);
+      // Members a plain-object fallback inherits from Object.prototype
+      // (`constructor`, `toString`, ...) must not mask the origin's own.
+      const source = fallbacks.find(
+        (fallback) => key in fallback && fallback[key] !== Object.prototype[key]
+      );
       return source?.[key] ?? Reflect.get(target, key);
     },
   });

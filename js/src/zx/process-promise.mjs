@@ -88,10 +88,20 @@ function promisifyStream(stream, from) {
     then(res = noop, rej = noop) {
       return new Promise((resolve, reject) => {
         const end = () => resolve(res(proxyOverride(stream, from.output)));
+        // `pipe()` ends the destination right after EPF (in the same 'end'
+        // emit); a stream it ended settles on 'finish', once the data is
+        // flushed - Bun opens fs streams lazily, so EPF alone is too early.
+        // Streams `pipe()` leaves open (stdout, stderr) settle on EPF.
+        const endPiped = () =>
+          process.nextTick(() => {
+            if (!stream.writableEnded || stream.writableFinished) {
+              end();
+            }
+          });
         stream
           .once('error', (e) => reject(rej(e)))
           .once('finish', end)
-          .once(EPF, end);
+          .once(EPF, endPiped);
       });
     },
     run() {

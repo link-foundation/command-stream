@@ -39,6 +39,10 @@ import {
 import { noop } from '../../src/zx/util.mjs';
 import { EventEmitter } from 'node:events';
 
+const isBun = Boolean(process.versions.bun);
+// Bun exposes child stdio as plain stream.Readable objects, not net.Socket.
+const ChildStdio = isBun ? Readable : Socket;
+
 describe('core', () => {
   describe('resolveDefaults()', () => {
     test('[zx:test/core.test.js:55:5:registration] overrides known (allowed) opts', async () => {
@@ -523,8 +527,8 @@ describe('core', () => {
       assert.ok(typeof p.fullCmd === 'string');
       assert.ok(typeof p.stage === 'string');
       assert.ok(p.child instanceof ChildProcess);
-      assert.ok(p.stdout instanceof Socket);
-      assert.ok(p.stderr instanceof Socket);
+      assert.ok(p.stdout instanceof ChildStdio);
+      assert.ok(p.stderr instanceof ChildStdio);
       assert.ok(p.exitCode instanceof Promise);
       assert.ok(p.signal instanceof AbortSignal);
       assert.equal(p.output, null);
@@ -664,7 +668,7 @@ describe('core', () => {
         assert.equal(p1._piped, true);
         await p2;
         assert.equal(p1._piped, false);
-        assert.ok(p1.stderr instanceof Socket);
+        assert.ok(p1.stderr instanceof ChildStdio);
         assert.equal(contents, 'test\n');
       });
 
@@ -818,7 +822,17 @@ describe('core', () => {
 
         test('[zx:test/core.test.js:822:9:registration] $ > stdout', async () => {
           const p = $`echo 1`.pipe(process.stdout);
-          assert.deepEqual(p, process.stdout);
+          if (isBun) {
+            // Bun's deepEqual also compares inherited methods, and the proxy
+            // deliberately overrides `pipe`/`then`; check the rest by hand.
+            assert.equal(
+              Object.getPrototypeOf(p),
+              Object.getPrototypeOf(process.stdout)
+            );
+            assert.deepEqual({ ...p }, { ...process.stdout });
+          } else {
+            assert.deepEqual(p, process.stdout);
+          }
         });
 
         test('[zx:test/core.test.js:827:9:registration] $ halted > stream', async () => {
@@ -1613,44 +1627,52 @@ describe('core', () => {
       }
     });
 
-    test('[zx:test/core.test.js:1609:5:registration] does not affect parallel contexts ($.cwdSyncHook enabled)', async () => {
-      syncProcessCwd();
-      const cwd = process.cwd();
-      try {
-        fs.mkdirpSync('/tmp/zx-cd-parallel/one/two');
-        await Promise.all([
-          within(async () => {
-            assert.equal(process.cwd(), cwd);
-            cd('/tmp/zx-cd-parallel/one');
-            await sleep(Math.random() * 15);
-            assert.ok(process.cwd().endsWith('/tmp/zx-cd-parallel/one'));
-          }),
-          within(async () => {
-            assert.equal(process.cwd(), cwd);
-            await sleep(Math.random() * 15);
-            assert.equal(process.cwd(), cwd);
-          }),
-          within(async () => {
-            assert.equal(process.cwd(), cwd);
-            await sleep(Math.random() * 15);
-            $.cwd = '/tmp/zx-cd-parallel/one/two';
-            assert.equal(process.cwd(), cwd);
-            assert.ok(
-              (await $`pwd`).stdout
-                .toString()
-                .trim()
-                .endsWith('/tmp/zx-cd-parallel/one/two')
-            );
-          }),
-        ]);
-      } catch (e) {
-        assert.ok(!e, e);
-      } finally {
-        fs.rmSync('/tmp/zx-cd-parallel', { recursive: true });
-        cd(cwd);
-        syncProcessCwd(false);
+    test(
+      '[zx:test/core.test.js:1609:5:registration] does not affect parallel contexts ($.cwdSyncHook enabled)',
+      {
+        // The hook re-applies each context's cwd on every async switch; Bun's
+        // async_hooks.createHook is a no-op, so the switches never fire there.
+        skip: isBun && 'Bun does not implement async_hooks.createHook',
+      },
+      async () => {
+        syncProcessCwd();
+        const cwd = process.cwd();
+        try {
+          fs.mkdirpSync('/tmp/zx-cd-parallel/one/two');
+          await Promise.all([
+            within(async () => {
+              assert.equal(process.cwd(), cwd);
+              cd('/tmp/zx-cd-parallel/one');
+              await sleep(Math.random() * 15);
+              assert.ok(process.cwd().endsWith('/tmp/zx-cd-parallel/one'));
+            }),
+            within(async () => {
+              assert.equal(process.cwd(), cwd);
+              await sleep(Math.random() * 15);
+              assert.equal(process.cwd(), cwd);
+            }),
+            within(async () => {
+              assert.equal(process.cwd(), cwd);
+              await sleep(Math.random() * 15);
+              $.cwd = '/tmp/zx-cd-parallel/one/two';
+              assert.equal(process.cwd(), cwd);
+              assert.ok(
+                (await $`pwd`).stdout
+                  .toString()
+                  .trim()
+                  .endsWith('/tmp/zx-cd-parallel/one/two')
+              );
+            }),
+          ]);
+        } catch (e) {
+          assert.ok(!e, e);
+        } finally {
+          fs.rmSync('/tmp/zx-cd-parallel', { recursive: true });
+          cd(cwd);
+          syncProcessCwd(false);
+        }
       }
-    });
+    );
 
     test('[zx:test/core.test.js:1648:5:registration] fails on entering not existing dir', async () => {
       assert.throws(() => cd('/tmp/abra-kadabra'));
