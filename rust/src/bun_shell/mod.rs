@@ -27,6 +27,9 @@ use std::fmt;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
+#[cfg_attr(not(test), allow(dead_code))]
+pub(crate) mod glob;
+
 /// A fixed-size byte buffer that receives output (`> ${buf}` in JavaScript,
 /// where `buf` is a `Uint8Array`). Output beyond its size is dropped.
 #[derive(Clone, Debug)]
