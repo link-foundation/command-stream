@@ -44,7 +44,7 @@ and produce machine-readable and Markdown comparisons.
 | ----------- | ------------------------------------------------------------------------------------------------------------ |
 | Performance | Exact-argument spawn latency, buffered stdout, concurrency, and nonzero exits.                               |
 | Rust APIs   | command-stream buffering versus streaming, pipeline versus manual handoff, and built-in versus spawned echo. |
-| Crate size  | Resolved crate source bytes and unique transitive source-closure bytes.                                      |
+| Crate size  | Resolved crate source bytes and unique transitive source-closure bytes, plus the `zx` module on its own.     |
 | Features    | Ported behavior and known-gap counts from immutable upstream Rust test corpora.                              |
 | Real-world  | Parallel CI checks, log analysis, file hashing, and a local HTTP health check.                               |
 
