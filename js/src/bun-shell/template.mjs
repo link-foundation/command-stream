@@ -6,6 +6,7 @@
 // are replaced by `\x08__bunstr_N\x08` references resolved by the lexer, and
 // objects (buffers, streams, blobs, responses) by `\x08__bun_N\x08`.
 
+import { filePathOf } from './file.mjs';
 import {
   LEX_JS_OBJREF_PREFIX,
   LEX_JS_STRING_PREFIX,
@@ -102,18 +103,6 @@ function isInstance(value, name) {
   return typeof ctor === 'function' && value instanceof ctor;
 }
 
-/** A `Bun.file(path)` blob: redirects and arguments use its path. */
-function fileBlobPath(value) {
-  if (
-    isInstance(value, 'Blob') &&
-    typeof value.exists === 'function' &&
-    typeof value.name === 'string'
-  ) {
-    return value.name;
-  }
-  return null;
-}
-
 function implementsToString(value) {
   const fn = value.toString;
   return typeof fn === 'function' && fn !== Object.prototype.toString;
@@ -183,16 +172,16 @@ class ShellSourceBuilder {
       this.appendObjRef(value);
       return;
     }
-    if (isInstance(value, 'Blob')) {
-      const path = fileBlobPath(value);
-      if (path === null) {
-        this.appendObjRef(value);
-        return;
-      }
+    const path = filePathOf(value);
+    if (path !== null) {
       if (path.includes('\0')) {
         throw nullByteError(path);
       }
       this.appendStr(path, true);
+      return;
+    }
+    if (isInstance(value, 'Blob')) {
+      this.appendObjRef(value);
       return;
     }
     if (
