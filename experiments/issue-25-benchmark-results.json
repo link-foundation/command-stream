@@ -1,5 +1,5 @@
 {
-  "note": "Single-run latency probe on Linux under concurrent test/build load; not a throughput or memory claim.",
+  "note": "Single-run Linux latency probes; not a throughput or memory claim.",
   "javascript": {
     "runtime": "v26.10.0",
     "platform": "linux",
@@ -13,22 +13,22 @@
         "mode": "ShellJS buffered",
         "received": 524288,
         "code": 0,
-        "firstByteMs": 325.29049599999996,
-        "totalMs": 325.3185179999999
+        "firstByteMs": 130.24127,
+        "totalMs": 130.27276899999998
       },
       {
         "mode": "command-stream buffered",
         "received": 524288,
         "code": 0,
-        "firstByteMs": 214.43264799999997,
-        "totalMs": 214.43991200000005
+        "firstByteMs": 162.92446700000005,
+        "totalMs": 162.932502
       },
       {
         "mode": "command-stream streaming",
         "received": 524288,
         "code": 0,
-        "firstByteMs": 123.64799199999993,
-        "totalMs": 197.58040499999993
+        "firstByteMs": 69.58850900000004,
+        "totalMs": 136.09662200000002
       }
     ]
   },
@@ -36,17 +36,17 @@
     "observations": [
       {
         "code": 0,
-        "firstByteMs": 75.781293,
+        "firstByteMs": 60.836294,
         "mode": "buffered",
         "received": 524288,
-        "totalMs": 75.869828
+        "totalMs": 60.944165
       },
       {
         "code": 0,
-        "firstByteMs": 11.372099,
+        "firstByteMs": 6.404146,
         "mode": "streaming",
         "received": 524288,
-        "totalMs": 64.686322
+        "totalMs": 54.470108
       }
     ],
     "platform": "linux",

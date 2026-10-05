@@ -62,6 +62,21 @@ describe('ShellJS compatibility entry points', () => {
     expect(() => shelljs.cat(join(fixture(), 'missing'))).toThrow();
   });
 
+  test('cmd passes spaces and shell metacharacters as literal arguments', () => {
+    shelljs.config.silent = true;
+    const result = shelljs.cmd(
+      process.execPath,
+      '-e',
+      'process.stdout.write(process.argv.slice(1).join("|"))',
+      'two words',
+      '$HOME',
+      '; echo injected',
+      { silent: true }
+    );
+    expect(result.code).toBe(0);
+    expect(result.stdout).toBe('two words|$HOME|; echo injected');
+  });
+
   test('exports every documented ShellJS command, configuration and environment helper', () => {
     const commands = [
       'cat',

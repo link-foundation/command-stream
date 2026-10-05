@@ -1,7 +1,7 @@
 import { performance } from 'node:perf_hooks';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
-import { $, quote, ProcessRunner } from '../src/$.mjs';
+import { $, ProcessRunner } from '../src/$.mjs';
 
 const fixture = fileURLToPath(
   new URL('./fixtures/chunked-output.mjs', import.meta.url)
@@ -31,8 +31,7 @@ export async function compareOutputModes({
     let received = 0;
     let code;
     if (mode === 'ShellJS buffered') {
-      const command = [process.execPath, ...args].map(quote).join(' ');
-      const result = $.shelljs.exec(command, {
+      const result = $.shelljs.cmd(process.execPath, ...args, {
         silent: true,
         maxBuffer: 16 * 1024 * 1024,
       });
