@@ -15,7 +15,11 @@
 import { readFileSync, appendFileSync, readdirSync } from 'fs';
 import { loadUseM } from './use-m-loader.mjs';
 import { runChecked } from './run-checked.mjs';
-import { stageReleaseMetadata, pushWithRetry } from './release-git.mjs';
+import {
+  stageReleaseMetadata,
+  pushWithRetry,
+  commitReleaseVersion,
+} from './release-git.mjs';
 
 // Load use-m dynamically
 const use = await loadUseM();
@@ -218,9 +222,7 @@ async function main() {
       stageReleaseMetadata();
 
       // Commit with version number as message
-      const commitMessage = newVersion;
-      const escapedMessage = commitMessage.replace(/"/g, '\\"');
-      await runChecked($`git commit -m "${escapedMessage}"`);
+      commitReleaseVersion(newVersion);
 
       await pushWithRetry({
         push: () => $`git push origin main`.run({ capture: true }),

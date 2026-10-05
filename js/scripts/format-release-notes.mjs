@@ -25,6 +25,7 @@
 
 import { loadUseM } from './use-m-loader.mjs';
 import { runChecked } from './run-checked.mjs';
+import { hasNpmBadge } from './release-note-badge.mjs';
 
 const PACKAGE_NAME = 'command-stream';
 
@@ -84,7 +85,7 @@ try {
   const currentBody = releaseData.body || '';
 
   // Skip if already formatted (has shields.io badge image)
-  if (currentBody.includes('img.shields.io')) {
+  if (hasNpmBadge(currentBody)) {
     console.log('ℹ️ Release notes already formatted');
     process.exit(0);
   }

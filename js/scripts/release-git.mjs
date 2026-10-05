@@ -2,6 +2,10 @@ import { execFileSync } from 'node:child_process';
 
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
 
+export function commitReleaseVersion(version) {
+  execFileSync('git', ['commit', '-m', version], { stdio: 'inherit' });
+}
+
 export function stageReleaseMetadata() {
   const root = git('rev-parse', '--show-toplevel');
   const prefix = git('rev-parse', '--show-prefix');

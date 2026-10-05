@@ -6,7 +6,28 @@ import { join } from 'node:path';
 import {
   stageReleaseMetadata,
   pushWithRetry,
+  commitReleaseVersion,
 } from '../scripts/release-git.mjs';
+
+test('release commits preserve their message literally without shell parsing', async () => {
+  const cwd = mkdtempSync(join(tmpdir(), 'release-commit-'));
+  const original = process.cwd();
+  const git = (...args) => execFileSync('git', args, { cwd, encoding: 'utf8' });
+  try {
+    git('init', '-q');
+    git('config', 'user.name', 'Test');
+    git('config', 'user.email', 'test@example.com');
+    writeFileSync(join(cwd, 'package.json'), '{}');
+    git('add', 'package.json');
+    process.chdir(cwd);
+    const message = '1.4.1 "quoted" \\ literal $(echo unintended)';
+    await commitReleaseVersion(message);
+    expect(git('log', '-1', '--format=%B').trim()).toBe(message);
+  } finally {
+    process.chdir(original);
+    rmSync(cwd, { recursive: true, force: true });
+  }
+});
 
 test('release staging refuses unrelated tracked and untracked files', () => {
   const cwd = mkdtempSync(join(tmpdir(), 'release-metadata-'));

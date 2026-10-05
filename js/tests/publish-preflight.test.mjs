@@ -36,9 +36,28 @@ test('npm validates the package-specific token exchange', async () => {
     },
   });
   expect(requests[0][0]).toContain('audience=npm%3Aregistry.npmjs.org');
-  expect(requests[1][0]).toEndWith('/@scope%2fpackage');
+  expect(requests[1][0]).toEndWith('/%40scope%2Fpackage');
   expect(requests[1][1].method).toBe('POST');
   expect(requests[1][1].headers.Authorization).toBe('Bearer identity');
+});
+test('npm package names cannot alter the exchange URL path or query', async () => {
+  let calls = 0;
+  await checkNpmPublisher({
+    packageName: '@scope/package?query=value#/extra',
+    env,
+    fetchFn: async (url) => {
+      if (++calls === 1) {
+        return response({ value: 'identity' });
+      }
+      const target = new URL(url);
+      expect(target.pathname).toEndWith(
+        '/%40scope%2Fpackage%3Fquery%3Dvalue%23%2Fextra'
+      );
+      expect(target.search).toBe('');
+      expect(target.hash).toBe('');
+      return response({ token: 'temporary' });
+    },
+  });
 });
 test('crates rejects credentials denied by the publish endpoint', async () => {
   await expect(

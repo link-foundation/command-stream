@@ -33,7 +33,7 @@ export async function checkNpmPublisher({
   if (!identity.value) {
     throw new Error('GitHub returned no OIDC identity');
   }
-  const escapedName = packageName.replace('/', '%2f');
+  const escapedName = encodeURIComponent(packageName);
   const result = await jsonRequest(
     fetchFn,
     `https://registry.npmjs.org/-/npm/v1/oidc/token/exchange/package/${escapedName}`,
