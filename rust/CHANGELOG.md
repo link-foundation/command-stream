@@ -175,6 +175,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [1.4.0] - 2026-10-05
+
+### Added
+
+- Add `execa` module and general API exports for exact-argv async/sync commands,
+  reusable defaults, binary input/output, line views, combined output,
+  rejection, timeout, cancellation, bounded capture and live process streams.
+
+### Fixed
+
+- Write streaming stdin concurrently with stdout/stderr readers to prevent a
+  full-duplex pipe deadlock; preserve native signal metadata separately from
+  numeric exit codes and support replacing a streaming process environment.
+
 ## [1.3.0] - 2026-10-05
 
 ### Added
