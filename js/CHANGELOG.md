@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.5.0
+
+### Minor Changes
+
+- Add the isolated Execa 9.6.1 API with ESM/CommonJS types, lazy `$.execa` and
+  `execaCompat()` access through the general API, plus migration examples and
+  reproducible streaming and size comparisons. Execa is now a production dependency.
+
+  Prevent false CI and release results by validating registry publication, release commands, pull request metadata, audit failures, and manual release gates.
+
+  Encode publisher package names safely, recognize actual npm badge images in release notes, and commit version messages without manual shell escaping.
+
+  Keep repeated metadata staging safe after consuming release fragments.
+
 ## 1.4.0
 
 ### Minor Changes
