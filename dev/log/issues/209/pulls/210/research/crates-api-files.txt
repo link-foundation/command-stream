@@ -1,0 +1,9 @@
+crates/crates_io_database/tests/canon_username.rs
+crates/crates_io_database/tests/crate_owners.rs
+src/controllers/krate/owners.rs
+src/controllers/user/me.rs
+src/controllers/version/readme.rs
+src/tests/krate/publish/readme.rs
+src/tests/owners.rs
+src/tests/worker/trustpub/delete_tokens.rs
+src/worker/jobs/trustpub/delete_tokens.rs

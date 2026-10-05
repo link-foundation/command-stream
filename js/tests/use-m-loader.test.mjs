@@ -236,7 +236,7 @@ test('no script fetches use-m inline any more', () => {
   expect(offenders).toEqual([]);
 });
 
-// Every script that needs use-m goes through the loader: eleven release
+// Every script that needs use-m goes through the loader: ten release
 // scripts plus the profile CLI at the repository root.
 test('the release scripts load use-m through the loader', () => {
   const files = execFileSync('git', ['ls-files', 'js/scripts/*.mjs'], {
@@ -252,7 +252,7 @@ test('the release scripts load use-m through the loader', () => {
     readFileSync(join(repoRoot, file), 'utf8').includes('loadUseM(')
   );
 
-  expect(viaLoader.length).toBeGreaterThanOrEqual(11);
+  expect(viaLoader.length).toBeGreaterThanOrEqual(10);
   expect(readFileSync(join(repoRoot, 'claude-profiles.mjs'), 'utf8')).toContain(
     'loadUseM('
   );

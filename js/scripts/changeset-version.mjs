@@ -13,7 +13,9 @@
  * - command-stream: Modern shell command execution with streaming support
  */
 
+import { existsSync } from 'node:fs';
 import { loadUseM } from './use-m-loader.mjs';
+import { runChecked } from './run-checked.mjs';
 
 // Load use-m dynamically, retrying a CDN blip instead of dying at module load.
 const use = await loadUseM();
@@ -23,14 +25,13 @@ const { $ } = await use('command-stream');
 
 try {
   console.log('Running changeset version...');
-  await $`bunx changeset version`;
+  await runChecked($`bunx changeset version`);
 
-  console.log('\nSynchronizing package-lock.json...');
-  try {
-    await $`npm install --package-lock-only`;
-  } catch {
-    // No package-lock.json or npm not available, skip
-    console.log('Skipping package-lock.json sync (not applicable)');
+  if (existsSync('package-lock.json')) {
+    console.log('Synchronizing package-lock.json...');
+    await runChecked(
+      $`npm install --package-lock-only --ignore-scripts --no-audit`
+    );
   }
 
   console.log('\n✅ Version bump complete with synchronized package-lock.json');

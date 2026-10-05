@@ -1,0 +1,45 @@
+CodeQL	fail	3s	https://github.com/link-foundation/command-stream/runs/111920179370	
+Actionlint	pass	10s	https://github.com/link-foundation/command-stream/actions/runs/37356457264/job/111919971647	
+Audit Cargo lockfile	pass	13s	https://github.com/link-foundation/command-stream/actions/runs/37356457412/job/111919972597	
+Audit bun lockfile	pass	10s	https://github.com/link-foundation/command-stream/actions/runs/37356457412/job/111919972828	
+Audit npm lockfile	pass	8s	https://github.com/link-foundation/command-stream/actions/runs/37356457412/job/111919972914	
+Bun.$ reference on macos-15	pass	22s	https://github.com/link-foundation/command-stream/actions/runs/37356457395/job/111919973535	
+Bun.$ reference on ubuntu-24.04	pass	11s	https://github.com/link-foundation/command-stream/actions/runs/37356457395/job/111919973198	
+Bun.$ reference on windows-2025	pass	42s	https://github.com/link-foundation/command-stream/actions/runs/37356457395/job/111919972880	
+Check for JavaScript changesets	pass	8s	https://github.com/link-foundation/command-stream/actions/runs/37356457385/job/111919972651	
+Check formatting of every tracked file	pass	16s	https://github.com/link-foundation/command-stream/actions/runs/37356457330/job/111919972859	
+Check workflow invariants	pass	9s	https://github.com/link-foundation/command-stream/actions/runs/37356457330/job/111919973541	
+CodeQL (actions)	pass	36s	https://github.com/link-foundation/command-stream/actions/runs/37356457412/job/111919972917	
+CodeQL (javascript-typescript)	pass	1m26s	https://github.com/link-foundation/command-stream/actions/runs/37356457412/job/111919972889	
+Dependency Review	pass	7s	https://github.com/link-foundation/command-stream/actions/runs/37356457412/job/111919972997	
+JS/Rust implementation parity	pass	52s	https://github.com/link-foundation/command-stream/actions/runs/37356657989/job/111920660693	
+JavaScript (smoke)	pass	26s	https://github.com/link-foundation/command-stream/actions/runs/37356457443/job/111919972391	
+Lint and format JavaScript	pass	33s	https://github.com/link-foundation/command-stream/actions/runs/37356457385/job/111920046307	
+Lint and format Rust	pass	29s	https://github.com/link-foundation/command-stream/actions/runs/37356457273/job/111920338309	
+Rust (smoke)	pass	1m56s	https://github.com/link-foundation/command-stream/actions/runs/37356457443/job/111919971868	
+Rust changelog and version checks	pass	49s	https://github.com/link-foundation/command-stream/actions/runs/37356457273/job/111919971780	
+Scan for committed secrets	pass	12s	https://github.com/link-foundation/command-stream/actions/runs/37356457412/job/111919973008	
+Test JavaScript (node 20 on ubuntu-24.04)	pass	1m9s	https://github.com/link-foundation/command-stream/actions/runs/37356457385/job/111920319042	
+Test JavaScript (node 22 on ubuntu-24.04)	pass	56s	https://github.com/link-foundation/command-stream/actions/runs/37356457385/job/111920319189	
+Test JavaScript (node 24 on ubuntu-24.04)	pass	57s	https://github.com/link-foundation/command-stream/actions/runs/37356457385/job/111920319308	
+Test JavaScript (bun on ubuntu-24.04)	pending	0	https://github.com/link-foundation/command-stream/actions/runs/37356457385/job/111920319359	
+Validate documentation	pass	8s	https://github.com/link-foundation/command-stream/actions/runs/37356457330/job/111919973628	
+port on Bun on ubuntu-24.04	pass	12s	https://github.com/link-foundation/command-stream/actions/runs/37356457395/job/111919974134	
+port on Deno on windows-2025	pass	47s	https://github.com/link-foundation/command-stream/actions/runs/37356457395/job/111919973017	
+port on Bun on macos-15	pass	22s	https://github.com/link-foundation/command-stream/actions/runs/37356457395/job/111919972942	
+port on Bun on windows-2025	pass	31s	https://github.com/link-foundation/command-stream/actions/runs/37356457395/job/111919973162	
+port on Deno on ubuntu-24.04	pass	17s	https://github.com/link-foundation/command-stream/actions/runs/37356457395/job/111919972786	
+port on Node.js on macos-15	pass	19s	https://github.com/link-foundation/command-stream/actions/runs/37356457395/job/111919973293	
+Zizmor	pass	18s	https://github.com/link-foundation/command-stream/actions/runs/37356457264/job/111919971028	
+port on Deno on macos-15	pass	26s	https://github.com/link-foundation/command-stream/actions/runs/37356457395/job/111919973701	
+port on Node.js on windows-2025	pass	30s	https://github.com/link-foundation/command-stream/actions/runs/37356457395/job/111919973257	
+port on Node.js on ubuntu-24.04	pass	14s	https://github.com/link-foundation/command-stream/actions/runs/37356457395/job/111919972959	
+Create Rust changelog PR	skipping	0	https://github.com/link-foundation/command-stream/actions/runs/37356457273/job/111919973397	
+Test JavaScript (bun on macos-15)	pending	0	https://github.com/link-foundation/command-stream/actions/runs/37356457385/job/111920319032	
+Create JavaScript changeset PR	skipping	0	https://github.com/link-foundation/command-stream/actions/runs/37356457385/job/111919973745	
+CodeQL (rust)	pending	0	https://github.com/link-foundation/command-stream/actions/runs/37356457412/job/111919973027	
+Test JavaScript (bun on windows-2025)	pending	0	https://github.com/link-foundation/command-stream/actions/runs/37356457385/job/111920319233	
+Test Rust (macos-15)	pending	0	https://github.com/link-foundation/command-stream/actions/runs/37356457273/job/111920562450	
+Test Rust (ubuntu-24.04)	pending	0	https://github.com/link-foundation/command-stream/actions/runs/37356457273/job/111920562508	
+Test Rust (windows-2025)	pending	0	https://github.com/link-foundation/command-stream/actions/runs/37356457273/job/111920562602	
+Test Rust scripts and check sizes	pending	0	https://github.com/link-foundation/command-stream/actions/runs/37356457273/job/111920562288	

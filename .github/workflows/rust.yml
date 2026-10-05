@@ -64,7 +64,7 @@ env:
 jobs:
   changelog:
     name: Rust changelog and version checks
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     if: github.event_name == 'pull_request'
     concurrency:
@@ -82,7 +82,7 @@ jobs:
           toolchain: stable
 
       - name: Install rust-script
-        run: cargo install rust-script
+        run: cargo install rust-script --version 0.35.0 --locked
 
       - name: Check for changelog fragments
         env:
@@ -100,7 +100,7 @@ jobs:
 
   lint:
     name: Lint and format Rust
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     needs: [changelog]
     # `!cancelled()` rather than `always()`: a cancelled changelog check must not
@@ -125,6 +125,12 @@ jobs:
         env:
           BASE_REF: ${{ github.base_ref }}
         run: bash .github/scripts/simulate-fresh-merge.sh
+
+      - name: Check registry publish credentials
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN || secrets.CARGO_TOKEN }}
+        run: node .github/scripts/publish-preflight.mjs crates
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-01
@@ -164,8 +170,8 @@ jobs:
     name: Test Rust (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
-    needs: [changelog]
-    if: ${{ !cancelled() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changelog.result == 'success') }}
+    needs: [lint]
+    if: ${{ !cancelled() && needs.lint.result == 'success' }}
     # The matrix value is part of the group so the per-OS entries stay parallel
     # and only a superseded run of the *same* entry is cancelled.
     concurrency:
@@ -174,7 +180,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-24.04, macos-15, windows-2025]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -218,10 +224,10 @@ jobs:
 
   scripts:
     name: Test Rust scripts and check sizes
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
-    needs: [changelog]
-    if: ${{ !cancelled() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changelog.result == 'success') }}
+    needs: [lint]
+    if: ${{ !cancelled() && needs.lint.result == 'success' }}
     concurrency:
       group: check-${{ github.workflow }}-${{ github.ref }}-scripts
       cancel-in-progress: true
@@ -259,7 +265,7 @@ jobs:
             ${{ runner.os }}-cargo-scripts-
 
       - name: Install rust-script
-        run: cargo install rust-script
+        run: cargo install rust-script --version 0.35.0 --locked
 
       - name: Run release script unit tests
         # Run the inline `#[cfg(test)]` suites for every rust-script under
@@ -278,6 +284,9 @@ jobs:
           done
           exit $status
 
+      - name: Test PR guard regressions
+        run: python3 experiments/issue-209/check-rust-guards.py
+
       - name: Check Rust file sizes
         # Best practice: no source file over ~1000 lines. The JavaScript side
         # enforces this through eslint's `max-lines`; the Rust side shipped
@@ -295,7 +304,7 @@ jobs:
 
   build:
     name: Build Rust package
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     needs: [lint, test]
     if: ${{ !cancelled() && needs.lint.result == 'success' && needs.test.result == 'success' }}
@@ -356,7 +365,7 @@ jobs:
       needs.test.result == 'success' &&
       needs.scripts.result == 'success' &&
       needs.build.result == 'success'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
       contents: write
@@ -385,7 +394,7 @@ jobs:
           toolchain: stable
 
       - name: Install rust-script
-        run: cargo install rust-script
+        run: cargo install rust-script --version 0.35.0 --locked
 
       - name: Determine bump type
         id: bump
@@ -432,8 +441,13 @@ jobs:
 
   instant-release:
     name: Instant Rust release
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'instant'
-    runs-on: ubuntu-latest
+    needs: [lint, test, scripts, build]
+    if: >-
+      !cancelled() && github.ref == 'refs/heads/main' &&
+      github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'instant' &&
+      needs.lint.result == 'success' && needs.test.result == 'success' &&
+      needs.scripts.result == 'success' && needs.build.result == 'success'
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
       contents: write
@@ -459,7 +473,7 @@ jobs:
           toolchain: stable
 
       - name: Install rust-script
-        run: cargo install rust-script
+        run: cargo install rust-script --version 0.35.0 --locked
 
       - name: Version Rust crate and commit to main
         id: version
@@ -489,8 +503,8 @@ jobs:
 
   changelog-pr:
     name: Create Rust changelog PR
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'changelog-pr'
-    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'changelog-pr'
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: write
@@ -514,7 +528,7 @@ jobs:
           toolchain: stable
 
       - name: Install rust-script
-        run: cargo install rust-script
+        run: cargo install rust-script --version 0.35.0 --locked
 
       - name: Create changelog fragment
         env:

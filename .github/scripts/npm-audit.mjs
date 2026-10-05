@@ -37,7 +37,22 @@ try {
   report = error.stdout;
 }
 
-const { vulnerabilities = {} } = JSON.parse(report);
+const parsed = JSON.parse(report);
+// npm also emits JSON on transport/authentication failures. Those are not
+// empty successful audits: accepting them would silently disable this gate.
+if (parsed.error) {
+  throw new Error(
+    `npm audit failed: ${parsed.error.code}: ${parsed.error.summary}`
+  );
+}
+if (
+  !parsed.vulnerabilities ||
+  typeof parsed.vulnerabilities !== 'object' ||
+  Array.isArray(parsed.vulnerabilities)
+) {
+  throw new Error('npm audit returned an invalid vulnerability report');
+}
+const { vulnerabilities } = parsed;
 const advisories = new Map();
 for (const [pkg, entry] of Object.entries(vulnerabilities)) {
   for (const via of entry.via) {

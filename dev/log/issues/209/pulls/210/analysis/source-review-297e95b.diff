@@ -1,0 +1,2499 @@
+diff --git a/.github/scripts/npm-audit.mjs b/.github/scripts/npm-audit.mjs
+index 2caea59..7fa42aa 100644
+--- a/.github/scripts/npm-audit.mjs
++++ b/.github/scripts/npm-audit.mjs
+@@ -37,7 +37,22 @@ try {
+   report = error.stdout;
+ }
+ 
+-const { vulnerabilities = {} } = JSON.parse(report);
++const parsed = JSON.parse(report);
++// npm also emits JSON on transport/authentication failures. Those are not
++// empty successful audits: accepting them would silently disable this gate.
++if (parsed.error) {
++  throw new Error(
++    `npm audit failed: ${parsed.error.code}: ${parsed.error.summary}`
++  );
++}
++if (
++  !parsed.vulnerabilities ||
++  typeof parsed.vulnerabilities !== 'object' ||
++  Array.isArray(parsed.vulnerabilities)
++) {
++  throw new Error('npm audit returned an invalid vulnerability report');
++}
++const { vulnerabilities } = parsed;
+ const advisories = new Map();
+ for (const [pkg, entry] of Object.entries(vulnerabilities)) {
+   for (const via of entry.via) {
+diff --git a/.github/scripts/publish-preflight.mjs b/.github/scripts/publish-preflight.mjs
+new file mode 100644
+index 0000000..468a377
+--- /dev/null
++++ b/.github/scripts/publish-preflight.mjs
+@@ -0,0 +1,121 @@
++// Validate release credentials without publishing, persisting, or logging them.
++import { readFileSync } from 'node:fs';
++import { resolve } from 'node:path';
++import { fileURLToPath } from 'node:url';
++
++async function jsonRequest(fetchFn, url, options = {}) {
++  const response = await fetchFn(url, {
++    ...options,
++    signal: AbortSignal.timeout(10000),
++  });
++  if (!response.ok) {
++    throw new Error(`Credential preflight rejected (HTTP ${response.status})`);
++  }
++  return response.json();
++}
++
++export async function checkNpmPublisher({
++  packageName,
++  env = process.env,
++  fetchFn = fetch,
++}) {
++  if (
++    !env.ACTIONS_ID_TOKEN_REQUEST_URL ||
++    !env.ACTIONS_ID_TOKEN_REQUEST_TOKEN
++  ) {
++    throw new Error('npm trusted publishing requires GitHub id-token: write');
++  }
++  const url = new URL(env.ACTIONS_ID_TOKEN_REQUEST_URL);
++  url.searchParams.set('audience', 'npm:registry.npmjs.org');
++  const identity = await jsonRequest(fetchFn, url, {
++    headers: { Authorization: `Bearer ${env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}` },
++  });
++  if (!identity.value) {
++    throw new Error('GitHub returned no OIDC identity');
++  }
++  const escapedName = packageName.replace('/', '%2f');
++  const result = await jsonRequest(
++    fetchFn,
++    `https://registry.npmjs.org/-/npm/v1/oidc/token/exchange/package/${escapedName}`,
++    {
++      method: 'POST',
++      headers: { Authorization: `Bearer ${identity.value}` },
++    }
++  );
++  if (typeof result.token !== 'string' || !result.token) {
++    throw new Error('npm returned no publish credential');
++  }
++}
++
++export async function checkCratePublisher({
++  packageName,
++  env = process.env,
++  fetchFn = fetch,
++}) {
++  const token = env.CARGO_REGISTRY_TOKEN || env.CARGO_TOKEN;
++  if (!token) {
++    throw new Error('Missing crates.io publish credential');
++  }
++  const headers = {
++    Authorization: token,
++    'User-Agent': 'command-stream CI credential preflight',
++  };
++  // /api/v1/me is cookie-only and rejects valid Cargo API tokens.
++  // The publish handler authenticates and checks crate/endpoint scopes before
++  // reading the archive length. Omit that length and the archive completely:
++  // the only accepted response proves we reached that check without publishing.
++  // Source: rust-lang/crates.io/src/controllers/krate/publish.rs.
++  const metadata = Buffer.from(
++    JSON.stringify({ name: packageName, vers: '0.0.0-preflight' })
++  );
++  const body = Buffer.alloc(metadata.length + 4);
++  body.writeUInt32LE(metadata.length);
++  metadata.copy(body, 4);
++  const response = await fetchFn('https://crates.io/api/v1/crates/new', {
++    method: 'PUT',
++    headers,
++    body,
++    signal: AbortSignal.timeout(10000),
++  });
++  if (response.status !== 400) {
++    throw new Error(
++      `crates.io credential preflight rejected (HTTP ${response.status})`
++    );
++  }
++  const result = await response.json();
++  if (
++    result.errors?.length !== 1 ||
++    result.errors[0].detail !== 'invalid tarball length'
++  ) {
++    throw new Error(
++      'crates.io did not confirm the publish credential and scope'
++    );
++  }
++}
++
++if (
++  process.argv[1] &&
++  fileURLToPath(import.meta.url) === resolve(process.argv[1])
++) {
++  try {
++    if (process.argv[2] === 'npm') {
++      const { name } = JSON.parse(readFileSync('js/package.json', 'utf8'));
++      await checkNpmPublisher({ packageName: name });
++    } else if (process.argv[2] === 'crates') {
++      const manifest = readFileSync('rust/Cargo.toml', 'utf8');
++      const name = manifest.match(/^name\s*=\s*"([^"]+)"/m)?.[1];
++      if (!name) {
++        throw new Error('Missing crate name');
++      }
++      await checkCratePublisher({ packageName: name });
++    } else {
++      throw new Error(
++        'Usage: node .github/scripts/publish-preflight.mjs npm|crates'
++      );
++    }
++    console.log('Registry credential preflight passed');
++  } catch (error) {
++    console.error(`::error::${error.message}`);
++    process.exitCode = 1;
++  }
++}
+diff --git a/js/scripts/changeset-version.mjs b/js/scripts/changeset-version.mjs
+index 7ce2dd2..f0b0732 100644
+--- a/js/scripts/changeset-version.mjs
++++ b/js/scripts/changeset-version.mjs
+@@ -13,7 +13,9 @@
+  * - command-stream: Modern shell command execution with streaming support
+  */
+ 
++import { existsSync } from 'node:fs';
+ import { loadUseM } from './use-m-loader.mjs';
++import { runChecked } from './run-checked.mjs';
+ 
+ // Load use-m dynamically, retrying a CDN blip instead of dying at module load.
+ const use = await loadUseM();
+@@ -23,14 +25,13 @@ const { $ } = await use('command-stream');
+ 
+ try {
+   console.log('Running changeset version...');
+-  await $`bunx changeset version`;
++  await runChecked($`bunx changeset version`);
+ 
+-  console.log('\nSynchronizing package-lock.json...');
+-  try {
+-    await $`npm install --package-lock-only`;
+-  } catch {
+-    // No package-lock.json or npm not available, skip
+-    console.log('Skipping package-lock.json sync (not applicable)');
++  if (existsSync('package-lock.json')) {
++    console.log('Synchronizing package-lock.json...');
++    await runChecked(
++      $`npm install --package-lock-only --ignore-scripts --no-audit`
++    );
+   }
+ 
+   console.log('\n✅ Version bump complete with synchronized package-lock.json');
+diff --git a/js/scripts/check-release-needed.mjs b/js/scripts/check-release-needed.mjs
+index a97bb5f..f73d224 100644
+--- a/js/scripts/check-release-needed.mjs
++++ b/js/scripts/check-release-needed.mjs
+@@ -31,9 +31,8 @@
+  * the workflow uses to publish the current version whether or not a changeset
+  * is present. See docs/case-studies/issue-166/.
+  *
+- * command-stream's `$` does NOT throw on a non-zero exit code (errexit is off
+- * by default — see issue #156), so the registry probe checks the captured exit
+- * code explicitly instead of relying on a thrown error.
++ * An exact-version registry query distinguishes a missing version (404) from
++ * registry/authentication outages, which must fail before any release output.
+  *
+  * Usage: bun scripts/check-release-needed.mjs
+  *   (run with working-directory: js, so ./package.json is the JS package)
+@@ -53,12 +52,7 @@
+  */
+ 
+ import { readFileSync, appendFileSync } from 'fs';
+-import { loadUseM } from './use-m-loader.mjs';
+-
+-// Load use-m dynamically (matches the other release scripts in this folder).
+-const use = await loadUseM();
+-
+-const { $ } = await use('command-stream');
++import { isPackageVersionPublished } from './npm-registry.mjs';
+ 
+ /**
+  * Append to the GitHub Actions output file (and echo for the run log).
+@@ -82,24 +76,6 @@ function getPackageInfo() {
+   return { name: packageJson.name, version: packageJson.version };
+ }
+ 
+-/**
+- * Check whether a specific version is published on npm.
+- *
+- * command-stream's `$` does not throw on non-zero exit, so we inspect the
+- * captured exit code: `npm view <pkg>@<version> version` exits 0 and prints the
+- * version when it exists, and exits non-zero (E404) when it does not.
+- *
+- * @param {string} packageName
+- * @param {string} version
+- * @returns {Promise<boolean>}
+- */
+-async function checkVersionOnNpm(packageName, version) {
+-  const result = await $`npm view "${packageName}@${version}" version`.run({
+-    capture: true,
+-  });
+-  return result.code === 0 && result.stdout.trim().includes(version);
+-}
+-
+ async function main() {
+   try {
+     const hasChangesets = process.env.HAS_CHANGESETS === 'true';
+@@ -114,7 +90,10 @@ async function main() {
+     console.log(
+       `Checking if ${packageName}@${currentVersion} is published on npm...`
+     );
+-    const isPublished = await checkVersionOnNpm(packageName, currentVersion);
++    const isPublished = await isPackageVersionPublished(
++      packageName,
++      currentVersion
++    );
+     console.log(`Published on npm: ${isPublished}`);
+     setOutput('current_unpublished', isPublished ? 'false' : 'true');
+ 
+diff --git a/js/scripts/check-version.mjs b/js/scripts/check-version.mjs
+new file mode 100644
+index 0000000..6f69dcc
+--- /dev/null
++++ b/js/scripts/check-version.mjs
+@@ -0,0 +1,33 @@
++#!/usr/bin/env node
++// Compare semantic values, not added diff lines, and fail if Git cannot supply
++// either side. Versions are changed only by the release pipeline on main.
++import { execFileSync } from 'node:child_process';
++
++try {
++  const git = (...args) =>
++    execFileSync('git', args, { encoding: 'utf8' }).trim();
++  const base =
++    process.env.GITHUB_BASE_SHA ||
++    `origin/${process.env.GITHUB_BASE_REF || 'main'}`;
++  const head = process.env.GITHUB_HEAD_SHA || 'HEAD';
++  const ancestor = git('merge-base', base, head);
++  // The workflow invokes this script inside js/. Git paths are repository
++  // relative, so determine the prefix instead of assuming a single-package tree.
++  const manifest = `${git('rev-parse', '--show-prefix')}package.json`;
++  const readVersion = (ref) => {
++    const { version } = JSON.parse(git('show', `${ref}:${manifest}`));
++    if (typeof version !== 'string' || version.trim() === '') {
++      throw new Error(`Missing package version at ${ref}`);
++    }
++    return version;
++  };
++  if (readVersion(ancestor) !== readVersion(head)) {
++    throw new Error(
++      'Manual package version changes are prohibited; add a changeset instead'
++    );
++  }
++  console.log('No manual package version changes detected');
++} catch (error) {
++  console.error(`::error::Version validation failed: ${error.message}`);
++  process.exitCode = 1;
++}
+diff --git a/js/scripts/create-manual-changeset.mjs b/js/scripts/create-manual-changeset.mjs
+index 4fce398..465a64c 100644
+--- a/js/scripts/create-manual-changeset.mjs
++++ b/js/scripts/create-manual-changeset.mjs
+@@ -15,6 +15,7 @@
+ import { writeFileSync } from 'fs';
+ import { randomBytes } from 'crypto';
+ import { loadUseM } from './use-m-loader.mjs';
++import { runChecked } from './run-checked.mjs';
+ 
+ const PACKAGE_NAME = 'command-stream';
+ 
+@@ -75,7 +76,7 @@ ${description}
+ 
+   // Format with Prettier
+   console.log('\nFormatting with Prettier...');
+-  await $`bunx prettier --write "${changesetFile}"`;
++  await runChecked($`bunx prettier --write "${changesetFile}"`);
+ 
+   console.log('\n✅ Changeset created and formatted successfully');
+ } catch (error) {
+diff --git a/js/scripts/format-github-release.mjs b/js/scripts/format-github-release.mjs
+index c60c09c..a6b6c5c 100644
+--- a/js/scripts/format-github-release.mjs
++++ b/js/scripts/format-github-release.mjs
+@@ -14,6 +14,7 @@
+  */
+ 
+ import { loadUseM } from './use-m-loader.mjs';
++import { runChecked } from './run-checked.mjs';
+ 
+ // Load use-m dynamically, retrying a CDN blip instead of dying at module load.
+ const use = await loadUseM();
+@@ -79,7 +80,9 @@ try {
+     console.log(`Formatting JavaScript release notes for ${tag}...`);
+     // Pass the trigger commit SHA for PR detection
+     // This allows proper PR lookup even if the changelog doesn't have a commit hash
+-    await $`bun scripts/format-release-notes.mjs --release-id "${releaseId}" --release-version "${tag}" --repository "${repository}" --commit-sha "${commitSha}"`;
++    await runChecked(
++      $`bun scripts/format-release-notes.mjs --release-id "${releaseId}" --release-version "${tag}" --repository "${repository}" --commit-sha "${commitSha}"`
++    );
+     console.log(`Formatted JavaScript release notes for ${tag}`);
+   }
+ } catch (error) {
+diff --git a/js/scripts/format-release-notes.mjs b/js/scripts/format-release-notes.mjs
+index c7340a0..ab2e333 100644
+--- a/js/scripts/format-release-notes.mjs
++++ b/js/scripts/format-release-notes.mjs
+@@ -24,6 +24,7 @@
+  */
+ 
+ import { loadUseM } from './use-m-loader.mjs';
++import { runChecked } from './run-checked.mjs';
+ 
+ const PACKAGE_NAME = 'command-stream';
+ 
+@@ -202,7 +203,8 @@ try {
+ 
+   // Update the release using JSON input to properly handle special characters
+   const updatePayload = JSON.stringify({ body: formattedBody });
+-  await $`gh api repos/${repository}/releases/${releaseId} -X PATCH --input -`.run(
++  await runChecked(
++    $`gh api repos/${repository}/releases/${releaseId} -X PATCH --input -`,
+     { stdin: updatePayload }
+   );
+ 
+diff --git a/js/scripts/instant-version-bump.mjs b/js/scripts/instant-version-bump.mjs
+index f78fee0..8e7974f 100644
+--- a/js/scripts/instant-version-bump.mjs
++++ b/js/scripts/instant-version-bump.mjs
+@@ -12,8 +12,9 @@
+  * - lino-arguments: Unified configuration from CLI args, env vars, and .lenv files
+  */
+ 
+-import { readFileSync, writeFileSync } from 'fs';
++import { readFileSync, writeFileSync, existsSync } from 'fs';
+ import { loadUseM } from './use-m-loader.mjs';
++import { runChecked } from './run-checked.mjs';
+ 
+ // Load use-m dynamically
+ const use = await loadUseM();
+@@ -58,7 +59,7 @@ try {
+   console.log(`Current version: ${oldVersion}`);
+ 
+   // Bump version using npm version (doesn't create git tag)
+-  await $`npm version ${bumpType} --no-git-tag-version`;
++  await runChecked($`npm version ${bumpType} --no-git-tag-version`);
+ 
+   // Get new version
+   const updatedPackageJson = JSON.parse(readFileSync('package.json', 'utf-8'));
+@@ -105,13 +106,11 @@ try {
+   writeFileSync(changelogPath, changelog, 'utf-8');
+   console.log('✅ CHANGELOG.md updated');
+ 
+-  // Synchronize package-lock.json if it exists
+-  try {
+-    console.log('\nSynchronizing package-lock.json...');
+-    await $`npm install --package-lock-only`;
+-  } catch {
+-    // No package-lock.json or npm not available, skip
+-    console.log('Skipping package-lock.json sync (not applicable)');
++  if (existsSync('package-lock.json')) {
++    console.log('Synchronizing package-lock.json...');
++    await runChecked(
++      $`npm install --package-lock-only --ignore-scripts --no-audit`
++    );
+   }
+ 
+   console.log('\n✅ Instant version bump complete');
+diff --git a/js/scripts/npm-registry.mjs b/js/scripts/npm-registry.mjs
+index f1472d7..67d169d 100644
+--- a/js/scripts/npm-registry.mjs
++++ b/js/scripts/npm-registry.mjs
+@@ -1,3 +1,5 @@
++import { debug } from './debug-print.mjs';
++
+ export const DEFAULT_NPM_REGISTRY_URL = 'https://registry.npmjs.org';
+ 
+ function getNpmRegistryFromEnv() {
+@@ -56,6 +58,21 @@ export function buildPackageMetadataUrl(
+   return `${normalizeRegistryUrl(registryUrl)}/${encodePackageName(packageName)}`;
+ }
+ 
++export function buildPackageVersionUrl(packageName, version, registryUrl) {
++  return `${buildPackageMetadataUrl(packageName, registryUrl)}/${encodeURIComponent(version)}`;
++}
++
++function traceResponse(response, packageName, version) {
++  debug('npm verification response', {
++    packageName,
++    version,
++    status: response.status,
++    cacheStatus: response.headers?.get('cf-cache-status'),
++    cacheControl: response.headers?.get('cache-control'),
++    age: response.headers?.get('age'),
++  });
++}
++
+ /**
+  * Check whether a package version exists in npm registry metadata.
+  * HTTP 404 means the package has not been published yet and is not an error.
+@@ -72,18 +89,28 @@ export async function isPackageVersionPublished(
+   {
+     fetchFn = fetch,
+     registryUrl = getNpmRegistryFromEnv() || DEFAULT_NPM_REGISTRY_URL,
++    timeoutMs = 10000,
+   } = {}
+ ) {
+   if (typeof version !== 'string' || version.trim() === '') {
+     throw new Error('Package version is required');
+   }
+ 
+-  const metadataUrl = buildPackageMetadataUrl(packageName, registryUrl);
+-  const response = await fetchFn(metadataUrl, {
++  // A package-wide packument can stay cached for five minutes after a publish.
++  // Query the exact version and request a fresh response, as npm's registry
++  // API supports, rather than interpreting an old version list as a failed push.
++  const metadataUrl = new URL(
++    buildPackageVersionUrl(packageName, version, registryUrl)
++  );
++  metadataUrl.searchParams.set('cache-bust', String(Date.now()));
++  const response = await fetchFn(metadataUrl.toString(), {
+     headers: {
+       accept: 'application/json',
++      'cache-control': 'no-cache',
+     },
++    signal: AbortSignal.timeout(timeoutMs),
+   });
++  traceResponse(response, packageName, version);
+ 
+   if (response.status === 404) {
+     return false;
+@@ -96,5 +123,5 @@ export async function isPackageVersionPublished(
+   }
+ 
+   const metadata = await response.json();
+-  return Object.hasOwn(metadata?.versions || {}, version);
++  return metadata?.name === packageName && metadata?.version === version;
+ }
+diff --git a/js/scripts/publish-retry.mjs b/js/scripts/publish-retry.mjs
+index 544bba7..c970262 100644
+--- a/js/scripts/publish-retry.mjs
++++ b/js/scripts/publish-retry.mjs
+@@ -29,7 +29,9 @@
+  * version" patterns that the template is still missing.
+  */
+ 
+-export const DEFAULT_VERIFY_ATTEMPTS = 7;
++// Thirty-four attempts allow sixteen minutes for propagation while remaining bounded.
++// Issue #209's release became visible after the old two-minute budget expired.
++export const DEFAULT_VERIFY_ATTEMPTS = 34;
+ export const DEFAULT_VERIFY_INITIAL_DELAY = 2000;
+ export const DEFAULT_VERIFY_MAX_DELAY = 30000;
+ 
+diff --git a/js/scripts/publish-to-npm.mjs b/js/scripts/publish-to-npm.mjs
+index 5fefff0..a502364 100644
+--- a/js/scripts/publish-to-npm.mjs
++++ b/js/scripts/publish-to-npm.mjs
+@@ -56,6 +56,7 @@ import {
+   sleep,
+ } from './publish-retry.mjs';
+ import { loadUseM } from './use-m-loader.mjs';
++import { runChecked } from './run-checked.mjs';
+ 
+ const FALLBACK_PACKAGE_NAME = 'command-stream';
+ 
+@@ -213,7 +214,7 @@ async function main() {
+   try {
+     if (shouldPull) {
+       // Pull the latest changes we just pushed
+-      await $`git pull origin main`;
++      await runChecked($`git pull origin main`);
+     }
+ 
+     // Get current version
+diff --git a/js/scripts/release-git.mjs b/js/scripts/release-git.mjs
+new file mode 100644
+index 0000000..f15cd5f
+--- /dev/null
++++ b/js/scripts/release-git.mjs
+@@ -0,0 +1,68 @@
++import { execFileSync } from 'node:child_process';
++
++const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
++
++export function stageReleaseMetadata() {
++  const root = git('rev-parse', '--show-toplevel');
++  const prefix = git('rev-parse', '--show-prefix');
++  const readPaths = (...args) =>
++    execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' })
++      .split('\0')
++      .filter(Boolean);
++  const files = [
++    ...new Set([
++      ...readPaths(
++        'ls-files',
++        '--modified',
++        '--deleted',
++        '--others',
++        '--exclude-standard',
++        '-z'
++      ),
++      ...readPaths('diff', '--cached', '--name-only', '-z'),
++    ]),
++  ];
++  const allowed =
++    /^(package\.json|package-lock\.json|bun\.lock|CHANGELOG\.md|\.changeset\/[^/]+\.md)$/;
++  if (
++    files.some(
++      (file) =>
++        !file.startsWith(prefix) || !allowed.test(file.slice(prefix.length))
++    )
++  ) {
++    throw new Error(
++      'Release generated changes outside the package metadata allowlist'
++    );
++  }
++  if (files.length) {
++    execFileSync('git', ['-C', root, 'add', '--', ...files]);
++  }
++}
++
++export function classifyPushFailure(output) {
++  const text = output.toLowerCase();
++  if (
++    /gh006|gh013|repository rule violations|changes must be made through a pull request|protected branch|push declined/.test(
++      text
++    )
++  ) {
++    return 'rules';
++  }
++  return /non-fast-forward|fetch first|updates were rejected/.test(text)
++    ? 'race'
++    : 'other';
++}
++
++export async function pushWithRetry({ push, rebase, maxAttempts = 3 }) {
++  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
++    const result = await push();
++    if (result.code === 0) {
++      return;
++    }
++    const output = `${result.stdout || ''}\n${result.stderr || ''}`;
++    if (classifyPushFailure(output) !== 'race' || attempt === maxAttempts) {
++      throw new Error(`Git push failed: ${output.trim()}`);
++    }
++    await rebase();
++  }
++}
+diff --git a/js/scripts/run-checked.mjs b/js/scripts/run-checked.mjs
+new file mode 100644
+index 0000000..cb433e6
+--- /dev/null
++++ b/js/scripts/run-checked.mjs
+@@ -0,0 +1,11 @@
++// command-stream keeps errexit disabled by default. Release mutations must
++// explicitly reject nonzero exits before emitting success or writing metadata.
++export async function runChecked(command, options = {}) {
++  const result = await command.run({ capture: true, ...options });
++  if (result.code !== 0) {
++    throw new Error(
++      `Release command failed (exit ${result.code}): ${result.stderr || result.stdout || 'no output'}`
++    );
++  }
++  return result;
++}
+diff --git a/js/scripts/setup-npm.mjs b/js/scripts/setup-npm.mjs
+index 4e29a0b..04fa70b 100644
+--- a/js/scripts/setup-npm.mjs
++++ b/js/scripts/setup-npm.mjs
+@@ -27,6 +27,7 @@ import { resolve } from 'node:path';
+ import process from 'node:process';
+ import { fileURLToPath } from 'node:url';
+ import { loadUseM } from './use-m-loader.mjs';
++import { runChecked } from './run-checked.mjs';
+ 
+ export const NPM_MIN_VERSION = '11.5.1';
+ export const NODE_MIN_VERSION = '22.14.0';
+@@ -184,7 +185,7 @@ async function resolveLatestSupportedNpmRelease(fetchFn) {
+ // 4. corepack as last resort
+ 
+ async function tryStandardInstall($) {
+-  await $`npm install -g npm@11`;
++  await runChecked($`npm install -g npm@11`);
+ }
+ 
+ async function tryCurlTarball($, fetchFn) {
+@@ -197,17 +198,19 @@ async function tryCurlTarball($, fetchFn) {
+   const globalNpmDir = `${nodeDir}/lib/node_modules/npm`;
+   const tempNpmDir = '/tmp/setup-npm-package';
+ 
+-  await $`rm -rf "${tempNpmDir}" && mkdir -p "${tempNpmDir}"`;
+-  await $`curl -fsSL "${npmRelease.tarballUrl}" | tar xz --strip-components=1 -C "${tempNpmDir}" && rm -rf "${globalNpmDir}" && mv "${tempNpmDir}" "${globalNpmDir}"`;
++  await runChecked($`rm -rf "${tempNpmDir}" && mkdir -p "${tempNpmDir}"`);
++  await runChecked(
++    $`curl -fsSL "${npmRelease.tarballUrl}" | tar xz --strip-components=1 -C "${tempNpmDir}" && rm -rf "${globalNpmDir}" && mv "${tempNpmDir}" "${globalNpmDir}"`
++  );
+ }
+ 
+ async function tryNpxInstall($) {
+-  await $`npx --yes npm@11 install -g npm@11`;
++  await runChecked($`npx --yes npm@11 install -g npm@11`);
+ }
+ 
+ async function tryCorepack($) {
+-  await $`corepack enable`;
+-  await $`corepack prepare npm@11 --activate`;
++  await runChecked($`corepack enable`);
++  await runChecked($`corepack prepare npm@11 --activate`);
+ }
+ 
+ async function tryStrategy(name, fn) {
+diff --git a/js/scripts/validate-changeset.mjs b/js/scripts/validate-changeset.mjs
+index cce9cc2..733b67f 100644
+--- a/js/scripts/validate-changeset.mjs
++++ b/js/scripts/validate-changeset.mjs
+@@ -5,157 +5,63 @@
+  *
+  * Key behavior:
+  * - Only checks changeset files ADDED by the current PR (not pre-existing ones)
+- * - Uses git diff to compare PR head against base branch
++ * - Compares the PR head with its merge base, failing on unavailable refs
+  * - Validates that the PR adds exactly one changeset with proper format
+- * - Falls back to checking all changesets for local development
++ * - Documentation-only changes do not force a package release
++ * - Local development without CI refs can check all pending changesets
+  *
+  * IMPORTANT: Update the package name below to match your package.json
+  */
+ 
+-import { execSync } from 'child_process';
+-import { readFileSync, readdirSync, existsSync } from 'fs';
+-import { join } from 'path';
++import { execFileSync } from 'node:child_process';
++import { readFileSync, readdirSync, existsSync } from 'node:fs';
++import { join } from 'node:path';
+ 
+ const PACKAGE_NAME = 'command-stream';
+ const CHANGESET_DIR = '.changeset';
+-const GIT_CHANGESET_DIR = existsSync('../.git')
+-  ? 'js/.changeset'
+-  : CHANGESET_DIR;
++const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
+ 
+-/**
+- * Ensure a git commit is available locally, fetching if necessary
+- * @param {string} sha The commit SHA to check
+- */
+-function ensureCommitAvailable(sha) {
+-  try {
+-    execSync(`git cat-file -e ${sha}`, { stdio: 'ignore' });
+-  } catch {
+-    console.log('Base commit not available locally, attempting fetch...');
+-    try {
+-      execSync(`git fetch origin ${sha}`, { stdio: 'inherit' });
+-    } catch {
+-      execSync(`git fetch origin`, { stdio: 'inherit' });
+-    }
+-  }
+-}
+-
+-/**
+- * Parse git diff output and extract added changeset files
+- * @param {string} diffOutput Output from git diff --name-status
+- * @returns {string[]} Array of added changeset file names
+- */
+-function parseAddedChangesets(diffOutput) {
+-  const addedChangesets = [];
+-  for (const line of diffOutput.trim().split('\n')) {
+-    if (!line) {
+-      continue;
+-    }
+-    const [status, filePath] = line.split('\t');
+-    if (
+-      status === 'A' &&
+-      (filePath.startsWith(`${CHANGESET_DIR}/`) ||
+-        filePath.startsWith(`${GIT_CHANGESET_DIR}/`)) &&
+-      filePath.endsWith('.md') &&
+-      !filePath.endsWith('README.md')
+-    ) {
+-      addedChangesets.push(
+-        filePath
+-          .replace(`${GIT_CHANGESET_DIR}/`, '')
+-          .replace(`${CHANGESET_DIR}/`, '')
+-      );
+-    }
+-  }
+-  return addedChangesets;
+-}
+-
+-/**
+- * Try to get changesets using explicit SHA comparison
+- * @param {string} baseSha Base commit SHA
+- * @param {string} headSha Head commit SHA
+- * @returns {string[] | null} Array of changeset files or null if failed
+- */
+-function tryExplicitShaComparison(baseSha, headSha) {
+-  console.log(`Comparing ${baseSha}...${headSha}`);
+-  try {
+-    ensureCommitAvailable(baseSha);
+-    const diffOutput = execSync(
+-      `git diff --name-status ${baseSha} ${headSha}`,
+-      { encoding: 'utf-8' }
+-    );
+-    return parseAddedChangesets(diffOutput);
+-  } catch (error) {
+-    console.log(`Git diff with explicit SHAs failed: ${error.message}`);
+-    return null;
+-  }
+-}
+-
+-/**
+- * Try to get changesets using base branch comparison
+- * @param {string} prBase Base branch name
+- * @returns {string[] | null} Array of changeset files or null if failed
+- */
+-function tryBaseBranchComparison(prBase) {
+-  console.log(`Comparing against base branch: ${prBase}`);
+-  try {
+-    try {
+-      execSync(`git fetch origin ${prBase}`, { stdio: 'inherit' });
+-    } catch {
+-      // Ignore fetch errors, we might already have it
++function getAddedChangesetFiles() {
++  const base =
++    process.env.GITHUB_BASE_SHA ||
++    process.env.BASE_SHA ||
++    (process.env.GITHUB_BASE_REF && `origin/${process.env.GITHUB_BASE_REF}`);
++  if (!base) {
++    if (process.env.CI || process.env.GITHUB_ACTIONS) {
++      throw new Error('A base reference is required in CI');
+     }
+-    const diffOutput = execSync(
+-      `git diff --name-status origin/${prBase}...HEAD`,
+-      { encoding: 'utf-8' }
+-    );
+-    return parseAddedChangesets(diffOutput);
+-  } catch (error) {
+-    console.log(`Git diff with base ref failed: ${error.message}`);
+-    return null;
++    console.log('Local validation: checking all pending changesets');
++    return existsSync(CHANGESET_DIR)
++      ? readdirSync(CHANGESET_DIR).filter(
++          (file) => file.endsWith('.md') && file !== 'README.md'
++        )
++      : [];
+   }
+-}
+-
+-/**
+- * Fallback: get all changesets in directory
+- * @returns {string[]} Array of all changeset file names
+- */
+-function getAllChangesets() {
+-  console.log(
+-    'Warning: Could not determine PR diff, checking all changesets in directory'
++  const head = process.env.GITHUB_HEAD_SHA || process.env.HEAD_SHA || 'HEAD';
++  const ancestor = git('merge-base', base, head);
++  const prefix = git('rev-parse', '--show-prefix');
++  const entries = git('diff', '--name-status', ancestor, head, '--', '.')
++    .split('\n')
++    .filter(Boolean)
++    .map((line) => line.split('\t'));
++  const packagePaths = entries.map((entry) =>
++    entry.at(-1).slice(prefix.length)
+   );
+-  if (!existsSync(CHANGESET_DIR)) {
+-    return [];
+-  }
+-  return readdirSync(CHANGESET_DIR).filter(
+-    (file) => file.endsWith('.md') && file !== 'README.md'
++  const needsRelease = packagePaths.some(
++    (file) =>
++      /^(src|scripts|types)\//.test(file) ||
++      ['package.json', 'package-lock.json', 'bun.lock'].includes(file)
+   );
+-}
+-
+-/**
+- * Get changeset files added in the current PR using git diff
+- * @returns {string[]} Array of added changeset file names
+- */
+-function getAddedChangesetFiles() {
+-  const baseSha = process.env.GITHUB_BASE_SHA || process.env.BASE_SHA;
+-  const headSha = process.env.GITHUB_HEAD_SHA || process.env.HEAD_SHA;
+-
+-  // Try explicit SHAs first
+-  if (baseSha && headSha) {
+-    const result = tryExplicitShaComparison(baseSha, headSha);
+-    if (result !== null) {
+-      return result;
+-    }
+-  }
+-
+-  // Try base branch comparison
+-  const prBase = process.env.GITHUB_BASE_REF;
+-  if (prBase) {
+-    const result = tryBaseBranchComparison(prBase);
+-    if (result !== null) {
+-      return result;
+-    }
+-  }
+-
+-  // Fallback to checking all changesets
+-  return getAllChangesets();
++  const added = entries
++    .filter(
++      ([status, file]) =>
++        status === 'A' &&
++        file.startsWith(`${prefix}${CHANGESET_DIR}/`) &&
++        file.endsWith('.md') &&
++        !file.endsWith('/README.md')
++    )
++    .map(([, file]) => file.slice(`${prefix}${CHANGESET_DIR}/`.length));
++  return needsRelease || added.length ? added : null;
+ }
+ 
+ /**
+@@ -217,6 +123,10 @@ try {
+ 
+   // Get changeset files added in this PR
+   const addedChangesetFiles = getAddedChangesetFiles();
++  if (addedChangesetFiles === null) {
++    console.log('No JavaScript release changes; a changeset is optional');
++    process.exit(0);
++  }
+   const changesetCount = addedChangesetFiles.length;
+ 
+   console.log(`Found ${changesetCount} changeset file(s) added by this PR`);
+diff --git a/js/scripts/version-and-commit.mjs b/js/scripts/version-and-commit.mjs
+index 47e92e1..bd167da 100644
+--- a/js/scripts/version-and-commit.mjs
++++ b/js/scripts/version-and-commit.mjs
+@@ -14,6 +14,8 @@
+ 
+ import { readFileSync, appendFileSync, readdirSync } from 'fs';
+ import { loadUseM } from './use-m-loader.mjs';
++import { runChecked } from './run-checked.mjs';
++import { stageReleaseMetadata, pushWithRetry } from './release-git.mjs';
+ 
+ // Load use-m dynamically
+ const use = await loadUseM();
+@@ -125,9 +127,7 @@ function countChangesets() {
+  */
+ async function getVersion(source = 'local') {
+   if (source === 'remote') {
+-    const result = await $`git show origin/main:js/package.json`.run({
+-      capture: true,
+-    });
++    const result = await runChecked($`git show origin/main:js/package.json`);
+     return JSON.parse(result.stdout).version;
+   }
+   return JSON.parse(readFileSync('./package.json', 'utf8')).version;
+@@ -136,19 +136,19 @@ async function getVersion(source = 'local') {
+ async function main() {
+   try {
+     // Configure git
+-    await $`git config user.name "github-actions[bot]"`;
+-    await $`git config user.email "github-actions[bot]@users.noreply.github.com"`;
++    await runChecked($`git config user.name "github-actions[bot]"`);
++    await runChecked(
++      $`git config user.email "41898282+github-actions[bot]@users.noreply.github.com"`
++    );
+ 
+     // Check if remote main has advanced (handles re-runs after partial success)
+     console.log('Checking for remote changes...');
+-    await $`git fetch origin main`;
++    await runChecked($`git fetch origin main`);
+ 
+-    const localHeadResult = await $`git rev-parse HEAD`.run({ capture: true });
++    const localHeadResult = await runChecked($`git rev-parse HEAD`);
+     const localHead = localHeadResult.stdout.trim();
+ 
+-    const remoteHeadResult = await $`git rev-parse origin/main`.run({
+-      capture: true,
+-    });
++    const remoteHeadResult = await runChecked($`git rev-parse origin/main`);
+     const remoteHead = remoteHeadResult.stdout.trim();
+ 
+     if (localHead !== remoteHead) {
+@@ -164,7 +164,7 @@ async function main() {
+       // Check if there are changesets to process
+       const changesetCount = countChangesets();
+ 
+-      if (changesetCount === 0) {
++      if (mode === 'changeset' && changesetCount === 0) {
+         console.log('No changesets to process and remote has advanced.');
+         console.log(
+           'Assuming version bump was already completed in a previous attempt.'
+@@ -175,7 +175,7 @@ async function main() {
+         return;
+       } else {
+         console.log('Rebasing on remote main to incorporate changes...');
+-        await $`git rebase origin/main`;
++        await runChecked($`git rebase origin/main`);
+       }
+     }
+ 
+@@ -188,14 +188,18 @@ async function main() {
+       // Run instant version bump script
+       // Rely on command-stream's auto-quoting for proper argument handling
+       if (description) {
+-        await $`bun scripts/instant-version-bump.mjs --bump-type ${bumpType} --description ${description}`;
++        await runChecked(
++          $`bun scripts/instant-version-bump.mjs --bump-type ${bumpType} --description ${description}`
++        );
+       } else {
+-        await $`bun scripts/instant-version-bump.mjs --bump-type ${bumpType}`;
++        await runChecked(
++          $`bun scripts/instant-version-bump.mjs --bump-type ${bumpType}`
++        );
+       }
+     } else {
+       console.log('Running changeset version...');
+       // Run changeset version to bump versions and update CHANGELOG
+-      await $`bun run changeset:version`;
++      await runChecked($`bun run changeset:version`);
+     }
+ 
+     // Get new version after bump
+@@ -204,32 +208,24 @@ async function main() {
+     setOutput('new_version', newVersion);
+ 
+     // Check if there are changes to commit
+-    const statusResult = await $`git status --porcelain`.run({ capture: true });
++    const statusResult = await runChecked($`git status --porcelain`);
+     const status = statusResult.stdout.trim();
+ 
+     if (status) {
+       console.log('Changes detected, committing...');
+ 
+       // Stage all changes (package.json, package-lock.json, CHANGELOG.md, deleted changesets)
+-      await $`git add -A`;
++      stageReleaseMetadata();
+ 
+       // Commit with version number as message
+       const commitMessage = newVersion;
+       const escapedMessage = commitMessage.replace(/"/g, '\\"');
+-      await $`git commit -m "${escapedMessage}"`;
+-
+-      // Push directly to main.
+-      // command-stream's `$` does NOT throw on a non-zero exit (errexit is off
+-      // by default, see issue #156), so we check the result code explicitly.
+-      // A silently-failed push would otherwise report version_committed=true and
+-      // let the release job publish/release a version that is not on main (the
+-      // same false-positive class that produced #166).
+-      const pushResult = await $`git push origin main`.run({ capture: true });
+-      if (pushResult.code !== 0) {
+-        throw new Error(
+-          `git push origin main failed (exit code ${pushResult.code}): ${pushResult.stderr?.trim() || 'no stderr'}`
+-        );
+-      }
++      await runChecked($`git commit -m "${escapedMessage}"`);
++
++      await pushWithRetry({
++        push: () => $`git push origin main`.run({ capture: true }),
++        rebase: () => runChecked($`git pull --rebase origin main`),
++      });
+ 
+       console.log('✅ Version bump committed and pushed to main');
+       setOutput('version_committed', 'true');
+diff --git a/js/scripts/wait-for-npm.mjs b/js/scripts/wait-for-npm.mjs
+index 4f5a5c2..7f13b3e 100644
+--- a/js/scripts/wait-for-npm.mjs
++++ b/js/scripts/wait-for-npm.mjs
+@@ -28,7 +28,9 @@ import { appendFileSync, readFileSync } from 'node:fs';
+ import path from 'node:path';
+ import process from 'node:process';
+ import { fileURLToPath } from 'node:url';
++import { debug } from './debug-print.mjs';
+ import { loadUseM } from './use-m-loader.mjs';
++import { isPackageVersionPublished } from './npm-registry.mjs';
+ 
+ export const DEFAULT_MAX_ATTEMPTS = 30;
+ export const DEFAULT_SLEEP_SECONDS = 10;
+@@ -77,8 +79,15 @@ export async function waitForNpmVersion({
+       `Checking npm for ${packageName}@${version} (attempt ${attempt}/${maxAttempts})`
+     );
+ 
+-    if (await checkAvailability(packageName, version)) {
+-      return true;
++    try {
++      if (await checkAvailability(packageName, version)) {
++        return true;
++      }
++    } catch (error) {
++      debug('npm availability check failed', {
++        attempt,
++        message: error.message,
++      });
+     }
+ 
+     if (attempt < maxAttempts) {
+@@ -100,7 +109,6 @@ function isCliEntryPoint() {
+ async function runCli() {
+   // Load use-m dynamically (matches the other release scripts in this folder).
+   const use = await loadUseM();
+-  const { $ } = await use('command-stream');
+   const { makeConfig } = await use('lino-arguments');
+ 
+   const config = makeConfig({
+@@ -140,20 +148,10 @@ async function runCli() {
+     config.packageName ||
+     JSON.parse(readFileSync('./package.json', 'utf8')).name;
+ 
+-  // command-stream's `$` does NOT throw on non-zero exit (errexit off by
+-  // default — see issue #156); `npm view <pkg>@<version> version` exits 0 and
+-  // prints the version when published, non-zero (E404) otherwise.
+-  const checkAvailability = async (name, ver) => {
+-    const result = await $`npm view "${name}@${ver}" version`.run({
+-      capture: true,
+-    });
+-    return result.code === 0 && result.stdout.trim() === ver;
+-  };
+-
+   const available = await waitForNpmVersion({
+     packageName,
+     version,
+-    checkAvailability,
++    checkAvailability: isPackageVersionPublished,
+     maxAttempts: config.maxAttempts,
+     sleepSeconds: config.sleepSeconds,
+   });
+diff --git a/rust/scripts/check-changelog-fragment.rs b/rust/scripts/check-changelog-fragment.rs
+index 70faf74..d51e867 100644
+--- a/rust/scripts/check-changelog-fragment.rs
++++ b/rust/scripts/check-changelog-fragment.rs
+@@ -20,10 +20,10 @@
+ //! regex = "1"
+ //! ```
+ 
++use regex::Regex;
+ use std::env;
+ use std::path::Path;
+ use std::process::{Command, exit};
+-use regex::Regex;
+ 
+ fn exec(command: &str, args: &[&str]) -> String {
+     match Command::new(command).args(args).output() {
+@@ -33,12 +33,12 @@ fn exec(command: &str, args: &[&str]) -> String {
+             } else {
+                 eprintln!("Error executing {} {:?}", command, args);
+                 eprintln!("{}", String::from_utf8_lossy(&output.stderr));
+-                String::new()
++                exit(1)
+             }
+         }
+         Err(e) => {
+             eprintln!("Failed to execute {} {:?}: {}", command, args, e);
+-            String::new()
++            exit(1)
+         }
+     }
+ }
+@@ -67,31 +67,49 @@ fn get_changed_files() -> Vec<String> {
+ 
+     let output = exec(
+         "git",
+-        &["diff", "--name-only", &format!("origin/{}...HEAD", base_ref)],
++        &[
++            "diff",
++            "--name-only",
++            &format!("origin/{}...HEAD", base_ref),
++        ],
+     );
+ 
+     if output.is_empty() {
+         return Vec::new();
+     }
+ 
+-    output.lines().filter(|s| !s.is_empty()).map(String::from).collect()
++    output
++        .lines()
++        .filter(|s| !s.is_empty())
++        .map(String::from)
++        .collect()
+ }
+ 
+ fn is_source_file(file_path: &str, rust_root: &str) -> bool {
+-    let prefix = if rust_root == "." { String::new() } else { format!("{}/", rust_root) };
++    let prefix = if rust_root == "." {
++        String::new()
++    } else {
++        format!("{}/", rust_root)
++    };
+ 
+     let source_patterns = [
+         Regex::new(&format!(r"^{}src/", regex::escape(&prefix))).unwrap(),
+         Regex::new(&format!(r"^{}tests/", regex::escape(&prefix))).unwrap(),
+-        Regex::new(&format!(r"^{}?scripts/", regex::escape(&prefix))).unwrap(),
++        Regex::new(&format!(r"^{}scripts/", regex::escape(&prefix))).unwrap(),
+         Regex::new(&format!(r"^{}Cargo\.toml$", regex::escape(&prefix))).unwrap(),
+     ];
+ 
+-    source_patterns.iter().any(|pattern| pattern.is_match(file_path))
++    source_patterns
++        .iter()
++        .any(|pattern| pattern.is_match(file_path))
+ }
+ 
+ fn is_changelog_fragment(file_path: &str, rust_root: &str) -> bool {
+-    let changelog_dir = if rust_root == "." { "changelog.d/".to_string() } else { format!("{}/changelog.d/", rust_root) };
++    let changelog_dir = if rust_root == "." {
++        "changelog.d/".to_string()
++    } else {
++        format!("{}/changelog.d/", rust_root)
++    };
+ 
+     (file_path.starts_with(&changelog_dir) || file_path.starts_with("changelog.d/"))
+         && file_path.ends_with(".md")
+@@ -103,7 +121,10 @@ fn main() {
+ 
+     let rust_root = get_rust_root();
+     if rust_root != "." {
+-        println!("Detected multi-language repository (Rust root: {})", rust_root);
++        println!(
++            "Detected multi-language repository (Rust root: {})",
++            rust_root
++        );
+     }
+ 
+     let changed_files = get_changed_files();
+@@ -120,7 +141,10 @@ fn main() {
+     println!();
+ 
+     // Count source files changed
+-    let source_changes: Vec<&String> = changed_files.iter().filter(|f| is_source_file(f, &rust_root)).collect();
++    let source_changes: Vec<&String> = changed_files
++        .iter()
++        .filter(|f| is_source_file(f, &rust_root))
++        .collect();
+     let source_changed_count = source_changes.len();
+ 
+     println!("Source files changed: {}", source_changed_count);
+@@ -132,7 +156,18 @@ fn main() {
+     println!();
+ 
+     // Count changelog fragments added in this PR
+-    let fragments_added: Vec<&String> = changed_files
++    let base_ref = env::var("GITHUB_BASE_REF").unwrap_or_else(|_| "main".to_string());
++    let added = exec(
++        "git",
++        &[
++            "diff",
++            "--name-only",
++            "--diff-filter=A",
++            &format!("origin/{}...HEAD", base_ref),
++        ],
++    );
++    let added_files: Vec<String> = added.lines().map(String::from).collect();
++    let fragments_added: Vec<&String> = added_files
+         .iter()
+         .filter(|f| is_changelog_fragment(f, &rust_root))
+         .collect();
+@@ -148,7 +183,9 @@ fn main() {
+ 
+     // Check if source files changed but no fragment was added
+     if source_changed_count > 0 && fragment_added_count == 0 {
+-        eprintln!("::error::No changelog fragment found in this PR. Please add a changelog entry in changelog.d/");
++        eprintln!(
++            "::error::No changelog fragment found in this PR. Please add a changelog entry in changelog.d/"
++        );
+         eprintln!();
+         eprintln!("To create a changelog fragment:");
+         eprintln!("  Create a new .md file in changelog.d/ with your changes");
+diff --git a/rust/scripts/check-release-needed.rs b/rust/scripts/check-release-needed.rs
+index b97c5e4..94dc2be 100644
+--- a/rust/scripts/check-release-needed.rs
++++ b/rust/scripts/check-release-needed.rs
+@@ -115,12 +115,13 @@ fn check_version_on_crates_io(crate_name: &str, version: &str) -> bool {
+                     }
+                 }
+             }
+-            false
++            eprintln!("::error::Invalid crates.io version metadata");
++            exit(1)
+         }
+         Err(ureq::Error::Status(404, _)) => false,
+         Err(e) => {
+-            eprintln!("Warning: Could not check crates.io: {}", e);
+-            false
++            eprintln!("::error::crates.io availability is unknown: {}", e);
++            exit(1)
+         }
+     }
+ }
+@@ -260,12 +261,13 @@ fn get_max_published_version(crate_name: &str) -> Option<String> {
+                     }
+                 }
+             }
+-            None
++            eprintln!("::error::Invalid crates.io package metadata");
++            exit(1)
+         }
+         Err(ureq::Error::Status(404, _)) => None,
+         Err(e) => {
+-            eprintln!("Warning: Could not query crates.io for versions: {}", e);
+-            None
++            eprintln!("::error::crates.io versions are unknown: {}", e);
++            exit(1)
+         }
+     }
+ }
+@@ -361,7 +363,9 @@ fn main() {
+                 image, dockerhub_published
+             );
+         } else {
+-            println!("Docker Hub artifact check skipped: DOCKERHUB_IMAGE or Dockerfile is not configured");
++            println!(
++                "Docker Hub artifact check skipped: DOCKERHUB_IMAGE or Dockerfile is not configured"
++            );
+         }
+         println!(
+             "GitHub release {}{} published: {}",
+diff --git a/rust/scripts/check-version-modification.rs b/rust/scripts/check-version-modification.rs
+index 09ebb33..da11a11 100644
+--- a/rust/scripts/check-version-modification.rs
++++ b/rust/scripts/check-version-modification.rs
+@@ -1,163 +1,82 @@
+ #!/usr/bin/env rust-script
+-//! Check for manual version modification in Cargo.toml
+-//!
+-//! This script prevents manual version changes in pull requests.
+-//! Versions should be managed automatically by the CI/CD pipeline
+-//! using changelog fragments in changelog.d/.
+-//!
+-//! Key behavior:
+-//! - Detects if `version = "..."` line has changed in Cargo.toml
+-//! - Fails the CI check if manual version change is detected
+-//! - Skips check for automated release branches (changelog-manual-release-*)
+-//!
+-//! Usage: rust-script scripts/check-version-modification.rs
+-//!
+-//! Environment variables (set by GitHub Actions):
+-//!   - GITHUB_HEAD_REF: The head branch name for PRs
+-//!   - GITHUB_BASE_REF: The base branch name for PRs
+-//!   - GITHUB_EVENT_NAME: Should be 'pull_request'
+-//!
+-//! Exit codes:
+-//!   - 0: No manual version changes detected (or check skipped)
+-//!   - 1: Manual version changes detected
+-//!
++//! Reject semantic package version changes in every pull request, including
++//! release-named branches. Missing Git refs or malformed manifests fail closed.
+ //! ```cargo
+ //! [dependencies]
+-//! regex = "1"
++//! toml = "0.8"
+ //! ```
+-
+ use std::env;
+ use std::path::Path;
+ use std::process::{Command, exit};
+-use regex::Regex;
+-
+-fn exec(command: &str, args: &[&str]) -> String {
+-    match Command::new(command).args(args).output() {
+-        Ok(output) => {
+-            String::from_utf8_lossy(&output.stdout).trim().to_string()
+-        }
+-        Err(_) => String::new(),
+-    }
+-}
+ 
+-fn exec_ignore_error(command: &str, args: &[&str]) {
+-    let _ = Command::new(command)
++fn git(args: &[&str]) -> Result<String, String> {
++    let result = Command::new("git")
+         .args(args)
+-        .stdout(std::process::Stdio::null())
+-        .stderr(std::process::Stdio::null())
+-        .status();
+-}
+-
+-fn should_skip_version_check() -> bool {
+-    let head_ref = env::var("GITHUB_HEAD_REF").unwrap_or_default();
+-
+-    // Skip for automated release PRs
+-    let automated_branch_prefixes = [
+-        "changelog-manual-release-",
+-        "changeset-release/",
+-        "release/",
+-        "automated-release/",
+-    ];
+-
+-    for prefix in &automated_branch_prefixes {
+-        if head_ref.starts_with(prefix) {
+-            println!("Skipping version check for automated branch: {}", head_ref);
+-            return true;
+-        }
++        .output()
++        .map_err(|e| e.to_string())?;
++    if !result.status.success() {
++        return Err(String::from_utf8_lossy(&result.stderr).to_string());
+     }
+-
+-    false
++    Ok(String::from_utf8_lossy(&result.stdout).trim().to_string())
+ }
+ 
+-fn get_rust_root() -> String {
+-    if let Ok(root) = env::var("RUST_ROOT") {
+-        if !root.is_empty() {
+-            return root;
+-        }
+-    }
+-
+-    if Path::new("./Cargo.toml").exists() {
+-        return ".".to_string();
+-    }
+-
+-    if Path::new("./rust/Cargo.toml").exists() {
+-        return "rust".to_string();
+-    }
+-
+-    ".".to_string()
++fn version_at(reference: &str, manifest: &str) -> Result<String, String> {
++    let content = git(&["show", &format!("{}:{}", reference, manifest)])?;
++    let parsed: toml::Value = toml::from_str(&content).map_err(|e| e.to_string())?;
++    parsed
++        .get("package")
++        .and_then(|p| p.get("version"))
++        .and_then(|v| v.as_str())
++        .map(String::from)
++        .ok_or_else(|| "Missing [package].version".to_string())
+ }
+ 
+-fn get_cargo_toml_path(rust_root: &str) -> String {
+-    if rust_root == "." {
+-        "Cargo.toml".to_string()
++fn check() -> Result<(), String> {
++    let base = env::var("GITHUB_BASE_SHA")
++        .ok()
++        .filter(|v| !v.is_empty())
++        .unwrap_or_else(|| {
++            format!(
++                "origin/{}",
++                env::var("GITHUB_BASE_REF").unwrap_or_else(|_| "main".into())
++            )
++        });
++    let head = env::var("GITHUB_HEAD_SHA").unwrap_or_else(|_| "HEAD".into());
++    let ancestor = git(&["merge-base", &base, &head])?;
++    let root = env::var("RUST_ROOT")
++        .ok()
++        .filter(|v| !v.is_empty())
++        .unwrap_or_else(|| {
++            if Path::new("Cargo.toml").exists() {
++                ".".into()
++            } else {
++                "rust".into()
++            }
++        });
++    let prefix = git(&["rev-parse", "--show-prefix"])?;
++    let manifest = if root == "." {
++        format!("{}Cargo.toml", prefix)
+     } else {
+-        format!("{}/Cargo.toml", rust_root)
++        format!("{}{}/Cargo.toml", prefix, root)
++    };
++    if version_at(&ancestor, &manifest)? != version_at(&head, &manifest)? {
++        return Err(
++            "Manual version changes are prohibited; add a changelog fragment instead".into(),
++        );
+     }
+-}
+-
+-fn get_cargo_toml_diff(cargo_toml_path: &str) -> String {
+-    let base_ref = env::var("GITHUB_BASE_REF").unwrap_or_else(|_| "main".to_string());
+-
+-    // Ensure we have the base branch
+-    exec_ignore_error("git", &["fetch", "origin", &base_ref, "--depth=1"]);
+-
+-    // Get the diff for Cargo.toml
+-    exec(
+-        "git",
+-        &["diff", &format!("origin/{}...HEAD", base_ref), "--", cargo_toml_path],
+-    )
+-}
+-
+-fn has_version_change(diff: &str) -> bool {
+-    if diff.is_empty() {
+-        return false;
+-    }
+-
+-    // Look for changes to the version line
+-    // Match lines that start with + or - followed by version = "..."
+-    let version_change_pattern = Regex::new(r#"(?m)^[+-]version\s*=\s*""#).unwrap();
+-    version_change_pattern.is_match(diff)
++    Ok(())
+ }
+ 
+ fn main() {
+-    println!("Checking for manual version modifications in Cargo.toml...\n");
+-
+-    // Only run on pull requests
+-    let event_name = env::var("GITHUB_EVENT_NAME").unwrap_or_default();
+-    if event_name != "pull_request" {
+-        println!("Skipping: Not a pull request event (event: {})", event_name);
+-        exit(0);
++    if env::var("GITHUB_EVENT_NAME").unwrap_or_default() != "pull_request" {
++        println!("Version guard runs on pull requests");
++        return;
+     }
+-
+-    // Skip for automated release branches
+-    if should_skip_version_check() {
+-        exit(0);
+-    }
+-
+-    // Get and check the diff
+-    let rust_root = get_rust_root();
+-    let cargo_toml_path = get_cargo_toml_path(&rust_root);
+-    let diff = get_cargo_toml_diff(&cargo_toml_path);
+-
+-    if diff.is_empty() {
+-        println!("No changes to Cargo.toml detected.");
+-        println!("Version check passed.");
+-        exit(0);
+-    }
+-
+-    // Check for version changes
+-    if has_version_change(&diff) {
+-        eprintln!("Error: Manual version change detected in Cargo.toml!\n");
+-        eprintln!("Versions are managed automatically by the CI/CD pipeline.");
+-        eprintln!("Please do not modify the version field directly.\n");
+-        eprintln!("To trigger a release, add a changelog fragment to changelog.d/");
+-        eprintln!("with the appropriate bump type (major, minor, or patch).\n");
+-        eprintln!("See changelog.d/README.md for more information.\n");
+-        eprintln!("If you need to undo your version change, run:");
+-        eprintln!("  git checkout origin/main -- Cargo.toml");
+-        exit(1);
++    match check() {
++        Ok(()) => println!("No manual package version changes detected"),
++        Err(error) => {
++            eprintln!("::error::Version validation failed: {}", error);
++            exit(1);
++        }
+     }
+-
+-    println!("Cargo.toml was modified but version field was not changed.");
+-    println!("Version check passed.");
+ }
+diff --git a/rust/scripts/detect-code-changes.rs b/rust/scripts/detect-code-changes.rs
+index 3a5769e..89fbbb7 100644
+--- a/rust/scripts/detect-code-changes.rs
++++ b/rust/scripts/detect-code-changes.rs
+@@ -37,11 +37,11 @@
+ //! regex = "1"
+ //! ```
+ 
++use regex::Regex;
+ use std::env;
+ use std::fs;
+ use std::io::Write;
+-use std::process::Command;
+-use regex::Regex;
++use std::process::{Command, exit};
+ 
+ fn exec(command: &str, args: &[&str]) -> String {
+     match Command::new(command).args(args).output() {
+@@ -51,19 +51,23 @@ fn exec(command: &str, args: &[&str]) -> String {
+             } else {
+                 eprintln!("Error executing {} {:?}", command, args);
+                 eprintln!("{}", String::from_utf8_lossy(&output.stderr));
+-                String::new()
++                exit(1)
+             }
+         }
+         Err(e) => {
+             eprintln!("Failed to execute {} {:?}: {}", command, args, e);
+-            String::new()
++            exit(1)
+         }
+     }
+ }
+ 
+ fn set_output(name: &str, value: &str) {
+     if let Ok(output_file) = env::var("GITHUB_OUTPUT") {
+-        if let Ok(mut file) = fs::OpenOptions::new().create(true).append(true).open(&output_file) {
++        if let Ok(mut file) = fs::OpenOptions::new()
++            .create(true)
++            .append(true)
++            .open(&output_file)
++        {
+             let _ = writeln!(file, "{}={}", name, value);
+         }
+     }
+@@ -72,40 +76,40 @@ fn set_output(name: &str, value: &str) {
+ 
+ fn is_merge_commit() -> bool {
+     let output = exec("git", &["cat-file", "-p", "HEAD"]);
+-    output.lines().filter(|line| line.starts_with("parent ")).count() > 1
++    output
++        .lines()
++        .filter(|line| line.starts_with("parent "))
++        .count()
++        > 1
++}
++
++fn has_ref(reference: &str) -> bool {
++    Command::new("git")
++        .args(["rev-parse", "--verify", "--quiet", reference])
++        .stdout(std::process::Stdio::null())
++        .stderr(std::process::Stdio::null())
++        .status()
++        .map(|s| s.success())
++        .unwrap_or(false)
+ }
+ 
+ fn get_changed_files() -> Vec<String> {
+-    // GitHub Actions checks out a synthetic merge commit for pull_request
+-    // events: HEAD is the merge commit, HEAD^ is the base branch, HEAD^2
+-    // is the actual PR head. To get the per-commit diff (what the latest
+-    // push actually changed), we compare HEAD^2^ to HEAD^2.
+-    // For push events, HEAD is the real commit, so HEAD^ to HEAD works.
+-    if is_merge_commit() {
+-        println!("Merge commit detected (pull_request event)");
+-        println!("Comparing HEAD^2^ to HEAD^2 (per-commit diff of PR head)");
+-        let output = exec("git", &["diff", "--name-only", "HEAD^2^", "HEAD^2"]);
+-        if !output.is_empty() {
+-            return output.lines().filter(|s| !s.is_empty()).map(String::from).collect();
+-        }
+-        // Fallback: first commit in PR, compare base to PR head
+-        println!("HEAD^2^ not available (first commit in PR), comparing HEAD^ to HEAD^2");
+-        let output = exec("git", &["diff", "--name-only", "HEAD^", "HEAD^2"]);
+-        if !output.is_empty() {
+-            return output.lines().filter(|s| !s.is_empty()).map(String::from).collect();
++    let output = if is_merge_commit() {
++        if has_ref("HEAD^2^") {
++            exec("git", &["diff", "--name-only", "HEAD^2^", "HEAD^2"])
++        } else {
++            exec("git", &["diff", "--name-only", "HEAD^", "HEAD^2"])
+         }
+-    }
+-
+-    println!("Comparing HEAD^ to HEAD");
+-    let output = exec("git", &["diff", "--name-only", "HEAD^", "HEAD"]);
+-
+-    if output.is_empty() {
+-        println!("HEAD^ not available, listing all files in HEAD");
+-        let output = exec("git", &["ls-tree", "--name-only", "-r", "HEAD"]);
+-        return output.lines().filter(|s| !s.is_empty()).map(String::from).collect();
+-    }
+-
+-    output.lines().filter(|s| !s.is_empty()).map(String::from).collect()
++    } else if has_ref("HEAD^") {
++        exec("git", &["diff", "--name-only", "HEAD^", "HEAD"])
++    } else {
++        exec("git", &["ls-tree", "--name-only", "-r", "HEAD"])
++    };
++    output
++        .lines()
++        .filter(|s| !s.is_empty())
++        .map(String::from)
++        .collect()
+ }
+ 
+ fn is_excluded_from_code_changes(file_path: &str) -> bool {
+@@ -158,8 +162,13 @@ fn main() {
+     set_output("docs-changed", if docs_changed { "true" } else { "false" });
+ 
+     // Detect workflow changes
+-    let workflow_changed = changed_files.iter().any(|f| f.starts_with(".github/workflows/"));
+-    set_output("workflow-changed", if workflow_changed { "true" } else { "false" });
++    let workflow_changed = changed_files
++        .iter()
++        .any(|f| f.starts_with(".github/workflows/"));
++    set_output(
++        "workflow-changed",
++        if workflow_changed { "true" } else { "false" },
++    );
+ 
+     // Detect code changes (excluding docs, changelog.d, experiments, examples folders, and markdown files)
+     let code_changed_files: Vec<&String> = changed_files
+@@ -180,7 +189,10 @@ fn main() {
+     // Check if any code files changed (.rs, .toml, .mjs, .yml, .yaml, or workflow files)
+     let code_pattern = Regex::new(r"\.(rs|toml|mjs|js|yml|yaml)$|\.github/workflows/").unwrap();
+     let code_changed = code_changed_files.iter().any(|f| code_pattern.is_match(f));
+-    set_output("any-code-changed", if code_changed { "true" } else { "false" });
++    set_output(
++        "any-code-changed",
++        if code_changed { "true" } else { "false" },
++    );
+ 
+     println!("\nChange detection completed.");
+ }
+diff --git a/rust/scripts/publish-crate.rs b/rust/scripts/publish-crate.rs
+index 49f199b..9dfec3d 100644
+--- a/rust/scripts/publish-crate.rs
++++ b/rust/scripts/publish-crate.rs
+@@ -39,6 +39,18 @@ use std::process::{Command, exit};
+ #[path = "rust-paths.rs"]
+ mod rust_paths;
+ 
++fn publish_command(manifest: &std::path::Path, token: Option<&str>) -> Command {
++    let mut cmd = Command::new("cargo");
++    cmd.arg("publish")
++        .arg("--allow-dirty")
++        .arg("--manifest-path")
++        .arg(manifest);
++    if let Some(token) = token {
++        cmd.env("CARGO_REGISTRY_TOKEN", token);
++    }
++    cmd
++}
++
+ fn get_arg(name: &str) -> Option<String> {
+     let args: Vec<String> = env::args().collect();
+     let flag = format!("--{}", name);
+@@ -52,7 +64,11 @@ fn get_arg(name: &str) -> Option<String> {
+ 
+ fn set_output(key: &str, value: &str) {
+     if let Ok(output_file) = env::var("GITHUB_OUTPUT") {
+-        if let Ok(mut file) = fs::OpenOptions::new().create(true).append(true).open(&output_file) {
++        if let Ok(mut file) = fs::OpenOptions::new()
++            .create(true)
++            .append(true)
++            .open(&output_file)
++        {
+             let _ = writeln!(file, "{}={}", key, value);
+         }
+     }
+@@ -139,7 +155,11 @@ fn main() {
+ 
+     // Get token from CLI arg, then env vars
+     let token = get_arg("token")
+-        .or_else(|| env::var("CARGO_REGISTRY_TOKEN").ok().filter(|s| !s.is_empty()))
++        .or_else(|| {
++            env::var("CARGO_REGISTRY_TOKEN")
++                .ok()
++                .filter(|s| !s.is_empty())
++        })
+         .or_else(|| env::var("CARGO_TOKEN").ok().filter(|s| !s.is_empty()));
+ 
+     let package_info = match rust_paths::read_package_info(&package_manifest) {
+@@ -155,7 +175,9 @@ fn main() {
+     println!("Package: {}@{}", name, version);
+ 
+     if name == "example-sum-package-name" {
+-        println!("Skipping publish: package name is the template default 'example-sum-package-name'");
++        println!(
++            "Skipping publish: package name is the template default 'example-sum-package-name'"
++        );
+         println!("Rename the package in Cargo.toml before publishing to crates.io");
+         set_output("publish_result", "skipped");
+         return;
+@@ -165,7 +187,9 @@ fn main() {
+     println!("=== Attempting to publish to crates.io ===");
+ 
+     if token.is_none() {
+-        println!("::warning::Neither CARGO_REGISTRY_TOKEN nor CARGO_TOKEN is set, attempting publish without explicit token");
++        println!(
++            "::warning::Neither CARGO_REGISTRY_TOKEN nor CARGO_TOKEN is set, attempting publish without explicit token"
++        );
+         println!();
+         println!("To fix this, ensure one of the following secrets is configured:");
+         println!("  - CARGO_REGISTRY_TOKEN (Cargo's native env var, preferred)");
+@@ -181,15 +205,7 @@ fn main() {
+ 
+     // Build the cargo publish command. Use the manifest path so this works for
+     // both a standalone crate and a crate nested under rust/.
+-    let mut cmd = Command::new("cargo");
+-    cmd.arg("publish")
+-        .arg("--allow-dirty")
+-        .arg("--manifest-path")
+-        .arg(&package_manifest);
+-
+-    if let Some(t) = &token {
+-        cmd.arg("--token").arg(t);
+-    }
++    let mut cmd = publish_command(&package_manifest, token.as_deref());
+ 
+     let output = cmd.output().expect("Failed to execute cargo publish");
+ 
+@@ -208,8 +224,12 @@ fn main() {
+                 eprintln!("=== VERSION ALREADY PUBLISHED ===");
+                 eprintln!();
+                 eprintln!("Version {} already exists on crates.io.", version);
+-                eprintln!("The release pipeline must always publish a version greater than what is already published.");
+-                eprintln!("This indicates a bug in version bumping: the pipeline should have computed a new, unpublished version.");
++                eprintln!(
++                    "The release pipeline must always publish a version greater than what is already published."
++                );
++                eprintln!(
++                    "This indicates a bug in version bumping: the pipeline should have computed a new, unpublished version."
++                );
+                 eprintln!();
+             }
+             FailureKind::RateLimited => {
+@@ -222,12 +242,20 @@ fn main() {
+                 eprintln!("Original cargo publish error:");
+                 eprintln!("{}", combined.trim());
+                 eprintln!();
+-                eprintln!("This is a TRANSIENT, automatically-recoverable throttle, not a pipeline bug.");
+-                eprintln!("No action is required other than waiting for the 24-hour window to roll over.");
+-                eprintln!("scripts/check-release-needed.rs will re-attempt the same version on the next");
++                eprintln!(
++                    "This is a TRANSIENT, automatically-recoverable throttle, not a pipeline bug."
++                );
++                eprintln!(
++                    "No action is required other than waiting for the 24-hour window to roll over."
++                );
++                eprintln!(
++                    "scripts/check-release-needed.rs will re-attempt the same version on the next"
++                );
+                 eprintln!("push to 'main' once the throttle window has cleared.");
+                 eprintln!();
+-                eprintln!("See: https://doc.rust-lang.org/cargo/reference/publishing.html#publishing-a-new-version-of-an-existing-crate");
++                eprintln!(
++                    "See: https://doc.rust-lang.org/cargo/reference/publishing.html#publishing-a-new-version-of-an-existing-crate"
++                );
+                 eprintln!();
+             }
+             FailureKind::AuthFailed => {
+@@ -236,11 +264,17 @@ fn main() {
+                 eprintln!();
+                 eprintln!("Failed to publish due to missing or invalid authentication token.");
+                 eprintln!();
+-                eprintln!("SOLUTION: Configure one of these secrets in your repository or organization:");
+-                eprintln!("  1. CARGO_REGISTRY_TOKEN - Cargo's native environment variable (preferred)");
++                eprintln!(
++                    "SOLUTION: Configure one of these secrets in your repository or organization:"
++                );
++                eprintln!(
++                    "  1. CARGO_REGISTRY_TOKEN - Cargo's native environment variable (preferred)"
++                );
+                 eprintln!("  2. CARGO_TOKEN - Alternative name for backwards compatibility");
+                 eprintln!();
+-                eprintln!("If using organization secrets with a different name, map it in your workflow:");
++                eprintln!(
++                    "If using organization secrets with a different name, map it in your workflow:"
++                );
+                 eprintln!("  - name: Publish to Crates.io");
+                 eprintln!("    env:");
+                 eprintln!("      CARGO_REGISTRY_TOKEN: ${{{{ secrets.YOUR_SECRET_NAME }}}}");
+@@ -331,3 +365,21 @@ You have published too many versions of this crate in the last 24 hours
+         assert!(!FailureKind::Unknown.is_deferred());
+     }
+ }
++
++#[cfg(test)]
++mod credential_tests {
++    use super::*;
++    #[test]
++    fn publish_keeps_credentials_out_of_command_arguments() {
++        let cmd = publish_command(std::path::Path::new("rust/Cargo.toml"), Some("test-token"));
++        assert!(
++            !cmd.get_args()
++                .any(|arg| arg == "--token" || arg == "test-token")
++        );
++        assert!(
++            cmd.get_envs()
++                .any(|(key, value)| key == "CARGO_REGISTRY_TOKEN"
++                    && value == Some(std::ffi::OsStr::new("test-token")))
++        );
++    }
++}
+diff --git a/rust/scripts/version-and-commit.rs b/rust/scripts/version-and-commit.rs
+index dd43602..3db8a2d 100644
+--- a/rust/scripts/version-and-commit.rs
++++ b/rust/scripts/version-and-commit.rs
+@@ -46,6 +46,50 @@ use std::process::Command;
+ #[path = "rust-paths.rs"]
+ mod rust_paths;
+ 
++const REPOSITORY_RULE_PATTERNS: &[&str] = &[
++    "gh006",
++    "gh013",
++    "repository rule violations",
++    "changes must be made through a pull request",
++    "protected branch",
++    "push declined",
++];
++
++const NON_FAST_FORWARD_PATTERNS: &[&str] = &[
++    "[rejected]",
++    "non-fast-forward",
++    "fetch first",
++    "updates were rejected",
++];
++
++#[derive(Debug, PartialEq, Eq)]
++enum PushFailure {
++    /// A repository ruleset refuses the push; retrying cannot fix policy.
++    RepositoryRules,
++    /// The remote branch moved; rebase onto it and try again.
++    LostRace,
++    /// Anything else: report the real error instead of masking it.
++    Other,
++}
++
++fn classify_push_failure(raw_output: &str) -> PushFailure {
++    let haystack = raw_output.to_lowercase();
++    // Rules first: a ruleset rejection also contains the word "rejected".
++    if REPOSITORY_RULE_PATTERNS
++        .iter()
++        .any(|pattern| haystack.contains(pattern))
++    {
++        return PushFailure::RepositoryRules;
++    }
++    if NON_FAST_FORWARD_PATTERNS
++        .iter()
++        .any(|pattern| haystack.contains(pattern))
++    {
++        return PushFailure::LostRace;
++    }
++    PushFailure::Other
++}
++
+ fn get_arg(name: &str) -> Option<String> {
+     let args: Vec<String> = env::args().collect();
+     let flag = format!("--{}", name);
+@@ -259,7 +303,11 @@ fn check_version_on_crates_io(crate_name: &str, version: &str) -> bool {
+         .call()
+     {
+         Ok(response) => response.status() == 200,
+-        Err(_) => false,
++        Err(ureq::Error::Status(404, _)) => false,
++        Err(error) => {
++            eprintln!("::error::crates.io availability is unknown: {}", error);
++            exit(1);
++        }
+     }
+ }
+ 
+@@ -303,9 +351,14 @@ fn get_max_published_version(crate_name: &str) -> Option<(u32, u32, u32)> {
+                     }
+                 }
+             }
+-            None
++            eprintln!("::error::Invalid crates.io package metadata; refusing to guess a version");
++            exit(1)
++        }
++        Err(ureq::Error::Status(404, _)) => None,
++        Err(error) => {
++            eprintln!("::error::crates.io versions are unknown: {}", error);
++            exit(1);
+         }
+-        Err(_) => None,
+     }
+ }
+ 
+@@ -334,9 +387,15 @@ fn ensure_version_exceeds_published(
+         if (major, minor, patch) <= (pub_major, pub_minor, pub_patch) {
+             println!(
+                 "Version {}.{}.{} is not greater than max published {}.{}.{}, adjusting to {}.{}.{}",
+-                major, minor, patch,
+-                pub_major, pub_minor, pub_patch,
+-                pub_major, pub_minor, pub_patch + 1
++                major,
++                minor,
++                patch,
++                pub_major,
++                pub_minor,
++                pub_patch,
++                pub_major,
++                pub_minor,
++                pub_patch + 1
+             );
+             major = pub_major;
+             minor = pub_minor;
+@@ -458,245 +517,17 @@ fn collect_changelog(changelog_dir: &str, changelog_file: &str, version: &str) {
+ }
+ 
+ #[cfg(test)]
+-mod tests {
+-    use super::{get_benchmarks_cargo_lock_path, update_cargo_lock, update_cargo_locks};
+-    use std::fs;
+-    use std::path::PathBuf;
+-    use std::process::Command;
+-    use std::time::{SystemTime, UNIX_EPOCH};
+-
+-    fn temp_dir(name: &str) -> PathBuf {
+-        let nanos = SystemTime::now()
+-            .duration_since(UNIX_EPOCH)
+-            .unwrap()
+-            .as_nanos();
+-        let path = std::env::temp_dir().join(format!("version-and-commit-{name}-{nanos}"));
+-        fs::create_dir_all(&path).unwrap();
+-        path
+-    }
+-
+-    #[test]
+-    fn cargo_lock_update_scopes_to_named_package_entry() {
+-        let repo = temp_dir("lock-update");
+-        let cargo_lock = repo.join("Cargo.lock");
+-        fs::write(
+-            &cargo_lock,
+-            r#"[[package]]
+-name = "example-sum-package-name-helper"
+-version = "9.9.9"
+-
+-[[package]]
+-name = "example-sum-package-name"
+-version = "0.13.0"
+-dependencies = [
+- "clap",
+-]
+-
+-[[package]]
+-name = "regex"
+-version = "1.12.3"
+-"#,
+-        )
+-        .unwrap();
+-
+-        assert!(update_cargo_lock(&cargo_lock, "example-sum-package-name", "0.14.0").unwrap());
+-
+-        let updated = fs::read_to_string(&cargo_lock).unwrap();
+-        assert!(updated.contains("name = \"example-sum-package-name\"\nversion = \"0.14.0\""));
+-        assert!(updated.contains("name = \"example-sum-package-name-helper\"\nversion = \"9.9.9\""));
+-        assert!(updated.contains("name = \"regex\"\nversion = \"1.12.3\""));
+-    }
+-
+-    #[test]
+-    fn cargo_lock_update_is_idempotent_when_version_already_matches() {
+-        let repo = temp_dir("lock-idempotent");
+-        let cargo_lock = repo.join("Cargo.lock");
+-        let content = r#"[[package]]
+-name = "example-sum-package-name"
+-version = "0.14.0"
+-"#;
+-        fs::write(&cargo_lock, content).unwrap();
+-
+-        assert!(!update_cargo_lock(&cargo_lock, "example-sum-package-name", "0.14.0").unwrap());
+-        assert_eq!(fs::read_to_string(&cargo_lock).unwrap(), content);
+-    }
+-
+-    #[test]
+-    fn cargo_lock_update_returns_false_when_lock_file_is_absent() {
+-        let repo = temp_dir("lock-absent");
+-        let cargo_lock = repo.join("Cargo.lock");
+-
+-        assert!(!update_cargo_lock(&cargo_lock, "example-sum-package-name", "0.14.0").unwrap());
+-        assert!(!cargo_lock.exists());
+-    }
+-
+-    #[test]
+-    fn cargo_lock_update_returns_false_when_package_entry_is_absent() {
+-        let repo = temp_dir("lock-entry-absent");
+-        let cargo_lock = repo.join("Cargo.lock");
+-        let content = r#"[[package]]
+-name = "regex"
+-version = "1.12.3"
+-"#;
+-        fs::write(&cargo_lock, content).unwrap();
+-
+-        assert!(!update_cargo_lock(&cargo_lock, "example-sum-package-name", "0.14.0").unwrap());
+-        assert_eq!(fs::read_to_string(&cargo_lock).unwrap(), content);
+-    }
+-
+-    /// Regression test: the rust-v1.1.0 release bumped rust/Cargo.lock but not
+-    /// rust/benchmarks/Cargo.lock, so `cargo clippy --locked` in the benchmark
+-    /// workflow failed with "cannot update the lock file ... --locked".
+-    #[test]
+-    fn cargo_locks_update_includes_benchmarks_lock_file() {
+-        let rust_root = temp_dir("locks-benchmarks");
+-        let rust_root_str = rust_root.to_string_lossy().to_string();
+-        let benchmarks_lock = get_benchmarks_cargo_lock_path(&rust_root_str);
+-        assert_eq!(
+-            benchmarks_lock,
+-            rust_root.join("benchmarks").join("Cargo.lock")
+-        );
+-
+-        let cargo_lock = rust_root.join("Cargo.lock");
+-        fs::create_dir_all(benchmarks_lock.parent().unwrap()).unwrap();
+-        let content = r#"[[package]]
+-name = "example-sum-package-name"
+-version = "0.13.0"
+-"#;
+-        fs::write(&cargo_lock, content).unwrap();
+-        fs::write(&benchmarks_lock, content).unwrap();
+-
+-        let updated = update_cargo_locks(
+-            &[cargo_lock.as_path(), benchmarks_lock.as_path()],
+-            "example-sum-package-name",
+-            "0.14.0",
+-        )
+-        .unwrap();
+-
+-        assert_eq!(
+-            updated,
+-            vec![
+-                cargo_lock.to_string_lossy().to_string(),
+-                benchmarks_lock.to_string_lossy().to_string(),
+-            ]
+-        );
+-        for lock in [&cargo_lock, &benchmarks_lock] {
+-            assert!(fs::read_to_string(lock)
+-                .unwrap()
+-                .contains("name = \"example-sum-package-name\"\nversion = \"0.14.0\""));
+-        }
+-    }
+-
+-    #[test]
+-    fn cargo_locks_update_skips_missing_benchmarks_lock_file() {
+-        let rust_root = temp_dir("locks-no-benchmarks");
+-        let rust_root_str = rust_root.to_string_lossy().to_string();
+-        let benchmarks_lock = get_benchmarks_cargo_lock_path(&rust_root_str);
+-        let cargo_lock = rust_root.join("Cargo.lock");
+-        fs::write(
+-            &cargo_lock,
+-            "[[package]]\nname = \"example-sum-package-name\"\nversion = \"0.13.0\"\n",
+-        )
+-        .unwrap();
+-
+-        let updated = update_cargo_locks(
+-            &[cargo_lock.as_path(), benchmarks_lock.as_path()],
+-            "example-sum-package-name",
+-            "0.14.0",
+-        )
+-        .unwrap();
+-
+-        assert_eq!(updated, vec![cargo_lock.to_string_lossy().to_string()]);
+-        assert!(!benchmarks_lock.exists());
+-    }
+-
+-    /// Regression test for issue #164: the Rust release job failed with
+-    /// "cannot rebase: Your index contains uncommitted changes." because the
+-    /// script staged the version bump (`git add`) and only afterwards ran
+-    /// `git rebase origin/main`. `git rebase` refuses to run with a dirty
+-    /// index, so the release must rebase onto the remote BEFORE staging.
+-    ///
+-    /// This test reproduces both orderings against a real temporary repository
+-    /// and asserts the buggy order fails while the fixed order succeeds.
+-    #[test]
+-    fn rebase_must_run_before_staging_the_version_bump() {
+-        let repo = temp_dir("rebase-order");
+-        let git = |args: &[&str]| -> std::process::Output {
+-            Command::new("git")
+-                .args(args)
+-                .current_dir(&repo)
+-                .output()
+-                .expect("failed to run git")
+-        };
+-
+-        // Some CI images default to `master`; force the initial branch to main.
+-        git(&["init", "-q", "."]);
+-        git(&["checkout", "-q", "-b", "main"]);
+-        git(&["config", "user.email", "ci@example.com"]);
+-        git(&["config", "user.name", "ci"]);
+-
+-        // Commit A: the state the release job checks out.
+-        fs::write(repo.join("Cargo.toml"), "version = \"0.1.0\"\n").unwrap();
+-        git(&["add", "Cargo.toml"]);
+-        git(&["commit", "-qm", "A: initial"]);
+-
+-        // Commit B on a parallel ref simulates origin/main advancing while the
+-        // release job was running (e.g. a concurrent release pushed to main).
+-        git(&["checkout", "-q", "-b", "upstream"]);
+-        fs::write(repo.join("remote.txt"), "remote change\n").unwrap();
+-        git(&["add", "remote.txt"]);
+-        git(&["commit", "-qm", "B: remote advanced"]);
+-        git(&["checkout", "-q", "main"]);
+-
+-        // BUGGY ORDER: stage the bump first, then rebase -> git rejects the
+-        // dirty index. This is exactly what broke the release job.
+-        fs::write(repo.join("Cargo.toml"), "version = \"0.1.1\"\n").unwrap();
+-        git(&["add", "Cargo.toml"]);
+-        let buggy = git(&["rebase", "upstream"]);
+-        assert!(
+-            !buggy.status.success(),
+-            "rebase unexpectedly succeeded with a dirty index"
+-        );
+-        let buggy_err = String::from_utf8_lossy(&buggy.stderr);
+-        assert!(
+-            buggy_err.contains("cannot rebase") || buggy_err.contains("uncommitted changes"),
+-            "unexpected rebase error: {buggy_err}"
+-        );
+-
+-        // Reset back to a clean tree at commit A.
+-        let _ = git(&["rebase", "--abort"]);
+-        git(&["reset", "-q", "--hard", "HEAD"]);
+-
+-        // FIXED ORDER: rebase while the tree is clean, THEN stage and commit.
+-        let fixed = git(&["rebase", "upstream"]);
+-        assert!(
+-            fixed.status.success(),
+-            "rebase with a clean tree failed: {}",
+-            String::from_utf8_lossy(&fixed.stderr)
+-        );
+-        fs::write(repo.join("Cargo.toml"), "version = \"0.1.1\"\n").unwrap();
+-        git(&["add", "Cargo.toml"]);
+-        let commit = git(&["commit", "-qm", "chore: release 0.1.1"]);
+-        assert!(
+-            commit.status.success(),
+-            "commit after clean rebase failed: {}",
+-            String::from_utf8_lossy(&commit.stderr)
+-        );
+-
+-        // The bump rides on top of the upstream commit, proving no work was lost.
+-        let log = git(&["log", "--oneline"]);
+-        let log_out = String::from_utf8_lossy(&log.stdout);
+-        assert!(log_out.contains("release 0.1.1"));
+-        assert!(log_out.contains("B: remote advanced"));
+-    }
+-}
++#[path = "version-and-commit/tests.rs"]
++mod tests;
+ 
+ #[cfg(not(test))]
+ fn main() {
+     let bump_type = match get_arg("bump-type") {
+         Some(bt) => bt,
+         None => {
+-            eprintln!("Usage: rust-script scripts/version-and-commit.rs --bump-type <major|minor|patch> [--description <desc>] [--rust-root <path>] [--tag-prefix <prefix>] [--release-label <label>]");
++            eprintln!(
++                "Usage: rust-script scripts/version-and-commit.rs --bump-type <major|minor|patch> [--description <desc>] [--rust-root <path>] [--tag-prefix <prefix>] [--release-label <label>]"
++            );
+             exit(1);
+         }
+     };
+@@ -731,15 +562,22 @@ fn main() {
+     let changelog_file = get_changelog_path(&rust_root);
+ 
+     // Configure git
+-    let _ = exec("git", &["config", "user.name", "github-actions[bot]"]);
+-    let _ = exec(
++    exec("git", &["config", "user.name", "github-actions[bot]"]).unwrap_or_else(|e| {
++        eprintln!("Git configuration failed: {}", e);
++        exit(1)
++    });
++    exec(
+         "git",
+         &[
+             "config",
+             "user.email",
+-            "github-actions[bot]@users.noreply.github.com",
++            "41898282+github-actions[bot]@users.noreply.github.com",
+         ],
+-    );
++    )
++    .unwrap_or_else(|e| {
++        eprintln!("Git configuration failed: {}", e);
++        exit(1)
++    });
+ 
+     // Sync with the latest remote state BEFORE touching any files.
+     //
+@@ -749,14 +587,26 @@ fn main() {
+     // broke the release job. Rebasing first also means the version bump is
+     // computed from the most recent state of the branch (matches the JS
+     // version-and-commit.mjs ordering).
+-    let current_branch =
+-        exec("git", &["rev-parse", "--abbrev-ref", "HEAD"]).unwrap_or_else(|_| "main".to_string());
++    let current_branch = exec("git", &["rev-parse", "--abbrev-ref", "HEAD"]).unwrap_or_else(|e| {
++        eprintln!("Branch detection failed: {}", e);
++        exit(1)
++    });
+     if let Err(e) = exec("git", &["fetch", "origin", &current_branch]) {
+-        eprintln!("Warning: Could not fetch origin/{}: {}", current_branch, e);
++        eprintln!(
++            "::error::Could not refresh origin/{}: {}",
++            current_branch, e
++        );
++        exit(1);
+     } else {
+-        let local = exec("git", &["rev-parse", "HEAD"]).unwrap_or_default();
+-        let remote =
+-            exec("git", &["rev-parse", &format!("origin/{}", current_branch)]).unwrap_or_default();
++        let local = exec("git", &["rev-parse", "HEAD"]).unwrap_or_else(|e| {
++            eprintln!("Local revision lookup failed: {}", e);
++            exit(1)
++        });
++        let remote = exec("git", &["rev-parse", &format!("origin/{}", current_branch)])
++            .unwrap_or_else(|e| {
++                eprintln!("Remote revision lookup failed: {}", e);
++                exit(1)
++            });
+         if !local.is_empty() && !remote.is_empty() && local != remote {
+             println!("Local branch is behind remote, rebasing...");
+             if let Err(e) = exec("git", &["rebase", &format!("origin/{}", current_branch)]) {
+@@ -848,8 +698,14 @@ fn main() {
+     let package_manifest_str = package_manifest.to_string_lossy().to_string();
+     let mut add_args = vec!["add", &package_manifest_str, &changelog_file];
+     add_args.extend(updated_locks.iter().map(String::as_str));
+-    let _ = exec("git", &add_args);
+-    let _ = exec("git", &["add", "-A", &changelog_dir]);
++    exec("git", &add_args).unwrap_or_else(|e| {
++        eprintln!("Staging failed: {}", e);
++        exit(1)
++    });
++    exec("git", &["add", "-A", &changelog_dir]).unwrap_or_else(|e| {
++        eprintln!("Staging fragments failed: {}", e);
++        exit(1)
++    });
+ 
+     // Check if there are changes to commit
+     if exec_check("git", &["diff", "--cached", "--quiet"]) {
+@@ -900,7 +756,8 @@ fn main() {
+         match exec("git", &["push"]) {
+             Ok(_) => break,
+             Err(e) => {
+-                if attempt < max_push_attempts {
++                if classify_push_failure(&e) == PushFailure::LostRace && attempt < max_push_attempts
++                {
+                     eprintln!(
+                         "Push failed (attempt {}/{}): {}",
+                         attempt, max_push_attempts, e
+@@ -921,7 +778,7 @@ fn main() {
+         }
+     }
+ 
+-    if let Err(e) = exec("git", &["push", "--tags"]) {
++    if let Err(e) = exec("git", &["push", "origin", &tag_name]) {
+         eprintln!("Error pushing tags: {}", e);
+         exit(1);
+     }
+diff --git a/rust/scripts/version-and-commit/tests.rs b/rust/scripts/version-and-commit/tests.rs
+new file mode 100644
+index 0000000..e3fd048
+--- /dev/null
++++ b/rust/scripts/version-and-commit/tests.rs
+@@ -0,0 +1,249 @@
++use super::{
++    classify_push_failure, get_benchmarks_cargo_lock_path, update_cargo_lock, update_cargo_locks,
++    PushFailure,
++};
++use std::fs;
++use std::path::PathBuf;
++use std::process::Command;
++use std::time::{SystemTime, UNIX_EPOCH};
++
++fn temp_dir(name: &str) -> PathBuf {
++    let nanos = SystemTime::now()
++        .duration_since(UNIX_EPOCH)
++        .unwrap()
++        .as_nanos();
++    let path = std::env::temp_dir().join(format!("version-and-commit-{name}-{nanos}"));
++    fs::create_dir_all(&path).unwrap();
++    path
++}
++
++#[test]
++fn cargo_lock_update_scopes_to_named_package_entry() {
++    let repo = temp_dir("lock-update");
++    let cargo_lock = repo.join("Cargo.lock");
++    fs::write(
++        &cargo_lock,
++        r#"[[package]]
++name = "example-sum-package-name-helper"
++version = "9.9.9"
++
++[[package]]
++name = "example-sum-package-name"
++version = "0.13.0"
++dependencies = [
++ "clap",
++]
++
++[[package]]
++name = "regex"
++version = "1.12.3"
++"#,
++    )
++    .unwrap();
++
++    assert!(update_cargo_lock(&cargo_lock, "example-sum-package-name", "0.14.0").unwrap());
++
++    let updated = fs::read_to_string(&cargo_lock).unwrap();
++    assert!(updated.contains("name = \"example-sum-package-name\"\nversion = \"0.14.0\""));
++    assert!(updated.contains("name = \"example-sum-package-name-helper\"\nversion = \"9.9.9\""));
++    assert!(updated.contains("name = \"regex\"\nversion = \"1.12.3\""));
++}
++
++#[test]
++fn cargo_lock_update_is_idempotent_when_version_already_matches() {
++    let repo = temp_dir("lock-idempotent");
++    let cargo_lock = repo.join("Cargo.lock");
++    let content = r#"[[package]]
++name = "example-sum-package-name"
++version = "0.14.0"
++"#;
++    fs::write(&cargo_lock, content).unwrap();
++
++    assert!(!update_cargo_lock(&cargo_lock, "example-sum-package-name", "0.14.0").unwrap());
++    assert_eq!(fs::read_to_string(&cargo_lock).unwrap(), content);
++}
++
++#[test]
++fn cargo_lock_update_returns_false_when_lock_file_is_absent() {
++    let repo = temp_dir("lock-absent");
++    let cargo_lock = repo.join("Cargo.lock");
++
++    assert!(!update_cargo_lock(&cargo_lock, "example-sum-package-name", "0.14.0").unwrap());
++    assert!(!cargo_lock.exists());
++}
++
++#[test]
++fn cargo_lock_update_returns_false_when_package_entry_is_absent() {
++    let repo = temp_dir("lock-entry-absent");
++    let cargo_lock = repo.join("Cargo.lock");
++    let content = r#"[[package]]
++name = "regex"
++version = "1.12.3"
++"#;
++    fs::write(&cargo_lock, content).unwrap();
++
++    assert!(!update_cargo_lock(&cargo_lock, "example-sum-package-name", "0.14.0").unwrap());
++    assert_eq!(fs::read_to_string(&cargo_lock).unwrap(), content);
++}
++
++/// Regression test: the rust-v1.1.0 release bumped rust/Cargo.lock but not
++/// rust/benchmarks/Cargo.lock, so `cargo clippy --locked` in the benchmark
++/// workflow failed with "cannot update the lock file ... --locked".
++#[test]
++fn cargo_locks_update_includes_benchmarks_lock_file() {
++    let rust_root = temp_dir("locks-benchmarks");
++    let rust_root_str = rust_root.to_string_lossy().to_string();
++    let benchmarks_lock = get_benchmarks_cargo_lock_path(&rust_root_str);
++    assert_eq!(
++        benchmarks_lock,
++        rust_root.join("benchmarks").join("Cargo.lock")
++    );
++
++    let cargo_lock = rust_root.join("Cargo.lock");
++    fs::create_dir_all(benchmarks_lock.parent().unwrap()).unwrap();
++    let content = r#"[[package]]
++name = "example-sum-package-name"
++version = "0.13.0"
++"#;
++    fs::write(&cargo_lock, content).unwrap();
++    fs::write(&benchmarks_lock, content).unwrap();
++
++    let updated = update_cargo_locks(
++        &[cargo_lock.as_path(), benchmarks_lock.as_path()],
++        "example-sum-package-name",
++        "0.14.0",
++    )
++    .unwrap();
++
++    assert_eq!(
++        updated,
++        vec![
++            cargo_lock.to_string_lossy().to_string(),
++            benchmarks_lock.to_string_lossy().to_string(),
++        ]
++    );
++    for lock in [&cargo_lock, &benchmarks_lock] {
++        assert!(fs::read_to_string(lock)
++            .unwrap()
++            .contains("name = \"example-sum-package-name\"\nversion = \"0.14.0\""));
++    }
++}
++
++#[test]
++fn cargo_locks_update_skips_missing_benchmarks_lock_file() {
++    let rust_root = temp_dir("locks-no-benchmarks");
++    let rust_root_str = rust_root.to_string_lossy().to_string();
++    let benchmarks_lock = get_benchmarks_cargo_lock_path(&rust_root_str);
++    let cargo_lock = rust_root.join("Cargo.lock");
++    fs::write(
++        &cargo_lock,
++        "[[package]]\nname = \"example-sum-package-name\"\nversion = \"0.13.0\"\n",
++    )
++    .unwrap();
++
++    let updated = update_cargo_locks(
++        &[cargo_lock.as_path(), benchmarks_lock.as_path()],
++        "example-sum-package-name",
++        "0.14.0",
++    )
++    .unwrap();
++
++    assert_eq!(updated, vec![cargo_lock.to_string_lossy().to_string()]);
++    assert!(!benchmarks_lock.exists());
++}
++
++/// Regression test for issue #164: the Rust release job failed with
++/// "cannot rebase: Your index contains uncommitted changes." because the
++/// script staged the version bump (`git add`) and only afterwards ran
++/// `git rebase origin/main`. `git rebase` refuses to run with a dirty
++/// index, so the release must rebase onto the remote BEFORE staging.
++///
++/// This test reproduces both orderings against a real temporary repository
++/// and asserts the buggy order fails while the fixed order succeeds.
++#[test]
++fn rebase_must_run_before_staging_the_version_bump() {
++    let repo = temp_dir("rebase-order");
++    let git = |args: &[&str]| -> std::process::Output {
++        Command::new("git")
++            .args(args)
++            .current_dir(&repo)
++            .output()
++            .expect("failed to run git")
++    };
++
++    // Some CI images default to `master`; force the initial branch to main.
++    git(&["init", "-q", "."]);
++    git(&["checkout", "-q", "-b", "main"]);
++    git(&["config", "user.email", "ci@example.com"]);
++    git(&["config", "user.name", "ci"]);
++
++    // Commit A: the state the release job checks out.
++    fs::write(repo.join("Cargo.toml"), "version = \"0.1.0\"\n").unwrap();
++    git(&["add", "Cargo.toml"]);
++    git(&["commit", "-qm", "A: initial"]);
++
++    // Commit B on a parallel ref simulates origin/main advancing while the
++    // release job was running (e.g. a concurrent release pushed to main).
++    git(&["checkout", "-q", "-b", "upstream"]);
++    fs::write(repo.join("remote.txt"), "remote change\n").unwrap();
++    git(&["add", "remote.txt"]);
++    git(&["commit", "-qm", "B: remote advanced"]);
++    git(&["checkout", "-q", "main"]);
++
++    // BUGGY ORDER: stage the bump first, then rebase -> git rejects the
++    // dirty index. This is exactly what broke the release job.
++    fs::write(repo.join("Cargo.toml"), "version = \"0.1.1\"\n").unwrap();
++    git(&["add", "Cargo.toml"]);
++    let buggy = git(&["rebase", "upstream"]);
++    assert!(
++        !buggy.status.success(),
++        "rebase unexpectedly succeeded with a dirty index"
++    );
++    let buggy_err = String::from_utf8_lossy(&buggy.stderr);
++    assert!(
++        buggy_err.contains("cannot rebase") || buggy_err.contains("uncommitted changes"),
++        "unexpected rebase error: {buggy_err}"
++    );
++
++    // Reset back to a clean tree at commit A.
++    let _ = git(&["rebase", "--abort"]);
++    git(&["reset", "-q", "--hard", "HEAD"]);
++
++    // FIXED ORDER: rebase while the tree is clean, THEN stage and commit.
++    let fixed = git(&["rebase", "upstream"]);
++    assert!(
++        fixed.status.success(),
++        "rebase with a clean tree failed: {}",
++        String::from_utf8_lossy(&fixed.stderr)
++    );
++    fs::write(repo.join("Cargo.toml"), "version = \"0.1.1\"\n").unwrap();
++    git(&["add", "Cargo.toml"]);
++    let commit = git(&["commit", "-qm", "chore: release 0.1.1"]);
++    assert!(
++        commit.status.success(),
++        "commit after clean rebase failed: {}",
++        String::from_utf8_lossy(&commit.stderr)
++    );
++
++    // The bump rides on top of the upstream commit, proving no work was lost.
++    let log = git(&["log", "--oneline"]);
++    let log_out = String::from_utf8_lossy(&log.stdout);
++    assert!(log_out.contains("release 0.1.1"));
++    assert!(log_out.contains("B: remote advanced"));
++}
++
++#[test]
++fn repository_rules_are_not_retried_as_a_lost_race() {
++    assert_eq!(
++        classify_push_failure("GH013 repository rule violations [rejected] (fetch first)"),
++        PushFailure::RepositoryRules
++    );
++    assert_eq!(
++        classify_push_failure("updates were rejected (fetch first)"),
++        PushFailure::LostRace
++    );
++    assert_eq!(
++        classify_push_failure("authentication failed"),
++        PushFailure::Other
++    );
++}

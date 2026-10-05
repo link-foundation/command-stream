@@ -28,7 +28,9 @@ import { appendFileSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { debug } from './debug-print.mjs';
 import { loadUseM } from './use-m-loader.mjs';
+import { isPackageVersionPublished } from './npm-registry.mjs';
 
 export const DEFAULT_MAX_ATTEMPTS = 30;
 export const DEFAULT_SLEEP_SECONDS = 10;
@@ -77,8 +79,15 @@ export async function waitForNpmVersion({
       `Checking npm for ${packageName}@${version} (attempt ${attempt}/${maxAttempts})`
     );
 
-    if (await checkAvailability(packageName, version)) {
-      return true;
+    try {
+      if (await checkAvailability(packageName, version)) {
+        return true;
+      }
+    } catch (error) {
+      debug('npm availability check failed', {
+        attempt,
+        message: error.message,
+      });
     }
 
     if (attempt < maxAttempts) {
@@ -100,7 +109,6 @@ function isCliEntryPoint() {
 async function runCli() {
   // Load use-m dynamically (matches the other release scripts in this folder).
   const use = await loadUseM();
-  const { $ } = await use('command-stream');
   const { makeConfig } = await use('lino-arguments');
 
   const config = makeConfig({
@@ -140,20 +148,10 @@ async function runCli() {
     config.packageName ||
     JSON.parse(readFileSync('./package.json', 'utf8')).name;
 
-  // command-stream's `$` does NOT throw on non-zero exit (errexit off by
-  // default — see issue #156); `npm view <pkg>@<version> version` exits 0 and
-  // prints the version when published, non-zero (E404) otherwise.
-  const checkAvailability = async (name, ver) => {
-    const result = await $`npm view "${name}@${ver}" version`.run({
-      capture: true,
-    });
-    return result.code === 0 && result.stdout.trim() === ver;
-  };
-
   const available = await waitForNpmVersion({
     packageName,
     version,
-    checkAvailability,
+    checkAvailability: isPackageVersionPublished,
     maxAttempts: config.maxAttempts,
     sleepSeconds: config.sleepSeconds,
   });

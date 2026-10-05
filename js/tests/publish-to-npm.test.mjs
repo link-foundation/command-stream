@@ -234,7 +234,7 @@ async function startLaggingRegistry({ packageName, version, visibleFromRead }) {
   const server = Bun.serve({
     port: 0,
     fetch(request) {
-      const wanted = `/${encodeURIComponent(packageName)}`;
+      const wanted = `/${encodeURIComponent(packageName)}/${encodeURIComponent(version)}`;
       if (new URL(request.url).pathname !== wanted) {
         return new Response('not found', { status: 404 });
       }
@@ -242,7 +242,7 @@ async function startLaggingRegistry({ packageName, version, visibleFromRead }) {
       if (reads < visibleFromRead) {
         return new Response('{}', { status: 404 });
       }
-      return Response.json({ name: packageName, versions: { [version]: {} } });
+      return Response.json({ name: packageName, version });
     },
   });
 

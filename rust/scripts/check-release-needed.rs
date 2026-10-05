@@ -115,12 +115,13 @@ fn check_version_on_crates_io(crate_name: &str, version: &str) -> bool {
                     }
                 }
             }
-            false
+            eprintln!("::error::Invalid crates.io version metadata");
+            exit(1)
         }
         Err(ureq::Error::Status(404, _)) => false,
         Err(e) => {
-            eprintln!("Warning: Could not check crates.io: {}", e);
-            false
+            eprintln!("::error::crates.io availability is unknown: {}", e);
+            exit(1)
         }
     }
 }
@@ -260,12 +261,13 @@ fn get_max_published_version(crate_name: &str) -> Option<String> {
                     }
                 }
             }
-            None
+            eprintln!("::error::Invalid crates.io package metadata");
+            exit(1)
         }
         Err(ureq::Error::Status(404, _)) => None,
         Err(e) => {
-            eprintln!("Warning: Could not query crates.io for versions: {}", e);
-            None
+            eprintln!("::error::crates.io versions are unknown: {}", e);
+            exit(1)
         }
     }
 }
@@ -361,7 +363,9 @@ fn main() {
                 image, dockerhub_published
             );
         } else {
-            println!("Docker Hub artifact check skipped: DOCKERHUB_IMAGE or Dockerfile is not configured");
+            println!(
+                "Docker Hub artifact check skipped: DOCKERHUB_IMAGE or Dockerfile is not configured"
+            );
         }
         println!(
             "GitHub release {}{} published: {}",

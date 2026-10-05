@@ -56,7 +56,7 @@ test('reports a published version as published', async () => {
     '0.20.1',
     {
       fetchFn: async () =>
-        jsonResponse(200, { versions: { '0.20.0': {}, '0.20.1': {} } }),
+        jsonResponse(200, { name: 'command-stream', version: '0.20.1' }),
     }
   );
   expect(published).toBe(true);
@@ -66,7 +66,10 @@ test('reports a missing version as not published', async () => {
   const published = await isPackageVersionPublished(
     'command-stream',
     '99.99.99',
-    { fetchFn: async () => jsonResponse(200, { versions: { '0.20.1': {} } }) }
+    {
+      fetchFn: async () =>
+        jsonResponse(200, { name: 'command-stream', version: '0.20.1' }),
+    }
   );
   expect(published).toBe(false);
 });
@@ -98,8 +101,34 @@ test('honours a custom registry URL', async () => {
     registryUrl: 'https://registry.example.com/',
     fetchFn: async (url) => {
       requestedUrl = url;
-      return jsonResponse(200, { versions: { '1.0.0': {} } });
+      return jsonResponse(200, { name: 'command-stream', version: '1.0.0' });
     },
   });
-  expect(requestedUrl).toBe('https://registry.example.com/command-stream');
+  expect(new URL(requestedUrl).pathname).toBe('/command-stream/1.0.0');
+  expect(new URL(requestedUrl).origin).toBe('https://registry.example.com');
+});
+
+test('issue #209: bypasses stale package metadata when the exact version is live', async () => {
+  let request;
+  const published = await isPackageVersionPublished('command-stream', '1.4.0', {
+    fetchFn: async (url, options) => {
+      request = { url: new URL(url), options };
+      return request.url.pathname === '/command-stream/1.4.0'
+        ? jsonResponse(200, { name: 'command-stream', version: '1.4.0' })
+        : jsonResponse(200, { versions: { '1.3.0': {} } });
+    },
+  });
+  expect(published).toBe(true);
+  expect(request.url.searchParams.has('cache-bust')).toBe(true);
+  expect(request.options.headers['cache-control']).toBe('no-cache');
+  expect(request.options.signal).toBeInstanceOf(AbortSignal);
+});
+
+test('issue #209: does not accept another package with the requested version', async () => {
+  expect(
+    await isPackageVersionPublished('command-stream', '1.4.0', {
+      fetchFn: async () =>
+        jsonResponse(200, { name: 'wrong-package', version: '1.4.0' }),
+    })
+  ).toBe(false);
 });

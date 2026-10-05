@@ -166,6 +166,11 @@ export async function runCorpus({
         retryFlaky && r.status === 'FAIL' && cases[i].oracleFlaky && a < 3;
         a++
       ) {
+        if (trace || verbose) {
+          process.stderr.write(
+            `RETRY ${cases[i].id} (${a + 1}/3): ${r.details.join('; ')}; ${cases[i].oracleFlaky}\n`
+          );
+        }
         r = await runOne(cases[i]);
       }
       results[i] = { ...r, ms: Date.now() - t0 };

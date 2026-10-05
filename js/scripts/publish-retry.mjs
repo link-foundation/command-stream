@@ -29,7 +29,9 @@
  * version" patterns that the template is still missing.
  */
 
-export const DEFAULT_VERIFY_ATTEMPTS = 7;
+// Thirty-four attempts allow sixteen minutes for propagation while remaining bounded.
+// Issue #209's release became visible after the old two-minute budget expired.
+export const DEFAULT_VERIFY_ATTEMPTS = 34;
 export const DEFAULT_VERIFY_INITIAL_DELAY = 2000;
 export const DEFAULT_VERIFY_MAX_DELAY = 30000;
 

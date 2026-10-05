@@ -27,6 +27,7 @@ import { resolve } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { loadUseM } from './use-m-loader.mjs';
+import { runChecked } from './run-checked.mjs';
 
 export const NPM_MIN_VERSION = '11.5.1';
 export const NODE_MIN_VERSION = '22.14.0';
@@ -184,7 +185,7 @@ async function resolveLatestSupportedNpmRelease(fetchFn) {
 // 4. corepack as last resort
 
 async function tryStandardInstall($) {
-  await $`npm install -g npm@11`;
+  await runChecked($`npm install -g npm@11`);
 }
 
 async function tryCurlTarball($, fetchFn) {
@@ -197,17 +198,19 @@ async function tryCurlTarball($, fetchFn) {
   const globalNpmDir = `${nodeDir}/lib/node_modules/npm`;
   const tempNpmDir = '/tmp/setup-npm-package';
 
-  await $`rm -rf "${tempNpmDir}" && mkdir -p "${tempNpmDir}"`;
-  await $`curl -fsSL "${npmRelease.tarballUrl}" | tar xz --strip-components=1 -C "${tempNpmDir}" && rm -rf "${globalNpmDir}" && mv "${tempNpmDir}" "${globalNpmDir}"`;
+  await runChecked($`rm -rf "${tempNpmDir}" && mkdir -p "${tempNpmDir}"`);
+  await runChecked(
+    $`curl -fsSL "${npmRelease.tarballUrl}" | tar xz --strip-components=1 -C "${tempNpmDir}" && rm -rf "${globalNpmDir}" && mv "${tempNpmDir}" "${globalNpmDir}"`
+  );
 }
 
 async function tryNpxInstall($) {
-  await $`npx --yes npm@11 install -g npm@11`;
+  await runChecked($`npx --yes npm@11 install -g npm@11`);
 }
 
 async function tryCorepack($) {
-  await $`corepack enable`;
-  await $`corepack prepare npm@11 --activate`;
+  await runChecked($`corepack enable`);
+  await runChecked($`corepack prepare npm@11 --activate`);
 }
 
 async function tryStrategy(name, fn) {

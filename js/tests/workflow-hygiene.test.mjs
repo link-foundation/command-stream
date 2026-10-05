@@ -245,9 +245,9 @@ describe('workflow linting is itself wired into CI', () => {
       .flatMap((job) => job.steps ?? [])
       .map((step) => step.uses)
       .filter(Boolean);
-    expect(uses.some((u) => u.startsWith('docker://rhysd/actionlint:'))).toBe(
-      true
-    );
+    expect(
+      uses.some((u) => u.startsWith('docker://rhysd/actionlint@sha256:'))
+    ).toBe(true);
   });
 
   test('zizmor runs with the repository policy at low confidence', () => {
@@ -522,7 +522,6 @@ describe('checks validate the merge result, not a stale preview', () => {
       'diffs base against head; a local merge changes neither side of that diff',
     ],
     ['rust.yml/changelog', 'same: the two guards it runs are diff-based'],
-    ['parity.yml/parity', 'same: it diffs the merge base against HEAD'],
     [
       'security.yml/codeql',
       'uploads results keyed to the checked-out commit, and GitHub rejects a commit it has never seen',
