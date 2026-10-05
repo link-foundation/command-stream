@@ -13,16 +13,21 @@ export function stageReleaseMetadata() {
     execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' })
       .split('\0')
       .filter(Boolean);
-  const files = [
-    ...new Set([
-      ...readPaths(
+  const unstaged = [
+    ...new Set(
+      readPaths(
         'ls-files',
         '--modified',
         '--deleted',
         '--others',
         '--exclude-standard',
         '-z'
-      ),
+      )
+    ),
+  ];
+  const files = [
+    ...new Set([
+      ...unstaged,
       ...readPaths('diff', '--cached', '--name-only', '-z'),
     ]),
   ];
@@ -38,8 +43,8 @@ export function stageReleaseMetadata() {
       'Release generated changes outside the package metadata allowlist'
     );
   }
-  if (files.length) {
-    execFileSync('git', ['-C', root, 'add', '--', ...files]);
+  if (unstaged.length) {
+    execFileSync('git', ['-C', root, 'add', '--', ...unstaged]);
   }
 }
 

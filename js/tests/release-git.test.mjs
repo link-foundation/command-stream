@@ -1,6 +1,12 @@
 import { test, expect } from 'bun:test';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
+import {
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  rmSync,
+  readFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -51,6 +57,32 @@ test('release staging refuses unrelated tracked and untracked files', () => {
       'package.json'
     );
     expect(readFileSync(join(cwd, 'package.json'), 'utf8')).toContain('1.0.1');
+  } finally {
+    process.chdir(original);
+    rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
+test('release staging is safe to repeat after consuming a fragment', () => {
+  const cwd = mkdtempSync(join(tmpdir(), 'release-restaging-'));
+  const original = process.cwd();
+  const git = (...args) => execFileSync('git', args, { cwd, encoding: 'utf8' });
+  try {
+    git('init', '-q');
+    git('config', 'user.name', 'Test');
+    git('config', 'user.email', 'test@example.com');
+    mkdirSync(join(cwd, '.changeset'));
+    writeFileSync(join(cwd, 'package.json'), '{}');
+    writeFileSync(join(cwd, '.changeset/release.md'), 'patch');
+    git('add', '.');
+    git('commit', '-qm', 'base');
+    rmSync(join(cwd, '.changeset/release.md'));
+    process.chdir(cwd);
+    stageReleaseMetadata();
+    stageReleaseMetadata();
+    expect(git('diff', '--cached', '--name-only').trim()).toBe(
+      '.changeset/release.md'
+    );
   } finally {
     process.chdir(original);
     rmSync(cwd, { recursive: true, force: true });

@@ -5,3 +5,5 @@
 Prevent false CI and release results by validating registry publication, release commands, pull request metadata, audit failures, and manual release gates.
 
 Encode publisher package names safely, recognize actual npm badge images in release notes, and commit version messages without manual shell escaping.
+
+Keep repeated metadata staging safe after consuming release fragments.
