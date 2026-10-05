@@ -164,8 +164,9 @@ jobs:
         run: bash .github/scripts/simulate-fresh-merge.sh
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable branch @ 2026-09-03
+        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-01
         with:
+          toolchain: stable
           components: rustfmt, clippy
 
       - name: Cache Cargo dependencies

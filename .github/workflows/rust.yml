@@ -77,7 +77,9 @@ jobs:
           persist-credentials: false
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable branch @ 2026-09-03
+        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-01
+        with:
+          toolchain: stable
 
       - name: Install rust-script
         run: cargo install rust-script
@@ -125,8 +127,9 @@ jobs:
         run: bash .github/scripts/simulate-fresh-merge.sh
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable branch @ 2026-09-03
+        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-01
         with:
+          toolchain: stable
           components: rustfmt, clippy
 
       - name: Cache cargo registry
@@ -190,7 +193,9 @@ jobs:
         run: bash .github/scripts/simulate-fresh-merge.sh
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable branch @ 2026-09-03
+        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-01
+        with:
+          toolchain: stable
 
       - name: Cache cargo registry
         uses: actions/cache@v5
@@ -238,7 +243,9 @@ jobs:
         run: bash .github/scripts/simulate-fresh-merge.sh
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable branch @ 2026-09-03
+        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-01
+        with:
+          toolchain: stable
 
       - name: Cache cargo registry
         uses: actions/cache@v5
@@ -313,7 +320,9 @@ jobs:
         run: bash .github/scripts/simulate-fresh-merge.sh
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable branch @ 2026-09-03
+        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-01
+        with:
+          toolchain: stable
 
       - name: Cache cargo registry
         uses: actions/cache@v5
@@ -371,7 +380,9 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable branch @ 2026-09-03
+        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-01
+        with:
+          toolchain: stable
 
       - name: Install rust-script
         run: cargo install rust-script
@@ -443,7 +454,9 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable branch @ 2026-09-03
+        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-01
+        with:
+          toolchain: stable
 
       - name: Install rust-script
         run: cargo install rust-script
@@ -496,7 +509,9 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable branch @ 2026-09-03
+        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-01
+        with:
+          toolchain: stable
 
       - name: Install rust-script
         run: cargo install rust-script
