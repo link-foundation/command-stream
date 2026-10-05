@@ -386,6 +386,23 @@ describe('every shipped ecosystem is audited', () => {
     expect(runs).toContain('cargo audit --file Cargo.lock');
   });
 
+  test('dependency review uses only the documented unpatched advisory exceptions', () => {
+    const review = security.doc.jobs['dependency-review'].steps.find((step) =>
+      step.uses?.startsWith('actions/dependency-review-action@')
+    );
+    const ignored = readFileSync(
+      join(repoRoot, '.github/audit-ignore.txt'),
+      'utf8'
+    )
+      .split('\n')
+      .map((line) => line.replace(/#.*/, '').trim())
+      .filter(Boolean);
+    expect(
+      review.with['allow-ghsas'].split(',').map((id) => id.trim())
+    ).toEqual(ignored);
+    expect(review.with['fail-on-severity']).toBe('high');
+  });
+
   test('CodeQL covers both languages and the workflows', () => {
     const languages = security.doc.jobs.codeql.strategy.matrix.language;
     expect(languages).toContain('javascript-typescript');

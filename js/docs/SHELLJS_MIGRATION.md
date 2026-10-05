@@ -7,6 +7,17 @@ ShellJS itself, as the Execa boundary uses Execa; it preserves behavior that an
 argument-joining wrapper cannot reproduce. The native command-stream API offers
 streaming, events, cancellation and custom virtual commands alongside it.
 
+The compatibility import installs a guard on ShellJS's resolved `fast-glob`
+synchronous entry points (`sync` and `globSync`), including any callers sharing
+that dependency instance. Patterns and ignore patterns are limited to 10,000
+characters and 100 combined brace/parenthesis nesting levels before parsing.
+Ordinary brace expansion remains available; ShellJS retains its usual literal
+fallback when argument expansion fails. Direct recursive glob calls can throw a
+`SyntaxError` for excessive nesting. Configuration resets cannot disable this
+guard. It mitigates [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm),
+which currently has no patched release. Direct imports of `braces` and
+`fast-glob`'s asynchronous entry points are outside this boundary.
+
 Rust exposes `command_stream::shelljs::ShellJs`: asynchronous command calls,
 configuration, file operations and an isolated directory stack. See the limits
 below when translating JavaScript-specific behavior.
