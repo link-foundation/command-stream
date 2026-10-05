@@ -116,9 +116,12 @@ fn retains_a_state_when_a_later_repaint_is_split_across_output_chunks() {
 
 #[test]
 fn retains_lines_after_they_scroll_off_the_visible_terminal() {
+    // A line is retained once its screen settles, so the pauses must outlast
+    // scheduler stalls on a loaded runner: with short ones, two writes can be
+    // read as one chunk and the earlier line scrolls off unseen.
     let mut options = shell_options(
-        "printf 'one\\r\\n'; sleep 0.04; printf 'two\\r\\n'; sleep 0.04; \
-         printf 'three\\r\\n'; sleep 0.04; printf 'four\\r\\n'",
+        "printf 'one\\r\\n'; sleep 0.25; printf 'two\\r\\n'; sleep 0.25; \
+         printf 'three\\r\\n'; sleep 0.25; printf 'four\\r\\n'",
     );
     options.rows = 2;
 
@@ -197,7 +200,9 @@ printf 'logged-in:%s\n' "$code"
         )
         .expect("login completes");
 
-    let capture = session.close().expect("session closes");
+    // The fixture exits on its own; wait for that instead of racing close()
+    // against it, because a kill during exit reports a signal exit code.
+    let capture = session.finish().expect("session finishes");
     assert_eq!(capture.exit_code, 0);
     assert!(capture.transcript.contains("logged-in:42"));
     assert!(capture
