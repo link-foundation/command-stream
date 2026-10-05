@@ -176,6 +176,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [1.4.1] - 2026-10-05
+
+### Fixed
+
+- Reject unknown Git and registry state during release checks, require new PR changelog fragments, and keep publish credentials out of command arguments.
+- Split large source and script modules while preserving public exports and behavior.
+- Reject unrelated staged or untracked release changes and create release tags only after successful push/rebase retries.
+
 ## [1.4.0] - 2026-10-05
 
 ### Added
