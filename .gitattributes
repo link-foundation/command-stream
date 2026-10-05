@@ -1,0 +1,4 @@
+# zx port fixtures: raw HTTP responses and CRLF markdown are byte-exact.
+js/tests/zx/fixtures/*.http -text
+js/tests/zx/fixtures/*.md -text
+js/tests/zx/fixtures/no-extension text eol=lf

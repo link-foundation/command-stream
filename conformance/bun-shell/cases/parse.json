@@ -1,0 +1,513 @@
+{
+  "source": "test/js/bun/shell/parse.test.ts",
+  "units": [
+    {
+      "line": 7,
+      "upstream": "basic",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "parse/basic",
+          "template": ["echo foo"],
+          "expect": {
+            "stdout": "foo\n"
+          }
+        }
+      ],
+      "note": "The upstream test compares a private AST JSON dump (shellInternals.parse); the AST shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 40,
+      "upstream": "basic redirect",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "parse/basic-redirect",
+          "template": ["echo foo > lmao.txt"],
+          "expect": {
+            "files": {
+              "lmao.txt": "foo\n"
+            }
+          }
+        }
+      ],
+      "note": "The upstream test compares a private AST JSON dump (shellInternals.parse); the AST shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 62,
+      "upstream": "single atom",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "parse/single-atom-ls",
+          "template": ["ls"],
+          "files": {
+            "a": "",
+            "b": ""
+          },
+          "expect": {
+            "stdout": "a\nb\n"
+          }
+        },
+        {
+          "id": "parse/single-atom-tilde",
+          "template": ["echo ~"],
+          "env": {
+            "HOME": "/home/xyz",
+            "USERPROFILE": "/home/xyz"
+          },
+          "note": "Unquoted `~` expands to $HOME. On Windows `~` expands to $USERPROFILE",
+          "expect": {
+            "stdout": "/home/xyz\n"
+          }
+        }
+      ],
+      "note": "The upstream test compares a private AST JSON dump (shellInternals.parse); the AST shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 98,
+      "upstream": "compound atom",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "parse/compound-atom-verbatim",
+          "template": ["\"FOO $NICE!\""],
+          "env": {
+            "NICE": "x"
+          },
+          "note": "Verbatim upstream script: the whole double-quoted compound word is the command name.",
+          "expect": {
+            "stderr": "bun: command not found: FOO x!\n",
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "parse/compound-atom-echo",
+          "template": ["echo \"FOO $NICE!\""],
+          "env": {
+            "NICE": "x"
+          },
+          "note": "`echo` prepended to observe the compound word.",
+          "expect": {
+            "stdout": "FOO x!\n"
+          }
+        }
+      ],
+      "note": "The upstream test compares a private AST JSON dump (shellInternals.parse); the AST shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 129,
+      "upstream": "pipelines",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "parse/pipelines",
+          "template": ["echo > foo.txt | echo hi"],
+          "expect": {
+            "stdout": "hi\n",
+            "files": {
+              "foo.txt": "\n"
+            }
+          }
+        }
+      ],
+      "note": "The upstream test compares a private AST JSON dump (shellInternals.parse); the AST shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 165,
+      "upstream": "binary expressions",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "parse/binary-expressions",
+          "template": ["echo foo && echo bar || echo lmao"],
+          "expect": {
+            "stdout": "foo\nbar\n"
+          }
+        }
+      ],
+      "note": "The upstream test compares a private AST JSON dump (shellInternals.parse); the AST shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 213,
+      "upstream": "precedence",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "parse/precedence",
+          "template": [
+            "FOO=bar && echo foo && echo bar | echo lmao | cat > foo.txt"
+          ],
+          "expect": {
+            "stdout": "foo\n",
+            "files": {
+              "foo.txt": "lmao\n"
+            }
+          }
+        },
+        {
+          "id": "parse/precedence-assign-visible",
+          "template": [
+            "FOO=bar && echo $FOO && echo bar | echo lmao | cat > foo.txt"
+          ],
+          "note": "Extra probe: the assignment-only command sets FOO for the rest of the && chain.",
+          "expect": {
+            "stdout": "bar\n",
+            "files": {
+              "foo.txt": "lmao\n"
+            }
+          }
+        }
+      ],
+      "note": "The upstream test compares a private AST JSON dump (shellInternals.parse); the AST shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 281,
+      "upstream": "assigns",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "parse/assigns",
+          "template": ["FOO=bar BAR=baz export LMAO=nice"],
+          "expect": {}
+        },
+        {
+          "id": "parse/assigns-scoped-to-command",
+          "template": [
+            "FOO=bar BAR=baz export LMAO=nice; echo \"[$FOO][$BAR][$LMAO]\""
+          ],
+          "note": "FOO/BAR are prefix assignments scoped to the export command only; LMAO is exported into the shell.",
+          "expect": {
+            "stdout": "[][][nice]\n"
+          }
+        }
+      ],
+      "note": "The upstream test compares a private AST JSON dump (shellInternals.parse); the AST shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 314,
+      "upstream": "redirect js obj",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "parse/redirect-js-obj",
+          "template": ["echo foo > ", " && echo foo > ", ""],
+          "values": [
+            {
+              "outBuffer": {
+                "id": "b1",
+                "size": 1024
+              }
+            },
+            {
+              "outBuffer": {
+                "id": "b2",
+                "size": 1024
+              }
+            }
+          ],
+          "expect": {
+            "buffers": {
+              "b1": "foo\n",
+              "b2": "foo\n"
+            }
+          }
+        }
+      ],
+      "note": "The upstream test compares a private AST JSON dump (shellInternals.parse); the AST shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 353,
+      "upstream": "cmd subst",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "parse/cmd-subst-quoted",
+          "template": ["echo \"$(echo 1; echo 2)\""],
+          "note": "Inside double quotes the substitution keeps its inner newline (trailing newline stripped).",
+          "expect": {
+            "stdout": "1\n2\n"
+          }
+        },
+        {
+          "id": "parse/cmd-subst-unquoted",
+          "template": ["echo $(echo 1; echo 2)"],
+          "note": "Extra contrast probe: unquoted substitution is split on whitespace.",
+          "expect": {
+            "stdout": "1 2\n"
+          }
+        }
+      ],
+      "note": "The upstream test compares a private AST JSON dump (shellInternals.parse); the AST shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 433,
+      "upstream": "cmd subst edgecase",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "parse/cmd-subst-edgecase-missing",
+          "template": ["echo $(ls foo) && echo nice"],
+          "note": "Verbatim: foo does not exist; ls error inside $(...) is not shown in stderr (quiet capture) and the substitution result is empty. The && still runs because echo succeeded.",
+          "expect": {
+            "stdout": "\nnice\n"
+          }
+        },
+        {
+          "id": "parse/cmd-subst-edgecase-dir",
+          "template": ["echo $(ls foo) && echo nice"],
+          "files": {
+            "foo/x": "",
+            "foo/y": ""
+          },
+          "expect": {
+            "stdout": {
+              "oneOf": ["x y\nnice\n", "y x\nnice\n"]
+            }
+          },
+          "note": "`ls` lists entries in directory order, which differs between file systems."
+        }
+      ],
+      "note": "The upstream test compares a private AST JSON dump (shellInternals.parse); the AST shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 514,
+      "upstream": "if_clause basic",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "parse/if-basic",
+          "template": ["if echo hi; then echo lmao; else echo lol; fi"],
+          "expect": {
+            "stdout": "hi\nlmao\n"
+          }
+        },
+        {
+          "id": "parse/if-basic-multiline",
+          "template": [
+            "if echo hi\n      then echo lmao\n      else echo lol\n      fi"
+          ],
+          "note": "Newline-separated form (template contains real newlines and indentation).",
+          "expect": {
+            "stdout": "hi\nlmao\n"
+          }
+        },
+        {
+          "id": "parse/if-basic-else-branch",
+          "template": ["if false; then echo lmao; else echo lol; fi"],
+          "note": "Extra probe: condition fails -> else branch.",
+          "expect": {
+            "stdout": "lol\n"
+          }
+        }
+      ],
+      "note": "The upstream test compares a private AST JSON dump (shellInternals.parse); the AST shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 602,
+      "upstream": "if_clause elif",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "parse/if-elif-then",
+          "template": [
+            "if true; then echo b; elif true; then echo d; else echo e; fi"
+          ],
+          "note": "Upstream placeholders a..e replaced by true/false/echo builtins.",
+          "expect": {
+            "stdout": "b\n"
+          }
+        },
+        {
+          "id": "parse/if-elif-elif",
+          "template": [
+            "if false; then echo b; elif true; then echo d; else echo e; fi"
+          ],
+          "expect": {
+            "stdout": "d\n"
+          }
+        },
+        {
+          "id": "parse/if-elif-else",
+          "template": [
+            "if false; then echo b; elif false; then echo d; else echo e; fi"
+          ],
+          "expect": {
+            "stdout": "e\n"
+          }
+        }
+      ],
+      "note": "The upstream test compares a private AST JSON dump (shellInternals.parse); the AST shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 728,
+      "upstream": "if_clause precedence: in pipeline",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "parse/if-in-pipeline",
+          "template": ["if echo hi; then echo lmao; else echo lol; fi | cat"],
+          "expect": {
+            "stdout": "hi\nlmao\n"
+          }
+        }
+      ],
+      "note": "The upstream test compares a private AST JSON dump (shellInternals.parse); the AST shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 843,
+      "upstream": "left side of binary not allowed (runAsTest, describe.todo)",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "parse/async-left-side-of-binary",
+          "template": ["echo foo & && echo hi"],
+          "expect": {
+            "error": "Background commands \"&\" are not supported yet."
+          }
+        }
+      ],
+      "note": "Upstream is inside describe.todo and expects the error '\"&\" is not allowed on the left-hand side of \"&&\"'; Bun 1.4.2 instead throws 'Background commands \"&\" are not supported yet.'"
+    },
+    {
+      "line": 847,
+      "upstream": "left side of binary not allowed 2 (runAsTest, describe.todo)",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "parse/async-left-side-of-binary-2",
+          "template": ["echo hi && echo foo & && echo hi"],
+          "expect": {
+            "error": "Background commands \"&\" are not supported yet."
+          }
+        }
+      ],
+      "note": "Upstream is inside describe.todo and expects the error '\"&\" is not allowed on the left-hand side of \"&&\"'; Bun 1.4.2 instead throws 'Background commands \"&\" are not supported yet.'"
+    },
+    {
+      "line": 849,
+      "upstream": "async: right side of binary works (describe.todo)",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "parse/async-right-side-of-binary",
+          "template": ["echo hi && echo foo &"],
+          "expect": {
+            "error": "Background commands \"&\" are not supported yet."
+          }
+        }
+      ],
+      "note": "Upstream is inside describe.todo and expects a successful parse (AST dump, Bun-internal). Executing the script in Bun 1.4.2 throws because background commands are unsupported."
+    },
+    {
+      "line": 900,
+      "upstream": "async: pipeline (describe.todo)",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "parse/async-pipeline",
+          "template": ["echo hi | echo foo &"],
+          "expect": {
+            "error": "Background commands \"&\" are not supported yet."
+          }
+        }
+      ],
+      "note": "Upstream is inside describe.todo and expects a successful parse (AST dump, Bun-internal). Executing the script in Bun 1.4.2 throws because background commands are unsupported."
+    },
+    {
+      "line": 954,
+      "upstream": "bad syntax: cmd subst edgecase",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "parse/bad-syntax-cmd-subst-edgecase",
+          "template": ["echo $(FOO=bar $FOO)"],
+          "expect": {
+            "stdout": "\n"
+          }
+        },
+        {
+          "id": "parse/bad-syntax-cmd-subst-edgecase-set",
+          "template": ["echo $(FOO=bar $FOO)"],
+          "env": {
+            "FOO": "pwd"
+          },
+          "note": "$FOO expands from the outer env before the prefix assignment. On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes",
+          "expect": {
+            "stdout": "{{TEMP_NATIVE}}\n"
+          }
+        }
+      ],
+      "note": "The upstream test compares a private AST JSON dump (shellInternals.parse); the AST shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 1019,
+      "upstream": "bad syntax: cmd edgecase",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "parse/bad-syntax-cmd-edgecase",
+          "template": ["FOO=bar BAR=baz; BUN_DEBUG_QUIET_LOGS=1 echo"],
+          "expect": {
+            "stdout": "\n"
+          }
+        },
+        {
+          "id": "parse/bad-syntax-cmd-edgecase-vars",
+          "template": [
+            "FOO=bar BAR=baz; BUN_DEBUG_QUIET_LOGS=1 echo; echo $FOO $BAR \"[$BUN_DEBUG_QUIET_LOGS]\""
+          ],
+          "note": "Extra probe: assignment-only statement sets shell vars; the prefix assignment on echo does not persist.",
+          "expect": {
+            "stdout": "\nbar baz []\n"
+          }
+        }
+      ],
+      "note": "The upstream test compares a private AST JSON dump (shellInternals.parse); the AST shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 1060,
+      "upstream": "invalid js obj",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "parse/invalid-js-obj",
+          "template": ["", " | cat"],
+          "values": [
+            {
+              "outBuffer": {
+                "id": "b1",
+                "size": 420
+              }
+            }
+          ],
+          "note": "Upstream interpolates a Uint8Array(420) in command position.",
+          "expect": {
+            "error": "expected a command or assignment but got: \"JSObjRef\""
+          }
+        }
+      ]
+    },
+    {
+      "line": 1065,
+      "upstream": "subshell",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "parse/subshell-invalid-position",
+          "template": ["echo (echo foo && echo hi)"],
+          "expect": {
+            "error": "Unexpected token: `(`"
+          }
+        },
+        {
+          "id": "parse/redirection-with-no-file",
+          "template": ["echo foo >"],
+          "expect": {
+            "error": "Redirection with no file"
+          }
+        }
+      ]
+    }
+  ]
+}

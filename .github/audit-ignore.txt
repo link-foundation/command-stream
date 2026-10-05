@@ -1,0 +1,12 @@
+# Advisories the npm and bun lockfile audits (security.yml) skip.
+#
+# One GHSA ID per line; text after `#` is the reason. Only list an advisory
+# that has no patched release to move to, record why it cannot be reached
+# from the published package, and remove the line once a fix ships: the npm
+# audit job warns when an entry no longer matches anything.
+
+# braces <= 3.0.3: stack exhaustion on deeply nested brace patterns. No patched
+# version exists (3.0.3 is the latest release). It is reached only through dev
+# tooling (@changesets/cli, shelljs and jscpd via micromatch), which expands
+# glob patterns written in this repository, never in the published package.
+GHSA-vfj7-8cjw-p6xm

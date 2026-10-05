@@ -1,0 +1,335 @@
+{
+  "source": "test/js/bun/shell/commands/mv.test.ts",
+  "units": [
+    {
+      "line": 28,
+      "upstream": "move file -> file",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-mv/file-to-file",
+          "template": ["echo foo > a; mv a b"],
+          "expect": {
+            "files": {
+              "b": "foo\n"
+            },
+            "absent": ["a"]
+          }
+        }
+      ]
+    },
+    {
+      "line": 34,
+      "upstream": "move single file into a directory",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-mv/file-into-dir",
+          "template": ["touch a; mkdir foo; mv a foo; ls foo"],
+          "expect": {
+            "stdout": "a\n",
+            "absent": ["a"],
+            "types": {
+              "foo/a": "file"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 45,
+      "upstream": "move multiple files into a directory",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-mv/multiple-files-into-dir",
+          "template": ["mkdir d; mv a b c d/; ls d/"],
+          "files": {
+            "a": "file",
+            "b": "file",
+            "c": "file"
+          },
+          "expect": {
+            "stdout": {
+              "sortedLines": ["a", "b", "c"]
+            },
+            "absent": ["a", "b", "c"],
+            "files": {
+              "d/a": "file",
+              "d/b": "file",
+              "d/c": "file"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 53,
+      "upstream": "fails if destination folder does not exist",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-mv/destination-dir-missing",
+          "template": ["mv file1.txt file2.txt does_not_exist/"],
+          "files": {
+            "file1.txt": "hello"
+          },
+          "expect": {
+            "stderr": "mv: does_not_exist/: No such file or directory\n",
+            "exitCode": 1,
+            "files": {
+              "file1.txt": "hello"
+            },
+            "absent": ["does_not_exist"]
+          },
+          "note": "upstream calls .file('file1.txt', ...) twice (second wins); file2.txt does not exist"
+        }
+      ]
+    },
+    {
+      "line": 62,
+      "upstream": "move dir -> dir",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-mv/dir-into-dir",
+          "template": [
+            "mkdir -p foo; mkdir -p bar; echo hi > foo/inside_foo; echo hi > bar/inside_bar; mv foo bar; ls -R bar"
+          ],
+          "expect": {
+            "stdout": {
+              "oneOf": [
+                {
+                  "sortedLines": ["inside_bar", "foo", "bar/foo:", "inside_foo"]
+                },
+                {
+                  "sortedLines": [
+                    "inside_bar",
+                    "foo",
+                    "bar\\foo:",
+                    "inside_foo"
+                  ]
+                }
+              ]
+            },
+            "absent": ["foo"],
+            "files": {
+              "bar/foo/inside_foo": "hi\n"
+            }
+          },
+          "note": "ls -R lists entries in directory order, so lines are compared sorted; the sub-directory header uses the platform separator (bar/foo: or bar\\foo:)."
+        }
+      ]
+    },
+    {
+      "line": 68,
+      "upstream": "move dir -> file fails",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-mv/dir-onto-file-fails",
+          "template": ["touch a; mkdir -p foo; mv foo/ a"],
+          "expect": {
+            "stderr": "mv: a: Not a directory\n",
+            "exitCode": 20,
+            "types": {
+              "a": "file",
+              "foo": "dir"
+            }
+          },
+          "note": "exit code 20 = ENOTDIR"
+        }
+      ]
+    },
+    {
+      "line": 101,
+      "upstream": "cross-device (EXDEV): file -> file across devices",
+      "disposition": "case",
+      "note": "upstream test.skipIf(no cross-device writable dir)",
+      "cases": [
+        {
+          "platforms": ["linux"],
+          "id": "commands-mv/xdev-file-to-file",
+          "template": [
+            "D=/dev/shm/$(basename {{TEMP}}); mkdir -p $D && mv src/f.txt $D/f.txt && cat $D/f.txt && stat -c %a $D/f.txt; rm -rf $D"
+          ],
+          "files": {
+            "src/f.txt": {
+              "content": "payload\n",
+              "mode": "640"
+            }
+          },
+          "requires": ["stat"],
+          "expect": {
+            "stdout": "payload\n640\n",
+            "absent": ["src/f.txt"]
+          },
+          "note": "Cross-device (EXDEV) test: the source lives in the case temp dir (under the OS temp dir, like upstream's tmpdir()) and the destination in a unique directory on /dev/shm (tmpfs, a different device on typical Linux systems; upstream picks /dev/shm or /tmp when on a different device and skips otherwise). The script creates and removes the /dev/shm directory itself. If /dev/shm happens to be on the same device, the case still passes (same observable result via rename). The copy+unlink fallback must preserve the permission bits (0640); checked with GNU `stat -c %a`."
+        }
+      ]
+    },
+    {
+      "line": 121,
+      "upstream": "cross-device (EXDEV): file -> directory across devices",
+      "disposition": "case",
+      "note": "upstream test.skipIf(no cross-device writable dir)",
+      "cases": [
+        {
+          "platforms": ["linux"],
+          "id": "commands-mv/xdev-file-into-dir",
+          "template": [
+            "D=/dev/shm/$(basename {{TEMP}}); mkdir -p $D && mv src/g.txt $D && cat $D/g.txt; rm -rf $D"
+          ],
+          "files": {
+            "src/g.txt": "into-dir\n"
+          },
+          "expect": {
+            "stdout": "into-dir\n",
+            "absent": ["src/g.txt"]
+          },
+          "note": "Cross-device (EXDEV) test: the source lives in the case temp dir (under the OS temp dir, like upstream's tmpdir()) and the destination in a unique directory on /dev/shm (tmpfs, a different device on typical Linux systems; upstream picks /dev/shm or /tmp when on a different device and skips otherwise). The script creates and removes the /dev/shm directory itself. If /dev/shm happens to be on the same device, the case still passes (same observable result via rename)."
+        }
+      ]
+    },
+    {
+      "line": 138,
+      "upstream": "cross-device (EXDEV): symlink across devices",
+      "disposition": "case",
+      "note": "upstream test.skipIf(no cross-device writable dir)",
+      "cases": [
+        {
+          "platforms": ["linux"],
+          "id": "commands-mv/xdev-symlink",
+          "template": [
+            "D=/dev/shm/$(basename {{TEMP}}); mkdir -p $D && mv src/link $D && readlink $D/link; rm -rf $D"
+          ],
+          "files": {
+            "src/link": {
+              "symlink": "does-not-exist"
+            }
+          },
+          "requires": ["readlink"],
+          "expect": {
+            "stdout": "does-not-exist\n",
+            "absent": ["src/link"]
+          },
+          "note": "Cross-device (EXDEV) test: the source lives in the case temp dir (under the OS temp dir, like upstream's tmpdir()) and the destination in a unique directory on /dev/shm (tmpfs, a different device on typical Linux systems; upstream picks /dev/shm or /tmp when on a different device and skips otherwise). The script creates and removes the /dev/shm directory itself. If /dev/shm happens to be on the same device, the case still passes (same observable result via rename). A dangling symlink is moved as a symlink (its target text is preserved, not followed)."
+        }
+      ]
+    },
+    {
+      "line": 155,
+      "upstream": "cross-device (EXDEV): directory tree across devices",
+      "disposition": "case",
+      "note": "upstream test.skipIf(no cross-device writable dir)",
+      "cases": [
+        {
+          "platforms": ["linux"],
+          "id": "commands-mv/xdev-dir-tree",
+          "template": [
+            "D=/dev/shm/$(basename {{TEMP}}); mkdir -p $D && mv src/tree $D && cat $D/tree/a.txt $D/tree/sub/b.txt; rm -rf $D"
+          ],
+          "files": {
+            "src/tree/a.txt": "A\n",
+            "src/tree/sub/b.txt": "B\n"
+          },
+          "expect": {
+            "stdout": "A\nB\n",
+            "absent": ["src/tree"]
+          },
+          "note": "Cross-device (EXDEV) test: the source lives in the case temp dir (under the OS temp dir, like upstream's tmpdir()) and the destination in a unique directory on /dev/shm (tmpfs, a different device on typical Linux systems; upstream picks /dev/shm or /tmp when on a different device and skips otherwise). The script creates and removes the /dev/shm directory itself. If /dev/shm happens to be on the same device, the case still passes (same observable result via rename)."
+        }
+      ]
+    },
+    {
+      "line": 175,
+      "upstream": "cross-device (EXDEV): directory onto non-empty directory across devices fails",
+      "disposition": "case",
+      "note": "upstream test.skipIf(no cross-device writable dir)",
+      "cases": [
+        {
+          "platforms": ["linux"],
+          "id": "commands-mv/xdev-dir-onto-non-empty-dir-fails",
+          "template": [
+            "D=/dev/shm/$(basename {{TEMP}}); mkdir -p $D/d; echo precious > $D/d/f.txt; mv src/d $D || echo mv-failed; cat $D/d/f.txt src/d/f.txt; rm -rf $D"
+          ],
+          "files": {
+            "src/d/f.txt": "new\n"
+          },
+          "expect": {
+            "stdout": "mv-failed\nprecious\nnew\n",
+            "stderr": {
+              "regex": "^mv: /dev/shm/[^/]+/d: Directory not empty\\n$"
+            }
+          },
+          "note": "Cross-device (EXDEV) test: the source lives in the case temp dir (under the OS temp dir, like upstream's tmpdir()) and the destination in a unique directory on /dev/shm (tmpfs, a different device on typical Linux systems; upstream picks /dev/shm or /tmp when on a different device and skips otherwise). The script creates and removes the /dev/shm directory itself. If /dev/shm happens to be on the same device, the case still passes (same observable result via rename). Upstream checks stderr contains 'not empty' and a non-zero exit code; Bun 1.4.2 prints 'mv: <dst>/d: Directory not empty' and exits 39 (ENOTEMPTY) -- the exit code is observed here via `|| echo mv-failed` because the script must clean up afterwards."
+        }
+      ]
+    },
+    {
+      "line": 195,
+      "upstream": "cross-device (EXDEV): unreadable directory across devices fails without creating the destination",
+      "disposition": "case",
+      "note": "upstream test.skipIf(no cross-device writable dir || isRoot)",
+      "cases": [
+        {
+          "platforms": ["linux"],
+          "id": "commands-mv/xdev-unreadable-dir-fails",
+          "template": [
+            "D=/dev/shm/$(basename {{TEMP}}); mkdir -p $D; chmod 000 src/tree; mv src/tree $D || echo mv-failed; chmod 700 src/tree; ls $D; cat src/tree/a.txt; rm -rf $D"
+          ],
+          "files": {
+            "src/tree/a.txt": "A\n"
+          },
+          "requires": ["chmod"],
+          "expect": {
+            "stdout": "mv-failed\nA\n",
+            "stderr": {
+              "regex": "^mv: /dev/shm/[^/]+/tree: Permission denied\\n$"
+            }
+          },
+          "note": "Cross-device (EXDEV) test: the source lives in the case temp dir (under the OS temp dir, like upstream's tmpdir()) and the destination in a unique directory on /dev/shm (tmpfs, a different device on typical Linux systems; upstream picks /dev/shm or /tmp when on a different device and skips otherwise). The script creates and removes the /dev/shm directory itself. If /dev/shm happens to be on the same device, the case still passes (same observable result via rename). Must not run as root (root bypasses the 000 permission). Upstream also asserts exitCode 13 (EACCES) for the mv; Bun 1.4.2 does exit 13, but here failure is observed via `|| echo mv-failed` because permissions must be restored (chmod 700) afterwards so the temp dir can be removed. `ls $D` printing nothing proves the destination was not created."
+        }
+      ]
+    },
+    {
+      "line": 219,
+      "upstream": "cross-device (EXDEV): FIFO across devices fails fast",
+      "disposition": "case",
+      "note": "upstream test.skipIf(no cross-device writable dir); uses mkfifo",
+      "cases": [
+        {
+          "platforms": ["linux"],
+          "id": "commands-mv/xdev-fifo-fails",
+          "template": [
+            "mkfifo src/bunshell-conf-xdev-fifo; mv src/bunshell-conf-xdev-fifo /dev/shm"
+          ],
+          "dirs": ["src"],
+          "requires": ["mkfifo"],
+          "expect": {
+            "stderr": "mv: /dev/shm/bunshell-conf-xdev-fifo: Operation not supported\n",
+            "exitCode": 95,
+            "exists": ["src/bunshell-conf-xdev-fifo"]
+          },
+          "note": "Cross-device (EXDEV) test: the source lives in the case temp dir (under the OS temp dir, like upstream's tmpdir()) and the destination in a unique directory on /dev/shm (tmpfs, a different device on typical Linux systems; upstream picks /dev/shm or /tmp when on a different device and skips otherwise). The script creates and removes the /dev/shm directory itself. If /dev/shm happens to be on the same device, the case still passes (same observable result via rename). Upstream checks stderr contains 'not supported' and a non-zero exit code; Bun 1.4.2 exits 95 (EOPNOTSUPP). The mv is the last command so its exit code is checked exactly; nothing is created in /dev/shm."
+        },
+        {
+          "platforms": ["linux"],
+          "id": "commands-mv/xdev-fifo-destination-not-created",
+          "template": [
+            "D=/dev/shm/$(basename {{TEMP}}); mkdir -p $D; mkfifo src/pipe; mv src/pipe $D || echo mv-failed; ls $D; ls src; rm -rf $D"
+          ],
+          "dirs": ["src"],
+          "requires": ["mkfifo"],
+          "expect": {
+            "stdout": "mv-failed\npipe\n",
+            "stderr": {
+              "regex": "^mv: /dev/shm/[^/]+/pipe: Operation not supported\\n$"
+            }
+          },
+          "note": "Cross-device (EXDEV) test: the source lives in the case temp dir (under the OS temp dir, like upstream's tmpdir()) and the destination in a unique directory on /dev/shm (tmpfs, a different device on typical Linux systems; upstream picks /dev/shm or /tmp when on a different device and skips otherwise). The script creates and removes the /dev/shm directory itself. If /dev/shm happens to be on the same device, the case still passes (same observable result via rename). Checks the FIFO stays in place and no destination entry is created."
+        }
+      ]
+    }
+  ]
+}

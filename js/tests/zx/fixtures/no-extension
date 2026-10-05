@@ -1,0 +1,7 @@
+#!/usr/bin/env command-stream
+// A script without an extension is treated as ESM.
+
+console.log(chalk.yellowBright`If file has no extension, it is treated as ESM.`);
+await $`pwd`;
+console.log('__filename =', __filename);
+console.log('__dirname  =', __dirname);

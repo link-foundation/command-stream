@@ -1,0 +1,46 @@
+{
+  "source": "test/js/bun/shell/epipe.test.ts",
+  "units": [
+    {
+      "line": 10,
+      "upstream": "builtin pipe to command",
+      "disposition": "case",
+      "note": "builtin yes writing into a pipe whose reader (head) exits after 10 lines must stop on EPIPE without error; describe.if(isPosix)",
+      "cases": [
+        {
+          "id": "epipe/yes-pipe-head",
+          "template": ["yes | head"],
+          "platforms": ["posix"],
+          "requires": ["head"],
+          "expect": {
+            "stdout": {
+              "repeat": "y\n",
+              "count": 10
+            },
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 12,
+      "upstream": "concurrent",
+      "disposition": "js-api",
+      "api": "Start 100 `Bun.$`yes | head`.text()` promises concurrently (Promise.all); every result must be exactly \"y\\n\" x 10 (no hang, no EPIPE error, no cross-talk between concurrent shells). posix only.",
+      "cases": [
+        {
+          "id": "epipe/yes-pipe-head-single",
+          "template": ["yes | head"],
+          "platforms": ["posix"],
+          "requires": ["head"],
+          "expect": {
+            "stdout": {
+              "repeat": "y\n",
+              "count": 10
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

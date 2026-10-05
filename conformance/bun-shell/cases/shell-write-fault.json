@@ -1,0 +1,22 @@
+{
+  "source": "test/js/bun/shell/shell-write-fault.test.ts",
+  "units": [
+    {
+      "line": 82,
+      "upstream": "shell finishes when send() on a pipeline pipe fails after the writer started",
+      "disposition": "case",
+      "note": "Upstream injects ENOMEM into send() on the pipeline socketpair via an LD_PRELOAD shim (SHELL_FAIL_SEND=1) and expects {exitCode: 0, stdout: ''} with no hang; the fault injection is Bun-internal. Without the fault the subshell's three echoes reach cat.",
+      "cases": [
+        {
+          "id": "shell-write-fault/subshell-echoes-piped-to-cat",
+          "template": ["(echo one; echo two; echo three) | cat"],
+          "platforms": ["linux"],
+          "quiet": true,
+          "expect": {
+            "stdout": "one\ntwo\nthree\n"
+          }
+        }
+      ]
+    }
+  ]
+}

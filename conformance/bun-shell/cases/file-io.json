@@ -1,0 +1,549 @@
+{
+  "source": "test/js/bun/shell/file-io.test.ts",
+  "units": [
+    {
+      "line": 13,
+      "upstream": "simple echo to file",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "file-io/simple-echo-to-file",
+          "template": ["echo \"hello world\" > output.txt"],
+          "expect": {
+            "files": {
+              "output.txt": "hello world\n"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 18,
+      "upstream": "empty output to file",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "file-io/empty-output-to-file",
+          "template": ["echo -n \"\" > empty.txt"],
+          "expect": {
+            "files": {
+              "empty.txt": ""
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 23,
+      "upstream": "zero-length write should trigger onIOWriterChunk callback",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "file-io/echo-empty-string-to-file",
+          "template": ["echo \"\" > zero.txt"],
+          "expect": {
+            "files": {
+              "zero.txt": "\n"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 30,
+      "upstream": "large single write",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "file-io/large-single-write",
+          "template": ["echo -n ", " > large.txt"],
+          "values": [
+            {
+              "string": {
+                "repeat": "x",
+                "count": 10240
+              }
+            }
+          ],
+          "expect": {
+            "files": {
+              "large.txt": {
+                "repeat": "x",
+                "count": 10240
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 35,
+      "upstream": "write to subdirectory",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "file-io/write-to-subdirectory",
+          "template": ["mkdir -p subdir && echo \"test\" > subdir/file.txt"],
+          "expect": {
+            "files": {
+              "subdir/file.txt": "test\n"
+            },
+            "types": {
+              "subdir": "dir"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 42,
+      "upstream": "write to invalid path should fail",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "file-io/write-to-invalid-path",
+          "template": ["echo \"should fail\" > /dev/null/invalid/path"],
+          "expect": {
+            "exitCode": 1,
+            "stderr": {
+              "byPlatform": {
+                "windows": "bun: No such file or directory: /dev/null/invalid/path",
+                "posix": "bun: Not a directory: /dev/null/invalid/path"
+              }
+            }
+          },
+          "note": "Windows has no /dev/null directory entry, so the error is ENOENT"
+        }
+      ],
+      "note": "upstream only checks stderr contains \"directory: /dev/null/invalid/path\"; Bun 1.4.2 prints exactly \"bun: Not a directory: /dev/null/invalid/path\" with NO trailing newline"
+    },
+    {
+      "line": 47,
+      "upstream": "write to non-existent directory should fail",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "file-io/write-to-nonexistent-absolute-dir",
+          "template": ["echo \"should fail\" > /nonexistent/file.txt"],
+          "expect": {
+            "exitCode": 1,
+            "stderr": "bun: No such file or directory: /nonexistent/file.txt"
+          }
+        }
+      ],
+      "note": "upstream only checks stderr contains \"No such file or directory\"; Bun 1.4.2 message has no trailing newline"
+    },
+    {
+      "line": 51,
+      "upstream": "write to /dev/null",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "file-io/write-to-dev-null",
+          "template": ["echo \"disappear\" > /dev/null"],
+          "platforms": ["posix"],
+          "expect": {
+            "stdout": ""
+          }
+        }
+      ]
+    },
+    {
+      "line": 56,
+      "upstream": "redirect to a FIFO whose reader drains slowly applies backpressure",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "file-io/redirect-to-slow-fifo",
+          "template": ["", " reader.cjs out.fifo | echo ", " > out.fifo"],
+          "values": [
+            {
+              "string": "{{NODE}}"
+            },
+            {
+              "string": {
+                "repeat": "z",
+                "count": 204800
+              }
+            }
+          ],
+          "files": {
+            "reader.cjs": "const fs = require('fs');\nconst fd = fs.openSync(process.argv[2], 'r');\nconst buf = Buffer.alloc(4096);\nlet zs = 0, total = 0;\nconst sleep = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);\nsleep(200);\nfor (;;) { const n = fs.readSync(fd, buf, 0, buf.length, null); if (n === 0) break; total += n; for (let i = 0; i < n; i++) if (buf[i] === 0x7a) zs++; if (total < 100000) sleep(1); }\nfs.writeFileSync('result.txt', JSON.stringify({ zs, total }));\n"
+          },
+          "setup": [
+            {
+              "template": ["mkfifo out.fifo"]
+            }
+          ],
+          "platforms": ["posix"],
+          "requires": ["node", "mkfifo"],
+          "timeoutMs": 15000,
+          "expect": {
+            "files": {
+              "result.txt": "{\"zs\":204800,\"total\":204801}"
+            }
+          }
+        }
+      ],
+      "note": "upstream (test.concurrent.skipIf(!isPosix)) spawns a bun fixture that pre-fills the FIFO so the shell write hits EAGAIN, then drains it slowly and checks all 204800 \"z\" bytes arrive and exitCode 0. Reproduced with a slow node reader started first in a pipeline (reader sleeps 200ms before reading, so the 64 KiB pipe buffer fills and the shell must poll for writability); the reader writes its byte counts to result.txt. 204801 = payload + trailing newline of echo."
+    },
+    {
+      "line": 134,
+      "upstream": "single writer completion and cleanup",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "file-io/single-writer",
+          "template": ["echo \"single\" > single_writer.txt"],
+          "expect": {
+            "files": {
+              "single_writer.txt": "single\n"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 139,
+      "upstream": "writer marked as dead during write",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "file-io/writer-marked-dead",
+          "template": ["echo \"robust test\" > robust.txt"],
+          "expect": {
+            "files": {
+              "robust.txt": "robust test\n"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 145,
+      "upstream": "bytelist capture during file write",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "file-io/bytelist-capture",
+          "template": ["echo \"captured content\" > capture.txt"],
+          "expect": {
+            "stdout": "",
+            "files": {
+              "capture.txt": "captured content\n"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 152,
+      "upstream": "attempt to trigger partial write panic",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "file-io/partial-write-2k",
+          "template": ["echo -n ", " > atomic.txt"],
+          "values": [
+            {
+              "string": {
+                "repeat": "A",
+                "count": 2048
+              }
+            }
+          ],
+          "expect": {
+            "files": {
+              "atomic.txt": {
+                "repeat": "A",
+                "count": 2048
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 157,
+      "upstream": "EAGAIN should never occur for files",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "file-io/sync-write",
+          "template": ["echo \"synchronous\" > sync_write.txt"],
+          "expect": {
+            "files": {
+              "sync_write.txt": "synchronous\n"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 162,
+      "upstream": "write error propagation",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "file-io/write-error-relative-missing-dir",
+          "template": ["echo \"error test\" > nonexistent_dir/file.txt"],
+          "expect": {
+            "exitCode": 1,
+            "stderr": "bun: No such file or directory: nonexistent_dir/file.txt"
+          }
+        }
+      ],
+      "note": "upstream only checks stderr contains \"No such file or directory\"; exact Bun 1.4.2 text (no trailing newline) encoded"
+    },
+    {
+      "line": 169,
+      "upstream": "file creation with default permissions",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "file-io/create-new-file",
+          "template": ["echo \"new file\" > new_file.txt"],
+          "expect": {
+            "files": {
+              "new_file.txt": "new file\n"
+            },
+            "types": {
+              "new_file.txt": "file"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 174,
+      "upstream": "overwrite existing file",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "file-io/overwrite-existing-file",
+          "template": [
+            "echo \"original\" > overwrite.txt && echo \"short\" > overwrite.txt"
+          ],
+          "expect": {
+            "files": {
+              "overwrite.txt": "short\n"
+            }
+          }
+        },
+        {
+          "id": "file-io/overwrite-preexisting-longer-file",
+          "template": ["echo \"short\" > overwrite.txt"],
+          "files": {
+            "overwrite.txt": "a much longer original content\n"
+          },
+          "note": "extra: > truncates a pre-existing longer file",
+          "expect": {
+            "files": {
+              "overwrite.txt": "short\n"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 179,
+      "upstream": "append to existing file",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "file-io/append-to-existing-file",
+          "template": [
+            "echo \"line1\" > append.txt && echo \"line2\" >> append.txt && echo \"line3\" >> append.txt"
+          ],
+          "expect": {
+            "files": {
+              "append.txt": "line1\nline2\nline3\n"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 200,
+      "upstream": "basic file output",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "file-io/basic-file-output",
+          "template": ["echo \"builder test\" > output.txt"],
+          "expect": {
+            "files": {
+              "output.txt": "builder test\n"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 205,
+      "upstream": "output without trailing newline",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "file-io/printf-no-newline",
+          "template": ["printf \"no newline\" > no_newline.txt"],
+          "requires": ["printf"],
+          "note": "printf is not a Bun builtin: the external printf executable is used",
+          "expect": {
+            "files": {
+              "no_newline.txt": "no newline"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 210,
+      "upstream": "write then append",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "file-io/write-then-append",
+          "template": [
+            "echo \"first\" > multi.txt && echo \"second\" >> multi.txt"
+          ],
+          "expect": {
+            "files": {
+              "multi.txt": "first\nsecond\n"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 215,
+      "upstream": "write to file with spaces in name",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "file-io/filename-with-spaces",
+          "template": [
+            "echo \"test with spaces in filename\" > \"file with spaces.txt\""
+          ],
+          "expect": {
+            "files": {
+              "file with spaces.txt": "test with spaces in filename\n"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 220,
+      "upstream": "pipe with file redirection",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "file-io/pipe-then-redirect",
+          "template": ["echo \"pipe test\" | cat > pipe_output.txt"],
+          "expect": {
+            "stdout": "",
+            "files": {
+              "pipe_output.txt": "pipe test\n"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 228,
+      "upstream": "builtin pwd with &> redirect",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "file-io/pwd-and-redirect",
+          "template": ["pwd &> pwd_output.txt"],
+          "expect": {
+            "stdout": "",
+            "stderr": "",
+            "files": {
+              "pwd_output.txt": "{{TEMP_NATIVE}}\n"
+            }
+          },
+          "note": "On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes"
+        }
+      ],
+      "note": "upstream only checks exitCode 0 (regression: EBADF double close); file content {{TEMP}}\\n added from real Bun"
+    },
+    {
+      "line": 233,
+      "upstream": "builtin echo with &> redirect",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "file-io/echo-and-redirect",
+          "template": ["echo \"hello\" &> echo_output.txt"],
+          "expect": {
+            "files": {
+              "echo_output.txt": "hello\n"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 235,
+      "upstream": "builtin pwd with &>> append redirect",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "file-io/pwd-and-append-redirect-new-file",
+          "template": ["pwd &>> append_output.txt"],
+          "expect": {
+            "files": {
+              "append_output.txt": "{{TEMP_NATIVE}}\n"
+            }
+          },
+          "note": "On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes"
+        },
+        {
+          "id": "file-io/pwd-and-append-redirect-existing-file",
+          "template": ["pwd &>> append_output.txt"],
+          "files": {
+            "append_output.txt": "before\n"
+          },
+          "note": "extra: &>> appends to existing content. On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes",
+          "expect": {
+            "files": {
+              "append_output.txt": "before\n{{TEMP_NATIVE}}\n"
+            }
+          }
+        }
+      ],
+      "note": "upstream only checks exitCode 0; file contents added from real Bun"
+    },
+    {
+      "line": 242,
+      "upstream": "write completion survives dropping the redirect writer's last reference",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "file-io/redirect-writer-keepalive",
+          "template": ["echo hello > out.txt"],
+          "expect": {
+            "stdout": "",
+            "files": {
+              "out.txt": "hello\n"
+            }
+          }
+        }
+      ],
+      "note": "upstream (Windows regression oven-sh/bun#33108) runs `await $`echo hello > out.txt`.quiet()` in a bun subprocess and prints the file; the observable behaviour is the file content"
+    }
+  ],
+  "nonUnitSites": [
+    {
+      "line": 188,
+      "reason": "commented-out runAsTest (\"concurrent writes to different files\")"
+    },
+    {
+      "line": 193,
+      "reason": "commented-out runAsTest (\"rapid sequential writes to same file\")"
+    }
+  ]
+}
