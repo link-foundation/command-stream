@@ -290,10 +290,15 @@ export async function kill(pid, signal = $.killSignal || SIGTERM) {
   if (process.platform === 'win32' && (await taskkill(pid))) {
     return;
   }
-  for (const child of await ps.tree({ pid, recursive: true })) {
-    trySignal(+child.pid, signal);
-  }
+  const descendants = await ps.tree({ pid, recursive: true });
+  // Signal the process before its descendants (zx does the reverse). A shell
+  // that forked its command and sees that child die first can still report the
+  // death as exit code 128+n before its own signal lands, instead of dying by
+  // the signal; reproduced in experiments/zx-timeout-kill-race.mjs.
   if (!trySignal(-pid, signal)) {
     trySignal(+pid, signal);
+  }
+  for (const child of descendants) {
+    trySignal(+child.pid, signal);
   }
 }

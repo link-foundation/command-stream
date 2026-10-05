@@ -8,7 +8,7 @@ import path, { basename } from 'node:path';
 import { WriteStream } from 'node:fs';
 import { Readable, Transform, Writable } from 'node:stream';
 import { Socket } from 'node:net';
-import { ChildProcess } from 'node:child_process';
+import { ChildProcess, spawn } from 'node:child_process';
 import {
   $,
   ProcessPromise,
@@ -23,6 +23,7 @@ import {
   useBash,
   Fail,
   kill,
+  ps,
 } from '../../src/zx/core.mjs';
 import {
   tempfile,
@@ -1741,6 +1742,36 @@ describe('core', () => {
         /Invalid/
       );
     });
+
+    test(
+      'signals the process before its descendants',
+      { skip: process.platform === 'win32' && 'taskkill ends the tree' },
+      async () => {
+        // A shell that forks its command and sees that child die first can
+        // report exit code 143 before its own SIGTERM lands; zx's
+        // timeout() test then flakes. Signalling the shell first avoids it.
+        const shell = spawn('sh', ['-c', 'sleep 30; :'], { stdio: 'ignore' });
+        const exited = new Promise((resolve) => shell.once('exit', resolve));
+        while ((await ps.tree({ pid: shell.pid })).length === 0) {
+          await sleep(10);
+        }
+        const signalled = [];
+        const original = process.kill;
+        process.kill = (pid, signal) => {
+          signalled.push(Math.abs(pid));
+          return original.call(process, pid, signal);
+        };
+        try {
+          await kill(shell.pid, 'SIGTERM');
+        } finally {
+          process.kill = original;
+        }
+        assert.equal(signalled[0], shell.pid);
+        assert.ok(signalled.slice(1).some((pid) => pid !== shell.pid));
+        assert.equal(await exited, null);
+        assert.equal(shell.signalCode, 'SIGTERM');
+      }
+    );
   });
 
   describe('within()', () => {

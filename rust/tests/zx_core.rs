@@ -487,6 +487,26 @@ async fn kill_throws_if_pid_is_invalid() {
     assert!(kill(100.1, None).await.is_err());
 }
 
+// A shell that forks its command and sees that child die first can report exit
+// code 143 before its own SIGTERM lands, so the shell is signalled first.
+#[cfg(unix)]
+#[test]
+fn kill_tree_ends_a_forking_shell_by_the_signal() {
+    use std::os::unix::process::ExitStatusExt;
+
+    let mut shell = std::process::Command::new("sh")
+        .args(["-c", "sleep 30; :"])
+        .spawn()
+        .expect("sh starts");
+    while zx::kill::descendants(shell.id()).is_empty() {
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    zx::kill::kill_tree(shell.id(), "SIGTERM").expect("signals are sent");
+    let status = shell.wait().expect("sh exits");
+    assert_eq!(status.code(), None);
+    assert_eq!(status.signal(), Some(15));
+}
+
 // zx:test/core.test.js:1685:5:registration
 #[tokio::test]
 async fn within_just_works() {

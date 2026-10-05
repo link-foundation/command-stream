@@ -91,13 +91,18 @@ pub fn kill_tree(pid: u32, signal: &str) -> Result<(), ZxError> {
     use nix::unistd::Pid;
     let sig = parse_signal(signal)?;
     let raw = i32::try_from(pid).map_err(|_| ZxError::new(format!("Invalid pid: {pid}")))?;
-    for child in descendants(pid) {
+    let children = descendants(pid);
+    // Signal the process before its descendants (zx does the reverse). A shell
+    // that forked its command and sees that child die first can still report the
+    // death as exit code 128+n before its own signal lands, instead of dying by
+    // the signal.
+    if send(Pid::from_raw(-raw), sig).is_err() {
+        let _ = send(Pid::from_raw(raw), sig);
+    }
+    for child in children {
         if let Ok(child) = i32::try_from(child) {
             let _ = send(Pid::from_raw(child), sig);
         }
-    }
-    if send(Pid::from_raw(-raw), sig).is_err() {
-        let _ = send(Pid::from_raw(raw), sig);
     }
     Ok(())
 }
