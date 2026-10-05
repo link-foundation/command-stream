@@ -39,12 +39,15 @@ use std::env;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 #[cfg(not(test))]
 use std::process::exit;
-use std::process::Command;
 
 #[path = "rust-paths.rs"]
 mod rust_paths;
+
+#[path = "release-git.rs"]
+mod release_git;
 
 const REPOSITORY_RULE_PATTERNS: &[&str] = &[
     "gh006",
@@ -55,12 +58,8 @@ const REPOSITORY_RULE_PATTERNS: &[&str] = &[
     "push declined",
 ];
 
-const NON_FAST_FORWARD_PATTERNS: &[&str] = &[
-    "[rejected]",
-    "non-fast-forward",
-    "fetch first",
-    "updates were rejected",
-];
+const NON_FAST_FORWARD_PATTERNS: &[&str] =
+    &["non-fast-forward", "fetch first", "updates were rejected"];
 
 #[derive(Debug, PartialEq, Eq)]
 enum PushFailure {
@@ -679,12 +678,16 @@ fn main() {
 
     let cargo_lock_path = rust_paths::get_cargo_lock_path(&rust_root);
     let benchmarks_lock_path = get_benchmarks_cargo_lock_path(&rust_root);
-    let updated_locks = match update_cargo_locks(
+    match update_cargo_locks(
         &[cargo_lock_path.as_path(), benchmarks_lock_path.as_path()],
         &crate_name,
         &new_version,
     ) {
-        Ok(updated) => updated,
+        Ok(updated) => {
+            for path in updated {
+                println!("Updated lockfile {}", path);
+            }
+        }
         Err(e) => {
             eprintln!("Error updating Cargo.lock: {}", e);
             exit(1);
@@ -695,15 +698,12 @@ fn main() {
     collect_changelog(&changelog_dir, &changelog_file, &new_version);
 
     // Stage Cargo.toml, Cargo.lock files if changed, CHANGELOG.md, and consumed fragments
-    let package_manifest_str = package_manifest.to_string_lossy().to_string();
-    let mut add_args = vec!["add", &package_manifest_str, &changelog_file];
-    add_args.extend(updated_locks.iter().map(String::as_str));
-    exec("git", &add_args).unwrap_or_else(|e| {
-        eprintln!("Staging failed: {}", e);
+    let release_repo = env::current_dir().unwrap_or_else(|e| {
+        eprintln!("Working directory lookup failed: {}", e);
         exit(1)
     });
-    exec("git", &["add", "-A", &changelog_dir]).unwrap_or_else(|e| {
-        eprintln!("Staging fragments failed: {}", e);
+    release_git::stage_release_metadata(&release_repo, &rust_root).unwrap_or_else(|e| {
+        eprintln!("Release staging failed: {}", e);
         exit(1)
     });
 
@@ -737,49 +737,15 @@ fn main() {
     }
     println!("Committed version {}", new_version);
 
-    // Create tag
+    // Prepare the tag; create it only after all push/rebase retries finish.
     let tag_name = format!("{}{}", tag_prefix, new_version);
     let tag_msg = match &description {
         Some(desc) => format!("Release {}{}\n\n{}", tag_name, label_suffix, desc),
         None => format!("Release {}{}", tag_name, label_suffix),
     };
 
-    if let Err(e) = exec("git", &["tag", "-a", &tag_name, "-m", &tag_msg]) {
-        eprintln!("Error creating tag: {}", e);
-        exit(1);
-    }
-    println!("Created tag {}", tag_name);
-
-    // Push changes and tag with retry (handles concurrent pushes in multi-workflow repos)
-    let max_push_attempts = 3;
-    for attempt in 1..=max_push_attempts {
-        match exec("git", &["push"]) {
-            Ok(_) => break,
-            Err(e) => {
-                if classify_push_failure(&e) == PushFailure::LostRace && attempt < max_push_attempts
-                {
-                    eprintln!(
-                        "Push failed (attempt {}/{}): {}",
-                        attempt, max_push_attempts, e
-                    );
-                    eprintln!("Pulling with rebase and retrying...");
-                    if let Err(rebase_err) =
-                        exec("git", &["pull", "--rebase", "origin", &current_branch])
-                    {
-                        eprintln!("Error during pull --rebase: {}", rebase_err);
-                        let _ = exec("git", &["rebase", "--abort"]);
-                        exit(1);
-                    }
-                } else {
-                    eprintln!("Error pushing after {} attempts: {}", max_push_attempts, e);
-                    exit(1);
-                }
-            }
-        }
-    }
-
-    if let Err(e) = exec("git", &["push", "origin", &tag_name]) {
-        eprintln!("Error pushing tags: {}", e);
+    if let Err(e) = release_git::push_release(&release_repo, &current_branch, &tag_name, &tag_msg) {
+        eprintln!("Error pushing release: {}", e);
         exit(1);
     }
     println!("Pushed changes and tags");
