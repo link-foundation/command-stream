@@ -1,0 +1,61 @@
+{
+  "source": "test/js/bun/shell/commands/false.test.ts",
+  "units": [
+    {
+      "line": 6,
+      "upstream": "works",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-false/works",
+          "template": ["false"],
+          "expect": {
+            "exitCode": 1
+          }
+        }
+      ]
+    },
+    {
+      "line": 8,
+      "upstream": "works with arguments",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-false/with-arguments",
+          "template": ["false 3 5"],
+          "expect": {
+            "exitCode": 1
+          }
+        }
+      ]
+    },
+    {
+      "line": 10,
+      "upstream": "works with --help",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-false/with-help",
+          "template": ["false --help"],
+          "expect": {
+            "exitCode": 1
+          }
+        }
+      ]
+    },
+    {
+      "line": 12,
+      "upstream": "works with --version",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-false/with-version",
+          "template": ["false --version"],
+          "expect": {
+            "exitCode": 1
+          }
+        }
+      ]
+    }
+  ]
+}

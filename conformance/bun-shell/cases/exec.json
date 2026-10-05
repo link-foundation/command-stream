@@ -1,0 +1,230 @@
+{
+  "source": "test/js/bun/shell/exec.test.ts",
+  "units": [
+    {
+      "line": 12,
+      "upstream": "it works",
+      "disposition": "case",
+      "note": "upstream runs the script string through the `bun exec <script>` CLI (a Bun subprocess using the same shell); reproduced by running the script directly through $",
+      "cases": [
+        {
+          "id": "exec/echo-hi",
+          "template": ["echo hi!"],
+          "expect": {
+            "stdout": "hi!\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 17,
+      "upstream": "it works on command fail",
+      "disposition": "case",
+      "note": "upstream runs the script string through the `bun exec <script>` CLI (a Bun subprocess using the same shell); reproduced by running the script directly through $",
+      "cases": [
+        {
+          "id": "exec/command-not-found",
+          "template": ["sldkfjslkdjflksdjflj"],
+          "expect": {
+            "exitCode": 1,
+            "stderr": "bun: command not found: sldkfjslkdjflksdjflj\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 24,
+      "upstream": "no args prints help text",
+      "disposition": "inapplicable",
+      "reason": "checks the usage/help text of the `bun exec` CLI subcommand when given no script (\"Usage: bun exec <script>\\n\\nExecute a shell script directly from Bun. ...\"); this is Bun CLI argument handling, not shell-language behaviour, and there is no script to run"
+    },
+    {
+      "line": 28,
+      "upstream": "it works2",
+      "disposition": "case",
+      "note": "upstream runs the script string through the `bun exec <script>` CLI (a Bun subprocess using the same shell); reproduced by running the script directly through $; upstream passes {raw: $.escape(`echo 'hi \"there bud\"'`)} so bun exec receives exactly the script below",
+      "cases": [
+        {
+          "id": "exec/single-quoted-with-double-quotes",
+          "template": ["echo 'hi \"there bud\"'"],
+          "expect": {
+            "stdout": "hi \"there bud\"\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 43,
+      "upstream": "write a lot of data",
+      "disposition": "case",
+      "note": "upstream runs the script string through the `bun exec <script>` CLI (a Bun subprocess using the same shell); reproduced by running the script directly through $",
+      "cases": [
+        {
+          "id": "exec/cat-128k-file",
+          "template": ["cat filename"],
+          "files": {
+            "filename": {
+              "repeat": "a",
+              "count": 131072
+            }
+          },
+          "expect": {
+            "stdout": {
+              "repeat": "a",
+              "count": 131072
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 70,
+      "upstream": "--help works (one test per program: touch, mkdir, echo, pwd, rm, mv, ls, exit, true, false, seq)",
+      "disposition": "case",
+      "note": "upstream runs the script string through the `bun exec <script>` CLI (a Bun subprocess using the same shell); reproduced by running the script directly through $; cat, cd, which, yes are commented out upstream",
+      "cases": [
+        {
+          "id": "exec/help-flag-touch",
+          "template": ["touch --help"],
+          "expect": {
+            "exitCode": 1,
+            "stderr": "touch: illegal option -- help\n",
+            "stdout": ""
+          }
+        },
+        {
+          "id": "exec/help-flag-mkdir",
+          "template": ["mkdir --help"],
+          "expect": {
+            "exitCode": 1,
+            "stderr": "mkdir: illegal option -- help\n",
+            "stdout": ""
+          }
+        },
+        {
+          "id": "exec/help-flag-echo",
+          "template": ["echo --help"],
+          "expect": {
+            "exitCode": 0,
+            "stderr": "",
+            "stdout": "--help\n"
+          }
+        },
+        {
+          "id": "exec/help-flag-pwd",
+          "template": ["pwd --help"],
+          "expect": {
+            "exitCode": 1,
+            "stderr": "pwd: too many arguments\n",
+            "stdout": ""
+          }
+        },
+        {
+          "id": "exec/help-flag-rm",
+          "template": ["rm --help"],
+          "expect": {
+            "exitCode": 1,
+            "stderr": "rm: illegal option -- -\n",
+            "stdout": ""
+          }
+        },
+        {
+          "id": "exec/help-flag-mv",
+          "template": ["mv --help"],
+          "expect": {
+            "exitCode": 1,
+            "stderr": "mv: illegal option -- -\n",
+            "stdout": ""
+          }
+        },
+        {
+          "id": "exec/help-flag-ls",
+          "template": ["ls --help"],
+          "expect": {
+            "exitCode": 1,
+            "stderr": "ls: illegal option -- -\n",
+            "stdout": ""
+          }
+        },
+        {
+          "id": "exec/help-flag-exit",
+          "template": ["exit --help"],
+          "expect": {
+            "exitCode": 1,
+            "stderr": "exit: numeric argument required\n",
+            "stdout": ""
+          }
+        },
+        {
+          "id": "exec/help-flag-true",
+          "template": ["true --help"],
+          "expect": {
+            "exitCode": 0,
+            "stderr": "",
+            "stdout": ""
+          }
+        },
+        {
+          "id": "exec/help-flag-false",
+          "template": ["false --help"],
+          "expect": {
+            "exitCode": 1,
+            "stderr": "",
+            "stdout": ""
+          }
+        },
+        {
+          "id": "exec/help-flag-seq",
+          "template": ["seq --help"],
+          "expect": {
+            "exitCode": 1,
+            "stderr": "seq: invalid argument\n",
+            "stdout": ""
+          }
+        }
+      ]
+    },
+    {
+      "line": 79,
+      "upstream": "cd with no arguments works",
+      "disposition": "case",
+      "note": "upstream runs the script string through the `bun exec <script>` CLI (a Bun subprocess using the same shell); reproduced by running the script directly through $",
+      "cases": [
+        {
+          "id": "exec/cd-no-args",
+          "template": ["cd"],
+          "expect": {
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": ""
+          }
+        }
+      ]
+    },
+    {
+      "line": 81,
+      "upstream": "bun works even when not in PATH",
+      "disposition": "inapplicable",
+      "reason": "checks that inside Bun's shell the command name `bun` resolves to the running Bun executable itself even with PATH=\"\" (stdout of `bun` contains \"Bun is a fast JavaScript runtime\", no \"bun: command not found: bun\"); this self-resolution of the host runtime binary is specific to the Bun runtime and has no equivalent for other hosts (there is no bun binary to resolve)"
+    },
+    {
+      "line": 87,
+      "upstream": "works with latin1 paths",
+      "disposition": "case",
+      "note": "upstream runs the script string through the `bun exec <script>` CLI (a Bun subprocess using the same shell); reproduced by running the script directly through $; upstream sets cwd to a directory named \"Í\" (latin1 character) containing file \"hi\"",
+      "cases": [
+        {
+          "id": "exec/ls-in-latin1-cwd",
+          "template": ["ls"],
+          "files": {
+            "Í/hi": "text"
+          },
+          "cwd": "Í",
+          "expect": {
+            "stdout": "hi\n"
+          }
+        }
+      ]
+    }
+  ]
+}

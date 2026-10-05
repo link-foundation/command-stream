@@ -1,0 +1,31 @@
+{
+  "source": "test/js/bun/shell/lazy.test.ts",
+  "units": [
+    {
+      "line": 7,
+      "upstream": "$ is lazy",
+      "disposition": "js-api",
+      "api": "Creating `const pending = $`echo 123 > ${path}`` (not awaited) must not run the command: right after creation Bun.file(path).text() rejects (file does not exist); then write \"456\" to path and read back \"456\" (still untouched); only after `await pending` does the file contain \"123\\n\" (the command runs when awaited and > truncates the \"456\" written meanwhile).",
+      "cases": [
+        {
+          "id": "lazy/redirect-overwrites-when-run",
+          "template": ["echo 123 > ", ""],
+          "values": [
+            {
+              "path": "bun-lazy"
+            }
+          ],
+          "files": {
+            "bun-lazy": "456"
+          },
+          "expect": {
+            "files": {
+              "bun-lazy": "123\n"
+            }
+          },
+          "note": "state at the moment the lazy command finally runs: file contains \"456\""
+        }
+      ]
+    }
+  ]
+}

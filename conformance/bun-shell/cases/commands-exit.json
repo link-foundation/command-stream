@@ -1,0 +1,106 @@
+{
+  "source": "test/js/bun/shell/commands/exit.test.ts",
+  "units": [
+    {
+      "line": 6,
+      "upstream": "works",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-exit/no-args",
+          "template": ["exit"],
+          "expect": {
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 10,
+      "upstream": "argument sets exit code (for arg of [0, 2, 11])",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-exit/arg-0",
+          "template": ["exit ", ""],
+          "values": [
+            {
+              "number": 0
+            }
+          ],
+          "expect": {
+            "exitCode": 0
+          }
+        },
+        {
+          "id": "commands-exit/arg-2",
+          "template": ["exit ", ""],
+          "values": [
+            {
+              "number": 2
+            }
+          ],
+          "expect": {
+            "exitCode": 2
+          }
+        },
+        {
+          "id": "commands-exit/arg-11",
+          "template": ["exit ", ""],
+          "values": [
+            {
+              "number": 11
+            }
+          ],
+          "expect": {
+            "exitCode": 11
+          }
+        }
+      ]
+    },
+    {
+      "line": 14,
+      "upstream": "too many arguments",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-exit/too-many-arguments",
+          "template": ["exit 3 5"],
+          "expect": {
+            "stderr": "exit: too many arguments\n",
+            "exitCode": 1
+          }
+        }
+      ]
+    },
+    {
+      "line": 16,
+      "upstream": "exit code wraps u8",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-exit/wraps-u8",
+          "template": ["exit 62757836"],
+          "expect": {
+            "exitCode": 204
+          }
+        }
+      ]
+    },
+    {
+      "line": 19,
+      "upstream": "numeric argument required",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-exit/numeric-argument-required",
+          "template": ["exit abc"],
+          "expect": {
+            "stderr": "exit: numeric argument required\n",
+            "exitCode": 1
+          }
+        }
+      ]
+    }
+  ]
+}

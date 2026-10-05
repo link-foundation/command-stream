@@ -1,0 +1,68 @@
+name: Link check
+
+# External link rot is checked here, on a schedule, and deliberately not on
+# pull requests.
+#
+# The pipeline templates run lychee as a pull-request gate. Doing the same here
+# would have made every pull request red for reasons no pull request caused:
+# a run over this tree reports 20 errors, and all 20 are links that are correct
+# in the document and unreachable from a runner -- npmjs.com answers 403 to any
+# non-browser client, and GitHub serves the stargazers list and the settings
+# pages only to a signed-in session. That is exactly the class of false positive
+# issue #199 is about, so the split is:
+#
+#   - relative links, which a change can actually break, are resolved offline on
+#     every pull request by js/tests/docs-validation.test.mjs (quality.yml),
+#   - external links, which only the rest of the world can break, are fetched
+#     here once a week and on demand.
+#
+# A failure of this workflow therefore never blocks a merge; it says a link that
+# used to work has stopped working. Known-unreachable-but-correct URLs go in
+# .lycheeignore, one commented entry each.
+
+on:
+  schedule:
+    # Mondays at 06:00 UTC, an hour after the weekly security audit.
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+# Least-privilege default; nothing here writes.
+permissions:
+  contents: read
+
+jobs:
+  links:
+    name: Check external links
+    runs-on: ubuntu-latest
+    # A run over this repository takes seconds; the budget is for a slow or
+    # unresponsive third-party host.
+    timeout-minutes: 15
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-links
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      # dev/log and docs/case-studies hold verbatim copies of other
+      # repositories' documents, kept as evidence: their relative links point
+      # into the tree they came from and are not this repository's to fix. The
+      # same directories are skipped by js/tests/docs-validation.test.mjs.
+      - name: Check links with lychee
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: >-
+            --verbose
+            --no-progress
+            --max-retries 2
+            --timeout 30
+            --exclude-path dev/log
+            --exclude-path docs/case-studies
+            './**/*.md'
+          fail: true
+          jobSummary: true
+        env:
+          # Raises GitHub's anonymous rate limit, which this repository's
+          # documents would otherwise hit on their own issue and pull links.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

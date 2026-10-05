@@ -1,0 +1,54 @@
+{
+  "source": "test/js/bun/shell/shell-load.test.ts",
+  "units": [
+    {
+      "line": 6,
+      "upstream": "shell load > immediate exit",
+      "disposition": "case",
+      "note": "upstream fixture runs $`${Bun.which('true')}`.text() 30000 times (100 concurrent) and asserts exit 0; the concurrency/load aspect is not reproduced. Cases run external `true` (resolved via $(which true)) and builtin true repeatedly in one script.",
+      "cases": [
+        {
+          "id": "shell-load/external-true-repeated",
+          "template": ["", ""],
+          "values": [
+            {
+              "raw": {
+                "repeat": "$(which true); ",
+                "count": 30
+              }
+            }
+          ],
+          "platforms": ["posix"],
+          "requires": ["true"],
+          "expect": {
+            "stdout": ""
+          }
+        },
+        {
+          "id": "shell-load/external-true-single",
+          "template": ["$(which true)"],
+          "platforms": ["posix"],
+          "requires": ["true"],
+          "expect": {
+            "stdout": ""
+          }
+        },
+        {
+          "id": "shell-load/builtin-true-repeated",
+          "template": ["", ""],
+          "values": [
+            {
+              "raw": {
+                "repeat": "true; ",
+                "count": 300
+              }
+            }
+          ],
+          "expect": {
+            "stdout": ""
+          }
+        }
+      ]
+    }
+  ]
+}
