@@ -115,3 +115,9 @@ Object.defineProperty($, 'zx', {
 });
 
 module.exports = $;
+
+// Match the lazy ESM compatibility properties without loading Execa at import.
+Object.defineProperties($, {
+  execa: { configurable: true, get: () => namespace.$.execa },
+  execaCompat: { configurable: true, value: namespace.execaCompat },
+});

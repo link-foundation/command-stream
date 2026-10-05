@@ -480,6 +480,46 @@ async fn zx_compat() -> ExampleResult {
 }
 // endfeature:zx-compat
 
+// feature:execa-compat
+async fn execa_compat() -> ExampleResult {
+    use command_stream::execa::{Execa, Options};
+    let isolated = command_stream::execa::execa("node", ["--version"]).await?;
+    let general = command_stream::execa("node", ["--version"]).await?;
+    let argv = command_stream::execa(
+        "node",
+        [
+            "-e",
+            "process.stdout.write(process.argv.slice(1).join('|'))",
+            "hello world",
+            "$HOME",
+        ],
+    )
+    .await?;
+    let api = Execa::new(Options {
+        strip_final_newline: false,
+        ..Options::default()
+    });
+    let newline = api.command("node", ["-e", "console.log('hello')"]).await?;
+    let tolerated = api
+        .command("node", ["-e", "process.exit(3)"])
+        .reject(false)
+        .await?;
+    let input = command_stream::execa("node", ["-e", "process.stdin.pipe(process.stdout)"])
+        .input(b"input".to_vec())
+        .await?;
+    Ok(vec![
+        observation(
+            "isolated and general API",
+            isolated.stdout == general.stdout,
+        ),
+        observation("exact argv", argv.text()),
+        observation("preserved newline", newline.text()),
+        observation("tolerated exit code", tolerated.exit_code),
+        observation("binary stdin", input.text()),
+    ])
+}
+// endfeature:execa-compat
+
 async fn execute(id: &str) -> ExampleResult {
     match id {
         "await-result" => await_result().await,
@@ -508,6 +548,7 @@ async fn execute(id: &str) -> ExampleResult {
         "shell-settings" => shell_settings().await,
         "ansi-utils" => ansi_utils().await,
         "zx-compat" => zx_compat().await,
+        "execa-compat" => execa_compat().await,
         _ => Err(format!("unknown feature: {id}").into()),
     }
 }

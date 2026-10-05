@@ -15,6 +15,12 @@ import $, {
   disableVirtualCommands,
   enableVirtualCommands,
   exec,
+  execa,
+  execaCompat,
+  execaSync,
+  execaNode,
+  execaCommand,
+  execaCommandSync,
   forceCleanupAll,
   getAnsiConfig,
   isPreQuotedPassthroughEnabled,
@@ -103,6 +109,7 @@ export async function taggedTemplates(): Promise<void> {
 }
 
 export async function entryPoints(): Promise<void> {
+  use(execa, execaCompat, execaSync, execaNode, execaCommand, execaCommandSync);
   expectType<Equal<Awaited<ReturnType<typeof sh>>, StreamResult>>();
   expectType<Equal<Awaited<ReturnType<typeof exec>>, StreamResult>>();
   expectType<Equal<Awaited<ReturnType<typeof run>>, StreamResult>>();

@@ -919,6 +919,37 @@
               "node": "# zx-compat — zx compatibility mode\n$.zx is the zx $: true\ninterpolation: \"hello world\\n\"\nProcessOutput: true\nrejected exit code: 2\nnothrow exit code: 3\npipe: [\"a\",\"b\"]\nwithin cwd: true\ncwd restored: true",
               "bun": "# zx-compat — zx compatibility mode\n$.zx is the zx $: true\ninterpolation: \"hello world\\n\"\nProcessOutput: true\nrejected exit code: 2\nnothrow exit code: 3\npipe: [\"a\",\"b\"]\nwithin cwd: true\ncwd restored: true"
             }
+          },
+          {
+            "id": "execa-compat",
+            "title": "Execa compatibility mode",
+            "category": "Running commands",
+            "summary": "The isolated command-stream/execa entry and general $.execa expose Execa 9.6.1; Rust has portable exact-argv counterparts with explicit limits.",
+            "file": "js/examples/features/execa-compat.mjs",
+            "api": ["$.execa", "$.execaCompat", "command-stream/execa"],
+            "alternatives": {
+              "bun-shell": { "unsupported": "Bun Shell has a different API" },
+              "zx": { "unsupported": "zx has a different API" },
+              "execa": "import { execa } from 'execa'; await execa('node', ['--version']);",
+              "shelljs": { "unsupported": "ShellJS has a different API" },
+              "child_process": {
+                "unsupported": "spawn does not expose Execa results or helpers"
+              }
+            },
+            "source": "// Execa uses exact argv, with isolated and general entry points.\nimport { $ } from '../../src/$.mjs';\nimport { execa } from '../../src/execa/index.mjs';\nimport { example } from './_harness.mjs';\n\nawait example(\n  { id: 'execa-compat', title: 'Execa compatibility mode' },\n  async ({ record }) => {\n    record('isolated and general API', $.execa === execa);\n    const script = 'process.stdout.write(process.argv.slice(1).join(\"|\"))';\n    record(\n      'exact argv',\n      (await $.execa(process.execPath, ['-e', script, 'hello world', '$HOME']))\n        .stdout\n    );\n    const api = $.execaCompat({ stripFinalNewline: false });\n    record(\n      'preserved newline',\n      (await api.execa(process.execPath, ['-e', 'console.log(\"hello\")'])).stdout\n    );\n    record(\n      'tolerated exit code',\n      (\n        await api.execa(process.execPath, ['-e', 'process.exit(3)'], {\n          reject: false,\n        })\n      ).exitCode\n    );\n    record(\n      'binary stdin',\n      (\n        await execa(\n          process.execPath,\n          ['-e', 'process.stdin.pipe(process.stdout)'],\n          { input: 'input' }\n        )\n      ).stdout\n    );\n  }\n);",
+            "rustApi": [
+              "execa",
+              "execa_compat",
+              "execa::Execa",
+              "execa::Options"
+            ],
+            "rustSource": "async fn execa_compat() -> ExampleResult {\n    use command_stream::execa::{Execa, Options};\n    let isolated = command_stream::execa::execa(\"node\", [\"--version\"]).await?;\n    let general = command_stream::execa(\"node\", [\"--version\"]).await?;\n    let argv = command_stream::execa(\n        \"node\",\n        [\n            \"-e\",\n            \"process.stdout.write(process.argv.slice(1).join('|'))\",\n            \"hello world\",\n            \"$HOME\",\n        ],\n    )\n    .await?;\n    let api = Execa::new(Options {\n        strip_final_newline: false,\n        ..Options::default()\n    });\n    let newline = api.command(\"node\", [\"-e\", \"console.log('hello')\"]).await?;\n    let tolerated = api\n        .command(\"node\", [\"-e\", \"process.exit(3)\"])\n        .reject(false)\n        .await?;\n    let input = command_stream::execa(\"node\", [\"-e\", \"process.stdin.pipe(process.stdout)\"])\n        .input(b\"input\".to_vec())\n        .await?;\n    Ok(vec![\n        observation(\n            \"isolated and general API\",\n            isolated.stdout == general.stdout,\n        ),\n        observation(\"exact argv\", argv.text()),\n        observation(\"preserved newline\", newline.text()),\n        observation(\"tolerated exit code\", tolerated.exit_code),\n        observation(\"binary stdin\", input.text()),\n    ])\n}",
+            "rustOutput": "# execa-compat — Rust\nisolated and general API: true\nexact argv: \"hello world|$HOME\"\npreserved newline: \"hello\\n\"\ntolerated exit code: 3\nbinary stdin: \"input\"",
+            "identicalOutput": true,
+            "output": {
+              "node": "# execa-compat — Execa compatibility mode\nisolated and general API: true\nexact argv: \"hello world|$HOME\"\npreserved newline: \"hello\\n\"\ntolerated exit code: 3\nbinary stdin: \"input\"",
+              "bun": "# execa-compat — Execa compatibility mode\nisolated and general API: true\nexact argv: \"hello world|$HOME\"\npreserved newline: \"hello\\n\"\ntolerated exit code: 3\nbinary stdin: \"input\""
+            }
           }
         ]
       }

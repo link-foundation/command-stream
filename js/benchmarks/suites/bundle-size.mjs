@@ -28,6 +28,14 @@ const packageConfigurations = [
     minimalImport: `import { $ } from './src/zx/core.mjs'; globalThis.__benchmark = $`,
   },
   {
+    name: 'command-stream/execa',
+    root: jsDirectory,
+    importUrl: pathToFileURL(join(jsDirectory, 'src', 'execa', 'index.mjs'))
+      .href,
+    fullImport: `import * as api from './src/execa/index.mjs'; globalThis.__benchmark = api`,
+    minimalImport: `import { execa as api } from './src/execa/index.mjs'; globalThis.__benchmark = api`,
+  },
+  {
     name: 'execa',
     fullImport: `import * as api from 'execa'; globalThis.__benchmark = api`,
     minimalImport: `import { execa as api } from 'execa'; globalThis.__benchmark = api`,

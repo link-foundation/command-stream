@@ -74,7 +74,18 @@
       },
       "default": "./src/bun.mjs"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./execa": {
+      "import": {
+        "types": "./types/execa.d.ts",
+        "default": "./src/execa/index.mjs"
+      },
+      "require": {
+        "types": "./types/execa.d.cts",
+        "default": "./src/execa/index.cjs"
+      },
+      "default": "./src/execa/index.mjs"
+    }
   },
   "repository": {
     "type": "git",
@@ -153,7 +164,6 @@
     "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.6",
-    "execa": "9.6.1",
     "husky": "^9.1.7",
     "jscpd": "^4.3.0",
     "lint-staged": "^16.4.0",
@@ -168,6 +178,7 @@
     "@resvg/resvg-js": "^2.6.2",
     "@xterm/headless": "^6.0.0",
     "gifenc": "^1.0.3",
-    "node-pty": "^1.2.0-beta.15"
+    "node-pty": "^1.2.0-beta.15",
+    "execa": "9.6.1"
   }
 }

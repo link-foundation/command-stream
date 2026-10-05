@@ -25,7 +25,7 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 - 🎯 **Bun.$ Everywhere**: the full Bun Shell API as `command-stream/bun` (or `$.bun`) on Node.js, Bun and Deno, tested with Bun's own tests ([guide](docs/BUN_SHELL.md))
 - 🔧 **Built-in Commands**: 22 essential commands work identically across platforms
 - 🆔 **Process Identity**: Read the process id with `command.pid`, before, during and after the run
-- 🔄 **Migration**: [Cross-spawn guide for JavaScript and Rust](docs/CROSS_SPAWN_MIGRATION.md); zx scripts run unchanged via `$.zx`, `command-stream/zx` or `#!/usr/bin/env command-stream`, with all 291 zx test units ported ([zx guide](docs/ZX_MIGRATION.md))
+- 🔄 **Migration**: [Cross-spawn guide for JavaScript and Rust](docs/CROSS_SPAWN_MIGRATION.md); zx scripts run unchanged via `$.zx`, `command-stream/zx` or `#!/usr/bin/env command-stream`, with all 291 zx test units ported ([zx guide](docs/ZX_MIGRATION.md)); Execa 9.6.1 runs via `command-stream/execa`, `$.execa` and `$.execaCompat()` ([guide and runtime limits](docs/EXECA_MIGRATION.md))
 - 🟦 **TypeScript**: Bundled strict declarations for ESM and CommonJS, with typed events, streams, pipelines and virtual commands ([guide and Rust mapping](docs/TYPESCRIPT.md))
 
 ## Comparison with Other Libraries

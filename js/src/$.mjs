@@ -449,6 +449,23 @@ Object.defineProperty($tagged, 'zx', {
   get: () => requireZx('./zx/core.cjs').$,
 });
 
+// The isolated Execa entry is loaded only when this compatibility API is used.
+function execaCompat(options) {
+  trace('ExecaCompat', () => 'Loading the isolated Execa API');
+  return requireZx('./execa/index.cjs').execaCompat(options);
+}
+
+const execa = (...args) => execaCompat().execa(...args);
+const execaSync = (...args) => execaCompat().execaSync(...args);
+const execaNode = (...args) => execaCompat().execaNode(...args);
+const execaCommand = (...args) => execaCompat().execaCommand(...args);
+const execaCommandSync = (...args) => execaCompat().execaCommandSync(...args);
+
+Object.defineProperties($tagged, {
+  execa: { configurable: true, get: () => execaCompat().execa },
+  execaCompat: { configurable: true, value: execaCompat },
+});
+
 trace('Initialization', () => 'Registering built-in virtual commands');
 registerBuiltins();
 trace(
@@ -458,6 +475,12 @@ trace(
 
 export {
   $tagged as $,
+  execaCompat,
+  execa,
+  execaSync,
+  execaNode,
+  execaCommand,
+  execaCommandSync,
   sh,
   exec,
   crossSpawn as spawn,

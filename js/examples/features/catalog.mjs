@@ -569,6 +569,25 @@ export const features = [
       },
     },
   },
+  {
+    id: 'execa-compat',
+    title: 'Execa compatibility mode',
+    category: 'Running commands',
+    summary:
+      'The isolated command-stream/execa entry and general $.execa expose Execa 9.6.1; Rust has portable exact-argv counterparts with explicit limits.',
+    file: 'js/examples/features/execa-compat.mjs',
+    api: ['$.execa', '$.execaCompat', 'command-stream/execa'],
+    alternatives: {
+      'bun-shell': { unsupported: 'Bun Shell has a different API' },
+      zx: { unsupported: 'zx has a different API' },
+      execa:
+        "import { execa } from 'execa'; await execa('node', ['--version']);",
+      shelljs: { unsupported: 'ShellJS has a different API' },
+      child_process: {
+        unsupported: 'spawn does not expose Execa results or helpers',
+      },
+    },
+  },
 ];
 
 export const featuresById = new Map(
@@ -629,6 +648,7 @@ export const rustApiByFeature = new Map(
       'unset_shell_option',
     ],
     'ansi-utils': ['AnsiUtils', 'AnsiConfig'],
+    'execa-compat': ['execa', 'execa_compat', 'execa::Execa', 'execa::Options'],
     'zx-compat': ['zx!', 'zx::Shell', 'zx::within', 'zx::ProcessOutput'],
   })
 );

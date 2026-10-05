@@ -91,8 +91,9 @@ pub struct StreamingRunner {
     command: StreamingCommand,
     cwd: Option<PathBuf>,
     env: Option<HashMap<String, String>>,
+    env_clear: bool,
     prefer_local: crate::PreferLocal,
-    stdin_content: Option<String>,
+    stdin_content: Option<Vec<u8>>,
     kill_signal: String,
     kill_grace_ms: u64,
     exit_pump_grace_ms: u64,
@@ -136,6 +137,7 @@ impl StreamingRunner {
             command,
             cwd: None,
             env: None,
+            env_clear: false,
             prefer_local: crate::PreferLocal::Off,
             stdin_content: None,
             kill_signal: DEFAULT_KILL_SIGNAL.to_string(),
@@ -164,7 +166,19 @@ impl StreamingRunner {
 
     /// Set stdin content
     pub fn stdin(mut self, content: impl Into<String>) -> Self {
+        self.stdin_content = Some(content.into().into_bytes());
+        self
+    }
+
+    /// Set binary stdin without UTF-8 conversion.
+    pub fn stdin_bytes(mut self, content: impl Into<Vec<u8>>) -> Self {
         self.stdin_content = Some(content.into());
+        self
+    }
+
+    /// Clear inherited environment variables before applying `env`.
+    pub fn clear_env(mut self, clear: bool) -> Self {
+        self.env_clear = clear;
         self
     }
 
@@ -198,7 +212,7 @@ impl StreamingRunner {
         self
     }
 
-    fn spawn(mut self) -> (OutputStream, JoinHandle<Result<()>>) {
+    pub(crate) fn spawn(mut self) -> (OutputStream, JoinHandle<Result<()>>) {
         let (tx, rx) = mpsc::channel(1024);
         // Unbounded so a synchronous Drop can request a kill without awaiting.
         let (kill_tx, kill_rx) = mpsc::unbounded_channel::<String>();
@@ -206,6 +220,7 @@ impl StreamingRunner {
         // when this returns. The task publishes it here as soon as the spawn
         // succeeds; `OutputStream::pid` reads the latest value (issue #18).
         let (pid_tx, pid_rx) = watch::channel(None);
+        let (exit_signal_tx, exit_signal_rx) = watch::channel(None);
 
         // Spawn the process handling task
         let command = self.command.clone();
@@ -222,6 +237,7 @@ impl StreamingRunner {
                 .insert(key, path);
         }
         let stdin_content = self.stdin_content.take();
+        let env_clear = self.env_clear;
         let grace = GraceWindows {
             exit_pump_ms: self.exit_pump_grace_ms,
             kill_ms: self.kill_grace_ms,
@@ -233,9 +249,11 @@ impl StreamingRunner {
                 output_tx: tx,
                 kill_rx,
                 pid_tx,
+                exit_signal_tx,
             };
             let result =
-                run_streaming_process(command, cwd, env, stdin_content, grace, channels).await;
+                run_streaming_process(command, cwd, env, stdin_content, env_clear, grace, channels)
+                    .await;
             if let Err(error) = &result {
                 trace_lazy("StreamingRunner", || format!("Error: {error}"));
             }
@@ -249,6 +267,7 @@ impl StreamingRunner {
                 kill_signal,
                 killed: false,
                 pid_rx,
+                exit_signal_rx,
             },
             task,
         )
@@ -285,7 +304,7 @@ impl StreamingRunner {
             exit_code,
         );
         if let Some(content) = stdin_content {
-            result.stdin = crate::result_streams::CapturedInput::new(content.into_bytes());
+            result.stdin = crate::result_streams::CapturedInput::new(content);
         }
         Ok(result)
     }
@@ -314,12 +333,19 @@ pub struct OutputStream {
     kill_signal: String,
     killed: bool,
     pid_rx: watch::Receiver<Option<u32>>,
+    exit_signal_rx: watch::Receiver<Option<String>>,
 }
 
 impl OutputStream {
     /// Receive the next chunk
     pub async fn next(&mut self) -> Option<OutputChunk> {
         self.rx.recv().await
+    }
+
+    /// Signal reported by the native child, available once it exits.
+    /// Ordinary exit codes above 128 are not mistaken for signals.
+    pub fn exit_signal(&self) -> Option<String> {
+        self.exit_signal_rx.borrow().clone()
     }
 
     /// Process id of the streamed command, as currently known.
@@ -423,6 +449,7 @@ struct StreamChannels {
     kill_rx: mpsc::UnboundedReceiver<String>,
     /// Publishes the child's id, which is only known inside the spawning task.
     pid_tx: watch::Sender<Option<u32>>,
+    exit_signal_tx: watch::Sender<Option<String>>,
 }
 
 /// How long the runner waits, in milliseconds, at the two points where it gives
@@ -442,7 +469,8 @@ async fn run_streaming_process(
     command: StreamingCommand,
     cwd: Option<PathBuf>,
     env: Option<HashMap<String, String>>,
-    stdin_content: Option<String>,
+    stdin_content: Option<Vec<u8>>,
+    env_clear: bool,
     grace: GraceWindows,
     channels: StreamChannels,
 ) -> Result<()> {
@@ -450,6 +478,7 @@ async fn run_streaming_process(
         output_tx: tx,
         mut kill_rx,
         pid_tx,
+        exit_signal_tx,
     } = channels;
     trace_lazy("StreamingRunner", || match &command {
         StreamingCommand::Shell(command) => format!("Starting: {command}"),
@@ -466,6 +495,8 @@ async fn run_streaming_process(
             cmd
         }
     };
+
+    cmd.kill_on_drop(true);
 
     // Configure stdio
     if stdin_content.is_some() {
@@ -487,6 +518,9 @@ async fn run_streaming_process(
     }
 
     // Set environment
+    if env_clear {
+        cmd.env_clear();
+    }
     if let Some(ref env_vars) = env {
         for (key, value) in env_vars {
             cmd.env(key, value);
@@ -498,14 +532,17 @@ async fn run_streaming_process(
     // as the first chunk arrives already sees it.
     let _ = pid_tx.send(child.id());
 
-    // Write stdin if needed
-    if let Some(content) = stdin_content {
-        if let Some(mut stdin) = child.stdin.take() {
-            use tokio::io::AsyncWriteExt;
-            let _ = stdin.write_all(content.as_bytes()).await;
-            let _ = stdin.shutdown().await;
-        }
-    }
+    // Write stdin concurrently with output readers and process cancellation.
+    // Filling stdin before reading stdout deadlocks a full-duplex child.
+    let stdin_handle = stdin_content.and_then(|content| {
+        child.stdin.take().map(|mut stdin| {
+            tokio::spawn(async move {
+                use tokio::io::AsyncWriteExt;
+                let _ = stdin.write_all(&content).await;
+                let _ = stdin.shutdown().await;
+            })
+        })
+    });
 
     // Spawn stdout reader
     let stdout = child.stdout.take();
@@ -567,7 +604,16 @@ async fn run_streaming_process(
     let code;
     tokio::select! {
         status = child.wait() => {
-            code = status_to_code(status?);
+            let status = status?;
+            #[cfg(unix)]
+            {
+                use std::os::unix::process::ExitStatusExt;
+                let signal = status.signal().and_then(|number| {
+                    nix::sys::signal::Signal::try_from(number).ok().map(|signal| signal.to_string())
+                });
+                let _ = exit_signal_tx.send(signal);
+            }
+            code = status_to_code(status);
         }
         maybe_signal = kill_rx.recv() => {
             // A kill was requested (explicit kill()/kill_with() or the stream
@@ -605,8 +651,14 @@ async fn run_streaming_process(
             }
             // Report the conventional 128 + signal code for the requested
             // signal, matching the JavaScript implementation.
+            let _ = exit_signal_tx.send(Some(signal.clone()));
             code = signal_exit_code(&signal);
         }
+    }
+
+    if let Some(handle) = stdin_handle {
+        handle.abort();
+        let _ = handle.await;
     }
 
     // The process has exited. Give the readers a short grace period to flush any

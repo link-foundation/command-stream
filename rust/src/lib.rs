@@ -65,6 +65,7 @@
 pub mod ansi;
 pub mod bun_shell;
 pub mod events;
+pub mod execa;
 pub mod local_bin;
 #[doc(hidden)]
 pub mod macros;
@@ -93,6 +94,7 @@ use tokio::process::Child;
 use tokio::sync::mpsc;
 
 pub use commands::{CommandContext, StreamChunk};
+pub use execa::{execa, execa_compat, execa_node, execa_sync};
 pub use shell_parser::{needs_real_shell, parse_shell_command, ParsedCommand};
 pub use utils::{CommandResult, VirtualUtils};
 
