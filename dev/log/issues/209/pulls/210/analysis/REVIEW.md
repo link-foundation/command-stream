@@ -1,6 +1,6 @@
 # Final scope and code review
 
-The implementation addresses the complete requirement matrix and findings F1–F15 in REPORT.md. Full pinned JS/Rust/Python file trees are inventoried, with both filename matches and consolidated template release-workflow roles compared against this monorepo's separate workflows. No Python package, product container, mobile app or desktop bundle exists here; their release implementations are documented as nonapplicable.
+The implementation addresses the complete requirement matrix and findings F1–F16 in REPORT.md. Full pinned JS/Rust/Python file trees are inventoried, with both filename matches and consolidated template release-workflow roles compared against this monorepo's separate workflows. No Python package, product container, mobile app or desktop bundle exists here; their release implementations are documented as nonapplicable.
 
 ## Diff review
 
@@ -20,6 +20,6 @@ The Bun reference workaround is limited to one reproduced upstream-runtime failu
 
 The working branch is `issue-209-4043f0c126d5`; pushes target only that branch and preserve additive history. Freshly fetched main `2344fee3ea05c0bdc70187b2920df88bce8bed8f` is already an ancestor, so no artificial merge commit is necessary. Source whitespace checks pass. Archived CSVs retain conventional CRLF and unified diffs retain mandatory blank context lines; these evidence formats are not rewritten to satisfy source whitespace checks.
 
-The initial and follow-up CI failures are retained with timestamps and head SHAs. All eight workflows at final source `5a2a97e` pass, including genuine dependency review, CodeQL with no new alerts, Rust scripts and the full operating-system/runtime matrix: 44 successes and six main-only release skips. The final full local Bun suite passes 2333 tests. Archive-commit checks must still be inspected at their actual latest SHA before marking PR 210 ready; post-commit verification is recorded in `../github/finalization.log` and the final PR description.
+The initial and follow-up CI failures are retained with timestamps and head SHAs. All eight workflows at final source `5a2a97e` pass, including genuine dependency review, CodeQL with no new alerts, Rust scripts and the full operating-system/runtime matrix: 44 successes and six main-only release skips. The final full local Bun suite passes 2333 tests. The first archive commit encountered the separately evidenced hosted-runner incident: eight jobs were cancelled without an assigned runner or executed step. The final incident-evidence commit must still be inspected at its actual latest SHA before marking PR 210 ready; post-commit verification is recorded in `../github/finalization.log` and the final PR description.
 
 Final issue/PR comment collection contains no issue/conversation comments and one CodeQL inline review comment. The comment's incomplete-encoding defect is repaired by F13 and confirmed by the subsequent no-new-alerts CodeQL result. Eight template defects and one Bun defect were reported with reproductions, workarounds and suggested fixes; existing relevant reports were linked instead of duplicated.
