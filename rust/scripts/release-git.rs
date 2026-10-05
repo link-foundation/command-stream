@@ -17,15 +17,24 @@ fn git(repo: &Path, args: &[&str]) -> Result<String, String> {
 
 pub fn stage_release_metadata(repo: &Path, rust_root: &str) -> Result<(), String> {
     let root = git(repo, &["rev-parse", "--show-toplevel"])?;
-    let working_prefix = git(repo, &["rev-parse", "--show-prefix"])?;
-    let prefix = if rust_root == "." {
-        working_prefix.trim().to_owned()
+    let repository = Path::new(root.trim())
+        .canonicalize()
+        .map_err(|e| e.to_string())?;
+    let package = repo
+        .join(rust_root)
+        .canonicalize()
+        .map_err(|e| e.to_string())?;
+    let relative = package
+        .strip_prefix(&repository)
+        .map_err(|_| "Release package must be inside the Git repository")?;
+    let relative = relative
+        .to_str()
+        .ok_or("Release package path must be valid UTF-8")?
+        .replace(std::path::MAIN_SEPARATOR, "/");
+    let prefix = if relative.is_empty() {
+        String::new()
     } else {
-        format!(
-            "{}{}/",
-            working_prefix.trim(),
-            rust_root.strip_prefix("./").unwrap_or(rust_root)
-        )
+        format!("{relative}/")
     };
     let modified = git(
         repo,
@@ -44,6 +53,10 @@ pub fn stage_release_metadata(repo: &Path, rust_root: &str) -> Result<(), String
         repo,
         &["-C", root.trim(), "diff", "--cached", "--name-only", "-z"],
     )?;
+    let unstaged: BTreeSet<&str> = modified
+        .split('\0')
+        .filter(|file| !file.is_empty())
+        .collect();
     let files: BTreeSet<&str> = modified
         .split('\0')
         .chain(staged.split('\0'))
@@ -65,9 +78,9 @@ pub fn stage_release_metadata(repo: &Path, rust_root: &str) -> Result<(), String
             return Err("Release generated changes outside the package metadata allowlist".into());
         }
     }
-    if !files.is_empty() {
+    if !unstaged.is_empty() {
         let mut args = vec!["-C", root.trim(), "add", "--"];
-        args.extend(files);
+        args.extend(unstaged);
         git(repo, &args)?;
     }
     Ok(())

@@ -65,6 +65,9 @@ fn monorepo_release_stages_only_its_metadata_and_consumed_fragments() {
     fs::write(package.join("benchmarks/Cargo.lock"), "lockfile").unwrap();
     fs::remove_file(package.join("changelog.d/release.md")).unwrap();
     stage_release_metadata(&repo, "rust").unwrap();
+    stage_release_metadata(&repo, "./rust/").unwrap();
+    stage_release_metadata(&repo, package.to_str().unwrap()).unwrap();
+    stage_release_metadata(&package, ".").unwrap();
     assert_eq!(
         fixture_git(&repo, &["diff", "--cached", "--name-only"]),
         "rust/Cargo.toml\nrust/benchmarks/Cargo.lock\nrust/changelog.d/release.md"
