@@ -98,3 +98,42 @@ cargo package --allow-dirty
 - crate version already exists: rerun the Rust workflow if a previous release
   partially completed; the Rust scripts check crates.io and GitHub release
   artifacts before deciding whether to bump.
+
+## Release Preflight and Diagnostics
+
+On `main`, the first lint job checks registry credentials before running package
+checks. JavaScript exchanges a GitHub OIDC identity for a package-specific npm
+publish token and discards it. Rust sends publish metadata without an archive to the crates.io publish endpoint.
+The specific missing-archive response proves token authentication and publish
+scopes passed; no crate can be published by this request. Actual publishing
+remains the authoritative ownership check, including team ownership. Pull request jobs do not receive release credentials.
+
+Pages needs a repository setting before the workflow can configure it. An
+administrator can select **Settings → Pages → Source → GitHub Actions**, or run:
+
+```bash
+gh api --method POST repos/link-foundation/command-stream/pages -f build_type=workflow
+```
+
+`GITHUB_TOKEN` in a workflow cannot bootstrap this setting with its ordinary
+Pages deployment permissions. The workflow checks the setting before installing
+or building documentation.
+
+Bun test jobs preserve console output and JUnit results in the `bun-tests-<OS>`
+artifacts, including failures. Their step budget leaves time to upload logs if a
+child process prevents the suite from exiting. To investigate a recurrence, set
+repository variables `COMMAND_STREAM_TRACE=true` and `CI_SCRIPTS_DEBUG=true`,
+then rerun the affected job. Both traces are off by default. Registry tracing
+records status and cache headers without credentials or response bodies.
+
+## Dependency Review Setup
+
+Dependency review requires the repository dependency graph. Enable it under
+**Settings → Code security**. Enabling vulnerability alerts also enables the graph:
+
+```bash
+gh api --method PUT repos/link-foundation/command-stream/vulnerability-alerts
+```
+
+The pull request review fails if the API is unavailable or unauthorized. It never
+reports a skipped review as a successful review. Lockfile audits run separately.

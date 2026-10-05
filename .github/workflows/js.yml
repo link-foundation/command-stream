@@ -70,7 +70,7 @@ permissions:
 jobs:
   changeset-check:
     name: Check for JavaScript changesets
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     if: github.event_name == 'pull_request'
     concurrency:
@@ -89,7 +89,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: js
-        run: bun install
+        run: bun install --frozen-lockfile
 
       - name: Check for changesets
         working-directory: js
@@ -97,26 +97,21 @@ jobs:
           GITHUB_BASE_REF: ${{ github.base_ref }}
           GITHUB_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          # Read through the environment rather than expanded into the script:
-          # a branch name is attacker-controlled on a fork PR, and the expanded
-          # form also made shellcheck compare two literals (SC2193).
-          HEAD_REF: ${{ github.head_ref }}
         run: |
-          if [[ "$HEAD_REF" == changeset-release/* ]]; then
-            echo "Skipping changeset check for automated release PR"
-            exit 0
-          fi
-
+          bun scripts/check-version.mjs
           bun scripts/validate-changeset.mjs
 
   lint:
     name: Lint and format JavaScript
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
     needs: [changeset-check]
     # `!cancelled()` rather than `always()`: a cancelled changeset-check must not
     # leave this job running.
-    if: ${{ !cancelled() && (github.event_name == 'push' || needs.changeset-check.result == 'success') }}
+    if: ${{ !cancelled() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changeset-check.result == 'success') }}
     concurrency:
       group: check-${{ github.workflow }}-${{ github.ref }}-lint
       cancel-in-progress: true
@@ -137,6 +132,10 @@ jobs:
           BASE_REF: ${{ github.base_ref }}
         run: bash .github/scripts/simulate-fresh-merge.sh
 
+      - name: Check registry publish credentials
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        run: node .github/scripts/publish-preflight.mjs npm
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
@@ -144,7 +143,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: js
-        run: bun install
+        run: bun install --frozen-lockfile
 
       - name: Run ESLint
         working-directory: js
@@ -165,12 +164,12 @@ jobs:
   test:
     # The Node entries differ only by version, so the version has to be part of
     # the name; without it three jobs shared the name "Test JavaScript (node on
-    # ubuntu-latest)" and a required-check rule could not name a single one.
+    # ubuntu-24.04)" and a required-check rule could not name a single one.
     name: Test JavaScript (${{ matrix.runtime }}${{ matrix.node-version && format(' {0}', matrix.node-version) || '' }} on ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
-    needs: [changeset-check]
-    if: ${{ !cancelled() && (github.event_name == 'push' || needs.changeset-check.result == 'success') }}
+    needs: [lint]
+    if: ${{ !cancelled() && needs.lint.result == 'success' }}
     # The matrix values are part of the group so the entries stay parallel and
     # only a superseded run of the *same* entry is cancelled.
     concurrency:
@@ -179,16 +178,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-24.04, macos-15, windows-2025]
         runtime: [bun]
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             runtime: node
             node-version: 20
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             runtime: node
             node-version: 22
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             runtime: node
             node-version: 24
     steps:
@@ -221,17 +220,17 @@ jobs:
           node-version: '24.x'
 
       - name: Install system dependencies (Ubuntu)
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-24.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y jq
 
       - name: Install system dependencies (macOS)
-        if: matrix.os == 'macos-latest'
+        if: matrix.os == 'macos-15'
         run: brew install jq
 
       - name: Install system dependencies (Windows)
-        if: matrix.os == 'windows-latest'
+        if: matrix.os == 'windows-2025'
         run: choco install jq -y
 
       # The zx compatibility suite (issue #26) runs a Deno smoke test and a
@@ -244,13 +243,27 @@ jobs:
       - name: Install dependencies (Bun)
         if: matrix.runtime == 'bun'
         working-directory: js
-        run: bun install
+        run: bun install --frozen-lockfile
 
       - name: Run tests (Bun)
         if: matrix.runtime == 'bun'
-        run: bun test js/tests/ --timeout 10000
+        timeout-minutes: 15
+        shell: bash
         env:
           COMMAND_STREAM_TRACE: ${{ vars.COMMAND_STREAM_TRACE || 'false' }}
+          CI_SCRIPTS_DEBUG: ${{ vars.CI_SCRIPTS_DEBUG || 'false' }}
+        run: |
+          set -o pipefail
+          mkdir -p ci-test-logs
+          bun test js/tests/ --timeout 10000 --reporter=junit --reporter-outfile=ci-test-logs/junit.xml 2>&1 | tee ci-test-logs/bun.log
+
+      - name: Preserve Bun test diagnostics
+        if: ${{ always() && matrix.runtime == 'bun' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: bun-tests-${{ matrix.os }}
+          path: ci-test-logs/
+          retention-days: 7
 
       - name: Setup Node.js
         if: matrix.runtime == 'node'
@@ -312,7 +325,7 @@ jobs:
       github.event_name == 'push' &&
       needs.lint.result == 'success' &&
       needs.test.result == 'success'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
       contents: write
@@ -347,7 +360,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: js
-        run: bun install
+        run: bun install --frozen-lockfile
 
       - name: Update npm for OIDC trusted publishing
         working-directory: js
@@ -426,8 +439,12 @@ jobs:
 
   instant-release:
     name: Instant JavaScript release
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'instant'
-    runs-on: ubuntu-latest
+    needs: [lint, test]
+    if: >-
+      !cancelled() && github.ref == 'refs/heads/main' &&
+      github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'instant' &&
+      needs.lint.result == 'success' && needs.test.result == 'success'
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
       contents: write
@@ -459,7 +476,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: js
-        run: bun install
+        run: bun install --frozen-lockfile
 
       - name: Update npm for OIDC trusted publishing
         working-directory: js
@@ -509,8 +526,8 @@ jobs:
 
   changeset-pr:
     name: Create JavaScript changeset PR
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'changeset-pr'
-    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'changeset-pr'
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: write
@@ -535,7 +552,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: js
-        run: bun install
+        run: bun install --frozen-lockfile
 
       - name: Create changeset file
         working-directory: js

@@ -24,6 +24,7 @@
  */
 
 import { loadUseM } from './use-m-loader.mjs';
+import { runChecked } from './run-checked.mjs';
 
 const PACKAGE_NAME = 'command-stream';
 
@@ -202,7 +203,8 @@ try {
 
   // Update the release using JSON input to properly handle special characters
   const updatePayload = JSON.stringify({ body: formattedBody });
-  await $`gh api repos/${repository}/releases/${releaseId} -X PATCH --input -`.run(
+  await runChecked(
+    $`gh api repos/${repository}/releases/${releaseId} -X PATCH --input -`,
     { stdin: updatePayload }
   );
 

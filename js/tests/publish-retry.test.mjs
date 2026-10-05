@@ -31,6 +31,19 @@ import {
 
 const noSleep = async () => {};
 
+test('issue #209: verification covers a five-minute propagation delay without republishing', async () => {
+  let elapsed = 0;
+  expect(
+    await waitForVersionOnRegistry({
+      verify: async () => elapsed >= 300000,
+      sleepFn: async (delay) => {
+        elapsed += delay;
+      },
+    })
+  ).toBe(true);
+  expect(elapsed).toBeLessThanOrEqual(1020000);
+});
+
 // The verbatim npm output from the failed run, trimmed to the relevant lines.
 // Source: dev/log/issues/199/pulls/200/ci-logs/run-33914574283.log
 const E409_STAGED_OUTPUT = [

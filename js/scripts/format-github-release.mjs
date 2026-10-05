@@ -14,6 +14,7 @@
  */
 
 import { loadUseM } from './use-m-loader.mjs';
+import { runChecked } from './run-checked.mjs';
 
 // Load use-m dynamically, retrying a CDN blip instead of dying at module load.
 const use = await loadUseM();
@@ -79,7 +80,9 @@ try {
     console.log(`Formatting JavaScript release notes for ${tag}...`);
     // Pass the trigger commit SHA for PR detection
     // This allows proper PR lookup even if the changelog doesn't have a commit hash
-    await $`bun scripts/format-release-notes.mjs --release-id "${releaseId}" --release-version "${tag}" --repository "${repository}" --commit-sha "${commitSha}"`;
+    await runChecked(
+      $`bun scripts/format-release-notes.mjs --release-id "${releaseId}" --release-version "${tag}" --repository "${repository}" --commit-sha "${commitSha}"`
+    );
     console.log(`Formatted JavaScript release notes for ${tag}`);
   }
 } catch (error) {

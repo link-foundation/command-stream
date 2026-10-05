@@ -70,20 +70,20 @@ describe('command-stream Feature Validation', () => {
     });
 
     test('should stream data as it arrives, not buffered', async () => {
-      const startTime = Date.now();
-      let firstChunkTime = null;
-
-      for await (const chunk of $`echo "immediate"; sleep 0.1; echo "delayed"`.stream()) {
-        if (chunk.type === 'stdout' && firstChunkTime === null) {
-          firstChunkTime = Date.now();
-          break; // Get first chunk immediately
+      // The child cannot finish until the consumer receives its first output.
+      // This proves streaming without assuming a shell starts within 50ms.
+      const child = `process.stdout.write('immediate\\n'); process.stdin.once('data', () => { process.stdout.write('delayed\\n'); process.exit(0); });`;
+      const command = $({ stdin: 'pipe', timeout: 5000 })`node -e ${child}`;
+      let received = false;
+      for await (const chunk of command.stream()) {
+        if (chunk.type === 'stdout' && !received) {
+          expect(chunk.data.toString()).toContain('immediate');
+          expect(command.finished).toBe(false);
+          received = true;
+          command.stdin.end('continue\n');
         }
       }
-
-      const timeToFirstChunk = firstChunkTime - startTime;
-      // Windows shell spawning is slower than Unix, so allow more time
-      const maxTime = process.platform === 'win32' ? 500 : 50;
-      expect(timeToFirstChunk).toBeLessThan(maxTime); // Should be immediate, not waiting for full command
+      expect(received).toBe(true);
     });
   });
 

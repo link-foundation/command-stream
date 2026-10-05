@@ -31,9 +31,8 @@
  * the workflow uses to publish the current version whether or not a changeset
  * is present. See docs/case-studies/issue-166/.
  *
- * command-stream's `$` does NOT throw on a non-zero exit code (errexit is off
- * by default — see issue #156), so the registry probe checks the captured exit
- * code explicitly instead of relying on a thrown error.
+ * An exact-version registry query distinguishes a missing version (404) from
+ * registry/authentication outages, which must fail before any release output.
  *
  * Usage: bun scripts/check-release-needed.mjs
  *   (run with working-directory: js, so ./package.json is the JS package)
@@ -53,12 +52,7 @@
  */
 
 import { readFileSync, appendFileSync } from 'fs';
-import { loadUseM } from './use-m-loader.mjs';
-
-// Load use-m dynamically (matches the other release scripts in this folder).
-const use = await loadUseM();
-
-const { $ } = await use('command-stream');
+import { isPackageVersionPublished } from './npm-registry.mjs';
 
 /**
  * Append to the GitHub Actions output file (and echo for the run log).
@@ -82,24 +76,6 @@ function getPackageInfo() {
   return { name: packageJson.name, version: packageJson.version };
 }
 
-/**
- * Check whether a specific version is published on npm.
- *
- * command-stream's `$` does not throw on non-zero exit, so we inspect the
- * captured exit code: `npm view <pkg>@<version> version` exits 0 and prints the
- * version when it exists, and exits non-zero (E404) when it does not.
- *
- * @param {string} packageName
- * @param {string} version
- * @returns {Promise<boolean>}
- */
-async function checkVersionOnNpm(packageName, version) {
-  const result = await $`npm view "${packageName}@${version}" version`.run({
-    capture: true,
-  });
-  return result.code === 0 && result.stdout.trim().includes(version);
-}
-
 async function main() {
   try {
     const hasChangesets = process.env.HAS_CHANGESETS === 'true';
@@ -114,7 +90,10 @@ async function main() {
     console.log(
       `Checking if ${packageName}@${currentVersion} is published on npm...`
     );
-    const isPublished = await checkVersionOnNpm(packageName, currentVersion);
+    const isPublished = await isPackageVersionPublished(
+      packageName,
+      currentVersion
+    );
     console.log(`Published on npm: ${isPublished}`);
     setOutput('current_unpublished', isPublished ? 'false' : 'true');
 
