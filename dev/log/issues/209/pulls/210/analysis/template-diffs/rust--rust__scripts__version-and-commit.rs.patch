@@ -13,14 +13,23 @@
  #![cfg_attr(test, allow(dead_code))]
  
  #[cfg(not(test))]
-@@ -41,10 +43,52 @@
+@@ -37,14 +39,55 @@
+ use std::fs;
+ use std::io::Write;
+ use std::path::{Path, PathBuf};
++use std::process::Command;
+ #[cfg(not(test))]
  use std::process::exit;
- use std::process::Command;
- 
+-use std::process::Command;
+-
 -#[path = "release-naming.rs"]
 -mod release_naming;
++
  #[path = "rust-paths.rs"]
  mod rust_paths;
++
++#[path = "release-git.rs"]
++mod release_git;
 +
 +const REPOSITORY_RULE_PATTERNS: &[&str] = &[
 +    "gh006",
@@ -31,12 +40,8 @@
 +    "push declined",
 +];
 +
-+const NON_FAST_FORWARD_PATTERNS: &[&str] = &[
-+    "[rejected]",
-+    "non-fast-forward",
-+    "fetch first",
-+    "updates were rejected",
-+];
++const NON_FAST_FORWARD_PATTERNS: &[&str] =
++    &["non-fast-forward", "fetch first", "updates were rejected"];
 +
 +#[derive(Debug, PartialEq, Eq)]
 +enum PushFailure {
@@ -68,7 +73,7 @@
  
  fn get_arg(name: &str) -> Option<String> {
      let args: Vec<String> = env::args().collect();
-@@ -94,17 +138,8 @@
+@@ -94,17 +137,8 @@
              if output.status.success() {
                  Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
              } else {
@@ -87,7 +92,7 @@
              }
          }
          Err(e) => Err(format!("Failed to execute: {}", e)),
-@@ -117,54 +152,6 @@
+@@ -117,54 +151,6 @@
          .output()
          .map(|o| o.status.success())
          .unwrap_or(false)
@@ -142,7 +147,7 @@
  }
  
  struct Version {
-@@ -256,6 +243,28 @@
+@@ -256,6 +242,28 @@
      Ok(true)
  }
  
@@ -171,7 +176,7 @@
  #[cfg(not(test))]
  #[derive(Deserialize)]
  struct CratesIoCrate {
-@@ -294,7 +303,11 @@
+@@ -294,7 +302,11 @@
          .call()
      {
          Ok(response) => response.status() == 200,
@@ -184,7 +189,7 @@
      }
  }
  
-@@ -338,9 +351,14 @@
+@@ -338,9 +350,14 @@
                      }
                  }
              }
@@ -202,7 +207,7 @@
      }
  }
  
-@@ -369,9 +387,15 @@
+@@ -369,9 +386,15 @@
          if (major, minor, patch) <= (pub_major, pub_minor, pub_patch) {
              println!(
                  "Version {}.{}.{} is not greater than max published {}.{}.{}, adjusting to {}.{}.{}",
@@ -221,7 +226,7 @@
              );
              major = pub_major;
              minor = pub_minor;
-@@ -411,26 +435,8 @@
+@@ -411,26 +434,8 @@
      }
  }
  
@@ -248,7 +253,7 @@
      let dir_path = Path::new(changelog_dir);
      if !dir_path.exists() {
          return;
-@@ -465,6 +471,7 @@
+@@ -465,6 +470,7 @@
          return;
      }
  
@@ -256,7 +261,7 @@
      let new_entry = format!(
          "\n## [{}] - {}\n\n{}\n",
          version,
-@@ -472,550 +479,55 @@
+@@ -472,550 +478,55 @@
          fragments.join("\n\n")
      );
  
@@ -842,7 +847,7 @@
              exit(1);
          }
      };
-@@ -1028,6 +540,9 @@
+@@ -1028,6 +539,9 @@
          exit(1);
      }
  
@@ -852,7 +857,7 @@
      let rust_root = match rust_paths::get_rust_root(None, true) {
          Ok(root) => root,
          Err(e) => {
-@@ -1035,10 +550,6 @@
+@@ -1035,10 +549,6 @@
              exit(1);
          }
      };
@@ -863,7 +868,7 @@
      let cargo_toml = rust_paths::get_cargo_toml_path(&rust_root);
      let package_manifest = match rust_paths::get_package_manifest_path(&cargo_toml) {
          Ok(path) => path,
-@@ -1051,15 +562,22 @@
+@@ -1051,15 +561,22 @@
      let changelog_file = get_changelog_path(&rust_root);
  
      // Configure git
@@ -890,7 +895,7 @@
  
      // Sync with the latest remote state BEFORE touching any files.
      //
-@@ -1069,29 +587,28 @@
+@@ -1069,29 +586,28 @@
      // broke the release job. Rebasing first also means the version bump is
      // computed from the most recent state of the branch (matches the JS
      // version-and-commit.mjs ordering).
@@ -940,21 +945,27 @@
              if let Err(e) = exec("git", &["rebase", &format!("origin/{}", current_branch)]) {
                  eprintln!("Error rebasing onto origin/{}: {}", current_branch, e);
                  let _ = exec("git", &["rebase", "--abort"]);
-@@ -1161,7 +678,12 @@
+@@ -1161,8 +677,17 @@
      }
  
      let cargo_lock_path = rust_paths::get_cargo_lock_path(&rust_root);
 -    let lock_updated = match update_cargo_lock(&cargo_lock_path, &crate_name, &new_version) {
+-        Ok(updated) => updated,
 +    let benchmarks_lock_path = get_benchmarks_cargo_lock_path(&rust_root);
-+    let updated_locks = match update_cargo_locks(
++    match update_cargo_locks(
 +        &[cargo_lock_path.as_path(), benchmarks_lock_path.as_path()],
 +        &crate_name,
 +        &new_version,
 +    ) {
-         Ok(updated) => updated,
++        Ok(updated) => {
++            for path in updated {
++                println!("Updated lockfile {}", path);
++            }
++        }
          Err(e) => {
              eprintln!("Error updating Cargo.lock: {}", e);
-@@ -1170,64 +692,20 @@
+             exit(1);
+@@ -1170,64 +695,17 @@
      };
  
      // Collect changelog fragments
@@ -976,10 +987,9 @@
 -    }
 -
 -    // Stage Cargo.toml, Cargo.lock if changed, CHANGELOG.md, and consumed changelog fragments.
-+    // Stage Cargo.toml, Cargo.lock files if changed, CHANGELOG.md, and consumed fragments
-     let package_manifest_str = package_manifest.to_string_lossy().to_string();
+-    let package_manifest_str = package_manifest.to_string_lossy().to_string();
 -    let cargo_lock_str = cargo_lock_path.to_string_lossy().to_string();
-     let mut add_args = vec!["add", &package_manifest_str, &changelog_file];
+-    let mut add_args = vec!["add", &package_manifest_str, &changelog_file];
 -    if lock_updated {
 -        add_args.push(&cargo_lock_str);
 -    }
@@ -1017,19 +1027,19 @@
 -            exit(1);
 -        }
 -    }
-+    add_args.extend(updated_locks.iter().map(String::as_str));
-+    exec("git", &add_args).unwrap_or_else(|e| {
-+        eprintln!("Staging failed: {}", e);
++    // Stage Cargo.toml, Cargo.lock files if changed, CHANGELOG.md, and consumed fragments
++    let release_repo = env::current_dir().unwrap_or_else(|e| {
++        eprintln!("Working directory lookup failed: {}", e);
 +        exit(1)
 +    });
-+    exec("git", &["add", "-A", &changelog_dir]).unwrap_or_else(|e| {
-+        eprintln!("Staging fragments failed: {}", e);
++    release_git::stage_release_metadata(&release_repo, &rust_root).unwrap_or_else(|e| {
++        eprintln!("Release staging failed: {}", e);
 +        exit(1)
 +    });
  
      // Check if there are changes to commit
      if exec_check("git", &["diff", "--cached", "--quiet"]) {
-@@ -1259,73 +737,52 @@
+@@ -1259,73 +737,18 @@
      }
      println!("Committed version {}", new_version);
  
@@ -1037,47 +1047,18 @@
 -    // #162): a lost non-fast-forward is fixed by rebasing onto the new remote
 -    // tip, while a repository-ruleset refusal or any other failure is reported
 -    // as what it is instead of being masked as a merge conflict.
-+    // Create tag
-+    let tag_name = format!("{}{}", tag_prefix, new_version);
-+    let tag_msg = match &description {
-+        Some(desc) => format!("Release {}{}\n\n{}", tag_name, label_suffix, desc),
-+        None => format!("Release {}{}", tag_name, label_suffix),
-+    };
-+
-+    if let Err(e) = exec("git", &["tag", "-a", &tag_name, "-m", &tag_msg]) {
-+        eprintln!("Error creating tag: {}", e);
-+        exit(1);
-+    }
-+    println!("Created tag {}", tag_name);
-+
-+    // Push changes and tag with retry (handles concurrent pushes in multi-workflow repos)
-     let max_push_attempts = 3;
-     for attempt in 1..=max_push_attempts {
-         match exec("git", &["push"]) {
-             Ok(_) => break,
+-    let max_push_attempts = 3;
+-    for attempt in 1..=max_push_attempts {
+-        match exec("git", &["push"]) {
+-            Ok(_) => break,
 -            Err(push_error) => match classify_push_failure(&push_error) {
 -                PushFailure::RepositoryRules => {
-+            Err(e) => {
-+                if classify_push_failure(&e) == PushFailure::LostRace && attempt < max_push_attempts
-+                {
-                     eprintln!(
+-                    eprintln!(
 -                        "::error title=Push declined by repository rules::The push to branch '{}' was declined by a repository rule (a GH006/GH013-class rejection, e.g. 'changes must be made through a pull request' or a protected-branch ruleset). Rebasing and retrying cannot change repository policy: release this change through a pull request, or adjust the ruleset so the release bot may push.\n--- git output ---\n{}",
 -                        current_branch, push_error
-+                        "Push failed (attempt {}/{}): {}",
-+                        attempt, max_push_attempts, e
-                     );
-+                    eprintln!("Pulling with rebase and retrying...");
-+                    if let Err(rebase_err) =
-+                        exec("git", &["pull", "--rebase", "origin", &current_branch])
-+                    {
-+                        eprintln!("Error during pull --rebase: {}", rebase_err);
-+                        let _ = exec("git", &["rebase", "--abort"]);
-+                        exit(1);
-+                    }
-+                } else {
-+                    eprintln!("Error pushing after {} attempts: {}", max_push_attempts, e);
-                     exit(1);
-                 }
+-                    );
+-                    exit(1);
+-                }
 -                PushFailure::Other => {
 -                    eprintln!("Error pushing: {}", push_error);
 -                    exit(1);
@@ -1110,20 +1091,17 @@
 -    // Create tag only after the release commit is on the remote, so that a
 -    // `pull --rebase` retry above can never leave the tag on an orphaned
 -    // pre-rebase commit (see issue #94).
--    let tag_name = format!("{}{}", tag_prefix, new_version);
--    let tag_msg = match &description {
--        Some(desc) => format!("Release {}{}\n\n{}", tag_name, label_suffix, desc),
--        None => format!("Release {}{}", tag_name, label_suffix),
--    };
--
++    // Prepare the tag; create it only after all push/rebase retries finish.
+     let tag_name = format!("{}{}", tag_prefix, new_version);
+     let tag_msg = match &description {
+         Some(desc) => format!("Release {}{}\n\n{}", tag_name, label_suffix, desc),
+         None => format!("Release {}{}", tag_name, label_suffix),
+     };
+ 
 -    if let Err(e) = exec("git", &["tag", "-a", &tag_name, "-m", &tag_msg]) {
 -        eprintln!("Error creating tag: {}", e);
-+            }
-+        }
-+    }
-+
-+    if let Err(e) = exec("git", &["push", "origin", &tag_name]) {
-+        eprintln!("Error pushing tags: {}", e);
++    if let Err(e) = release_git::push_release(&release_repo, &current_branch, &tag_name, &tag_msg) {
++        eprintln!("Error pushing release: {}", e);
          exit(1);
      }
 -    println!("Created tag {}", tag_name);

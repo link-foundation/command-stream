@@ -10,6 +10,7 @@
 - [x] Fix every affected occurrence, add opt-in diagnostics where root causes remain uncertain, preserve existing behavior, and prepare release changes only when applicable.
 - [x] Report reproducible shared defects to related/template repositories with workarounds and code suggestions when warranted.
 - [x] Run applicable local CI and full local test suites; save and review logs, update analysis and commit atomic validated changes.
-- [ ] Merge latest main when necessary, push only issue-209-4043f0c126d5, update existing PR 210 with final scope, reproduction and validation.
-- [ ] Inspect final PR diff, verify complete requirement coverage and a clean tree, wait for latest-SHA CI, preserve/review nonpassing logs and fix any remaining failures.
-- [ ] Mark PR 210 ready and return its URL with concrete results and any evidenced limits.
+- [x] Fetch latest main and verify it is already an ancestor; push validated source only to issue-209-4043f0c126d5 and prepare the final PR 210 scope, reproduction and validation description.
+- [x] Inspect source diffs through native Git/paginated APIs, verify complete requirement coverage, and preserve/review every final-source CI log: eight workflows pass at 5a2a97e with 44 successful checks and six main-only skips.
+
+Post-archive acceptance: commit/push the completed evidence, verify the archive commit's latest-SHA CI, check a clean tree and main ancestry, update the live PR description with that exact result, mark PR 210 ready, and return its URL. These actions necessarily follow this archive snapshot; their completion is recorded in local `../github/finalization.log`, `../ci-logs/final-archive-*.log` and the live PR description.

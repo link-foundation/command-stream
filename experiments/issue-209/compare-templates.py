@@ -62,6 +62,16 @@ for name in local:
     for lang, (base, names) in templates.items():
         candidate = name.removeprefix('js/').removeprefix('rust/')
         options = [n for n in names if relevant(n) and (n == candidate or Path(n).name == Path(name).name)]
+        role_match = False
+        if not options and name.startswith('.github/workflows/') and Path(name).name in {
+            'js.yml', 'rust.yml', 'quality.yml', 'parity.yml', 'docs.yml'
+        }:
+            # Templates keep these validation/release roles in one workflow;
+            # this monorepo separates them. Compare roles despite different names.
+            release = '.github/workflows/release.yml'
+            if release in names:
+                options = [release]
+                role_match = True
         if not options:
             matches[lang] = 'Local-specific; covered by principle/workflow matrix'
             continue
@@ -70,6 +80,8 @@ for name in local:
         right = path.read_text(errors='replace')
         equal = left == right
         matches[lang] = f'{upstream}: ' + ('identical' if equal else 'adapted/diff preserved')
+        if role_match:
+            matches[lang] += ' (workflow role comparison)'
         if not equal:
             patch = ''.join(difflib.unified_diff(left.splitlines(True), right.splitlines(True),
                 fromfile=f'{lang}-template/{upstream}', tofile=name))

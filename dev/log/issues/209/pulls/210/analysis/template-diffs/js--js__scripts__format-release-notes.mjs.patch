@@ -15,7 +15,7 @@
   * PR Detection Logic:
   * 1. Extract commit hash from changelog entry (if present)
   * 2. Fall back to --commit-sha argument (passed from workflow)
-@@ -18,31 +20,23 @@
+@@ -18,31 +20,24 @@
   * - command-stream: Modern shell command execution with streaming support
   * - lino-arguments: Unified configuration from CLI args, env vars, and .lenv files
   *
@@ -34,6 +34,7 @@
 -import { loadCommandStream, loadLinoArguments } from './use-module.mjs';
 +import { loadUseM } from './use-m-loader.mjs';
 +import { runChecked } from './run-checked.mjs';
++import { hasNpmBadge } from './release-note-badge.mjs';
 +
 +const PACKAGE_NAME = 'command-stream';
 +
@@ -58,7 +59,7 @@
  const config = makeConfig({
    yargs: ({ yargs, getenv }) =>
      yargs
-@@ -65,12 +59,6 @@
+@@ -65,12 +60,6 @@
          type: 'string',
          default: getenv('COMMIT_SHA', ''),
          describe: 'Commit SHA for PR detection',
@@ -71,7 +72,7 @@
        }),
  });
  
-@@ -78,9 +66,6 @@
+@@ -78,9 +67,6 @@
  const version = config.releaseVersion;
  const repository = config.repository;
  const passedCommitSha = config.commitSha;
@@ -81,7 +82,16 @@
  
  if (!releaseId || !version || !repository) {
    console.error(
-@@ -204,8 +189,8 @@
+@@ -99,7 +85,7 @@
+   const currentBody = releaseData.body || '';
+ 
+   // Skip if already formatted (has shields.io badge image)
+-  if (currentBody.includes('img.shields.io')) {
++  if (hasNpmBadge(currentBody)) {
+     console.log('ℹ️ Release notes already formatted');
+     process.exit(0);
+   }
+@@ -204,8 +190,8 @@
    }
  
    // Build formatted release notes
@@ -92,7 +102,7 @@
  
    let formattedBody = `${cleanDescription}`;
  
-@@ -218,7 +203,8 @@
+@@ -218,7 +204,8 @@
  
    // Update the release using JSON input to properly handle special characters
    const updatePayload = JSON.stringify({ body: formattedBody });

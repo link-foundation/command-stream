@@ -2,31 +2,55 @@
   {
     "key": "js-version",
     "repo": "link-foundation/js-ai-driven-development-pipeline-template",
-    "title": "Version guard rejects formatting changes and passes when the base ref is unavailable"
+    "title": "Version guard rejects formatting changes and passes when the base ref is unavailable",
+    "url": "https://github.com/link-foundation/js-ai-driven-development-pipeline-template/issues/205"
   },
   {
     "key": "js-changeset",
     "repo": "link-foundation/js-ai-driven-development-pipeline-template",
-    "title": "CI changeset validation can accept a pre-existing fragment when Git comparison fails"
+    "title": "CI changeset validation can accept a pre-existing fragment when Git comparison fails",
+    "url": "https://github.com/link-foundation/js-ai-driven-development-pipeline-template/issues/206"
   },
   {
     "key": "js-preflight",
     "repo": "link-foundation/js-ai-driven-development-pipeline-template",
-    "title": "Release preflight marks npm OIDC verified without checking the package token exchange"
+    "title": "Release preflight marks npm OIDC verified without checking the package token exchange",
+    "url": "https://github.com/link-foundation/js-ai-driven-development-pipeline-template/issues/207"
   },
   {
     "key": "rust-guards",
     "repo": "link-foundation/rust-ai-driven-development-pipeline-template",
-    "title": "PR guards accept manual version changes on release/* and edits to existing changelog fragments"
+    "title": "PR guards accept manual version changes on release/* and edits to existing changelog fragments",
+    "url": "https://github.com/link-foundation/rust-ai-driven-development-pipeline-template/issues/182"
   },
   {
     "key": "rust-preflight",
     "repo": "link-foundation/rust-ai-driven-development-pipeline-template",
-    "title": "Cargo credential preflight uses the cookie-only /api/v1/me endpoint and rejects valid API tokens"
+    "title": "Cargo credential preflight uses the cookie-only /api/v1/me endpoint and rejects valid API tokens",
+    "url": "https://github.com/link-foundation/rust-ai-driven-development-pipeline-template/issues/183"
   },
   {
     "key": "python-changeset",
     "repo": "link-foundation/python-ai-driven-development-pipeline-template",
-    "title": "Changelog validator returns success with source changes and no fragment, contrary to its documented exit contract"
+    "title": "Changelog validator returns success with source changes and no fragment, contrary to its documented exit contract",
+    "url": "https://github.com/link-foundation/python-ai-driven-development-pipeline-template/issues/93"
+  },
+  {
+    "key": "js-release-formatting",
+    "repo": "link-foundation/js-ai-driven-development-pipeline-template",
+    "title": "Release formatter skips unformatted notes containing a shields.io mention or unrelated badge",
+    "url": "https://github.com/link-foundation/js-ai-driven-development-pipeline-template/issues/208"
+  },
+  {
+    "key": "rust-release-staging",
+    "repo": "link-foundation/rust-ai-driven-development-pipeline-template",
+    "title": "Release writer can commit unrelated files already staged in the index",
+    "url": "https://github.com/link-foundation/rust-ai-driven-development-pipeline-template/issues/184"
+  },
+  {
+    "key": "bun-broken-pipe",
+    "repo": "oven-sh/bun",
+    "title": "Bun.$ broken-pipe subprocess intermittently captures grep ECONNRESET stderr on Linux",
+    "url": "https://github.com/oven-sh/bun/issues/44602"
   }
 ]

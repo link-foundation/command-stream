@@ -17,12 +17,14 @@
   *
   * Uses link-foundation libraries:
   * - use-m: Dynamic package loading without package.json dependencies
-@@ -17,27 +13,16 @@
+@@ -17,27 +13,20 @@
   */
  
  import { readFileSync, appendFileSync, readdirSync } from 'fs';
 -
--import {
++import { loadUseM } from './use-m-loader.mjs';
++import { runChecked } from './run-checked.mjs';
+ import {
 -  getJsRoot,
 -  getPackageJsonPath,
 -  getChangesetDir,
@@ -33,9 +35,10 @@
 -import { loadCommandStream, loadLinoArguments } from './use-module.mjs';
 -import { printUntrusted } from './github-actions-log.mjs';
 -import { checkStagedFormatting } from './check-staged-formatting.mjs';
-+import { loadUseM } from './use-m-loader.mjs';
-+import { runChecked } from './run-checked.mjs';
-+import { stageReleaseMetadata, pushWithRetry } from './release-git.mjs';
++  stageReleaseMetadata,
++  pushWithRetry,
++  commitReleaseVersion,
++} from './release-git.mjs';
 +
 +// Load use-m dynamically
 +const use = await loadUseM();
@@ -53,7 +56,7 @@
  
  // Parse CLI arguments using lino-arguments
  const config = makeConfig({
-@@ -58,29 +43,17 @@
+@@ -58,29 +47,17 @@
          type: 'string',
          default: getenv('DESCRIPTION', ''),
          describe: 'Description for instant version bump',
@@ -85,7 +88,7 @@
  
  // Detect if positional arguments were used (common mistake)
  const args = process.argv.slice(2);
-@@ -89,26 +62,21 @@
+@@ -89,26 +66,21 @@
    console.error('Command line arguments:', args);
    console.error('');
    console.error(
@@ -118,7 +121,7 @@
    process.exit(1);
  }
  
-@@ -123,14 +91,10 @@
+@@ -123,14 +95,10 @@
  if (mode === 'instant' && !bumpType) {
    console.error('Error: --bump-type is required for instant mode');
    console.error(
@@ -134,7 +137,7 @@
  
  /**
   * Append to GitHub Actions output file
-@@ -149,7 +113,7 @@
+@@ -149,7 +117,7 @@
   */
  function countChangesets() {
    try {
@@ -143,7 +146,7 @@
      const files = readdirSync(changesetDir);
      return files.filter((f) => f.endsWith('.md') && f !== 'README.md').length;
    } catch {
-@@ -162,36 +126,29 @@
+@@ -162,36 +130,29 @@
   * @param {string} source - 'local' or 'remote'
   */
  async function getVersion(source = 'local') {
@@ -190,7 +193,7 @@
      const remoteHead = remoteHeadResult.stdout.trim();
  
      if (localHead !== remoteHead) {
-@@ -207,7 +164,7 @@
+@@ -207,7 +168,7 @@
        // Check if there are changesets to process
        const changesetCount = countChangesets();
  
@@ -199,7 +202,7 @@
          console.log('No changesets to process and remote has advanced.');
          console.log(
            'Assuming version bump was already completed in a previous attempt.'
-@@ -218,7 +175,7 @@
+@@ -218,7 +179,7 @@
          return;
        } else {
          console.log('Rebasing on remote main to incorporate changes...');
@@ -208,7 +211,7 @@
        }
      }
  
-@@ -229,23 +186,20 @@
+@@ -229,23 +190,20 @@
      if (mode === 'instant') {
        console.log('Running instant version bump...');
        // Run instant version bump script
@@ -239,7 +242,7 @@
      }
  
      // Get new version after bump
-@@ -254,53 +208,32 @@
+@@ -254,53 +212,30 @@
      setOutput('new_version', newVersion);
  
      // Check if there are changes to commit
@@ -258,8 +261,8 @@
 +      stageReleaseMetadata();
  
        // Commit with version number as message
-       const commitMessage = newVersion;
-       const escapedMessage = commitMessage.replace(/"/g, '\\"');
+-      const commitMessage = newVersion;
+-      const escapedMessage = commitMessage.replace(/"/g, '\\"');
 -      await $`git commit -m "${escapedMessage}"`;
 -
 -      // Push directly to main, rebasing and retrying if another main writer won
@@ -284,7 +287,7 @@
 -      }
 -
 -      console.log('\u2705 Version bump committed and pushed to main');
-+      await runChecked($`git commit -m "${escapedMessage}"`);
++      commitReleaseVersion(newVersion);
 +
 +      await pushWithRetry({
 +        push: () => $`git push origin main`.run({ capture: true }),

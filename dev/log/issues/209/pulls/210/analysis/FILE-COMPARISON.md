@@ -40,6 +40,7 @@ All counterpart diffs are retained in `template-diffs/`. Template-only files are
 | js/scripts/publish-retry.mjs | scripts/publish-retry.mjs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
 | js/scripts/publish-to-npm.mjs | scripts/publish-to-npm.mjs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
 | js/scripts/release-git.mjs | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| js/scripts/release-note-badge.mjs | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
 | js/scripts/run-checked.mjs | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
 | js/scripts/setup-npm.mjs | scripts/setup-npm.mjs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
 | js/scripts/use-m-loader.mjs | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
@@ -60,6 +61,7 @@ All counterpart diffs are retained in `template-diffs/`. Template-only files are
 | rust/scripts/get-version.rs | Local-specific; covered by principle/workflow matrix | scripts/get-version.rs: identical | Local-specific; covered by principle/workflow matrix |
 | rust/scripts/git-config.rs | Local-specific; covered by principle/workflow matrix | scripts/git-config.rs: identical | Local-specific; covered by principle/workflow matrix |
 | rust/scripts/publish-crate.rs | Local-specific; covered by principle/workflow matrix | scripts/publish-crate.rs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix |
+| rust/scripts/release-git.rs | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
 | rust/scripts/rust-paths.rs | Local-specific; covered by principle/workflow matrix | scripts/rust-paths.rs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix |
 | rust/scripts/version-and-commit.rs | Local-specific; covered by principle/workflow matrix | scripts/version-and-commit.rs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix |
 | rust/scripts/version-and-commit/tests.rs | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |

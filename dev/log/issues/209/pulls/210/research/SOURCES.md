@@ -16,4 +16,10 @@
 - Scriv fragment tooling: https://scriv.readthedocs.io/en/latest/
 - Unpatched development-tool braces advisory: https://github.com/advisories/GHSA-vfj7-8cjw-p6xm
 
+- CodeQL parsed URL hostname guidance: https://codeql.github.com/codeql-query-help/javascript/js-incomplete-url-substring-sanitization/
+- CodeQL context-aware escaping guidance: https://codeql.github.com/codeql-query-help/javascript/js-incomplete-sanitization/
+- Bun current broken-pipe expectation: https://github.com/oven-sh/bun/blob/main/test/js/bun/shell/bunshell.test.ts (full source captured as `bun-bunshell-current.txt.gz`, main SHA in `bun-main-sha.txt`).
+
 Run-specific facts are based on the archived GitHub logs and local measurements, not inferred from these documentation pages. Historical npm cache involvement is an inference; the exact original cache state was not captured.
+
+- [Pinned CodeQL diff-limit handling](https://github.com/github/codeql-action/blob/1767808e1164b88b6d037184ffb3ed13697e8966/src/diff-informed-analysis-utils.ts#L156): returns no ranges when the 300-file comparison could be incomplete. Current CI confirms fallback to standard source-root analysis and successful SARIF uploads. Full source copy and search metadata are retained.
