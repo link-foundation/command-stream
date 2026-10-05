@@ -27,6 +27,15 @@ Its latest-Node job failed, while Node 20/22/24 passed. GitHub returns HTTP 410
 for the expired logs, so no original error can be established from those logs.
 Fresh branch runs are required to validate this implementation.
 
+Fresh run 37320814910 failed the benchmark parity rule (log line 432): only
+the JavaScript size suite had changed. The Rust suite now measures the isolated
+Execa module's source share while retaining the whole crate's dependency closure.
+Its regression first failed with a missing Execa measurement, then passed.
+Run 37320815020 exposed POSIX-only assumptions in two Windows tests (log lines
+22512 and 22599). They now verify upstream Windows failure metadata and test
+environment replacement with a dedicated inherited user variable; Bun's Windows
+PATH behavior is recorded in the migration guide.
+
 Execa 9.6.1 is a production dependency. We preserve its complete Node API
 rather than translating it through the shell. Bun lacks the counted channel
 references used by upstream IPC: the IPC contract runs under Node, with this

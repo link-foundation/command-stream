@@ -17,6 +17,6 @@
 - [x] Add JavaScript changeset and Rust changelog fragment; update CI coverage.
 - [x] Run focused tests, all local suites, lint/format/types/duplication, Rust
       fmt/clippy, feature parity and generated docs checks; save large logs.
-- [ ] Commit atomic validated work, push only issue-24-2ec0e8fa, update PR 122.
+- [x] Commit atomic validated work, push only issue-24-2ec0e8fa, update PR 122.
 - [ ] Confirm fresh CI timestamps/SHAs, preserve failed logs and fix actual
       failures; review gh pr diff and clean status; mark PR 122 ready.

@@ -200,21 +200,40 @@ describe('Execa execution and output', { timeout: 10_000 }, () => {
   });
   test('cwd supports a URL and env can replace the inherited environment', async () => {
     const dir = realpathSync(mkdtempSync(join(tmpdir(), 'execa-cwd-')));
+    const inherited = process.env.COMMAND_STREAM_EXECA_INHERITED;
+    process.env.COMMAND_STREAM_EXECA_INHERITED = 'must not reach the child';
     try {
       const { pathToFileURL } = await import('node:url');
       assert.equal(
         (await run('cwd', [], { cwd: pathToFileURL(dir) })).stdout,
         dir
       );
-      const { stdout } = await run('env', ['EXECA_TEST', 'PATH'], {
+      const selected = ['EXECA_TEST', 'COMMAND_STREAM_EXECA_INHERITED', 'PATH'];
+      const options = {
         env: { EXECA_TEST: 'literal $ value' },
         extendEnv: false,
-      });
-      assert.deepEqual(JSON.parse(stdout), {
-        EXECA_TEST: 'literal $ value',
-        PATH: null,
-      });
+      };
+      const { stdout } = await run('env', selected, options);
+      const output = JSON.parse(stdout);
+      assert.equal(output.EXECA_TEST, 'literal $ value');
+      assert.equal(output.COMMAND_STREAM_EXECA_INHERITED, null);
+      // Bun on Windows retains PATH even with a replacement environment.
+      // Preserve upstream behavior while checking that user variables clear.
+      const reference = await upstream.execa(
+        node,
+        args('env', ...selected),
+        options
+      );
+      assert.deepEqual(output, JSON.parse(reference.stdout));
+      if (process.platform !== 'win32') {
+        assert.equal(output.PATH, null);
+      }
     } finally {
+      if (inherited === undefined) {
+        delete process.env.COMMAND_STREAM_EXECA_INHERITED;
+      } else {
+        process.env.COMMAND_STREAM_EXECA_INHERITED = inherited;
+      }
       rmSync(dir, { recursive: true, force: true });
     }
   });
@@ -261,10 +280,26 @@ describe('Execa errors and lifecycle', { timeout: 10_000 }, () => {
     assert.equal(result.failed, true);
     assert.equal(result.timedOut, false);
   });
-  test('spawn errors retain ENOENT instead of inventing an exit code', async () => {
+  test('missing commands preserve upstream platform-specific failure metadata', async () => {
+    const file = 'command-stream-execa-missing-command-24';
+    const reference = await upstream.execa(file, [], { reject: false });
+    const result = await api.execa(file, [], { reject: false });
+    assert.ok(result instanceof api.ExecaError && result.failed);
+    for (const key of ['code', 'exitCode', 'signal', 'stdout', 'stderr']) {
+      assert.equal(result[key], reference[key], key);
+    }
+    // Execa resolves unknown Windows commands through cmd.exe, which reports
+    // an exit status. POSIX reports a spawn error without an exit status.
+    if (process.platform !== 'win32') {
+      assert.equal(result.code, 'ENOENT');
+      assert.equal(result.exitCode, undefined);
+    }
     await assert.rejects(
-      api.execa('command-stream-execa-missing-command-24'),
-      (error) => error.code === 'ENOENT' && error.exitCode === undefined
+      api.execa(file),
+      (error) =>
+        error instanceof api.ExecaError &&
+        error.code === reference.code &&
+        error.exitCode === reference.exitCode
     );
   });
   test('timeout terminates a finite child and reports timedOut', async () => {

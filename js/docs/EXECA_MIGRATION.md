@@ -18,6 +18,10 @@ IPC helpers rely on Node's counted IPC-channel references, which Bun does not
 implement. Use Node for IPC; for non-IPC `execaNode` calls in Bun, pass
 `{ ipc: false }`. Deno compatibility is not claimed for this entry. These
 upstream runtime limits are preserved, and IPC tests run in Node CI.
+On Windows, unresolved commands may run through `cmd.exe` and report its exit
+status instead of a POSIX `ENOENT` spawn error. Bun 1.4.2 on Windows also retains
+PATH with `extendEnv: false`; other inherited user variables are cleared. The
+adapter preserves these upstream/runtime behaviors.
 
 CommonJS uses `require('command-stream/execa')`. Like the Bun and zx entries,
 this uses `require(esm)` and needs Node >=20.19 or >=22.12, or Bun.
