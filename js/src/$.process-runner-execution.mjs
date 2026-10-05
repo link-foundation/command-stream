@@ -4,6 +4,7 @@ import { toStreamResult } from './$.result-streams.mjs';
 import { trace } from './$.trace.mjs';
 import {
   buildCommandArgv,
+  describeCommand,
   isShellArgvSpec,
   isShellCommandSpec,
   resolveSpawnCwd,
@@ -1154,11 +1155,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
       );
 
       // Log command if tracing enabled
-      const traceCmd =
-        this.spec.mode === 'shell' && !shellArgv
-          ? this.spec.command
-          : argv.join(' ');
-      logShellTrace(shellSettings, traceCmd);
+      logShellTrace(shellSettings, describeCommand(this.spec));
 
       // Detect interactive mode
       const isInteractive = isInteractiveMode(stdin, this.options);
@@ -1444,11 +1441,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
     const shellArgv = isShellArgvSpec(this.spec);
     const argv = buildCommandArgv(this.spec, env);
 
-    const traceCmd =
-      this.spec.mode === 'shell' && !shellArgv
-        ? this.spec.command
-        : argv.join(' ');
-    logShellTrace(shellSettings, traceCmd);
+    logShellTrace(shellSettings, describeCommand(this.spec));
 
     const result = executeSyncProcess(argv, {
       cwd,

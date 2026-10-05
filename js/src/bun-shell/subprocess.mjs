@@ -7,7 +7,7 @@
 // Bun buffers (`Pipe`, and `Capture` for the non-quiet root stdout/stderr)
 // are collected and appended to the shell's buffers once the pipe closes.
 
-import { spawn } from 'node:child_process';
+import { spawn as spawnProcess } from 'node:child_process';
 import os from 'node:os';
 import { ByteList, ChannelTarget, FdTarget, StreamTarget } from './io.mjs';
 import { RedirectFlags } from './lexer.mjs';
@@ -393,7 +393,7 @@ function waitForClose(child) {
  * @param {import('./env.mjs').ShellExecEnv} opts.shell
  * @param {() => void} [opts.onSpawn] called once the child has started (the
  *   caller can close the redirect fds it handed over)
- * @param {typeof spawn} [opts.spawnChild] process launcher (test seam)
+ * @param {typeof spawnProcess} [opts.spawn] process launcher (test seam)
  * @returns {Promise<{exitCode: number} | {spawnError: Error}>}
  */
 export async function runSubprocess({
@@ -406,7 +406,7 @@ export async function runSubprocess({
   dup = null,
   shell,
   onSpawn,
-  spawnChild = spawn,
+  spawn = spawnProcess,
 }) {
   const plans = [
     planIn(io.stdin, overrides.stdin),
@@ -430,7 +430,7 @@ export async function runSubprocess({
 
   let child;
   try {
-    child = spawnChild(target.file, target.args, {
+    child = spawn(target.file, target.args, {
       cwd,
       env: IS_WINDOWS ? withRequiredWindowsEnv(env) : env,
       stdio: plans.map((p) => p.stdio),

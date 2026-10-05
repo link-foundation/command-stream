@@ -28,7 +28,7 @@ test(
         bufferedStdout: { append() {} },
         bufferedStderr: { append() {} },
       },
-      spawnChild() {
+      spawn() {
         globalThis.queueMicrotask(() => {
           child.emit('spawn');
           child.emit('exit', 0, null);
@@ -68,7 +68,7 @@ test(
         bufferedStdout: { append: (bytes) => chunks.push(bytes) },
         bufferedStderr: { append() {} },
       },
-      spawnChild() {
+      spawn() {
         globalThis.queueMicrotask(() => {
           child.emit('spawn');
           child.stdout.emit('data', Buffer.from('early output'));
