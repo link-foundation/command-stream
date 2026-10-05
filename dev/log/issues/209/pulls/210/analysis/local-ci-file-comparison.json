@@ -1,0 +1,362 @@
+[
+  {
+    "file": ".github/DEPLOYMENT.md",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": ".github/audit-ignore.txt",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": ".github/scripts/check-language-parity.sh",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": ".github/scripts/npm-audit.mjs",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": ".github/scripts/publish-preflight.mjs",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": ".github/scripts/simulate-fresh-merge.sh",
+    "js": "scripts/simulate-fresh-merge.sh: adapted/diff preserved",
+    "rust": "scripts/simulate-fresh-merge.sh: adapted/diff preserved",
+    "python": "scripts/simulate-fresh-merge.sh: adapted/diff preserved"
+  },
+  {
+    "file": ".github/workflows/benchmarks.yml",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": ".github/workflows/bun-shell.yml",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": ".github/workflows/docs.yml",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": ".github/workflows/docs.yml: adapted/diff preserved"
+  },
+  {
+    "file": ".github/workflows/js.yml",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": ".github/workflows/links.yml",
+    "js": ".github/workflows/links.yml: adapted/diff preserved",
+    "rust": ".github/workflows/links.yml: adapted/diff preserved",
+    "python": ".github/workflows/links.yml: adapted/diff preserved"
+  },
+  {
+    "file": ".github/workflows/parity.yml",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": ".github/workflows/quality.yml",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": ".github/workflows/rust.yml",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": ".github/workflows/security.yml",
+    "js": ".github/workflows/security.yml: adapted/diff preserved",
+    "rust": ".github/workflows/security.yml: adapted/diff preserved",
+    "python": ".github/workflows/security.yml: adapted/diff preserved"
+  },
+  {
+    "file": ".github/workflows/workflows.yml",
+    "js": ".github/workflows/workflows.yml: adapted/diff preserved",
+    "rust": ".github/workflows/workflows.yml: adapted/diff preserved",
+    "python": ".github/workflows/workflows.yml: adapted/diff preserved"
+  },
+  {
+    "file": ".github/zizmor.yml",
+    "js": ".github/zizmor.yml: adapted/diff preserved",
+    "rust": ".github/zizmor.yml: adapted/diff preserved",
+    "python": ".github/zizmor.yml: adapted/diff preserved"
+  },
+  {
+    "file": ".husky/pre-commit",
+    "js": ".husky/pre-commit: adapted/diff preserved",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "js/scripts/build-terminal-font.mjs",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "js/scripts/capture-competitor-discovery.mjs",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "js/scripts/changeset-version.mjs",
+    "js": "scripts/changeset-version.mjs: adapted/diff preserved",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "js/scripts/check-release-needed.mjs",
+    "js": "scripts/check-release-needed.mjs: adapted/diff preserved",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "js/scripts/check-version.mjs",
+    "js": "scripts/check-version.mjs: adapted/diff preserved",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "js/scripts/create-github-release.mjs",
+    "js": "scripts/create-github-release.mjs: adapted/diff preserved",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "js/scripts/create-manual-changeset.mjs",
+    "js": "scripts/create-manual-changeset.mjs: adapted/diff preserved",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "js/scripts/debug-print.mjs",
+    "js": "scripts/debug-print.mjs: identical",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "js/scripts/format-github-release.mjs",
+    "js": "scripts/format-github-release.mjs: adapted/diff preserved",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "js/scripts/format-release-notes.mjs",
+    "js": "scripts/format-release-notes.mjs: adapted/diff preserved",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "js/scripts/generate-competitor-dispositions.mjs",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "js/scripts/instant-version-bump.mjs",
+    "js": "scripts/instant-version-bump.mjs: adapted/diff preserved",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "js/scripts/merge-changesets.mjs",
+    "js": "scripts/merge-changesets.mjs: adapted/diff preserved",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "js/scripts/npm-registry.mjs",
+    "js": "scripts/npm-registry.mjs: adapted/diff preserved",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "js/scripts/publish-failure-classifier.mjs",
+    "js": "scripts/publish-failure-classifier.mjs: identical",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "js/scripts/publish-retry.mjs",
+    "js": "scripts/publish-retry.mjs: adapted/diff preserved",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "js/scripts/publish-to-npm.mjs",
+    "js": "scripts/publish-to-npm.mjs: adapted/diff preserved",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "js/scripts/release-git.mjs",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "js/scripts/run-checked.mjs",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "js/scripts/setup-npm.mjs",
+    "js": "scripts/setup-npm.mjs: adapted/diff preserved",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "js/scripts/use-m-loader.mjs",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "js/scripts/validate-changeset.mjs",
+    "js": "scripts/validate-changeset.mjs: adapted/diff preserved",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "js/scripts/version-and-commit.mjs",
+    "js": "scripts/version-and-commit.mjs: adapted/diff preserved",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "js/scripts/wait-for-npm.mjs",
+    "js": "scripts/wait-for-npm.mjs: adapted/diff preserved",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "rust/scripts/bump-version.rs",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "scripts/bump-version.rs: identical",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "rust/scripts/check-changelog-fragment.rs",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "scripts/check-changelog-fragment.rs: adapted/diff preserved",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "rust/scripts/check-crate-size.rs",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "scripts/check-crate-size.rs: adapted/diff preserved",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "rust/scripts/check-file-size.rs",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "scripts/check-file-size.rs: adapted/diff preserved",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "rust/scripts/check-release-needed.rs",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "scripts/check-release-needed.rs: adapted/diff preserved",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "rust/scripts/check-version-modification.rs",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "scripts/check-version-modification.rs: adapted/diff preserved",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "rust/scripts/collect-changelog.rs",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "scripts/collect-changelog.rs: identical",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "rust/scripts/create-changelog-fragment.rs",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "scripts/create-changelog-fragment.rs: adapted/diff preserved",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "rust/scripts/create-github-release.rs",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "scripts/create-github-release.rs: adapted/diff preserved",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "rust/scripts/detect-code-changes.rs",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "scripts/detect-code-changes.rs: adapted/diff preserved",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "rust/scripts/get-bump-type.rs",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "scripts/get-bump-type.rs: identical",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "rust/scripts/get-version.rs",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "scripts/get-version.rs: identical",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "rust/scripts/git-config.rs",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "scripts/git-config.rs: identical",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "rust/scripts/publish-crate.rs",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "scripts/publish-crate.rs: adapted/diff preserved",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "rust/scripts/rust-paths.rs",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "scripts/rust-paths.rs: adapted/diff preserved",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "rust/scripts/version-and-commit.rs",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "scripts/version-and-commit.rs: adapted/diff preserved",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "rust/scripts/version-and-commit/tests.rs",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "Local-specific; covered by principle/workflow matrix",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  },
+  {
+    "file": "rust/scripts/wait-for-crate.rs",
+    "js": "Local-specific; covered by principle/workflow matrix",
+    "rust": "scripts/wait-for-crate.rs: adapted/diff preserved",
+    "python": "Local-specific; covered by principle/workflow matrix"
+  }
+]

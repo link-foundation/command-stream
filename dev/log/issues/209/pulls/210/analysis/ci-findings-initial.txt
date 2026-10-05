@@ -1,0 +1,377 @@
+
+run-37303855729.log.gz: 1694 lines, 5 findings
+760: Rust (full)	UNKNOWN STEP	2026-10-05T11:35:40.5538530Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+765: Rust (full)	UNKNOWN STEP	2026-10-05T11:35:40.5540874Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+772: Rust (full)	UNKNOWN STEP	2026-10-05T11:35:40.5554610Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+784: Rust (full)	UNKNOWN STEP	2026-10-05T11:35:40.5661493Z test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+1519: JavaScript (full)	UNKNOWN STEP	2026-10-05T11:35:04.6943322Z  0 fail
+
+run-37310859773.log.gz: 26094 lines, 26 findings
+1695: Bun.$ reference on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:07.2734578Z Total 1256: 1216 passed, 0 failed, 40 skipped in 11.5s
+3420: port on Deno on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:24.2050905Z Total 1256: 1216 passed, 0 failed, 40 skipped in 5.9s
+5167: Bun.$ reference on macos-latest	UNKNOWN STEP	2026-10-05T12:38:02.0416710Z Total 1256: 1185 passed, 0 failed, 71 skipped in 1.5s
+6968: port on Deno on windows-latest	UNKNOWN STEP	2026-10-05T12:38:56.4374461Z Total 1256: 1127 passed, 0 failed, 129 skipped in 7.3s
+8205: port on Bun on macos-latest	UNKNOWN STEP	2026-10-05T12:39:01.8054110Z DONE bunshell/deno-last-exit-code-ls-error: PASS
+8623: port on Bun on macos-latest	UNKNOWN STEP	2026-10-05T12:39:04.0176930Z DONE bunshell/subshell-invalid-use-parse-error: PASS
+8649: port on Bun on macos-latest	UNKNOWN STEP	2026-10-05T12:39:04.0201040Z DONE bunshell/shell-error-false-is-error: PASS
+8651: port on Bun on macos-latest	UNKNOWN STEP	2026-10-05T12:39:04.0201810Z DONE bunshell/shell-error-false-is-shell-error: PASS
+8659: port on Bun on macos-latest	UNKNOWN STEP	2026-10-05T12:39:04.0204640Z DONE bunshell/shell-error-false-named-shell-error: PASS
+9055: port on Bun on macos-latest	UNKNOWN STEP	2026-10-05T12:39:04.0460210Z DONE commands-rm/nonexistent-error: PASS
+9785: port on Bun on macos-latest	UNKNOWN STEP	2026-10-05T12:39:05.5084140Z DONE shell-hang/success-and-error: PASS
+11236: port on Bun on macos-latest	UNKNOWN STEP	2026-10-05T12:39:06.2635100Z Total 1256: 1185 passed, 0 failed, 71 skipped in 5.6s
+12993: port on Deno on macos-latest	UNKNOWN STEP	2026-10-05T12:38:25.5252490Z Total 1256: 1185 passed, 0 failed, 71 skipped in 6.6s
+14785: port on Node.js on windows-latest	UNKNOWN STEP	2026-10-05T12:38:46.5871194Z Total 1256: 1127 passed, 0 failed, 129 skipped in 4.9s
+16539: port on Node.js on macos-latest	UNKNOWN STEP	2026-10-05T12:38:51.6645010Z Total 1256: 1185 passed, 0 failed, 71 skipped in 6.3s
+18255: port on Node.js on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:24.1417641Z Total 1256: 1216 passed, 0 failed, 40 skipped in 6.0s
+19968: port on Bun on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:23.0925339Z Total 1256: 1216 passed, 0 failed, 40 skipped in 4.1s
+21171: Bun.$ reference on windows-latest	UNKNOWN STEP	2026-10-05T12:38:52.1187841Z DONE bunshell/deno-last-exit-code-ls-error: PASS
+21605: Bun.$ reference on windows-latest	UNKNOWN STEP	2026-10-05T12:38:57.3913142Z DONE bunshell/subshell-invalid-use-parse-error: PASS
+21631: Bun.$ reference on windows-latest	UNKNOWN STEP	2026-10-05T12:38:57.4724878Z DONE bunshell/shell-error-false-is-error: PASS
+21633: Bun.$ reference on windows-latest	UNKNOWN STEP	2026-10-05T12:38:57.4737182Z DONE bunshell/shell-error-false-is-shell-error: PASS
+21641: Bun.$ reference on windows-latest	UNKNOWN STEP	2026-10-05T12:38:57.4796440Z DONE bunshell/shell-error-false-named-shell-error: PASS
+22037: Bun.$ reference on windows-latest	UNKNOWN STEP	2026-10-05T12:38:58.9237093Z DONE commands-rm/nonexistent-error: PASS
+22767: Bun.$ reference on windows-latest	UNKNOWN STEP	2026-10-05T12:39:00.0987302Z DONE shell-hang/success-and-error: PASS
+24269: Bun.$ reference on windows-latest	UNKNOWN STEP	2026-10-05T12:39:00.2137841Z Total 1256: 1127 passed, 0 failed, 129 skipped in 10.1s
+26067: port on Bun on windows-latest	UNKNOWN STEP	2026-10-05T12:38:56.9480089Z Total 1256: 1127 passed, 0 failed, 129 skipped in 5.9s
+
+run-37310859779.log.gz: 9050 lines, 4 findings
+2208: CodeQL (rust)	UNKNOWN STEP	2026-10-05T12:38:00.6065677Z   expect-error: false
+3660: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T12:38:01.8136676Z   expect-error: false
+6937: Audit Cargo lockfile	UNKNOWN STEP	2026-10-05T12:37:53.6235531Z ^[[36;1m  printf '::error::install-action: %s\n' "$*"^[[0m
+8816: CodeQL (actions)	UNKNOWN STEP	2026-10-05T12:38:03.2763608Z   expect-error: false
+
+run-37310859791.log.gz: 1543 lines, 2 findings
+947: Validate documentation	UNKNOWN STEP	2026-10-05T12:38:05.7345223Z  0 fail
+1524: Check workflow invariants	UNKNOWN STEP	2026-10-05T12:38:16.7621363Z  0 fail
+
+run-37310859798.log.gz: 879 lines, 0 findings
+
+run-37310859834.log.gz: 31724 lines, 6 findings
+3270: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:39:11.6902060Z /bin/sh: -c: line 1: syntax error: unexpected end of file
+7511: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:40:21.6819710Z  0 fail
+11347: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:31.7851885Z /bin/sh: 1: Syntax error: Unterminated quoted string
+14631: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:24.0266786Z  0 fail
+25913: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:40:34.1140858Z  0 fail
+31691: Release JavaScript package	UNKNOWN STEP	2026-10-05T12:43:06.3700282Z ##[error]Process completed with exit code 1.
+
+run-37310859865.log.gz: 10235 lines, 131 findings
+1236: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:23.7891080Z test result: ok. 274 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.28s
+1241: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:23.8276060Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+1308: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:23.9189640Z test result: ok. 62 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+1340: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:24.4731540Z test result: ok. 24 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.51s
+1346: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:24.9733830Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.50s
+1356: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:25.0167550Z test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+1389: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:25.8948230Z test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.85s
+1404: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:26.0144680Z test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+1411: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:26.0148410Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+1426: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:26.0643280Z test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+1472: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:26.1755750Z test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+1493: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:27.3078980Z test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.12s
+1506: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:28.1030940Z test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.79s
+1519: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:28.1447870Z test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+1526: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:28.2202260Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+1544: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:28.2526190Z test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+1576: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:38.2734970Z test result: ok. 26 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.01s
+1586: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:38.7427080Z test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.44s
+1594: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:38.7736300Z test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+1601: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:38.8055980Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+1638: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:38.8238200Z test result: ok. 30 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+1656: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:44.8249800Z test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.98s
+1675: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:44.8484550Z test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+1682: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:44.8787400Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+1707: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:45.2870320Z test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.39s
+1724: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:46.3504170Z test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.05s
+1772: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:46.3910560Z test result: ok. 41 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+1805: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:46.6391220Z test result: ok. 27 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+1821: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:46.7048640Z test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+1868: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:46.8926640Z test result: ok. 41 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+1881: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:46.9251530Z test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+1892: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:46.9533960Z test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+1915: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:47.2255080Z test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.24s
+1933: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:47.2424580Z test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+1945: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:47.2861000Z test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+1963: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:47.3271310Z test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+1987: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:47.9159330Z test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.57s
+2002: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:47.9351810Z test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+2037: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:51.2833080Z test result: ok. 26 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 2.75s
+2170: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:55.5628600Z test result: ok. 26 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 2.83s
+3832: Test Rust scripts and check sizes	UNKNOWN STEP	2026-10-05T12:38:51.8334508Z test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+3853: Test Rust scripts and check sizes	UNKNOWN STEP	2026-10-05T12:38:52.2397804Z test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+3892: Test Rust scripts and check sizes	UNKNOWN STEP	2026-10-05T12:38:56.1674575Z test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+3911: Test Rust scripts and check sizes	UNKNOWN STEP	2026-10-05T12:38:56.3609862Z test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+4046: Test Rust scripts and check sizes	UNKNOWN STEP	2026-10-05T12:39:08.3489494Z test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+4061: Test Rust scripts and check sizes	UNKNOWN STEP	2026-10-05T12:39:08.6797991Z test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+4077: Test Rust scripts and check sizes	UNKNOWN STEP	2026-10-05T12:39:09.4718466Z ##[warning]File has 932 lines (approaching limit of 1000). Consider extracting code to keep at or below 900 lines and prevent concurrent PR merge limit violations.
+4079: Test Rust scripts and check sizes	UNKNOWN STEP	2026-10-05T12:39:09.4728515Z ##[warning]File has 915 lines (approaching limit of 1000). Consider extracting code to keep at or below 900 lines and prevent concurrent PR merge limit violations.
+4081: Test Rust scripts and check sizes	UNKNOWN STEP	2026-10-05T12:39:09.4731770Z ##[warning]File has 949 lines (approaching limit of 1000). Consider extracting code to keep at or below 900 lines and prevent concurrent PR merge limit violations.
+4083: Test Rust scripts and check sizes	UNKNOWN STEP	2026-10-05T12:39:09.4734573Z ##[warning]File has 910 lines (approaching limit of 1000). Consider extracting code to keep at or below 900 lines and prevent concurrent PR merge limit violations.
+4085: Test Rust scripts and check sizes	UNKNOWN STEP	2026-10-05T12:39:09.4737585Z ##[warning]File has 935 lines (approaching limit of 1000). Consider extracting code to keep at or below 900 lines and prevent concurrent PR merge limit violations.
+5377: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:06.5084237Z test result: ok. 275 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.17s
+5383: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:06.5103912Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+5451: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:06.6162036Z test result: ok. 62 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+5482: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:06.7572951Z test result: ok. 24 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.14s
+5489: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:07.1935379Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.43s
+5500: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:07.1960176Z test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+5531: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:07.5107176Z test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.31s
+5545: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:07.5130232Z test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+5553: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:07.5152314Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+5568: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:07.5182747Z test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+5615: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:07.5257948Z test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+5636: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:08.5327369Z test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.01s
+5649: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:08.5895977Z test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+5662: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:08.5942667Z test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+5669: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:08.6015651Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+5687: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:08.6145412Z test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+5719: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:18.6188514Z test result: ok. 26 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.00s
+5729: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:18.6559179Z test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+5737: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:18.6588180Z test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+5744: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:18.6609039Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+5780: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:18.6630956Z test result: ok. 30 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+5799: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:23.8952353Z test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.23s
+5818: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:23.8975324Z test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+5825: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:23.9003952Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+5849: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:24.0104344Z test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+5867: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:24.8197701Z test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.81s
+5914: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:24.8251415Z test result: ok. 41 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+5947: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:24.9303361Z test result: ok. 27 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+5964: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:24.9358051Z test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+6011: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:24.9809122Z test result: ok. 41 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+6024: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:24.9827551Z test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+6035: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:24.9839096Z test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+6058: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:25.1962787Z test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s
+6076: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:25.1978678Z test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+6088: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:25.2010596Z test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+6106: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:25.2030609Z test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+6130: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:25.5886112Z test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.38s
+6145: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:25.5908091Z test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+6180: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:27.2414490Z test result: ok. 26 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 1.50s
+6313: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:28.9238816Z test result: ok. 26 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 1.49s
+7562: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:39:54.2604266Z test result: ok. 260 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.26s
+7568: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:39:54.2710647Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+7636: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:39:54.4029952Z test result: ok. 62 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+7666: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:39:54.6595121Z test result: ok. 23 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.25s
+7673: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:39:55.1164718Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.45s
+7683: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:39:55.1319239Z test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+7712: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:39:55.6544970Z test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.51s
+7726: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:39:55.6669178Z test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+7733: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:39:55.6768812Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+7748: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:39:55.6925326Z test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+7754: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:39:55.7016868Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+7763: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:39:56.2227150Z test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.51s
+7769: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:39:56.2331194Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+7782: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:39:56.3324675Z test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+7789: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:39:56.5147770Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+7805: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:39:56.6227306Z test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+7835: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:40:06.6523252Z test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.02s
+7841: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:40:06.6629546Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+7849: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:40:06.7152898Z test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+7856: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:40:06.7540807Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+7892: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:40:06.7661596Z test result: ok. 30 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+7901: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:40:06.7753655Z test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+7920: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:40:06.7862390Z test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+7927: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:40:06.8311239Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+7946: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:40:07.0226135Z test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+7952: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:40:07.0327744Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+7999: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:40:07.0521506Z test result: ok. 41 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+8032: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:40:07.1717979Z test result: ok. 27 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+8049: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:40:07.1895170Z test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+8064: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:40:07.2202341Z test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+8077: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:40:07.2319467Z test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+8088: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:40:07.2413517Z test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+8108: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:40:07.3841034Z test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+8126: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:40:07.3954830Z test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+8138: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:40:07.4085838Z test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+8156: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:40:07.4203643Z test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+8162: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:40:07.4292918Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+8177: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:40:07.4399069Z test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+8212: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:40:13.6452389Z test result: ok. 26 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 5.91s
+8351: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:40:20.3356124Z test result: ok. 26 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 5.93s
+
+run-37310859981.log.gz: 1419 lines, 5 findings
+587: Rust (full)	UNKNOWN STEP	2026-10-05T12:38:22.4776671Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+593: Rust (full)	UNKNOWN STEP	2026-10-05T12:38:22.4786815Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+599: Rust (full)	UNKNOWN STEP	2026-10-05T12:38:22.4799852Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+612: Rust (full)	UNKNOWN STEP	2026-10-05T12:38:22.4958401Z test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+1243: JavaScript (full)	UNKNOWN STEP	2026-10-05T12:38:00.8044663Z  0 fail
+
+run-37310860026.log.gz: 468 lines, 2 findings
+449: Verify and deploy generated documentation	UNKNOWN STEP	2026-10-05T12:39:24.8285050Z ##[error]Get Pages site failed. Please verify that the repository has Pages enabled and configured to build using GitHub Actions, or consider exploring the `enablement` parameter for this action. Error: Not Found - https://docs.github.com/rest/pages/pages#get-a-apiname-pages-site
+450: Verify and deploy generated documentation	UNKNOWN STEP	2026-10-05T12:39:24.8300315Z ##[error]HttpError: Not Found - https://docs.github.com/rest/pages/pages#get-a-apiname-pages-site
+
+run-37315903872.log.gz: 337 lines, 2 findings
+294: Check external links	UNKNOWN STEP	2026-10-05T13:19:38.6726201Z | ⏳ Timeouts    | 0     |
+320: Check external links	UNKNOWN STEP	2026-10-05T13:19:38.6764769Z ##[error]Process completed with exit code 2.
+
+run-37318353511.log.gz: 9054 lines, 4 findings
+1422: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:32.6935523Z   expect-error: false
+5074: Audit Cargo lockfile	UNKNOWN STEP	2026-10-05T13:38:24.6197230Z ^[[36;1m  printf '::error::install-action: %s\n' "$*"^[[0m
+6580: CodeQL (actions)	UNKNOWN STEP	2026-10-05T13:38:31.8421338Z   expect-error: false
+8634: CodeQL (rust)	UNKNOWN STEP	2026-10-05T13:38:31.7828846Z   expect-error: false
+
+run-37345116818.log.gz: 9331 lines, 137 findings
+1017: Test Rust (windows-latest)	Run tests	2026-10-05T17:01:55.7774395Z test result: ok. 260 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.31s
+1023: Test Rust (windows-latest)	Run tests	2026-10-05T17:01:55.7910908Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+1091: Test Rust (windows-latest)	Run tests	2026-10-05T17:01:55.9383994Z test result: ok. 62 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+1121: Test Rust (windows-latest)	Run tests	2026-10-05T17:01:56.2805708Z test result: ok. 23 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.33s
+1128: Test Rust (windows-latest)	Run tests	2026-10-05T17:01:56.7485790Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.45s
+1138: Test Rust (windows-latest)	Run tests	2026-10-05T17:01:56.7694731Z test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+1167: Test Rust (windows-latest)	Run tests	2026-10-05T17:01:57.3705870Z test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.59s
+1181: Test Rust (windows-latest)	Run tests	2026-10-05T17:01:57.3868038Z test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+1203: Test Rust (windows-latest)	Run tests	2026-10-05T17:01:58.4458670Z test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.05s
+1210: Test Rust (windows-latest)	Run tests	2026-10-05T17:01:58.7386339Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.28s
+1217: Test Rust (windows-latest)	Run tests	2026-10-05T17:01:58.7518702Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+1232: Test Rust (windows-latest)	Run tests	2026-10-05T17:01:58.7722446Z test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+1238: Test Rust (windows-latest)	Run tests	2026-10-05T17:01:58.7840456Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+1247: Test Rust (windows-latest)	Run tests	2026-10-05T17:01:59.3163498Z test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.52s
+1253: Test Rust (windows-latest)	Run tests	2026-10-05T17:01:59.3284333Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+1266: Test Rust (windows-latest)	Run tests	2026-10-05T17:01:59.4448713Z test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+1273: Test Rust (windows-latest)	Run tests	2026-10-05T17:01:59.6755175Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s
+1289: Test Rust (windows-latest)	Run tests	2026-10-05T17:01:59.8316988Z test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+1319: Test Rust (windows-latest)	Run tests	2026-10-05T17:02:09.8510840Z test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.01s
+1325: Test Rust (windows-latest)	Run tests	2026-10-05T17:02:09.8649485Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+1333: Test Rust (windows-latest)	Run tests	2026-10-05T17:02:09.9402567Z test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+1340: Test Rust (windows-latest)	Run tests	2026-10-05T17:02:09.9912124Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+1376: Test Rust (windows-latest)	Run tests	2026-10-05T17:02:10.0084962Z test result: ok. 30 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+1385: Test Rust (windows-latest)	Run tests	2026-10-05T17:02:10.0209056Z test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+1404: Test Rust (windows-latest)	Run tests	2026-10-05T17:02:10.0356335Z test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+1411: Test Rust (windows-latest)	Run tests	2026-10-05T17:02:10.0937850Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+1430: Test Rust (windows-latest)	Run tests	2026-10-05T17:02:10.3445403Z test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.24s
+1436: Test Rust (windows-latest)	Run tests	2026-10-05T17:02:10.3576196Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+1483: Test Rust (windows-latest)	Run tests	2026-10-05T17:02:10.3795391Z test result: ok. 41 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+1516: Test Rust (windows-latest)	Run tests	2026-10-05T17:02:10.5074260Z test result: ok. 27 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+1533: Test Rust (windows-latest)	Run tests	2026-10-05T17:02:10.5293766Z test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+1548: Test Rust (windows-latest)	Run tests	2026-10-05T17:02:10.5607206Z test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+1561: Test Rust (windows-latest)	Run tests	2026-10-05T17:02:10.5766135Z test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+1572: Test Rust (windows-latest)	Run tests	2026-10-05T17:02:10.5895115Z test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+1592: Test Rust (windows-latest)	Run tests	2026-10-05T17:02:10.7446562Z test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+1610: Test Rust (windows-latest)	Run tests	2026-10-05T17:02:10.7589757Z test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+1622: Test Rust (windows-latest)	Run tests	2026-10-05T17:02:10.7757609Z test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+1640: Test Rust (windows-latest)	Run tests	2026-10-05T17:02:10.7904322Z test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+1646: Test Rust (windows-latest)	Run tests	2026-10-05T17:02:10.8021071Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+1661: Test Rust (windows-latest)	Run tests	2026-10-05T17:02:10.8169416Z test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+1697: Test Rust (windows-latest)	Run tests	2026-10-05T17:02:20.5657423Z test result: ok. 27 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 9.35s
+1837: Test Rust (windows-latest)	Run doc tests	2026-10-05T17:02:30.1010389Z test result: ok. 27 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 8.08s
+2596: Test Rust scripts and check sizes	Run release script unit tests	2026-10-05T17:00:49.6492772Z test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+2614: Test Rust scripts and check sizes	Run release script unit tests	2026-10-05T17:00:50.0367582Z test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+2647: Test Rust scripts and check sizes	Run release script unit tests	2026-10-05T17:00:53.0701673Z test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+2666: Test Rust scripts and check sizes	Run release script unit tests	2026-10-05T17:00:53.2443775Z test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+2747: Test Rust scripts and check sizes	Run release script unit tests	2026-10-05T17:01:03.6260609Z test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+2762: Test Rust scripts and check sizes	Run release script unit tests	2026-10-05T17:01:03.9012438Z test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+2778: Test Rust scripts and check sizes	Check Rust file sizes	2026-10-05T17:01:04.5182582Z ##[warning]File has 932 lines (approaching limit of 1000). Consider extracting code to keep at or below 900 lines and prevent concurrent PR merge limit violations.
+2780: Test Rust scripts and check sizes	Check Rust file sizes	2026-10-05T17:01:04.5191311Z ##[warning]File has 915 lines (approaching limit of 1000). Consider extracting code to keep at or below 900 lines and prevent concurrent PR merge limit violations.
+2782: Test Rust scripts and check sizes	Check Rust file sizes	2026-10-05T17:01:04.5193610Z ##[warning]File has 949 lines (approaching limit of 1000). Consider extracting code to keep at or below 900 lines and prevent concurrent PR merge limit violations.
+2784: Test Rust scripts and check sizes	Check Rust file sizes	2026-10-05T17:01:04.5195734Z ##[warning]File has 910 lines (approaching limit of 1000). Consider extracting code to keep at or below 900 lines and prevent concurrent PR merge limit violations.
+2786: Test Rust scripts and check sizes	Check Rust file sizes	2026-10-05T17:01:04.5198183Z ##[warning]File has 937 lines (approaching limit of 1000). Consider extracting code to keep at or below 900 lines and prevent concurrent PR merge limit violations.
+3884: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:24.8855900Z test result: ok. 274 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.34s
+3890: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:24.9028610Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+3958: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:25.0371160Z test result: ok. 62 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+3990: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:25.3600640Z test result: ok. 24 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.31s
+3996: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:25.8472940Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.47s
+4006: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:25.8558660Z test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+4040: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:26.4019180Z test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.51s
+4053: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:26.4525100Z test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+4075: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:27.4361750Z test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.03s
+4081: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:27.7197610Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.28s
+4089: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:27.7359470Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+4104: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:27.7468490Z test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+4151: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:27.8101200Z test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+4172: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:28.8996130Z test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.08s
+4185: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:29.4391200Z test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.53s
+4198: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:29.4819540Z test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+4205: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:29.5270190Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+4223: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:29.5866140Z test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+4255: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:39.6021580Z test result: ok. 26 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.01s
+4265: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:40.3229730Z test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.60s
+4273: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:40.3630140Z test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+4280: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:40.3947180Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+4316: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:40.4315470Z test result: ok. 30 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+4335: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:46.4911830Z test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.01s
+4354: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:46.5081680Z test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+4361: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:46.5323840Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+4385: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:46.9619530Z test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.42s
+4404: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:48.0871490Z test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.09s
+4451: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:48.1256620Z test result: ok. 41 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+4484: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:48.2435940Z test result: ok. 27 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+4500: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:48.2853700Z test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+4548: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:48.5165760Z test result: ok. 41 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
+4561: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:48.5393360Z test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+4571: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:48.5509390Z test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+4594: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:48.8171720Z test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
+4612: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:48.8367390Z test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+4624: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:48.8793700Z test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+4643: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:48.9217830Z test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+4667: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:49.5677520Z test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.62s
+4683: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:49.6037180Z test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+4717: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:53.3912760Z test result: ok. 27 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 3.05s
+4851: Test Rust (macos-latest)	Run doc tests	2026-10-05T17:01:55.9541570Z test result: ok. 27 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 1.97s
+6722: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:15.8223443Z test result: ok. 275 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.27s
+6728: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:15.8246455Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+6796: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:15.9336912Z test result: ok. 62 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+6827: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:16.2226051Z test result: ok. 24 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.29s
+6834: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:16.6617190Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.44s
+6844: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:16.6646886Z test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+6876: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:17.0170435Z test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.35s
+6890: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:17.0203189Z test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+6912: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:17.8296555Z test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.81s
+6919: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:17.9318021Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+6927: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:17.9349624Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+6942: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:17.9394866Z test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+6989: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:17.9507864Z test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+7010: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:18.9608523Z test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.01s
+7023: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:19.0419851Z test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+7036: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:19.0486696Z test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+7043: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:19.0594618Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+7061: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:19.0885211Z test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+7093: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:29.0942479Z test result: ok. 26 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.00s
+7103: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:29.1469390Z test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+7111: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:29.1508896Z test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+7118: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:29.1537693Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+7154: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:29.1570914Z test result: ok. 30 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+7173: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:34.3929052Z test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.23s
+7193: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:34.3964346Z test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+7199: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:34.3997916Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+7223: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:34.5149897Z test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+7241: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:35.3282569Z test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.81s
+7288: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:35.3365772Z test result: ok. 41 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+7321: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:35.4442777Z test result: ok. 27 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+7338: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:35.4530226Z test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+7385: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:35.5143672Z test result: ok. 41 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+7399: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:35.5171014Z test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+7409: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:35.5187409Z test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+7432: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:35.7368472Z test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s
+7451: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:35.7395482Z test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+7462: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:35.7444902Z test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+7480: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:35.7476021Z test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+7504: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:36.1465577Z test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.40s
+7519: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:36.1501166Z test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+7555: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:38.4717791Z test result: ok. 27 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 2.11s
+7689: Test Rust (ubuntu-latest)	Run doc tests	2026-10-05T17:01:40.9120753Z test result: ok. 27 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 2.13s
+
+run-37345116899.log.gz: 9090 lines, 4 findings
+2584: CodeQL (actions)	Analyze	2026-10-05T17:00:20.2957233Z   expect-error: false
+3850: CodeQL (javascript-typescript)	Analyze	2026-10-05T17:00:29.9923149Z   expect-error: false
+7163: Audit Cargo lockfile	Run taiki-e/install-action@e67fa11c4b9316fa714ddf0abed07a0c3143b95b	2026-10-05T17:00:13.6328397Z ^[[36;1m  printf '::error::install-action: %s\n' "$*"^[[0m
+8669: CodeQL (rust)	Analyze	2026-10-05T17:00:29.8376556Z   expect-error: false
+
+run-37345116966.log.gz: 882 lines, 0 findings
+
+run-37345116991.log.gz: 1429 lines, 5 findings
+590: Rust (full)	Test and lint benchmark infrastructure	2026-10-05T17:00:45.1000944Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+595: Rust (full)	Test and lint benchmark infrastructure	2026-10-05T17:00:45.1007129Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+601: Rust (full)	Test and lint benchmark infrastructure	2026-10-05T17:00:45.1018856Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+615: Rust (full)	Test and lint benchmark infrastructure	2026-10-05T17:00:45.2802248Z test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+1252: JavaScript (full)	Test benchmark infrastructure and adapters	2026-10-05T17:00:18.2988634Z  0 fail
+
+run-37345117236.log.gz: 1556 lines, 2 findings
+959: Validate documentation	Check documentation links, size and required sections	2026-10-05T17:00:33.4338320Z  0 fail
+1537: Check workflow invariants	Check CI/CD invariants	2026-10-05T17:00:15.5789904Z  0 fail
+
+run-37345117246.log.gz: 469 lines, 2 findings
+450: Verify and deploy generated documentation	Configure GitHub Pages	2026-10-05T17:01:16.3509751Z ##[error]Get Pages site failed. Please verify that the repository has Pages enabled and configured to build using GitHub Actions, or consider exploring the `enablement` parameter for this action. Error: Not Found - https://docs.github.com/rest/pages/pages#get-a-apiname-pages-site
+451: Verify and deploy generated documentation	Configure GitHub Pages	2026-10-05T17:01:16.3522223Z ##[error]HttpError: Not Found - https://docs.github.com/rest/pages/pages#get-a-apiname-pages-site
+
+run-37347693383.log.gz: 694 lines, 0 findings
+
+run-37347693691.log.gz: 1626 lines, 2 findings
+563: Validate documentation	Check documentation links, size and required sections	2026-10-05T17:21:03.9469531Z  0 fail
+1165: Check workflow invariants	Check CI/CD invariants	2026-10-05T17:21:37.7802662Z  0 fail

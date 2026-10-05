@@ -1,0 +1,66 @@
+# Complete local workflow and CI script comparison
+
+All counterpart diffs are retained in `template-diffs/`. Template-only files are catalogued in each complete-file inventory, including nonapplicable artifact publishers. Policy decisions are explained in REPORT.md.
+
+| Local file | JavaScript template | Rust template | Python template |
+| --- | --- | --- | --- |
+| .github/DEPLOYMENT.md | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| .github/audit-ignore.txt | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| .github/scripts/check-language-parity.sh | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| .github/scripts/npm-audit.mjs | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| .github/scripts/publish-preflight.mjs | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| .github/scripts/simulate-fresh-merge.sh | scripts/simulate-fresh-merge.sh: adapted/diff preserved | scripts/simulate-fresh-merge.sh: adapted/diff preserved | scripts/simulate-fresh-merge.sh: adapted/diff preserved |
+| .github/workflows/benchmarks.yml | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| .github/workflows/bun-shell.yml | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| .github/workflows/docs.yml | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix | .github/workflows/docs.yml: adapted/diff preserved |
+| .github/workflows/js.yml | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| .github/workflows/links.yml | .github/workflows/links.yml: adapted/diff preserved | .github/workflows/links.yml: adapted/diff preserved | .github/workflows/links.yml: adapted/diff preserved |
+| .github/workflows/parity.yml | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| .github/workflows/quality.yml | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| .github/workflows/rust.yml | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| .github/workflows/security.yml | .github/workflows/security.yml: adapted/diff preserved | .github/workflows/security.yml: adapted/diff preserved | .github/workflows/security.yml: adapted/diff preserved |
+| .github/workflows/workflows.yml | .github/workflows/workflows.yml: adapted/diff preserved | .github/workflows/workflows.yml: adapted/diff preserved | .github/workflows/workflows.yml: adapted/diff preserved |
+| .github/zizmor.yml | .github/zizmor.yml: adapted/diff preserved | .github/zizmor.yml: adapted/diff preserved | .github/zizmor.yml: adapted/diff preserved |
+| .husky/pre-commit | .husky/pre-commit: adapted/diff preserved | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| js/scripts/build-terminal-font.mjs | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| js/scripts/capture-competitor-discovery.mjs | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| js/scripts/changeset-version.mjs | scripts/changeset-version.mjs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| js/scripts/check-release-needed.mjs | scripts/check-release-needed.mjs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| js/scripts/check-version.mjs | scripts/check-version.mjs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| js/scripts/create-github-release.mjs | scripts/create-github-release.mjs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| js/scripts/create-manual-changeset.mjs | scripts/create-manual-changeset.mjs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| js/scripts/debug-print.mjs | scripts/debug-print.mjs: identical | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| js/scripts/format-github-release.mjs | scripts/format-github-release.mjs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| js/scripts/format-release-notes.mjs | scripts/format-release-notes.mjs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| js/scripts/generate-competitor-dispositions.mjs | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| js/scripts/instant-version-bump.mjs | scripts/instant-version-bump.mjs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| js/scripts/merge-changesets.mjs | scripts/merge-changesets.mjs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| js/scripts/npm-registry.mjs | scripts/npm-registry.mjs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| js/scripts/publish-failure-classifier.mjs | scripts/publish-failure-classifier.mjs: identical | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| js/scripts/publish-retry.mjs | scripts/publish-retry.mjs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| js/scripts/publish-to-npm.mjs | scripts/publish-to-npm.mjs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| js/scripts/release-git.mjs | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| js/scripts/run-checked.mjs | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| js/scripts/setup-npm.mjs | scripts/setup-npm.mjs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| js/scripts/use-m-loader.mjs | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| js/scripts/validate-changeset.mjs | scripts/validate-changeset.mjs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| js/scripts/version-and-commit.mjs | scripts/version-and-commit.mjs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| js/scripts/wait-for-npm.mjs | scripts/wait-for-npm.mjs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| rust/scripts/bump-version.rs | Local-specific; covered by principle/workflow matrix | scripts/bump-version.rs: identical | Local-specific; covered by principle/workflow matrix |
+| rust/scripts/check-changelog-fragment.rs | Local-specific; covered by principle/workflow matrix | scripts/check-changelog-fragment.rs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix |
+| rust/scripts/check-crate-size.rs | Local-specific; covered by principle/workflow matrix | scripts/check-crate-size.rs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix |
+| rust/scripts/check-file-size.rs | Local-specific; covered by principle/workflow matrix | scripts/check-file-size.rs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix |
+| rust/scripts/check-release-needed.rs | Local-specific; covered by principle/workflow matrix | scripts/check-release-needed.rs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix |
+| rust/scripts/check-version-modification.rs | Local-specific; covered by principle/workflow matrix | scripts/check-version-modification.rs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix |
+| rust/scripts/collect-changelog.rs | Local-specific; covered by principle/workflow matrix | scripts/collect-changelog.rs: identical | Local-specific; covered by principle/workflow matrix |
+| rust/scripts/create-changelog-fragment.rs | Local-specific; covered by principle/workflow matrix | scripts/create-changelog-fragment.rs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix |
+| rust/scripts/create-github-release.rs | Local-specific; covered by principle/workflow matrix | scripts/create-github-release.rs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix |
+| rust/scripts/detect-code-changes.rs | Local-specific; covered by principle/workflow matrix | scripts/detect-code-changes.rs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix |
+| rust/scripts/get-bump-type.rs | Local-specific; covered by principle/workflow matrix | scripts/get-bump-type.rs: identical | Local-specific; covered by principle/workflow matrix |
+| rust/scripts/get-version.rs | Local-specific; covered by principle/workflow matrix | scripts/get-version.rs: identical | Local-specific; covered by principle/workflow matrix |
+| rust/scripts/git-config.rs | Local-specific; covered by principle/workflow matrix | scripts/git-config.rs: identical | Local-specific; covered by principle/workflow matrix |
+| rust/scripts/publish-crate.rs | Local-specific; covered by principle/workflow matrix | scripts/publish-crate.rs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix |
+| rust/scripts/rust-paths.rs | Local-specific; covered by principle/workflow matrix | scripts/rust-paths.rs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix |
+| rust/scripts/version-and-commit.rs | Local-specific; covered by principle/workflow matrix | scripts/version-and-commit.rs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix |
+| rust/scripts/version-and-commit/tests.rs | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix | Local-specific; covered by principle/workflow matrix |
+| rust/scripts/wait-for-crate.rs | Local-specific; covered by principle/workflow matrix | scripts/wait-for-crate.rs: adapted/diff preserved | Local-specific; covered by principle/workflow matrix |

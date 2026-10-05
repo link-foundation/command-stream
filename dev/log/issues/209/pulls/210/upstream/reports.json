@@ -1,0 +1,32 @@
+[
+  {
+    "key": "js-version",
+    "repo": "link-foundation/js-ai-driven-development-pipeline-template",
+    "title": "Version guard rejects formatting changes and passes when the base ref is unavailable"
+  },
+  {
+    "key": "js-changeset",
+    "repo": "link-foundation/js-ai-driven-development-pipeline-template",
+    "title": "CI changeset validation can accept a pre-existing fragment when Git comparison fails"
+  },
+  {
+    "key": "js-preflight",
+    "repo": "link-foundation/js-ai-driven-development-pipeline-template",
+    "title": "Release preflight marks npm OIDC verified without checking the package token exchange"
+  },
+  {
+    "key": "rust-guards",
+    "repo": "link-foundation/rust-ai-driven-development-pipeline-template",
+    "title": "PR guards accept manual version changes on release/* and edits to existing changelog fragments"
+  },
+  {
+    "key": "rust-preflight",
+    "repo": "link-foundation/rust-ai-driven-development-pipeline-template",
+    "title": "Cargo credential preflight uses the cookie-only /api/v1/me endpoint and rejects valid API tokens"
+  },
+  {
+    "key": "python-changeset",
+    "repo": "link-foundation/python-ai-driven-development-pipeline-template",
+    "title": "Changelog validator returns success with source changes and no fragment, contrary to its documented exit contract"
+  }
+]

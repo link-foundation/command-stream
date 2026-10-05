@@ -1,0 +1,104 @@
+--- js-template/scripts/format-release-notes.mjs
++++ js/scripts/format-release-notes.mjs
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env node
++#!/usr/bin/env bun
+ 
+ /**
+  * Script to format GitHub release notes with proper formatting:
+@@ -7,6 +7,8 @@
+  * - Add shields.io NPM version badge
+  * - Format nicely with proper markdown
+  *
++ * IMPORTANT: Update the PACKAGE_NAME constant below to match your package.json
++ *
+  * PR Detection Logic:
+  * 1. Extract commit hash from changelog entry (if present)
+  * 2. Fall back to --commit-sha argument (passed from workflow)
+@@ -18,31 +20,23 @@
+  * - command-stream: Modern shell command execution with streaming support
+  * - lino-arguments: Unified configuration from CLI args, env vars, and .lenv files
+  *
+- * The version flag is named --release-version because yargs reserves
+- * --version for its own built-in flag.
++ * Note: Uses --release-version instead of --version to avoid conflict with yargs' built-in --version flag.
+  */
+ 
+-import { getJsRoot, parseJsRootConfig } from './js-paths.mjs';
+-import { readPackageInfo } from './package-info.mjs';
+-import {
+-  buildNpmVersionBadge,
+-  normalizeReleaseVersionForBadge,
+-} from './format-release-notes-helpers.mjs';
+-import { bootstrapDependencies } from './bootstrap-dependencies.mjs';
+-import { loadCommandStream, loadLinoArguments } from './use-module.mjs';
++import { loadUseM } from './use-m-loader.mjs';
++import { runChecked } from './run-checked.mjs';
++
++const PACKAGE_NAME = 'command-stream';
++
++// Load use-m dynamically
++const use = await loadUseM();
+ 
+ // Import link-foundation libraries
+-// Loaded through bootstrapDependencies: when the use-m CDN is unreachable,
+-// this script reports the failure and writes its outputs, and the process
+-// does not die inside module initialisation.
+-const [{ $ }, { makeConfig }] = await bootstrapDependencies([
+-  loadCommandStream,
+-  loadLinoArguments,
+-]);
++const { $ } = await use('command-stream');
++const { makeConfig } = await use('lino-arguments');
+ 
+ // Parse CLI arguments using lino-arguments
+-// The flag is named --release-version because yargs reserves --version for
+-// its own built-in flag.
++// Note: Using --release-version instead of --version to avoid conflict with yargs' built-in --version flag
+ const config = makeConfig({
+   yargs: ({ yargs, getenv }) =>
+     yargs
+@@ -65,12 +59,6 @@
+         type: 'string',
+         default: getenv('COMMIT_SHA', ''),
+         describe: 'Commit SHA for PR detection',
+-      })
+-      .option('js-root', {
+-        type: 'string',
+-        default: getenv('JS_ROOT', ''),
+-        describe:
+-          'JavaScript package root directory (auto-detected if not specified)',
+       }),
+ });
+ 
+@@ -78,9 +66,6 @@
+ const version = config.releaseVersion;
+ const repository = config.repository;
+ const passedCommitSha = config.commitSha;
+-const jsRootConfig = config.jsRoot || parseJsRootConfig();
+-const jsRoot = getJsRoot({ jsRoot: jsRootConfig, verbose: true });
+-const { name: packageName } = readPackageInfo({ jsRoot });
+ 
+ if (!releaseId || !version || !repository) {
+   console.error(
+@@ -204,8 +189,8 @@
+   }
+ 
+   // Build formatted release notes
+-  const versionWithoutV = normalizeReleaseVersionForBadge(version);
+-  const npmBadge = buildNpmVersionBadge(packageName, version);
++  const versionWithoutV = version.replace(/^js-v/, '').replace(/^v/, '');
++  const npmBadge = `[![npm version](https://img.shields.io/badge/npm-${versionWithoutV}-blue.svg)](https://www.npmjs.com/package/${PACKAGE_NAME}/v/${versionWithoutV})`;
+ 
+   let formattedBody = `${cleanDescription}`;
+ 
+@@ -218,7 +203,8 @@
+ 
+   // Update the release using JSON input to properly handle special characters
+   const updatePayload = JSON.stringify({ body: formattedBody });
+-  await $`gh api repos/${repository}/releases/${releaseId} -X PATCH --input -`.run(
++  await runChecked(
++    $`gh api repos/${repository}/releases/${releaseId} -X PATCH --input -`,
+     { stdin: updatePayload }
+   );
+ 

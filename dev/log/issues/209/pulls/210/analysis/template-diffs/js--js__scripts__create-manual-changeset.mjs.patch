@@ -1,0 +1,109 @@
+--- js-template/scripts/create-manual-changeset.mjs
++++ js/scripts/create-manual-changeset.mjs
+@@ -2,7 +2,9 @@
+ 
+ /**
+  * Create a changeset file for manual releases
+- * Usage: node scripts/create-manual-changeset.mjs --bump-type <major|minor|patch> [--description <description>] [--js-root <path>]
++ * Usage: bun scripts/create-manual-changeset.mjs --bump-type <major|minor|patch> [--description <description>]
++ *
++ * IMPORTANT: Update the PACKAGE_NAME constant below to match your package.json
+  *
+  * Uses link-foundation libraries:
+  * - use-m: Dynamic package loading without package.json dependencies
+@@ -10,24 +12,19 @@
+  * - lino-arguments: Unified configuration from CLI args, env vars, and .lenv files
+  */
+ 
+-import { mkdirSync, writeFileSync } from 'fs';
++import { writeFileSync } from 'fs';
+ import { randomBytes } from 'crypto';
+-import { join } from 'path';
++import { loadUseM } from './use-m-loader.mjs';
++import { runChecked } from './run-checked.mjs';
+ 
+-import { getChangesetDir, getJsRoot, parseJsRootConfig } from './js-paths.mjs';
+-import { formatChangesetHeader, readPackageInfo } from './package-info.mjs';
+-import { bootstrapDependencies } from './bootstrap-dependencies.mjs';
+-import { loadCommandStream, loadLinoArguments } from './use-module.mjs';
+-import { printUntrusted } from './github-actions-log.mjs';
++const PACKAGE_NAME = 'command-stream';
++
++// Load use-m dynamically
++const use = await loadUseM();
+ 
+ // Import link-foundation libraries
+-// Loaded through bootstrapDependencies: when the use-m CDN is unreachable,
+-// this script reports the failure and writes its outputs, and the process
+-// does not die inside module initialisation.
+-const [{ $ }, { makeConfig }] = await bootstrapDependencies([
+-  loadCommandStream,
+-  loadLinoArguments,
+-]);
++const { $ } = await use('command-stream');
++const { makeConfig } = await use('lino-arguments');
+ 
+ // Parse CLI arguments using lino-arguments
+ const config = makeConfig({
+@@ -43,55 +40,43 @@
+         type: 'string',
+         default: getenv('DESCRIPTION', ''),
+         describe: 'Description for the changeset',
+-      })
+-      .option('js-root', {
+-        type: 'string',
+-        default: getenv('JS_ROOT', ''),
+-        describe:
+-          'JavaScript package root directory (auto-detected if not specified)',
+       }),
+ });
+ 
+ try {
+-  const { bumpType, description: descriptionArg, jsRoot: jsRootArg } = config;
++  const { bumpType, description: descriptionArg } = config;
+ 
+   // Use provided description or default based on bump type
+   const description = descriptionArg || `Manual ${bumpType} release`;
+ 
+   if (!bumpType || !['major', 'minor', 'patch'].includes(bumpType)) {
+     console.error(
+-      'Usage: node scripts/create-manual-changeset.mjs --bump-type <major|minor|patch> [--description <description>]'
++      'Usage: bun scripts/create-manual-changeset.mjs --bump-type <major|minor|patch> [--description <description>]'
+     );
+     process.exit(1);
+   }
+ 
+-  const jsRootConfig = jsRootArg || parseJsRootConfig();
+-  const jsRoot = getJsRoot({ jsRoot: jsRootConfig, verbose: true });
+-  const changesetDir = getChangesetDir({ jsRoot });
+-  const { name: packageName } = readPackageInfo({ jsRoot });
+-
+   // Generate a random changeset ID
+   const changesetId = randomBytes(4).toString('hex');
+-  const changesetFile = join(changesetDir, `manual-release-${changesetId}.md`);
++  const changesetFile = `.changeset/manual-release-${changesetId}.md`;
+ 
+   // Create the changeset file with single quotes to match Prettier config
+   const content = `---
+-${formatChangesetHeader(packageName, bumpType)}
++'${PACKAGE_NAME}': ${bumpType}
+ ---
+ 
+ ${description}
+ `;
+ 
+-  mkdirSync(changesetDir, { recursive: true });
+   writeFileSync(changesetFile, content, 'utf-8');
+ 
+   console.log(`Created changeset: ${changesetFile}`);
+   console.log('Content:');
+-  printUntrusted(content);
++  console.log(content);
+ 
+   // Format with Prettier
+   console.log('\nFormatting with Prettier...');
+-  await $`npx prettier --write "${changesetFile}"`;
++  await runChecked($`bunx prettier --write "${changesetFile}"`);
+ 
+   console.log('\n✅ Changeset created and formatted successfully');
+ } catch (error) {

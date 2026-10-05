@@ -1,0 +1,263 @@
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/workflows.yml:4:  push:
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/workflows.yml:17:# Least-privilege default; these jobs only need to read the checked-out tree.
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/workflows.yml:28:jobs:
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/workflows.yml:76:          node scripts/check-status-gate-covers-all-jobs.mjs
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/workflows.yml:134:  # Terminal status gate: runs even when the jobs above fail or are
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/workflows.yml:150:    needs:
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/links.yml:4:  push:
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/links.yml:31:# Least-privilege default; jobs escalate individually when needed.
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/links.yml:42:jobs:
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/links.yml:139:  # Terminal status gate: runs even when the jobs above fail or are
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/links.yml:155:    needs:
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/security.yml:4:  push:
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/security.yml:12:# Least-privilege default; jobs escalate individually when needed.
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/security.yml:23:jobs:
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/security.yml:101:  # Terminal status gate: runs even when the jobs above fail or are
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/security.yml:117:    needs:
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:4:  push:
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:18:        default: 'instant'
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:20:          - instant
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:36:# Every job starts read-only; the publishing jobs escalate individually.
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:47:jobs:
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:48:  # === DETECT CHANGES - determines which jobs should run ===
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:59:      # branch already passed this workflow, so a docs-only push can trust
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:69:      any-code-changed: ${{ steps.changes.outputs.any-code-changed }}
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:98:    needs: [detect-changes]
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:118:    needs: [detect-changes]
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:121:      needs.detect-changes.outputs.any-code-changed == 'true'
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:161:        run: node scripts/check-version.mjs
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:173:    needs: [detect-changes]
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:174:    if: github.event_name == 'pull_request' && needs.detect-changes.outputs.any-code-changed == 'true'
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:222:    needs: [detect-changes]
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:228:        needs.detect-changes.outputs.any-code-changed == 'true'
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:280:    needs:
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:289:    # Run for relevant code/package/workflow changes, or for an instant manual
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:295:        needs.detect-changes.outputs.any-code-changed == 'true' ||
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:298:          github.event.inputs.release_mode == 'instant'
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:371:  # Builds the Dockerfile without pushing so a broken image fails the pull
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:373:  # push: false + load: true keeps this working for fork pull requests,
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:384:    needs: [detect-changes]
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:385:    if: github.event_name == 'pull_request' && needs.detect-changes.outputs.any-code-changed == 'true'
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:404:      - name: Build Docker image (no push)
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:411:        uses: docker/build-push-action@v7
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:415:          push: false
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:436:    needs: [detect-changes]
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:456:  # credentials can write before the expensive jobs spend their minutes
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:459:  # authorisation, so scripts/preflight-credentials.sh probes with an
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:462:  release-preflight:
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:470:      # mirrored in the publishing jobs' permission envelope -- is itself the
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:480:          # Release mode (push to main, manual instant release) fails the run
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:487:                (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:488:                (github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'instant')
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:495:        run: bash scripts/preflight-credentials.sh
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:497:  # Release - only runs on main after tests pass (for push events)
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:500:    needs:
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:511:        release-preflight,
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:519:    # This is needed because lint/test jobs have a transitive dependency on changeset-check
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:523:      github.event_name == 'push' &&
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:524:      needs.release-preflight.result == 'success' &&
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:542:      # `git push origin main` to publish the version bump, which needs the
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:604:          steps.version.outputs.version_committed == 'true' ||
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:642:  # Manual Instant Release - triggered via workflow_dispatch with instant mode
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:645:  instant-release:
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:648:    needs:
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:659:        release-preflight,
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:664:      github.event.inputs.release_mode == 'instant' &&
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:665:      needs.release-preflight.result == 'success' &&
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:687:      # .git/config: scripts/version-and-commit.mjs pushes the version
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:720:        run: node scripts/version-and-commit.mjs --mode instant --bump-type "$BUMP_TYPE" --description "$RELEASE_DESCRIPTION"
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:724:        if: steps.version.outputs.version_committed == 'true' || steps.version.outputs.already_released == 'true'
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:760:    needs: [release, instant-release, release-preflight]
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:767:      needs.release-preflight.result == 'success' &&
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:770:        (needs.instant-release.result == 'success' && needs.instant-release.outputs.published == 'true')
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:787:      RELEASE_VERSION: ${{ needs.release.outputs.published_version || needs.instant-release.outputs.published_version }}
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:809:  # Build each architecture on a native runner. Each build is pushed by digest;
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:813:    needs: [docker-publish-config]
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:832:      - name: Build and push platform image by digest
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:864:    needs: [docker-publish-config, docker-publish-build]
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:936:    needs: [lint]
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:1014:  # GitHub reports jobs killed by timeout-minutes as cancelled rather than
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:1026:    needs:
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:1038:      - release-preflight
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/release.yml:1040:      - instant-release
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/example-app.yml:13:  push:
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/example-app.yml:35:jobs:
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/example-app.yml:56:        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/example-app.yml:65:          GITHUB_PAGES: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/example-app.yml:76:        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/example-app.yml:86:    needs: [web-build]
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/example-app.yml:87:    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/example-app.yml:248:      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/example-app.yml:293:          # ruleset sends this generated commit through the fallback PR.
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/example-app.yml:298:            echo "::error::RELEASE_PR_TOKEN is required to push generated preview images."
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/example-app.yml:313:          # Screenshot-only pushes do not match this workflow's path filter.
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/example-app.yml:316:          node scripts/push-main-with-rebase-retry.mjs origin main --label preview-images
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/example-app.yml:341:  # Terminal status gate: runs even when the jobs above fail or are
+/tmp/issue-209-templates/js-ai-driven-development-pipeline-template/.github/workflows/example-app.yml:357:    needs:
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/desktop-release.yml:27:jobs:
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/desktop-release.yml:52:    needs: resolve
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/desktop-release.yml:131:    needs: [resolve, build]
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/desktop-release.yml:191:  # Terminal status gate (issue #156): GitHub reports jobs killed by
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/desktop-release.yml:197:    needs:
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/desktop-release.yml:212:          IS_MAIN: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/workflows.yml:4:  push:
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/workflows.yml:14:jobs:
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/workflows.yml:100:  # Terminal status gate (issue #156): GitHub reports jobs killed by
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/workflows.yml:106:    needs:
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/workflows.yml:120:          IS_MAIN: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/links.yml:4:  push:
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/links.yml:31:# Least-privilege default; jobs escalate individually when needed.
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/links.yml:42:jobs:
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/links.yml:143:  # Terminal status gate (issue #156): GitHub reports jobs killed by
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/links.yml:149:    needs:
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/links.yml:162:          IS_MAIN: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/security.yml:4:  push:
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/security.yml:14:jobs:
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/security.yml:87:  # Terminal status gate (issue #156): GitHub reports jobs killed by
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/security.yml:93:    needs:
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/security.yml:108:          IS_MAIN: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/links.yml:4:  push:
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/links.yml:31:jobs:
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/links.yml:110:  # Terminal status gate (issue #69): GitHub reports jobs killed by
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/links.yml:116:    needs:
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/docs.yml:3:# Builds Sphinx documentation on every push and PR that touches docs/, src/, or
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/docs.yml:4:# this workflow. On pushes to main the rendered site is published to GitHub
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/docs.yml:15:  push:
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/docs.yml:32:# per job, to the two jobs that actually publish.
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/docs.yml:40:jobs:
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/docs.yml:47:      # actions/configure-pages enables the Pages site on push to main.
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/docs.yml:76:        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_GITHUB_PAGES != 'true'
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/docs.yml:80:        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_GITHUB_PAGES == 'true'
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/docs.yml:84:        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_GITHUB_PAGES == 'true'
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/docs.yml:91:    needs: [build]
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/docs.yml:92:    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_GITHUB_PAGES == 'true'
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/docs.yml:108:  # Terminal status gate (issue #69): GitHub reports jobs killed by
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/docs.yml:114:    needs:
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/security.yml:4:  push:
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/security.yml:13:jobs:
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/security.yml:83:  # Terminal status gate (issue #69): GitHub reports jobs killed by
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/security.yml:89:    needs:
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:4:  push:
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:15:        default: 'instant'
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:17:          - instant
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:32:# Least-privilege default for every job; jobs that need more escalate explicitly.
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:50:  # `pull_request` jobs that compile and run branch code (`build.rs`, proc
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:64:jobs:
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:65:  # === DETECT CHANGES - determines which jobs should run ===
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:78:      any-code-changed: ${{ steps.changes.outputs.any-code-changed }}
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:115:    needs: [detect-changes]
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:128:  # scripts/preflight-credentials.sh probes with an attempted write. In
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:132:  # why the publishing jobs gate on `result == 'success'` rather than on the
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:134:  release-preflight:
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:150:                (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:151:                (github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'instant')
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:159:        run: bash scripts/preflight-credentials.sh
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:170:    needs: [detect-changes]
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:171:    if: github.event_name == 'pull_request' && needs.detect-changes.outputs.any-code-changed == 'true'
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:224:        run: rust-script scripts/check-version-modification.rs
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:253:    needs: [detect-changes]
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:254:    if: github.event_name == 'pull_request' && needs.detect-changes.outputs.any-code-changed == 'true'
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:289:  # Builds the image at pull-request stage without pushing, so a Dockerfile
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:291:  # (crate published, image missing). push: false also works for fork pull requests
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:298:    # scripts/run-with-budget-warning.sh; docker/build-push-action owns its own
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:305:    needs: [detect-changes]
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:306:    if: github.event_name == 'pull_request' && needs.detect-changes.outputs.any-code-changed == 'true'
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:326:      - name: Build image (no push)
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:328:        uses: docker/build-push-action@v7
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:331:          push: false
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:341:  # Binary crates must commit Cargo.lock so CI and release jobs resolve the same
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:351:    needs: [detect-changes]
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:358:        needs.detect-changes.outputs.any-code-changed == 'true'
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:388:    needs: [detect-changes, cargo-lock]
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:399:          needs.detect-changes.outputs.any-code-changed == 'true'
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:480:    needs: [detect-changes, cargo-lock]
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:488:          needs.detect-changes.outputs.any-code-changed == 'true' ||
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:561:    needs: [detect-changes, cargo-lock]
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:569:          needs.detect-changes.outputs.any-code-changed == 'true' ||
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:615:    needs: [detect-changes, cargo-lock]
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:686:    needs: [lint, test, script-tests]
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:724:  # Automatic release on push to main using changelog fragments
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:728:    needs: [lint, test, build, release-preflight]
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:735:    # Note: !cancelled() ensures consistent behavior with other jobs that depend on skipped jobs.
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:738:      github.event_name == 'push' &&
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:740:      needs.release-preflight.result == 'success' &&
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:751:      # This job pushes the version bump commit and tag back to `main`, so the
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:891:    needs: [lint, test, build, release-preflight]
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:903:      github.event.inputs.release_mode == 'instant' &&
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:904:      needs.release-preflight.result == 'success' &&
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:915:      # This job pushes the version bump commit and tag back to `main`, so the
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:947:        if: steps.version.outputs.version_committed == 'true' || steps.version.outputs.already_released == 'true'
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:951:        if: steps.version.outputs.version_committed == 'true' || steps.version.outputs.already_released == 'true'
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:955:        if: steps.version.outputs.version_committed == 'true' || steps.version.outputs.already_released == 'true'
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:964:          (steps.version.outputs.version_committed == 'true' ||
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:971:          (steps.version.outputs.version_committed == 'true' ||
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:978:          (steps.version.outputs.version_committed == 'true' ||
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:1003:          (steps.version.outputs.version_committed == 'true' ||
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:1024:    needs: [auto-release, manual-release, release-preflight]
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:1027:      needs.release-preflight.result == 'success' &&
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:1062:      - name: Build and push architecture digest
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:1064:        uses: docker/build-push-action@v7
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:1069:          outputs: type=image,name=${{ env.DOCKERHUB_IMAGE }},push-by-digest=true,name-canonical=true,push=true
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:1092:    needs: [auto-release, manual-release, docker-publish, release-preflight]
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:1095:      needs.release-preflight.result == 'success' &&
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:1205:    needs: [build]
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:1212:        (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:1213:        (github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'instant')
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:1279:  # GitHub reports jobs killed by timeout-minutes as cancelled. Observe every
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:1283:    needs:
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:1286:      - release-preflight
+/tmp/issue-209-templates/rust-ai-driven-development-pipeline-template/.github/workflows/release.yml:1315:          IS_MAIN: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/workflows.yml:8:  push:
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/workflows.yml:22:jobs:
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/workflows.yml:116:  # Terminal status gate (issue #69): GitHub reports jobs killed by
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/workflows.yml:122:    needs:
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:4:  push:
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:32:# Concurrency is intentionally job-scoped. Superseded read-only jobs cancel
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:35:# manual cancellation. Write-capable release jobs share one non-cancelling
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:39:jobs:
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:40:  # === DETECT CHANGES - determines which jobs should run ===
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:50:      any-code-changed: ${{ steps.changes.outputs.any-code-changed }}
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:97:  # These jobs ensure code quality and tests pass before any release
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:109:    needs: [detect-changes]
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:115:        needs.detect-changes.outputs.any-code-changed == 'true'
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:211:    needs: [detect-changes]
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:232:  # a login proves authentication, not authorisation -- so the preflight
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:236:  # same probes annotate without blocking, which is why the publishing jobs
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:238:  release-preflight:
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:259:                (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:266:        run: bash scripts/preflight-credentials.sh
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:277:    needs: [detect-changes]
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:285:        needs.detect-changes.outputs.any-code-changed == 'true'
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:365:    needs: [detect-changes, lint, test]
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:370:        needs.detect-changes.outputs.any-code-changed == 'true'
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:440:    needs: [detect-changes]
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:441:    if: github.event_name == 'pull_request' && needs.detect-changes.outputs.any-code-changed == 'true'
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:520:  # Build without pushing so a broken Dockerfile fails before package publish.
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:529:    needs: [detect-changes]
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:530:    if: github.event_name == 'pull_request' && needs.detect-changes.outputs.any-code-changed == 'true'
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:550:      - name: Build Docker image (no push)
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:553:        uses: docker/build-push-action@v7
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:556:          push: false
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:567:  # Automatic release on push to main (if version changed)
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:570:    needs: [lint, test, build, release-preflight]
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:579:      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:583:      needs.release-preflight.result == 'success'
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:694:    needs: [lint, test, build, release-preflight]
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:710:      needs.release-preflight.result == 'success'
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:718:      # .git/config: scripts/version_and_commit.py runs `git push origin main`
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:780:        if: steps.version.outputs.version_committed == 'true' || steps.version.outputs.already_released == 'true'
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:786:        if: steps.version.outputs.version_committed == 'true' || steps.version.outputs.already_released == 'true'
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:792:        if: steps.version.outputs.version_committed == 'true' || steps.version.outputs.already_released == 'true'
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:798:        if: steps.version.outputs.version_committed == 'true' || steps.version.outputs.already_released == 'true'
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:805:        if: steps.version.outputs.version_committed == 'true' || steps.version.outputs.already_released == 'true'
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:822:    needs: [auto-release, manual-release, release-preflight]
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:825:      needs.release-preflight.result == 'success' && (
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:864:  # Native runners build both architectures in parallel and push immutable
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:868:    needs: [docker-publish-config, release-preflight]
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:870:      needs.release-preflight.result == 'success' &&
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:898:      - name: Build and push platform image by digest
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:901:        uses: docker/build-push-action@v7
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:907:          outputs: type=image,name=${{ needs.docker-publish-config.outputs.image }},push-by-digest=true,name-canonical=true,push=true
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:926:    needs: [docker-publish-config, docker-publish-build, release-preflight]
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:928:      needs.release-preflight.result == 'success' &&
+/tmp/issue-209-templates/python-ai-driven-development-pipeline-template/.github/workflows/release.yml:981:    needs: [detect-changes, validate-docs, release-preflight, lint, test, build,
