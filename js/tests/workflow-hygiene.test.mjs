@@ -369,8 +369,17 @@ describe('every shipped ecosystem is audited', () => {
     // package-lock.json and bun.lock resolve transitive versions
     // independently, so one can be clean while the other is not: they differed
     // by 8 high-severity advisories when this workflow was written.
-    expect(runs).toContain('npm audit --package-lock-only --audit-level=high');
+    // npm audit cannot ignore a single advisory, so a wrapper runs it at the
+    // same high-severity bar, minus the shared .github/audit-ignore.txt list.
+    expect(runs).toContain('node ../.github/scripts/npm-audit.mjs');
+    const wrapper = readFileSync(
+      join(repoRoot, '.github/scripts/npm-audit.mjs'),
+      'utf8'
+    );
+    expect(wrapper).toContain("['audit', '--package-lock-only', '--json']");
+    expect(wrapper).toContain("new Set(['high', 'critical'])");
     expect(runs).toContain('bun audit --audit-level=high');
+    expect(runs).toContain('../.github/audit-ignore.txt');
   });
 
   test('the Rust lockfile is audited', () => {

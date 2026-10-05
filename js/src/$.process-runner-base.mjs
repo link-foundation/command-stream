@@ -317,6 +317,7 @@ class ProcessRunner extends StreamEmitter {
       stdin: 'inherit',
       cwd: undefined,
       env: undefined,
+      preferLocal: false,
       interactive: false,
       shellOperators: true,
       killSignal: 'SIGTERM',

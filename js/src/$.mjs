@@ -37,6 +37,7 @@ import {
 import { ProcessRunner } from './process-runner.mjs';
 import { toStreamResult } from './$.result-streams.mjs';
 import crossSpawn from 'cross-spawn';
+import { createRequire } from 'node:module';
 
 // Public APIs
 async function sh(commandString, options = {}) {
@@ -436,6 +437,17 @@ function registerBuiltins() {
 $tagged.spawn = crossSpawn;
 // `$.bun`: the Bun.$-compatible shell (also `command-stream/bun`).
 $tagged.bun = bunShell;
+
+// `$.zx` is the zx compatibility mode (issue #26): the `$` of
+// `command-stream/zx`. It is loaded on first access through `require(esm)`,
+// like `$.cjs`, so `command-stream` users who never touch it do not pay for
+// the zx layer.
+const requireZx = createRequire(import.meta.url);
+Object.defineProperty($tagged, 'zx', {
+  configurable: true,
+  enumerable: false,
+  get: () => requireZx('./zx/core.cjs').$,
+});
 
 trace('Initialization', () => 'Registering built-in virtual commands');
 registerBuiltins();

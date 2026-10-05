@@ -1,0 +1,130 @@
+// Port of zx test/error.test.ts (issue #26). Test vectors come from
+// google/zx (Apache-2.0); each test title carries the pinned upstream unit id.
+
+import assert from 'node:assert';
+import { describe, test } from 'node:test';
+import { Fail } from '../../src/zx/error.mjs';
+
+const {
+  getErrnoMessage,
+  getExitCodeInfo,
+  getCallerLocation,
+  getCallerLocationFromString,
+  formatExitMessage,
+  formatErrorMessage,
+  formatErrorDetails,
+} = Fail;
+
+describe('zx error', () => {
+  test('[zx:test/error.test.ts:30:3:registration] getExitCodeInfo()', () => {
+    assert.equal(getExitCodeInfo(2), 'Misuse of shell builtins');
+  });
+
+  test('[zx:test/error.test.ts:34:3:registration] getErrnoMessage()', () => {
+    assert.equal(getErrnoMessage(-2), 'No such file or directory');
+    assert.equal(getErrnoMessage(1e9), 'Unknown error');
+    assert.equal(getErrnoMessage(undefined), 'Unknown error');
+  });
+
+  test('[zx:test/error.test.ts:40:3:registration] getCallerLocation()', () => {
+    // node:test reports `TestContext.<anonymous>`; Bun names the frame after
+    // the enclosing test callback. Both point back into this file's test.
+    const location = getCallerLocation(new Error('Foo'));
+    assert.match(location, /TestContext\.<anonymous>|error\.test\.mjs/);
+  });
+
+  describe('getCallerLocationFromString()', () => {
+    test('[zx:test/error.test.ts:48:5:registration] empty', () => {
+      assert.equal(getCallerLocationFromString(), 'unknown');
+    });
+
+    test('[zx:test/error.test.ts:52:5:registration] no-match', () => {
+      assert.equal(
+        getCallerLocationFromString('stack\nstring'),
+        'stack\nstring'
+      );
+    });
+
+    test('[zx:test/error.test.ts:59:5:registration] getCallerLocationFromString-v8', () => {
+      const stack = `
+    Error
+      at getCallerLocation (/Users/user/test.js:22:17)
+      at Proxy.set (/Users/user/test.js:40:10)
+      at e (/Users/user/test.js:34:13)
+      at d (/Users/user/test.js:11:5)
+      at c (/Users/user/test.js:8:5)
+      at b (/Users/user/test.js:5:5)
+      at a (/Users/user/test.js:2:5)
+      at Object.<anonymous> (/Users/user/test.js:37:1)
+      at Module._compile (node:internal/modules/cjs/loader:1254:14)
+      at Module._extensions..js (node:internal/modules/cjs/loader:1308:10)
+      at Module.load (node:internal/modules/cjs/loader:1117:32)
+      at Module._load (node:internal/modules/cjs/loader:958:12)
+    `;
+      assert.match(getCallerLocationFromString(stack), /^.*:11:5.*$/);
+    });
+
+    test('[zx:test/error.test.ts:78:5:registration] getCallerLocationFromString-JSC', () => {
+      const stack = `
+    getCallerLocation@/Users/user/test.js:22:17
+    Proxy.set@/Users/user/test.js:40:10)
+    e@/Users/user/test.js:34:13
+    d@/Users/user/test.js:11:5
+    c@/Users/user/test.js:8:5
+    b@/Users/user/test.js:5:5
+    a@/Users/user/test.js:2:5
+    module code@/Users/user/test.js:37:1
+    evaluate@[native code]
+    moduleEvaluation@[native code]
+    moduleEvaluation@[native code]
+    @[native code]
+    asyncFunctionResume@[native code]
+    promiseReactionJobWithoutPromise@[native code]
+    promiseReactionJob@[native code]
+    d@/Users/user/test.js:11:5
+  `;
+      assert.match(getCallerLocationFromString(stack), /^.*:11:5.*$/);
+    });
+  });
+
+  test('[zx:test/error.test.ts:102:3:registration] getExitMessage()', () => {
+    assert.match(
+      formatExitMessage(2, null, '', ''),
+      /Misuse of shell builtins/
+    );
+    assert.equal(
+      formatExitMessage(1, 'SIGKILL', '', '', 'data'),
+      `\n    at \n    exit code: 1\n    signal: SIGKILL\n    details: \ndata`
+    );
+    assert.equal(formatExitMessage(0, null, '', ''), 'exit code: 0');
+  });
+
+  test('[zx:test/error.test.ts:108:3:registration] getErrorMessage()', () => {
+    assert.match(
+      formatErrorMessage({ errno: -2 }, ''),
+      /No such file or directory/
+    );
+    assert.match(formatErrorMessage({ errno: -1e9 }, ''), /Unknown error/);
+    assert.match(formatErrorMessage({}, ''), /Unknown error/);
+  });
+
+  test('[zx:test/error.test.ts:123:3:registration] findErrors()', () => {
+    const lines = [...Array(40).keys()].map((v) => `${v}`);
+    assert.equal(formatErrorDetails([]), '', 'empty returns empty');
+    assert.equal(
+      formatErrorDetails(['foo', 'bar']),
+      'foo\nbar',
+      'squashes a few'
+    );
+    assert.equal(
+      formatErrorDetails(['failure: foo', 'NOT OK smth', ...lines]),
+      'failure: foo\nNOT OK smth',
+      'extracts errors'
+    );
+    assert.equal(
+      formatErrorDetails(lines),
+      '0\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n...',
+      'shows a sample'
+    );
+  });
+});

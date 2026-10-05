@@ -6,6 +6,7 @@
 //   const name = await $`echo ${'world'} | cat`.text();
 
 import { braces } from './braces.mjs';
+import { resolvePreferredEnv } from '../$.local-bin.mjs';
 import { ShellFile } from './file.mjs';
 import { Interpreter } from './interpreter.mjs';
 import { parse } from './parser.mjs';
@@ -106,6 +107,7 @@ class ParsedShellScript {
     this.jsobjs = jsobjs;
     this.cwd = undefined;
     this.env = undefined;
+    this.preferLocal = false;
     this.quiet = false;
   }
 
@@ -184,6 +186,13 @@ export class ShellPromise extends Promise {
     return this;
   }
 
+  /** Prefer project-local executables (a command-stream extension). */
+  preferLocal(value = true) {
+    this.#throwIfRunning();
+    this.#args.preferLocal = value;
+    return this;
+  }
+
   #run() {
     if (this.#hasRun) {
       return;
@@ -195,7 +204,7 @@ export class ShellPromise extends Promise {
     try {
       interp = new Interpreter({
         jsobjs: args.jsobjs,
-        env: args.env ?? {},
+        env: resolvePreferredEnv(args.env ?? {}, args.cwd, args.preferLocal),
         cwd: args.cwd,
         quiet: args.quiet,
       });
@@ -284,6 +293,7 @@ export class ShellPromise extends Promise {
 
 const cwdSymbol = Symbol('cwd');
 const envSymbol = Symbol('env');
+const preferLocalSymbol = Symbol('preferLocal');
 const throwsSymbol = Symbol('throws');
 const originalDefaultEnv = process.env;
 
@@ -308,6 +318,12 @@ class ShellPrototype {
     } else {
       throw new TypeError('cwd must be a string or undefined');
     }
+    return this;
+  }
+
+  /** Prefer project-local executables by default (a command-stream extension). */
+  preferLocal(value = true) {
+    this[preferLocalSymbol] = value;
     return this;
   }
 
@@ -339,12 +355,14 @@ function makeShellFunction(name) {
       if (env) {
         parsed.setEnv(env);
       }
+      parsed.preferLocal = fn[preferLocalSymbol];
       return new ShellPromise(parsed, fn[throwsSymbol]);
     },
   }[name];
   Object.setPrototypeOf(fn, ShellPrototype.prototype);
   fn[cwdSymbol] = undefined;
   fn[envSymbol] = originalDefaultEnv;
+  fn[preferLocalSymbol] = false;
   fn[throwsSymbol] = true;
   return fn;
 }

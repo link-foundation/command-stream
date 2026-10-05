@@ -158,10 +158,11 @@ jobs:
 
       # --package-lock-only audits what is committed, without installing it, so
       # the result describes the lockfile a consumer would resolve rather than
-      # whatever the runner happened to fetch.
+      # whatever the runner happened to fetch. The wrapper fails at high
+      # severity like --audit-level=high, minus .github/audit-ignore.txt.
       - name: Audit the committed package-lock.json
         working-directory: js
-        run: npm audit --package-lock-only --audit-level=high
+        run: node ../.github/scripts/npm-audit.mjs
 
   bun-audit:
     name: Audit bun lockfile
@@ -194,9 +195,15 @@ jobs:
       # bun.lock resolves versions independently of package-lock.json, so a
       # clean npm audit does not imply a clean bun one: while fixing #199 the
       # two lockfiles disagreed by 8 high-severity advisories.
+      # Shares the npm job's ignore list, see .github/audit-ignore.txt.
       - name: Audit the committed bun.lock
         working-directory: js
-        run: bun audit --audit-level=high
+        run: |
+          ignores=()
+          while read -r id; do
+            ignores+=("--ignore=$id")
+          done < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' ../.github/audit-ignore.txt)
+          bun audit --audit-level=high "${ignores[@]}"
 
   cargo-audit:
     name: Audit Cargo lockfile

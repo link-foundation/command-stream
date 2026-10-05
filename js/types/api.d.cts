@@ -51,6 +51,8 @@ export interface ProcessOptions {
   cwd?: string;
   /** Environment of the command (replaces `process.env`, not merged). */
   env?: NodeJS.ProcessEnv | Record<string, string | undefined>;
+  /** Resolve project executables from `<cwd>/node_modules/.bin` (or explicit directories) first. */
+  preferLocal?: boolean | string | string[];
   /** Pass the TTY through to the command when stdin/stdout/stderr are TTYs. */
   interactive?: boolean;
   /** Let the built-in parser handle `&&`, `||`, `;` and subshells. Default: `true`. */
@@ -445,6 +447,8 @@ export interface CrossSpawn {
 export interface Dollar extends CommandTag {
   (options: ProcessOptions): CommandTag;
   spawn: CrossSpawn;
+  /** zx compatibility mode: the `$` of `command-stream/zx`. */
+  readonly zx: typeof import('./zx-api.cjs').$;
   /** The Bun.$-compatible shell (the same as `command-stream/bun`). */
   bun: BunShell;
 }

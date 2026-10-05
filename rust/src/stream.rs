@@ -91,6 +91,7 @@ pub struct StreamingRunner {
     command: StreamingCommand,
     cwd: Option<PathBuf>,
     env: Option<HashMap<String, String>>,
+    prefer_local: crate::PreferLocal,
     stdin_content: Option<String>,
     kill_signal: String,
     kill_grace_ms: u64,
@@ -135,6 +136,7 @@ impl StreamingRunner {
             command,
             cwd: None,
             env: None,
+            prefer_local: crate::PreferLocal::Off,
             stdin_content: None,
             kill_signal: DEFAULT_KILL_SIGNAL.to_string(),
             kill_grace_ms: DEFAULT_KILL_GRACE_MS,
@@ -151,6 +153,12 @@ impl StreamingRunner {
     /// Set environment variables
     pub fn env(mut self, env: HashMap<String, String>) -> Self {
         self.env = Some(env);
+        self
+    }
+
+    /// Prefer executables from the command's working directory or explicit directories.
+    pub fn prefer_local(mut self, preference: crate::PreferLocal) -> Self {
+        self.prefer_local = preference;
         self
     }
 
@@ -202,7 +210,17 @@ impl StreamingRunner {
         // Spawn the process handling task
         let command = self.command.clone();
         let cwd = self.cwd.take();
-        let env = self.env.take();
+        let mut env = self.env.take();
+        let local_cwd = cwd
+            .clone()
+            .or_else(|| std::env::current_dir().ok())
+            .unwrap_or_else(|| PathBuf::from("."));
+        if let Some((key, path)) =
+            crate::local_bin::preferred_path(env.as_ref(), &local_cwd, &self.prefer_local)
+        {
+            env.get_or_insert_with(|| std::env::vars().collect())
+                .insert(key, path);
+        }
         let stdin_content = self.stdin_content.take();
         let grace = GraceWindows {
             exit_pump_ms: self.exit_pump_grace_ms,

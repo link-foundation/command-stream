@@ -6,6 +6,9 @@
   "main": "./src/$.cjs",
   "module": "./src/$.mjs",
   "types": "./types/index.d.ts",
+  "bin": {
+    "command-stream": "./src/zx/cli.mjs"
+  },
   "exports": {
     ".": {
       "import": {
@@ -21,6 +24,44 @@
     "./process-runner": {
       "types": "./types/process-runner.d.ts",
       "default": "./src/process-runner.mjs"
+    },
+    "./zx": {
+      "import": {
+        "types": "./types/zx.d.ts",
+        "default": "./src/zx/index.mjs"
+      },
+      "require": {
+        "types": "./types/zx.d.cts",
+        "default": "./src/zx/index.cjs"
+      },
+      "default": "./src/zx/index.mjs"
+    },
+    "./zx/core": {
+      "import": {
+        "types": "./types/zx-core.d.ts",
+        "default": "./src/zx/core.mjs"
+      },
+      "require": {
+        "types": "./types/zx-core.d.cts",
+        "default": "./src/zx/core.cjs"
+      },
+      "default": "./src/zx/core.mjs"
+    },
+    "./zx/cli": {
+      "import": {
+        "types": "./types/zx-cli.d.ts",
+        "default": "./src/zx/cli.mjs"
+      },
+      "require": {
+        "types": "./types/zx-cli.d.cts",
+        "default": "./src/zx/cli.cjs"
+      },
+      "default": "./src/zx/cli.mjs"
+    },
+    "./zx/globals": {
+      "types": "./types/zx-globals.d.ts",
+      "require": "./src/zx/globals.cjs",
+      "default": "./src/zx/globals.mjs"
     },
     "./bun": {
       "import": {

@@ -65,6 +65,7 @@
 pub mod ansi;
 pub mod bun_shell;
 pub mod events;
+pub mod local_bin;
 #[doc(hidden)]
 pub mod macros;
 pub mod pipeline;
@@ -81,6 +82,9 @@ pub mod commands;
 pub mod shell_parser;
 pub mod utils;
 
+// zx-compatible API (google/zx 8.x): `$`-style Shell, ProcessOutput, goods.
+pub mod zx;
+
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::Stdio;
@@ -95,6 +99,7 @@ pub use utils::{CommandResult, VirtualUtils};
 // Re-export modular utilities at crate root for convenient access
 pub use ansi::{AnsiConfig, AnsiUtils};
 pub use events::{EventData, EventType, StreamEmitter};
+pub use local_bin::PreferLocal;
 pub use pipeline::{Pipeline, PipelineBuilder, PipelineExt};
 pub use quote::{
     escape_for_double_quotes, escape_for_single_quotes, has_shell_escapes,
@@ -281,6 +286,8 @@ pub struct RunOptions {
     pub cwd: Option<PathBuf>,
     /// Environment variables
     pub env: Option<HashMap<String, String>>,
+    /// Prefer executables from the working directory or explicit local directories.
+    pub prefer_local: PreferLocal,
     /// Interactive mode (TTY forwarding)
     pub interactive: bool,
     /// Enable shell operator parsing
@@ -309,6 +316,7 @@ impl Default for RunOptions {
             stdin: StdinOption::Inherit,
             cwd: None,
             env: None,
+            prefer_local: PreferLocal::Off,
             interactive: false,
             shell_operators: true,
             trace: true,
@@ -524,6 +532,18 @@ impl ProcessRunner {
                 cmd.env(key, value);
             }
         }
+        let local_cwd = self
+            .options
+            .cwd
+            .clone()
+            .or_else(|| std::env::current_dir().ok())
+            .unwrap_or_else(|| PathBuf::from("."));
+        local_bin::apply_prefer_local(
+            &mut cmd,
+            self.options.env.as_ref(),
+            &local_cwd,
+            &self.options.prefer_local,
+        );
 
         // Run the child in its own process group so that killing it can signal
         // the whole group (parent + grandchildren), matching `StreamingRunner`

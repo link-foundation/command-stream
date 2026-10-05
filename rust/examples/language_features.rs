@@ -5,6 +5,7 @@
 //! `cargo run --example language_features -- await-result`.
 
 use command_stream::commands::{CommandContext, VirtualCommandRegistry};
+use command_stream::zx;
 use command_stream::{
     cmd, create, exec, run, run_sync, set_shell_option, unset_shell_option, AnsiUtils,
     CommandResult, EventData, EventType, OutputChunk, Pipeline, ProcessRunner, RunOptions,
@@ -448,6 +449,37 @@ async fn ansi_utils() -> ExampleResult {
 }
 // endfeature:ansi-utils
 
+// feature:zx-compat
+async fn zx_compat() -> ExampleResult {
+    // Interpolated values are quoted the zx way, so spaces survive.
+    let words = "hello world";
+    let greeting = zx!("echo {}", words).await?;
+
+    // Failing commands return Err(ProcessOutput), unless `nothrow` is set.
+    let rejected = zx!("exit 2").await.unwrap_err();
+    let tolerated = zx!(zx::Shell::new().nothrow(true), "exit 3").await?;
+
+    let sorted = zx!("printf 'b\\na\\n'").pipe(zx!("sort")).await?;
+
+    // `within` scopes settings such as the working directory.
+    let dir = std::env::temp_dir().canonicalize()?;
+    let inside = zx::within(async {
+        zx::configure(|options| options.cwd = Some(dir.clone()));
+        zx!("pwd").await
+    })
+    .await?;
+
+    Ok(vec![
+        observation("interpolation", greeting.stdout),
+        observation("rejected exit code", rejected.exit_code),
+        observation("nothrow exit code", tolerated.exit_code),
+        observation("pipe", sorted.lines()),
+        observation("within cwd", inside.stdout.trim() == dir.to_string_lossy()),
+        observation("cwd restored", zx::current_options().cwd.is_none()),
+    ])
+}
+// endfeature:zx-compat
+
 async fn execute(id: &str) -> ExampleResult {
     match id {
         "await-result" => await_result().await,
@@ -475,6 +507,7 @@ async fn execute(id: &str) -> ExampleResult {
         "interpolation" => interpolation().await,
         "shell-settings" => shell_settings().await,
         "ansi-utils" => ansi_utils().await,
+        "zx-compat" => zx_compat().await,
         _ => Err(format!("unknown feature: {id}").into()),
     }
 }
