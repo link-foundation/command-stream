@@ -150,6 +150,11 @@ output through `CommandContext::output_tx`; their returned `CommandResult`
 retains the output. Use `StreamingRunner` for external streaming without
 retaining the complete result. These boundaries matter for large data.
 
+JavaScript `streams.stdin` starts a real process with a writable input pipe.
+For a built-in name, this mode uses the installed system command and its flags;
+the public runner owns its streams, PID and cancellation. Pass completed input
+with the `stdin` option or use a virtual pipeline to run the native handler.
+
 Register an application-specific transform without installing a shell program:
 
 ```javascript
