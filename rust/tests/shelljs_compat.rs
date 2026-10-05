@@ -51,8 +51,20 @@ async fn compatibility_directory_stack_text_commands_and_writes() {
     let dir = tempfile::tempdir().unwrap();
     let mut shell = ShellJs::new();
     shell.config.silent = true;
+    let before = shell.cwd().canonicalize().unwrap();
     shell.pushd(&[dir.path().to_str().unwrap()]).await.unwrap();
-    assert!(shell.dirs().stdout.contains(dir.path().to_str().unwrap()));
+    // cd resolves symlinks and removes Windows verbatim path prefixes. Check
+    // directory identity and stack order rather than the caller's spelling.
+    let dirs = shell.dirs();
+    let paths: Vec<_> = dirs
+        .stdout
+        .lines()
+        .map(|path| std::path::Path::new(path).canonicalize().unwrap())
+        .collect();
+    assert_eq!(
+        paths,
+        vec![dir.path().canonicalize().unwrap(), before.clone()]
+    );
     let text = command_stream::CommandResult::success("hello\nworld\n");
     shell.to(&text, "output", false).await.unwrap();
     assert_eq!(
@@ -86,6 +98,8 @@ async fn compatibility_directory_stack_text_commands_and_writes() {
     );
     assert_eq!(shell.find(&["."]).await.unwrap().code, 0);
     shell.popd().await.unwrap();
+    assert_eq!(shell.cwd().canonicalize().unwrap(), before);
+    assert_eq!(shell.dirs().stdout.lines().count(), 1);
     assert_eq!(
         shell.call("nonexistent-command", &[]).await.unwrap().code,
         127
