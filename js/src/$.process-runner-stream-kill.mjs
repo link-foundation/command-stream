@@ -44,14 +44,19 @@ function sendSignalToProcess(pid, sig, runtime) {
     );
   }
 
+  const deliveredSignal = process.platform === 'win32' ? 'SIGKILL' : sig;
   try {
-    process.kill(pid, sig);
-    trace('ProcessRunner', () => `Sent ${sig} to ${prefix}process ${pid}`);
-    operations.push(`${sig} to process`);
+    process.kill(pid, deliveredSignal);
+    trace(
+      'ProcessRunner',
+      () => `Sent ${deliveredSignal} to ${prefix}process ${pid}`
+    );
+    operations.push(`${deliveredSignal} to process`);
   } catch (err) {
     trace(
       'ProcessRunner',
-      () => `Error sending ${sig} to ${prefix}process: ${err.message}`
+      () =>
+        `Error sending ${deliveredSignal} to ${prefix}process: ${err.message}`
     );
   }
 
@@ -181,6 +186,13 @@ function killChildProcess(
     'ProcessRunner',
     () => `${runtime} kill operations attempted: ${killOperations.join(', ')}`
   );
+
+  // taskkill and the direct-child fallback are both forceful on Windows.
+  // Retrying after a grace period could kill a different process that reused
+  // the terminated child's PID.
+  if (process.platform === 'win32') {
+    return;
+  }
 
   if (forceful) {
     if (isBun) {

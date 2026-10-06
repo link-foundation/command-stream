@@ -85,6 +85,11 @@ merged output is captured in `stdout`, while `stderr` is empty.
 
 ## Streaming
 
+On Windows, killing a process runner or cancelling/dropping a streaming command
+stops its descendants with `taskkill /PID <pid> /T /F` before the parent exits.
+Termination is immediate; the signal grace period applies to POSIX platforms.
+If `taskkill` fails, termination falls back to the direct child.
+
 Completed `CommandResult` values expose readable `stdout` and `stderr`
 snapshots (`std::io::Read`) and a writable `stdin` record (`std::io::Write`).
 String methods and formatting remain available on the output snapshots. Reading

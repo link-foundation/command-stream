@@ -630,25 +630,23 @@ async fn run_streaming_process(
             // or awaiting a zero-length timeout, which yields to the runtime -
             // is a window the child can be scheduled in, which made "no grace"
             // a race the child occasionally won rather than a guarantee.
-            let survived_grace = if grace.kill_ms == 0 {
-                true
-            } else {
+            if cfg!(unix) && grace.kill_ms > 0 && signal != "SIGKILL" {
                 if let Some(pid) = pid {
                     // The child is always spawned with `process_group(0)`
                     // above, so it leads the group named by its own pid.
                     send_signal_to_process(pid, &signal, Delivery::ProcessAndGroup);
                 }
-                tokio::time::timeout(Duration::from_millis(grace.kill_ms), child.wait())
-                    .await
-                    .is_err()
-            };
-            if survived_grace {
-                if let Some(pid) = pid {
-                    send_signal_to_process(pid, "SIGKILL", Delivery::ProcessAndGroup);
-                }
-                let _ = child.start_kill();
-                let _ = child.wait().await;
+                // Keep the leader unreaped until escalation: its descendants
+                // may ignore the first signal even when the leader exits.
+                // Reaping it here previously suppressed their SIGKILL.
+                tokio::time::sleep(Duration::from_millis(grace.kill_ms)).await;
             }
+            if let Some(pid) = pid {
+                // Windows uses taskkill here before terminating the parent.
+                send_signal_to_process(pid, "SIGKILL", Delivery::ProcessAndGroup);
+            }
+            let _ = child.start_kill();
+            let _ = child.wait().await;
             // Report the conventional 128 + signal code for the requested
             // signal, matching the JavaScript implementation.
             let _ = exit_signal_tx.send(Some(signal.clone()));

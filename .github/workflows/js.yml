@@ -299,6 +299,8 @@ jobs:
           node --test js/tests/node-commonjs-entry.mjs
           node --test js/tests/node-process-regressions.mjs
           node --test js/tests/windows-tree-kill.test.mjs
+          node --test js/tests/node-windows-kill.mjs
+          node --test js/tests/stdin-epipe.test.mjs
           node --test js/tests/github-cli-body.test.mjs
 
       # The zx-compatible API (issue #26) ports google/zx's own test suite; the
@@ -345,18 +347,18 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
-      - name: Check descendant termination
+      - name: Install dependencies for process tests
         # These regressions use the core runner, without building native PTY
         # extensions or the terminal font assets.
         working-directory: js
         run: npm ci --ignore-scripts
 
       - name: Run descendant termination regressions
-        run: node --test js/tests/windows-tree-kill.test.mjs
+        run: node --test js/tests/windows-tree-kill.test.mjs js/tests/node-windows-kill.mjs js/tests/stdin-epipe.test.mjs
 
   release:
     name: Release JavaScript package
-    needs: [lint, test]
+    needs: [lint, test, process-tree]
     # Required because lint/test depend on the pull-request-only changeset-check
     # job, which is skipped on push events.
     if: |
@@ -364,7 +366,8 @@ jobs:
       github.ref == 'refs/heads/main' &&
       github.event_name == 'push' &&
       needs.lint.result == 'success' &&
-      needs.test.result == 'success'
+      needs.test.result == 'success' &&
+      needs.process-tree.result == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -479,11 +482,12 @@ jobs:
 
   instant-release:
     name: Instant JavaScript release
-    needs: [lint, test]
+    needs: [lint, test, process-tree]
     if: >-
       !cancelled() && github.ref == 'refs/heads/main' &&
       github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'instant' &&
-      needs.lint.result == 'success' && needs.test.result == 'success'
+      needs.lint.result == 'success' && needs.test.result == 'success' &&
+      needs.process-tree.result == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
