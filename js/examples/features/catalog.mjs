@@ -574,7 +574,7 @@ export const features = [
     title: 'Execa compatibility mode',
     category: 'Running commands',
     summary:
-      'The isolated command-stream/execa entry and general $.execa expose Execa 9.6.1; Rust has portable exact-argv counterparts with explicit limits.',
+      'The isolated command-stream/execa entry and general $.execa expose Execa 10.1.0; Rust has portable exact-argv counterparts with explicit limits.',
     file: 'js/examples/features/execa-compat.mjs',
     api: ['$.execa', '$.execaCompat', 'command-stream/execa'],
     alternatives: {

@@ -24,7 +24,7 @@ jobs:
       group: check-${{ github.workflow }}-${{ github.ref }}-parity
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
           # Read-only job: diff, merge simulation and executable feature checks.
@@ -44,7 +44,7 @@ jobs:
         run: bash .github/scripts/simulate-fresh-merge.sh
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7.0.0
         with:
           node-version: '24.x'
 
@@ -54,7 +54,7 @@ jobs:
           bun-version: latest
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-01
+        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-06
         with:
           toolchain: stable
 

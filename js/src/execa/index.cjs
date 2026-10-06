@@ -6,7 +6,7 @@ try {
 } catch (error) {
   if (error && error.code === 'ERR_REQUIRE_ESM') {
     throw new Error(
-      'command-stream/execa: require() needs Node.js >= 20.19.0 or >= 22.12.0, or Bun. ' +
+      'command-stream/execa: require() needs Node.js >= 22.12.0, or Bun. ' +
         "Upgrade Node.js, or use await import('command-stream/execa').",
       { cause: error }
     );

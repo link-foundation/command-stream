@@ -77,7 +77,7 @@ jobs:
       group: check-${{ github.workflow }}-${{ github.ref }}-changeset-check
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -116,7 +116,7 @@ jobs:
       group: check-${{ github.workflow }}-${{ github.ref }}-lint
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
         with:
           # The merge simulation below needs the base branch's history.
           fetch-depth: 0
@@ -183,7 +183,7 @@ jobs:
         include:
           - os: ubuntu-24.04
             runtime: node
-            node-version: 20
+            node-version: 26
           - os: ubuntu-24.04
             runtime: node
             node-version: 22
@@ -191,7 +191,7 @@ jobs:
             runtime: node
             node-version: 24
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
         with:
           # The merge simulation below needs the base branch's history.
           fetch-depth: 0
@@ -215,7 +215,7 @@ jobs:
 
       - name: Setup Node.js PTY host
         if: matrix.runtime == 'bun'
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7.0.0
         with:
           node-version: '24.x'
 
@@ -259,7 +259,7 @@ jobs:
 
       - name: Preserve Bun test diagnostics
         if: ${{ always() && matrix.runtime == 'bun' }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: bun-tests-${{ matrix.os }}
           path: ci-test-logs/
@@ -267,7 +267,7 @@ jobs:
 
       - name: Setup Node.js
         if: matrix.runtime == 'node'
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7.0.0
         with:
           node-version: ${{ matrix.node-version }}
 
@@ -329,9 +329,9 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-15, windows-2025]
-        node-version: ['20.x', '22.x', '24.x']
+        node-version: ['22.x', '24.x', '26.x']
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -344,7 +344,7 @@ jobs:
         run: bash .github/scripts/simulate-fresh-merge.sh
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7.0.0
         with:
           node-version: ${{ matrix.node-version }}
 
@@ -387,12 +387,12 @@ jobs:
       # this repository sets persist-credentials: false; zizmor runs at
       # --min-confidence low so a checkout that forgets it fails the audit, and
       # the six writer jobs that legitimately need it say so here.
-      - uses: actions/checkout@v6 # zizmor: ignore[artipacked]
+      - uses: actions/checkout@v7.0.1 # zizmor: ignore[artipacked]
         with:
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7.0.0
         with:
           node-version: '24.x'
           registry-url: 'https://registry.npmjs.org'
@@ -504,12 +504,12 @@ jobs:
       # this repository sets persist-credentials: false; zizmor runs at
       # --min-confidence low so a checkout that forgets it fails the audit, and
       # the six writer jobs that legitimately need it say so here.
-      - uses: actions/checkout@v6 # zizmor: ignore[artipacked]
+      - uses: actions/checkout@v7.0.1 # zizmor: ignore[artipacked]
         with:
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7.0.0
         with:
           node-version: '24.x'
           registry-url: 'https://registry.npmjs.org'
@@ -586,7 +586,7 @@ jobs:
       # this repository sets persist-credentials: false; zizmor runs at
       # --min-confidence low so a checkout that forgets it fails the audit, and
       # the six writer jobs that legitimately need it say so here.
-      - uses: actions/checkout@v6 # zizmor: ignore[artipacked]
+      - uses: actions/checkout@v7.0.1 # zizmor: ignore[artipacked]
         with:
           fetch-depth: 0
 

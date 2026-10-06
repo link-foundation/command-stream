@@ -257,7 +257,7 @@ class Expansion {
 
   glob() {
     const pattern = neutralizeGlobMetachars(this.currentOut, this.metaOffsets);
-    let entries = [];
+    let entries;
     let walkErr = null;
     try {
       entries = globWalkSync(pattern, {

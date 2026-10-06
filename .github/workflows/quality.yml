@@ -34,7 +34,7 @@ jobs:
       group: check-${{ github.workflow }}-${{ github.ref }}-format
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
         with:
           # The merge simulation below needs the base branch's history.
           fetch-depth: 0
@@ -74,7 +74,7 @@ jobs:
       group: check-${{ github.workflow }}-${{ github.ref }}-docs
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
         with:
           # The merge simulation below needs the base branch's history, and the
           # test itself lists the tracked markdown files with `git ls-files`.
@@ -108,7 +108,7 @@ jobs:
       group: check-${{ github.workflow }}-${{ github.ref }}-hygiene
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false

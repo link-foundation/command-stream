@@ -50,13 +50,13 @@ jobs:
       # results to the commit it finds in the checkout, and GitHub rejects
       # results for a commit it has never seen; a merge commit created on the
       # runner is exactly that. CodeQL therefore analyses the merge preview.
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
         with:
           # Analysis reads the tree; it never pushes.
           persist-credentials: false
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
+        uses: github/codeql-action/init@v4.38.2
         with:
           languages: ${{ matrix.language }}
           # All three languages here are extracted without compiling, so there
@@ -65,7 +65,7 @@ jobs:
           build-mode: none
 
       - name: Analyze
-        uses: github/codeql-action/analyze@v4
+        uses: github/codeql-action/analyze@v4.38.2
 
   dependency-review:
     name: Dependency Review
@@ -84,7 +84,7 @@ jobs:
       # No fresh-merge simulation here either: this job never reads the working
       # tree. It asks the API to compare two commit SHAs, so merging the base
       # branch into the checkout would change nothing it looks at.
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
 
@@ -92,7 +92,7 @@ jobs:
       # before running this job (see DEPLOYMENT.md). Permission, network and
       # configuration failures must remain failures rather than skipped reviews.
       - name: Review dependency changes
-        uses: actions/dependency-review-action@v5
+        uses: actions/dependency-review-action@v5.0.0
         with:
           fail-on-severity: high
           # No upstream patch; runtime depth guard and regression coverage are
@@ -108,7 +108,7 @@ jobs:
       group: check-${{ github.workflow }}-${{ github.ref }}-npm-audit
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
         with:
           # The merge simulation below needs the base branch's history.
           fetch-depth: 0
@@ -124,7 +124,7 @@ jobs:
           BASE_REF: ${{ github.base_ref }}
         run: bash .github/scripts/simulate-fresh-merge.sh
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7.0.0
         with:
           node-version: 24
 
@@ -144,7 +144,7 @@ jobs:
       group: check-${{ github.workflow }}-${{ github.ref }}-bun-audit
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
         with:
           # The merge simulation below needs the base branch's history.
           fetch-depth: 0
@@ -185,7 +185,7 @@ jobs:
       group: check-${{ github.workflow }}-${{ github.ref }}-cargo-audit
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
         with:
           # The merge simulation below needs the base branch's history.
           fetch-depth: 0
@@ -201,7 +201,7 @@ jobs:
           BASE_REF: ${{ github.base_ref }}
         run: bash .github/scripts/simulate-fresh-merge.sh
 
-      - uses: taiki-e/install-action@e67fa11c4b9316fa714ddf0abed07a0c3143b95b # v2.87.4
+      - uses: taiki-e/install-action@f7e5d7c961414b23f5b25b2da9294395d08513ad # v2.87.26
         with:
           tool: cargo-audit@0.22.2
 
@@ -219,7 +219,7 @@ jobs:
       group: check-${{ github.workflow }}-${{ github.ref }}-secret-scan
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
         with:
           # The merge simulation below needs the base branch's history.
           fetch-depth: 0
@@ -249,6 +249,6 @@ jobs:
       - name: Run secretlint over the working tree
         run: |
           npx --yes \
-            -p secretlint@13.0.5 \
-            -p @secretlint/secretlint-rule-preset-recommend@13.0.5 \
+            -p secretlint@13.0.7 \
+            -p @secretlint/secretlint-rule-preset-recommend@13.0.7 \
             secretlint "**/*"

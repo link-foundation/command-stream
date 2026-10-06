@@ -69,3 +69,5 @@ export function create<const Bound extends Options = {}>(
   options?: Bound
 ): ExecaCompatibilityApi<Bound>;
 export function isExecaChildProcess(value: unknown): value is ResultPromise;
+export const execaCommand: CommandMethod<{}>;
+export const execaCommandSync: CommandSyncMethod<{}>;

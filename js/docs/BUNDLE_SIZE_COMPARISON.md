@@ -1,6 +1,6 @@
 # Reproducible size and streaming comparisons
 
-The Execa-compatible entry delegates to Execa 9.6.1. It provides compatibility,
+The Execa-compatible entry delegates to Execa 10.1.0. It provides compatibility,
 not a smaller replacement implementation. It adds Execa's production dependency
 closure to the package. The old draft's “20 KB”, “60% smaller” and “zero
 dependencies” claims did not measure the current package and have been removed.

@@ -33,8 +33,8 @@ type ExecaExports = typeof import('execa', {
 export declare const execa: ExecaExports['execa'];
 export declare const execaSync: ExecaExports['execaSync'];
 export declare const execaNode: ExecaExports['execaNode'];
-export declare const execaCommand: ExecaExports['execaCommand'];
-export declare const execaCommandSync: ExecaExports['execaCommandSync'];
+export declare const execaCommand: typeof import('./execa-api.cjs').execaCommand;
+export declare const execaCommandSync: typeof import('./execa-api.cjs').execaCommandSync;
 
 // ---------------------------------------------------------------------------
 // Options

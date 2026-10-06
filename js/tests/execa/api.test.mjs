@@ -1,4 +1,4 @@
-// Execa 9.6.1 public-contract checks for the adapter. The implementation is
+// Execa 10.1.0 public-contract checks for the adapter. The implementation is
 // delegated to Execa; these tests verify our entry points and real processes.
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
@@ -70,6 +70,27 @@ describe('Execa entry points', { timeout: 10_000 }, () => {
       'hello world',
     ]);
   });
+
+  for (const name of ['execaCommand', 'execaCommandSync']) {
+    test(`${name} retains presets, nested defaults and CommonJS exports`, async () => {
+      const command = `${node} -e process.stdout.write('hello\\n')`;
+      assert.equal((await api[name](command)).stdout, 'hello');
+      assert.equal(
+        (await require('../../src/execa/index.cjs')[name](command)).stdout,
+        'hello'
+      );
+      const preset = api[name]({ stripFinalNewline: false });
+      assert.equal((await preset(command)).stdout, 'hello\n');
+      assert.equal(
+        (await preset({ stripFinalNewline: true })(command)).stdout,
+        'hello'
+      );
+      const bound = api
+        .create({ stripFinalNewline: false })
+        .create({ env: { EXECA_TEST: 'yes' } });
+      assert.equal((await bound[name](command)).stdout, 'hello\n');
+    });
+  }
 
   test('execaCompat create binds all methods and merges new defaults', async () => {
     const bound = $.execaCompat().create({ stripFinalNewline: false });

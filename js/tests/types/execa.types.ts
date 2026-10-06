@@ -1,6 +1,8 @@
 import {
   execa,
   execaSync,
+  execaCommand,
+  execaCommandSync,
   execaCompat,
   create,
   isExecaChildProcess,
@@ -14,6 +16,12 @@ export async function contracts(): Promise<void> {
   const child = execa('node', ['--version']);
   child.kill('SIGTERM');
   const text: string = (await child).stdout;
+  const commandLines: string[] = (
+    await execaCommand({ lines: true })('node --version')
+  ).stdout;
+  const commandBytes: Uint8Array = execaCommandSync('node --version', {
+    encoding: 'buffer',
+  }).stdout;
   const lines: string[] = (await execa({ lines: true })`node --version`).stdout;
   const bytes: Uint8Array = execaSync('node', ['--version'], {
     encoding: 'buffer',
@@ -51,6 +59,8 @@ export async function contracts(): Promise<void> {
   const error: Error = new ExecaError();
   use(
     text,
+    commandLines,
+    commandBytes,
     lines,
     bytes,
     result,

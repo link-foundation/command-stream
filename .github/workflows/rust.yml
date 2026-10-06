@@ -71,18 +71,18 @@ jobs:
       group: check-${{ github.workflow }}-${{ github.ref }}-changelog
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-01
+        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-06
         with:
           toolchain: stable
 
       - name: Install rust-script
-        run: cargo install rust-script --version 0.35.0 --locked
+        run: cargo install rust-script --version 0.36.0 --locked
 
       - name: Check for changelog fragments
         env:
@@ -110,7 +110,7 @@ jobs:
       group: check-${{ github.workflow }}-${{ github.ref }}-lint
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
         with:
           # The merge simulation below needs the base branch's history.
           fetch-depth: 0
@@ -133,13 +133,13 @@ jobs:
         run: node .github/scripts/publish-preflight.mjs crates
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-01
+        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-06
         with:
           toolchain: stable
           components: rustfmt, clippy
 
       - name: Cache cargo registry
-        uses: actions/cache@v5
+        uses: actions/cache@v6.1.0
         with:
           path: |
             ~/.cargo/registry
@@ -182,7 +182,7 @@ jobs:
       matrix:
         os: [ubuntu-24.04, macos-15, windows-2025]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
         with:
           # The merge simulation below needs the base branch's history.
           fetch-depth: 0
@@ -199,12 +199,12 @@ jobs:
         run: bash .github/scripts/simulate-fresh-merge.sh
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-01
+        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-06
         with:
           toolchain: stable
 
       - name: Cache cargo registry
-        uses: actions/cache@v5
+        uses: actions/cache@v6.1.0
         with:
           path: |
             ~/.cargo/registry
@@ -232,7 +232,7 @@ jobs:
       group: check-${{ github.workflow }}-${{ github.ref }}-scripts
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
         with:
           # The merge simulation below needs the base branch's history.
           fetch-depth: 0
@@ -249,12 +249,12 @@ jobs:
         run: bash .github/scripts/simulate-fresh-merge.sh
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-01
+        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-06
         with:
           toolchain: stable
 
       - name: Cache cargo registry
-        uses: actions/cache@v5
+        uses: actions/cache@v6.1.0
         with:
           path: |
             ~/.cargo/registry
@@ -265,7 +265,7 @@ jobs:
             ${{ runner.os }}-cargo-scripts-
 
       - name: Install rust-script
-        run: cargo install rust-script --version 0.35.0 --locked
+        run: cargo install rust-script --version 0.36.0 --locked
 
       - name: Run release script unit tests
         # Run the inline `#[cfg(test)]` suites for every rust-script under
@@ -312,7 +312,7 @@ jobs:
       group: check-${{ github.workflow }}-${{ github.ref }}-build
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
         with:
           # The merge simulation below needs the base branch's history.
           fetch-depth: 0
@@ -329,12 +329,12 @@ jobs:
         run: bash .github/scripts/simulate-fresh-merge.sh
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-01
+        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-06
         with:
           toolchain: stable
 
       - name: Cache cargo registry
-        uses: actions/cache@v5
+        uses: actions/cache@v6.1.0
         with:
           path: |
             ~/.cargo/registry
@@ -384,17 +384,17 @@ jobs:
       # this repository sets persist-credentials: false; zizmor runs at
       # --min-confidence low so a checkout that forgets it fails the audit, and
       # the six writer jobs that legitimately need it say so here.
-      - uses: actions/checkout@v6 # zizmor: ignore[artipacked]
+      - uses: actions/checkout@v7.0.1 # zizmor: ignore[artipacked]
         with:
           fetch-depth: 0
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-01
+        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-06
         with:
           toolchain: stable
 
       - name: Install rust-script
-        run: cargo install rust-script --version 0.35.0 --locked
+        run: cargo install rust-script --version 0.36.0 --locked
 
       - name: Determine bump type
         id: bump
@@ -463,17 +463,17 @@ jobs:
       # this repository sets persist-credentials: false; zizmor runs at
       # --min-confidence low so a checkout that forgets it fails the audit, and
       # the six writer jobs that legitimately need it say so here.
-      - uses: actions/checkout@v6 # zizmor: ignore[artipacked]
+      - uses: actions/checkout@v7.0.1 # zizmor: ignore[artipacked]
         with:
           fetch-depth: 0
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-01
+        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-06
         with:
           toolchain: stable
 
       - name: Install rust-script
-        run: cargo install rust-script --version 0.35.0 --locked
+        run: cargo install rust-script --version 0.36.0 --locked
 
       - name: Version Rust crate and commit to main
         id: version
@@ -518,17 +518,17 @@ jobs:
       # this repository sets persist-credentials: false; zizmor runs at
       # --min-confidence low so a checkout that forgets it fails the audit, and
       # the six writer jobs that legitimately need it say so here.
-      - uses: actions/checkout@v6 # zizmor: ignore[artipacked]
+      - uses: actions/checkout@v7.0.1 # zizmor: ignore[artipacked]
         with:
           fetch-depth: 0
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-01
+        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-06
         with:
           toolchain: stable
 
       - name: Install rust-script
-        run: cargo install rust-script --version 0.35.0 --locked
+        run: cargo install rust-script --version 0.36.0 --locked
 
       - name: Create changelog fragment
         env:
