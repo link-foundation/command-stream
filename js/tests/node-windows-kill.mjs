@@ -61,6 +61,7 @@ for (const [name, result] of [
       // target an unrelated process if Windows reuses the terminated PID.
       assert.equal(timers.length, 0);
       assert.equal(runner.result.code, 130);
+      assert.equal(runner.result.signal, 'SIGINT');
       assert.equal(runner.finished, true);
     } finally {
       Object.defineProperty(process, 'platform', platform);

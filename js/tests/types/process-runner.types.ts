@@ -16,4 +16,5 @@ export async function subpath(): Promise<void> {
   const runner = new ProcessRunner({ mode: 'shell', command: 'true' }, options);
   const result = await runner;
   expectType<Equal<typeof result, StreamResult>>();
+  expectType<Equal<typeof result.signal, NodeJS.Signals | null>>();
 }

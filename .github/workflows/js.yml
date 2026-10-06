@@ -301,6 +301,7 @@ jobs:
           node --test js/tests/windows-tree-kill.test.mjs
           node --test js/tests/node-windows-kill.mjs
           node --test js/tests/stdin-epipe.test.mjs
+          node --test js/tests/process-runner-signal-exit.test.mjs
           node --test js/tests/github-cli-body.test.mjs
 
       # The zx-compatible API (issue #26) ports google/zx's own test suite; the

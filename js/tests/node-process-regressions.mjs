@@ -55,7 +55,10 @@ for (const [name, createRunner] of [
       const result = await runner;
 
       assert.equal(result.code, 143);
-      assert.deepEqual(chunks, [{ type: 'exit', code: result.code }]);
+      assert.deepEqual(chunks, [
+        { type: 'exit', code: result.code, signal: 'SIGTERM' },
+      ]);
+      assert.equal(result.signal, 'SIGTERM');
       assert.equal(runner.finished, true);
       assert.equal(runner._child, null);
     }

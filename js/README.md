@@ -606,11 +606,12 @@ const result = await $`ls -la`;
 console.log(result.stdout.toString());
 console.log(result.code); // exit code
 console.log(result.exitCode); // alias for result.code
+console.log(result.signal); // terminating signal name, or null
 ```
 
-Errors thrown in `errexit` mode carry the same pair of names, so handlers
-written for Node.js `child_process` (`error.code`) and for Execa, zx,
-nano-spawn or the Bun shell (`error.exitCode`) both work unchanged.
+Errors thrown in `errexit` mode carry `code` and `exitCode` for compatibility with
+Node.js, Execa, zx, nano-spawn, and Bun Shell. See
+[signal termination](./docs/SIGNAL_TERMINATION.md) for nonzero statuses and signal fields.
 
 ### Custom Options with $({ options }) Syntax (NEW!)
 
@@ -1012,15 +1013,15 @@ for await (const chunk of $`long-running-command`.stream()) {
   if (chunk.type === 'stdout') {
     console.log('Real-time output:', chunk.data.toString());
   } else if (chunk.type === 'exit') {
-    console.log('Process exited with code:', chunk.code);
+    console.log('Exit:', chunk.code, chunk.signal);
   }
 }
 ```
 
 `stream()` yields `{ type: 'stdout' | 'stderr', data: Buffer }` chunks as output
-arrives, followed by a final `{ type: 'exit', code }` chunk when the process
+arrives, followed by a final `{ type: 'exit', code, signal }` chunk when the process
 exits. Always guard on `chunk.type` before reading `chunk.data`, since the
-`exit` chunk carries `code` instead of `data`.
+`exit` chunk carries `code` and `signal`, a signal name or `null`, instead of `data`.
 
 Compound commands stream progressively too. Supported sequences keep built-in
 and registered virtual commands in command-stream while forwarding nested
@@ -1098,7 +1099,7 @@ $`command`
   })
   .on('stderr', (chunk) => console.log('Stderr:', chunk))
   .on('end', (result) => console.log('Done:', result))
-  .on('exit', (code) => console.log('Exit code:', code))
+  .on('exit', (code, signal) => console.log('Exit:', code, signal))
   .start(); // Explicitly start the command
 
 // Or auto-start by awaiting
@@ -1729,7 +1730,7 @@ As with any shell-enabled process, pass only trusted `file` and `args` values; s
 - `stdout`: Emitted for stdout chunks (Buffer)
 - `stderr`: Emitted for stderr chunks (Buffer)
 - `end`: Emitted when process completes with final result object
-- `exit`: Emitted with exit code
+- `exit`: Emitted with `(code, signal)`; `signal` is the terminating signal name or `null`
 
 #### Methods
 
