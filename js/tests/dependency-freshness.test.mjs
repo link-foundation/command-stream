@@ -20,7 +20,7 @@ const dependency = (version, extra = {}) => ({
 const registry =
   (latest, issueState = 'open') =>
   async (url) =>
-    url.includes('api.github.com')
+    new URL(url).hostname === 'api.github.com'
       ? { state: issueState }
       : { crate: { max_stable_version: latest }, 'dist-tags': { latest } };
 
@@ -104,7 +104,7 @@ describe('dependency freshness', () => {
       ],
       {
         fetchJson: async (url) => {
-          if (url.includes('api.github.com')) {
+          if (new URL(url).hostname === 'api.github.com') {
             throw new Error('HTTP 403');
           }
           return { crate: { max_stable_version: '0.31.3' } };
