@@ -298,6 +298,7 @@ jobs:
           node --test js/tests/node-terminal-artifacts.mjs
           node --test js/tests/node-commonjs-entry.mjs
           node --test js/tests/node-process-regressions.mjs
+          node --test js/tests/process-runner-signal-exit.test.mjs
           node --test js/tests/github-cli-body.test.mjs
 
       # The zx-compatible API (issue #26) ports google/zx's own test suite; the

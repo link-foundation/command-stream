@@ -17,6 +17,7 @@ import {
   createCommandError,
   createExecutionErrorResult,
   createResult,
+  determineFinalExitCode,
   finishExecutionError,
   getStdinString,
   getSyncStdinInput,
@@ -435,48 +436,15 @@ function handleStdin(runner, stdin, isInteractive) {
 }
 
 /**
- * Determine final exit code
- * @param {number|null|undefined} code - Raw exit code
- * @param {boolean} cancelled - Was process cancelled
- * @returns {number}
- */
-function determineFinalExitCode(code, cancelled) {
-  trace(
-    'ProcessRunner',
-    () =>
-      `Raw exit code from child | ${JSON.stringify({
-        code,
-        codeType: typeof code,
-        cancelled,
-        isBun,
-      })}`
-  );
-
-  if (code !== undefined && code !== null) {
-    return code;
-  }
-
-  if (cancelled) {
-    trace(
-      'ProcessRunner',
-      () => `Process was killed, using SIGTERM exit code 143`
-    );
-    return 143;
-  }
-
-  trace('ProcessRunner', () => `Process exited without code, defaulting to 0`);
-  return 0;
-}
-
-/**
  * Build result data from runner state
  * @param {object} runner - ProcessRunner instance
  * @param {number} exitCode - Exit code
  * @returns {object}
  */
-function buildResultData(runner, exitCode) {
+function buildResultData(runner, exitCode, signal) {
   return {
     code: exitCode,
+    signal,
     stdout: runner.options.capture
       ? runner.outChunks && runner.outChunks.length > 0
         ? Buffer.concat(runner.outChunks).toString('utf8')
@@ -540,7 +508,8 @@ function executeSyncBun(argv, options) {
   }
 
   const result = createResult({
-    code: proc.exitCode || 0,
+    code: determineFinalExitCode(proc.exitCode, proc.signalCode),
+    signal: proc.signalCode ?? null,
     stdout: proc.stdout?.toString('utf8') || '',
     stderr: proc.stderr?.toString('utf8') || '',
     stdin: getStdinString(stdin),
@@ -573,7 +542,8 @@ function executeSyncNode(argv, options) {
   }
 
   const result = createResult({
-    code: proc.status || 0,
+    code: determineFinalExitCode(proc.status, proc.signal),
+    signal: proc.signal ?? null,
     stdout: proc.stdout || '',
     stderr: proc.stderr || '',
     stdin: getStdinString(stdin),
@@ -959,7 +929,7 @@ async function executeChildProcess(runner, argv, config) {
   const stdinPumpPromise = handleStdin(runner, stdin, isInteractive);
   const exited = createExitPromise(runner._child, runner);
 
-  const code = await exited;
+  const { code, signal } = await exited;
   await drainPumpsAfterExit(
     runner,
     [outPump, errPump, stdinPumpPromise],
@@ -967,9 +937,8 @@ async function executeChildProcess(runner, argv, config) {
   );
 
   const spawnErrorCode = prepareSpawnErrorResult(runner);
-  const finalExitCode =
-    spawnErrorCode ?? determineFinalExitCode(code, runner._cancelled);
-  const resultData = buildResultData(runner, finalExitCode);
+  const finalExitCode = spawnErrorCode ?? determineFinalExitCode(code, signal);
+  const resultData = buildResultData(runner, finalExitCode, signal);
 
   trace(
     'ProcessRunner',
@@ -977,6 +946,7 @@ async function executeChildProcess(runner, argv, config) {
       `Process completed | ${JSON.stringify({
         command: runner.command,
         finalExitCode,
+        signal,
         captured: runner.options.capture,
         hasStdout: !!resultData.stdout,
         hasStderr: !!resultData.stderr,
@@ -1266,6 +1236,8 @@ export function attachExecutionMethods(ProcessRunner, deps) {
 
   ProcessRunner.prototype._writeToStdin = async function (buf) {
     trace('ProcessRunner', () => `_writeToStdin | len=${buf?.length || 0}`);
+    // A child may die before the asynchronous Node write completes.
+    StreamUtils.addStdinErrorHandler(this._child.stdin, 'child stdin buffer');
     const bytes =
       buf instanceof Uint8Array
         ? buf

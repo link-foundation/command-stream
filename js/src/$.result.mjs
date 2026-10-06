@@ -1,18 +1,72 @@
 // Result creation utilities for command-stream
 // Creates standardized result objects
 
+import os from 'node:os';
+import { trace } from './$.trace.mjs';
+
+/** Shell-compatible status for a signal, using the platform's signal numbers. */
+export function getSignalExitCode(signal) {
+  const number = os.constants.signals?.[signal];
+  if (typeof number === 'number') {
+    return 128 + number;
+  }
+  // Fallbacks for runtimes that do not expose the signal table.
+  return { SIGINT: 130, SIGKILL: 137, SIGTERM: 143 }[signal] ?? 1;
+}
+
+/**
+ * Determine final exit code
+ * @param {number|null|undefined} code - Raw exit code
+ * @param {string|null} signal - Terminating signal
+ * @returns {number}
+ */
+export function determineFinalExitCode(code, signal) {
+  trace(
+    'ProcessRunner',
+    () =>
+      `Raw exit code from child | ${JSON.stringify({
+        code,
+        codeType: typeof code,
+        signal,
+        isBun: typeof globalThis.Bun !== 'undefined',
+      })}`
+  );
+
+  if (signal) {
+    return getSignalExitCode(signal);
+  }
+
+  if (code !== undefined && code !== null) {
+    return code;
+  }
+
+  trace(
+    'ProcessRunner',
+    () => `Process exited without code or signal, defaulting to 1`
+  );
+  return 1;
+}
+
 /**
  * Create a standardized result object
  * @param {object} params - Result parameters
  * @param {number} params.code - Exit code
+ * @param {string|null} [params.signal] - Terminating signal, or null
  * @param {string} params.stdout - Standard output
  * @param {string} params.stderr - Standard error
  * @param {string} params.stdin - Standard input that was sent
  * @returns {object} Result object with text() method
  */
-export function createResult({ code, stdout = '', stderr = '', stdin = '' }) {
+export function createResult({
+  code,
+  signal = null,
+  stdout = '',
+  stderr = '',
+  stdin = '',
+}) {
   return {
     code,
+    signal,
     // `exitCode` is an alias for `code` for better compatibility (issue #36)
     exitCode: code,
     stdout,
@@ -103,9 +157,9 @@ export function attachExitCodeAlias(error, code) {
 }
 
 export function createCancelledResult(signal) {
-  const signalCodes = { SIGINT: 130, SIGKILL: 137, SIGTERM: 143 };
   return createResult({
-    code: signalCodes[signal] ?? 1,
+    code: getSignalExitCode(signal),
+    signal: signal ?? null,
     stdout: '',
     stderr: '',
     stdin: '',
@@ -118,7 +172,10 @@ export function createCancelledResult(signal) {
  * @returns {Buffer|undefined} Spawn input
  */
 export function getSyncStdinInput(stdin) {
-  if (typeof stdin === 'string') {
+  if (
+    typeof stdin === 'string' &&
+    !['ignore', 'inherit', 'pipe'].includes(stdin)
+  ) {
     return Buffer.from(stdin);
   }
   return Buffer.isBuffer(stdin) ? stdin : undefined;
