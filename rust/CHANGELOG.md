@@ -177,6 +177,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [1.5.0] - 2026-10-06
+
+### Added
+
+- Add portable native `head`, `tail`, `sort` and `uniq` commands, with shared
+  JavaScript/Rust conformance cases and progressive output channels.
+- Add the asynchronous `shelljs::ShellJs` session API, directory stack, text and
+  filesystem helpers, error/configuration handling, migration examples and a
+  bounded buffered-versus-streaming benchmark.
+
 ## [1.4.1] - 2026-10-05
 
 ### Fixed
