@@ -74,6 +74,24 @@ describe('benchmark statistics', () => {
 });
 
 describe('competitor adapters', () => {
+  test('Execa 10 captures explicit input and failed-command results', async () => {
+    const adapters = await loadCompetitorAdapters();
+    const execa = adapters.find(({ name }) => name === 'execa');
+    const result = await execa.run(
+      process.execPath,
+      [
+        '-e',
+        "process.stdin.setEncoding('utf8'); let input = ''; process.stdin.on('data', chunk => input += chunk); process.stdin.on('end', () => { process.stdout.write(input); process.stderr.write('failed'); process.exitCode = 7; });",
+      ],
+      { input: 'dependency upgrade' }
+    );
+    expect(result).toEqual({
+      stdout: 'dependency upgrade',
+      stderr: 'failed',
+      exitCode: 7,
+    });
+  });
+
   test('makes Windows executables addressable by zx default Bash', () => {
     expect(executableForZx('C:\\Program Files\\Bun\\bun.exe', 'win32')).toBe(
       'C:/Program Files/Bun/bun.exe'
