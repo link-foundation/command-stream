@@ -34,6 +34,18 @@ export async function commonJs(): Promise<void> {
 }
 
 import bun = require('command-stream/bun');
+import shelljs = require('command-stream/shelljs');
+
+export function commonJsShelljs(): void {
+  const output: string = shelljs.head({ '-n': 2 }, ['file.txt']).stdout;
+  const code: number = $.shelljs.cat('file.txt').code;
+  const exists: boolean = shelljs.test('-f', 'file.txt');
+  const errorCode: number | null = $.shelljs.errorCode();
+  const error: string | null = shelljs.error();
+  const temporaryDirectory: string = shelljs.tempdir();
+  const noArguments = () => shelljs.cmd('git');
+  use(output, code, exists, errorCode, error, temporaryDirectory, noArguments);
+}
 
 export async function commonJsBun(): Promise<void> {
   expectType<Equal<typeof bun.$, bun.BunShell>>();

@@ -23,6 +23,9 @@ import type {
 import type { Readable, Writable } from 'node:stream';
 import type { BunShell } from './bun.cjs';
 
+/** Pinned ShellJS API, with its synchronous ShellString and configuration semantics. */
+export declare const shelljs: typeof import('./shelljs.cjs');
+
 export declare const execaCompat: typeof import('./execa-api.cjs').execaCompat;
 type ExecaExports = typeof import('execa', {
   with: { 'resolution-mode': 'import' },
@@ -455,6 +458,7 @@ export interface CrossSpawn {
 
 /** The `$` export: a tagged template, or `$(options)` returning one. */
 export interface Dollar extends CommandTag {
+  readonly shelljs: typeof shelljs;
   /** The isolated, lazy-loaded Execa method. */
   readonly execa: ExecaExports['execa'];
   /** Access all Execa methods and bind reusable defaults. */

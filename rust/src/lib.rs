@@ -82,6 +82,7 @@ pub mod trace;
 // Core modules
 pub mod commands;
 pub mod shell_parser;
+pub mod shelljs;
 pub mod utils;
 
 // zx-compatible API (google/zx 8.x): `$`-style Shell, ProcessOutput, goods.
@@ -623,6 +624,11 @@ impl ProcessRunner {
             "seq" => Some(commands::seq(ctx).await),
             "tee" => Some(commands::tee(ctx).await),
             "test" => Some(commands::test(ctx).await),
+            "head" => Some(commands::head(ctx).await),
+            "tail" => Some(commands::tail(ctx).await),
+            "sort" => Some(commands::sort(ctx).await),
+            "uniq" => Some(commands::uniq(ctx).await),
+
             _ => None,
         }
     }

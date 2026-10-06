@@ -23,7 +23,7 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 - 🔄 **Bun Optimized**: Designed for Bun runtime with Node.js compatibility
 - ⚡ **Performance**: Memory-efficient streaming prevents large buffer accumulation
 - 🎯 **Bun.$ Everywhere**: the full Bun Shell API as `command-stream/bun` (or `$.bun`) on Node.js, Bun and Deno, tested with Bun's own tests ([guide](docs/BUN_SHELL.md))
-- 🔧 **Built-in Commands**: 22 essential commands work identically across platforms
+- 🔧 **Built-in Commands**: 26 essential commands work identically across platforms
 - 🆔 **Process Identity**: Read the process id with `command.pid`, before, during and after the run
 - 🔄 **Migration**: [Cross-spawn guide for JavaScript and Rust](docs/CROSS_SPAWN_MIGRATION.md); zx scripts run unchanged via `$.zx`, `command-stream/zx` or `#!/usr/bin/env command-stream`, with all 291 zx test units ported ([zx guide](docs/ZX_MIGRATION.md)); Execa 9.6.1 runs via `command-stream/execa`, `$.execa` and `$.execaCompat()` ([guide and runtime limits](docs/EXECA_MIGRATION.md))
 - 🟦 **TypeScript**: Bundled strict declarations for ESM and CommonJS, with typed events, streams, pipelines and virtual commands ([guide and Rust mapping](docs/TYPESCRIPT.md))
@@ -53,7 +53,7 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 | **Stdout Support**             | ✅ Real-time streaming + events                                                                         | ✅ Node.js streams + interleaved                                                      | ✅ Inherited/buffered                                                                             | ✅ Shell redirection + buffered                            | ✅ Direct output                                                                          | ✅ Readable streams + `.pipe.stdout`                                            |
 | **Stderr Support**             | ✅ Real-time streaming + events                                                                         | ✅ Streams + interleaved output                                                       | ✅ Inherited/buffered                                                                             | ✅ Redirection + `.quiet()` access                         | ✅ Error output                                                                           | ✅ Readable streams + `.pipe.stderr`                                            |
 | **Stdin Support**              | ✅ string/Buffer/inherit/ignore                                                                         | ✅ Input/output streams                                                               | ✅ Full stdio support                                                                             | ✅ Pipe operations                                         | 🟡 Basic                                                                                  | ✅ Basic stdin                                                                  |
-| **Built-in Commands**          | ✅ **22 commands**: cat, ls, mkdir, rm, mv, cp, touch, basename, dirname, seq, yes + all Bun.$ commands | ❌ Uses system                                                                        | ❌ Uses system                                                                                    | ✅ echo, cd, etc.                                          | ✅ **20+ commands**: cat, ls, mkdir, rm, mv, cp, etc.                                     | ❌ Uses system                                                                  |
+| **Built-in Commands**          | ✅ **26 commands**: cat, ls, mkdir, rm, mv, cp, touch, basename, dirname, seq, yes + all Bun.$ commands | ❌ Uses system                                                                        | ❌ Uses system                                                                                    | ✅ echo, cd, etc.                                          | ✅ **20+ commands**: cat, ls, mkdir, rm, mv, cp, etc.                                     | ❌ Uses system                                                                  |
 | **Virtual Commands Engine**    | ✅ **Revolutionary**: Register JavaScript functions as shell commands with full pipeline support        | ❌ No custom commands                                                                 | ❌ No custom commands                                                                             | ❌ No extensibility                                        | ❌ No custom commands                                                                     | ❌ No custom commands                                                           |
 | **Pipeline/Piping Support**    | ✅ **Advanced**: System + Built-ins + Virtual + Mixed + `.pipe()` method                                | ✅ Programmatic `.pipe()` + multi-destination                                         | ✅ Child streams can be piped                                                                     | ✅ Standard shell piping                                   | ✅ Shell piping + `.to()` method                                                          | ✅ Shell piping + `.pipe()` method                                              |
 | **Bundle Size**                | [Measured](benchmarks/README.md)                                                                        | [Measured](benchmarks/README.md)                                                      | [Measured](benchmarks/README.md)                                                                  | [Measured](benchmarks/README.md)                           | [Measured](benchmarks/README.md)                                                          | [Measured](benchmarks/README.md)                                                |
@@ -106,7 +106,7 @@ Run the focused executable corpus with `bun run test:competitors`.
 
 ## Built-in Commands (🚀 NEW!)
 
-command-stream now includes **22 built-in commands** that work identically to their bash/sh counterparts, providing true cross-platform shell scripting without system dependencies:
+command-stream includes **26 built-in commands** with portable option subsets, providing cross-platform shell scripting without external command dependencies:
 
 ### 📁 **File System Commands**
 
@@ -114,38 +114,32 @@ command-stream now includes **22 built-in commands** that work identically to th
 - `ls` - List directory contents (supports `-l`, `-a`, `-A`)
 - `mkdir` - Create directories (supports `-p` recursive)
 - `rm` - Remove files/directories (supports `-r`, `-f`)
-- `mv` - Move/rename files and directories
-- `cp` - Copy files/directories (supports `-r` recursive)
+- `mv` / `cp` - Move or copy files/directories (`cp` supports `-r` recursive)
 - `touch` - Create files or update timestamps
+
+### Text Commands
+
+- `head` / `tail` - Select the first or last lines (supports `-n N`)
+- `sort` - Sort lines (supports `-r`, `-n`, `-u`)
+- `uniq` - Filter consecutive duplicate lines (supports `-c`, `-d`, `-u`, `-i`)
 
 ### 🔧 **Utility Commands**
 
-- `basename` - Extract filename from path
-- `dirname` - Extract directory from path
-- `seq` - Generate number sequences
+- `basename` / `dirname` - Extract filename or directory from a path
+- `seq` / `yes` - Generate number sequences or repeatedly output a string
 - `tee` - Copy input to stdout and to files (supports `-a`, `-i`)
-- `yes` - Output string repeatedly (streaming)
 
 ### ⚡ **System Commands**
 
-- `cd` - Change directory
-- `pwd` - Print working directory
+- `cd` / `pwd` - Change or print the working directory
 - `echo` - Print arguments (supports `-n`)
-- `sleep` - Wait for specified time
-- `true`/`false` - Success/failure commands
-- `which` - Locate commands
-- `exit` - Exit with code
-- `env` - Print environment variables
-- `test` - File condition testing
+- `sleep` / `true` / `false` - Wait or return success/failure
+- `which` / `exit` - Locate commands or return an exit code
+- `env` / `test` - Print environment variables or test file conditions
 
 ### ✨ **Key Advantages**
 
-- **🌍 Cross-Platform**: Works identically on Windows, macOS, and Linux
-- **🚀 Performance**: No system calls - pure JavaScript execution
-- **🔄 Pipeline Support**: All commands work in pipelines and virtual command chains
-- **⚙️ Option Aware**: Commands respect `cwd`, `env`, and other options
-- **🛡️ Safe by Default**: Proper error handling and safety checks (e.g., `rm` requires `-r` for directories)
-- **📝 Bash Compatible**: Error messages and behavior match bash/sh exactly
+Native commands use JavaScript APIs across Windows, macOS and Linux, support pipelines, and respect `cwd` and `env`. They report failures through exit codes and stderr; for example, `rm` requires `-r` for directories. See the [migration guide](./docs/SHELLJS_MIGRATION.md) for text-command option and streaming limits.
 
 ```javascript
 import { $ } from 'command-stream';
@@ -190,6 +184,10 @@ the result on. So this `tee` is a pipeline stage, not a live terminal filter --
 it cannot echo keystrokes back as you type them. The `interactive: true` option
 applies to spawned system processes; for a live `tee`, disable virtual commands
 and let the system binary run.
+
+## ShellJS compatibility
+
+`$.shelljs`, the named `shelljs` export and `command-stream/shelljs` retain the pinned ShellJS 0.10.0 API. The [migration guide](./docs/SHELLJS_MIGRATION.md) covers every command, native streaming, Rust counterparts and benchmarks.
 
 ## Installation
 
@@ -1992,9 +1990,10 @@ await $`${raw(trustedCommand)}`;
 
 ### Built-in Commands
 
-22 cross-platform commands that work identically everywhere:
+26 cross-platform commands that work identically everywhere:
 
 **File System**: `cat`, `ls`, `mkdir`, `rm`, `mv`, `cp`, `touch`
+**Text**: `head`, `tail`, `sort`, `uniq`
 **Utilities**: `basename`, `dirname`, `seq`, `tee`, `yes`
 **System**: `cd`, `pwd`, `echo`, `sleep`, `true`, `false`, `which`, `exit`, `env`, `test`
 

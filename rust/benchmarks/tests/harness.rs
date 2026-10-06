@@ -11,6 +11,25 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
 #[test]
+fn streaming_probe_checks_complete_output_and_reports_both_modes() {
+    let result = std::process::Command::new(env!("CARGO_BIN_EXE_shelljs_streaming"))
+        .output()
+        .expect("run bounded streaming probe");
+    assert!(result.status.success(), "{:?}", result.stderr);
+    let report: serde_json::Value = serde_json::from_slice(&result.stdout).unwrap();
+    let observations = report["observations"].as_array().unwrap();
+    assert_eq!(observations.len(), 2);
+    for observation in observations {
+        assert_eq!(observation["received"], 524_288);
+        assert_eq!(observation["code"], 0);
+        assert!(
+            observation["firstByteMs"].as_f64().unwrap()
+                <= observation["totalMs"].as_f64().unwrap()
+        );
+    }
+}
+
+#[test]
 fn parses_and_validates_cli_options() {
     let options = parse_arguments(&[
         "--suite".to_string(),

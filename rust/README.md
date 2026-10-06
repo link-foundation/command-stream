@@ -13,6 +13,14 @@ examples and the differences from JavaScript Execa.
 Rust implementation of command-stream: a shell command execution library with
 streaming, events, shell parsing, virtual commands, and built-in command support.
 
+## ShellJS compatibility
+
+`command_stream::shelljs::ShellJs` provides asynchronous command calls with
+session-local directory state. Native head, tail, sort and uniq bring the
+built-in catalog to 26 commands. See the [migration guide](../js/docs/SHELLJS_MIGRATION.md)
+and [runnable example](./examples/shelljs_migration.rs) for supported options and
+JavaScript translation limits.
+
 ## Installation
 
 ```bash

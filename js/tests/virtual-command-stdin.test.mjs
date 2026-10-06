@@ -78,6 +78,42 @@ describe('virtual commands and the stdin option', () => {
     expect(result.stdout?.toString()).toBe('from option\n');
   });
 
+  test('a manual stdin pipe belongs to the public runner', async () => {
+    // Use a portable real executable with a virtual name to reproduce the
+    // same fallback as head/tail/sort/uniq without depending on Unix tools.
+    register('node', async () => {
+      throw new Error('manual stdin must use the real executable');
+    });
+    const script = 'process.stdin.pipe(process.stdout)';
+    const runner = $({ mirror: false })`node -e ${script}`;
+    let deadline;
+    try {
+      const stdin = await Promise.race([
+        runner.streams.stdin,
+        new Promise((_, reject) => {
+          deadline = setTimeout(
+            () => reject(new Error('manual stdin never became available')),
+            2000
+          );
+        }),
+      ]);
+      expect(stdin).not.toBe(null);
+      expect(runner.child.stdin).toBe(stdin);
+      expect(await runner.streams.stdout).toBe(runner.child.stdout);
+      expect(await runner.streams.stderr).toBe(runner.child.stderr);
+      expect(runner.pid).toBeGreaterThan(0);
+      stdin.end('manual input\n');
+      const result = await runner;
+      expect(result.code).toBe(0);
+      expect(result.stdout.toString()).toBe('manual input\n');
+      expect(result.stdin.toString()).toBe('manual input\n');
+    } finally {
+      clearTimeout(deadline);
+      runner.kill();
+      unregister('node');
+    }
+  });
+
   test('piped input wins over the pipeline stdin option', async () => {
     const result = await $({
       mirror: false,

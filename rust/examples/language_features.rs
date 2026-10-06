@@ -520,6 +520,60 @@ async fn execa_compat() -> ExampleResult {
 }
 // endfeature:execa-compat
 
+// feature:shelljs-compat
+async fn shelljs_compat() -> ExampleResult {
+    let directory = tempfile::tempdir()?;
+    std::fs::write(directory.path().join("file with spaces"), "z\na\na\nb\n")?;
+    let mut shell = command_stream::shelljs::ShellJs::new();
+    shell.config.silent = true;
+    shell
+        .cd(&[directory.path().to_str().ok_or("non-UTF8 path")?])
+        .await?;
+    Ok(vec![
+        observation("general API", true),
+        observation(
+            "separate arguments",
+            shell.echo(&["hello", "two words"]).await?.stdout,
+        ),
+        observation(
+            "head",
+            shell.head(&["-n", "2", "file with spaces"]).await?.stdout,
+        ),
+        observation(
+            "tail",
+            shell.tail(&["-n", "2", "file with spaces"]).await?.stdout,
+        ),
+        observation("missing file code", shell.cat(&["missing"]).await?.code),
+    ])
+}
+// endfeature:shelljs-compat
+
+// feature:native-text
+async fn native_text() -> ExampleResult {
+    let options = RunOptions {
+        stdin: StdinOption::Content("b\nb\na\n".into()),
+        ..quiet_options()
+    };
+    let mut observations = Vec::new();
+    for (label, command) in [
+        ("head", "head -n 2"),
+        ("tail", "tail -n 1"),
+        ("sort", "sort -u"),
+        ("uniq", "uniq -cd"),
+        ("zero lines", "tail -n 0"),
+    ] {
+        observations.push(observation(
+            label,
+            ProcessRunner::new(command, options.clone())
+                .run()
+                .await?
+                .stdout,
+        ));
+    }
+    Ok(observations)
+}
+// endfeature:native-text
+
 async fn execute(id: &str) -> ExampleResult {
     match id {
         "await-result" => await_result().await,
@@ -549,6 +603,8 @@ async fn execute(id: &str) -> ExampleResult {
         "ansi-utils" => ansi_utils().await,
         "zx-compat" => zx_compat().await,
         "execa-compat" => execa_compat().await,
+        "shelljs-compat" => shelljs_compat().await,
+        "native-text" => native_text().await,
         _ => Err(format!("unknown feature: {id}").into()),
     }
 }

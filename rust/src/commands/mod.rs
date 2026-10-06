@@ -22,6 +22,7 @@ mod seq;
 mod sleep;
 mod tee;
 mod test;
+mod text;
 mod touch;
 mod r#true;
 mod which;
@@ -46,6 +47,7 @@ pub use seq::seq;
 pub use sleep::sleep;
 pub use tee::tee;
 pub use test::test;
+pub use text::{head, sort, tail, uniq};
 pub use touch::touch;
 pub use which::which;
 pub use yes::yes;
@@ -203,6 +205,10 @@ impl VirtualCommandRegistry {
         register!("seq", seq);
         register!("tee", tee);
         register!("test", test);
+        register!("head", head);
+        register!("tail", tail);
+        register!("sort", sort);
+        register!("uniq", uniq);
     }
 }
 

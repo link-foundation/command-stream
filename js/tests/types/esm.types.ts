@@ -42,6 +42,7 @@ import $, {
   setQuoteContextEnabled,
   sh,
   shell,
+  shelljs,
   spawn,
   unregister,
   unrollTerminalFrames,
@@ -363,3 +364,6 @@ export function errors(error: unknown): void {
   const options: ProcessOptions = { signal: new AbortController().signal };
   use(options);
 }
+
+const shelljsOutput: string = shelljs.echo('typed').stdout;
+void shelljsOutput;

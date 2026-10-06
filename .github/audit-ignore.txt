@@ -2,11 +2,17 @@
 #
 # One GHSA ID per line; text after `#` is the reason. Only list an advisory
 # that has no patched release to move to, record why it cannot be reached
-# from the published package, and remove the line once a fix ships: the npm
-# audit job warns when an entry no longer matches anything.
+# or how it is mitigated in the published package, and remove the line once a
+# fix ships: the npm audit job warns when an entry no longer matches anything.
 
 # braces <= 3.0.3: stack exhaustion on deeply nested brace patterns. No patched
-# version exists (3.0.3 is the latest release). It is reached only through dev
-# tooling (@changesets/cli, shelljs and jscpd via micromatch), which expands
-# glob patterns written in this repository, never in the published package.
+# version exists (3.0.3 is the latest release). Dev tooling (@changesets/cli and
+# jscpd via micromatch) expands repository-controlled patterns. Runtime ShellJS
+# uses js/src/shelljs/glob-safety.cjs: before fast-glob's synchronous entry points
+# it bounds pattern length and combined brace/parenthesis AST depth, including
+# ignore patterns. js/tests/shelljs-glob-safety.test.mjs reproduces the advisory
+# in a bounded child and verifies rejection before recursive parsing. Direct
+# imports of braces or fast-glob's async API are outside this mitigation.
+# Dependency review uses this same single advisory exception in security.yml.
+# Remove the exception and guard together when a patched release ships.
 GHSA-vfj7-8cjw-p6xm

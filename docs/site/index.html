@@ -559,11 +559,11 @@
             "source": "// command-stream ships built-in implementations of common shell commands, so\n// scripts behave the same even where those binaries are missing.\nimport {\n  $,\n  listCommands,\n  enableVirtualCommands,\n  disableVirtualCommands,\n} from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\n\nconst $q = $({ mirror: false });\n\nawait example(\n  { id: 'builtin-catalog', title: 'The built-in command catalog' },\n  async ({ record }) => {\n    record('available built-ins', listCommands().sort());\n    record('number of built-ins', listCommands().length);\n\n    // Built-ins can be switched off, which falls back to the real binaries.\n    record('with built-ins', (await $q`echo built-in`).stdout);\n    disableVirtualCommands();\n    record('with built-ins disabled', (await $q`echo real binary`).stdout);\n    enableVirtualCommands();\n    record('built-ins enabled again', listCommands().length > 0);\n  }\n);",
             "rustApi": ["VirtualCommandRegistry::with_builtins"],
             "rustSource": "async fn builtin_catalog() -> ExampleResult {\n    let registry = VirtualCommandRegistry::with_builtins();\n    let mut commands = registry.list();\n    commands.sort_unstable();\n    Ok(vec![\n        observation(\"available built-ins\", &commands),\n        observation(\"number of built-ins\", commands.len()),\n    ])\n}",
-            "rustOutput": "# builtin-catalog — Rust\navailable built-ins: [\"basename\",\"cat\",\"cd\",\"cp\",\"dirname\",\"echo\",\"env\",\"exit\",\"false\",\"ls\",\"mkdir\",\"mv\",\"pwd\",\"rm\",\"seq\",\"sleep\",\"tee\",\"test\",\"touch\",\"true\",\"which\",\"yes\"]\nnumber of built-ins: 22",
+            "rustOutput": "# builtin-catalog — Rust\navailable built-ins: [\"basename\",\"cat\",\"cd\",\"cp\",\"dirname\",\"echo\",\"env\",\"exit\",\"false\",\"head\",\"ls\",\"mkdir\",\"mv\",\"pwd\",\"rm\",\"seq\",\"sleep\",\"sort\",\"tail\",\"tee\",\"test\",\"touch\",\"true\",\"uniq\",\"which\",\"yes\"]\nnumber of built-ins: 26",
             "identicalOutput": true,
             "output": {
-              "node": "# builtin-catalog — The built-in command catalog\navailable built-ins: [\"basename\",\"cat\",\"cd\",\"cp\",\"dirname\",\"echo\",\"env\",\"exit\",\"false\",\"ls\",\"mkdir\",\"mv\",\"pwd\",\"rm\",\"seq\",\"sleep\",\"tee\",\"test\",\"touch\",\"true\",\"which\",\"yes\"]\nnumber of built-ins: 22\nwith built-ins: \"built-in\\n\"\nwith built-ins disabled: \"real binary\\n\"\nbuilt-ins enabled again: true",
-              "bun": "# builtin-catalog — The built-in command catalog\navailable built-ins: [\"basename\",\"cat\",\"cd\",\"cp\",\"dirname\",\"echo\",\"env\",\"exit\",\"false\",\"ls\",\"mkdir\",\"mv\",\"pwd\",\"rm\",\"seq\",\"sleep\",\"tee\",\"test\",\"touch\",\"true\",\"which\",\"yes\"]\nnumber of built-ins: 22\nwith built-ins: \"built-in\\n\"\nwith built-ins disabled: \"real binary\\n\"\nbuilt-ins enabled again: true"
+              "node": "# builtin-catalog — The built-in command catalog\navailable built-ins: [\"basename\",\"cat\",\"cd\",\"cp\",\"dirname\",\"echo\",\"env\",\"exit\",\"false\",\"head\",\"ls\",\"mkdir\",\"mv\",\"pwd\",\"rm\",\"seq\",\"sleep\",\"sort\",\"tail\",\"tee\",\"test\",\"touch\",\"true\",\"uniq\",\"which\",\"yes\"]\nnumber of built-ins: 26\nwith built-ins: \"built-in\\n\"\nwith built-ins disabled: \"real binary\\n\"\nbuilt-ins enabled again: true",
+              "bun": "# builtin-catalog — The built-in command catalog\navailable built-ins: [\"basename\",\"cat\",\"cd\",\"cp\",\"dirname\",\"echo\",\"env\",\"exit\",\"false\",\"head\",\"ls\",\"mkdir\",\"mv\",\"pwd\",\"rm\",\"seq\",\"sleep\",\"sort\",\"tail\",\"tee\",\"test\",\"touch\",\"true\",\"uniq\",\"which\",\"yes\"]\nnumber of built-ins: 26\nwith built-ins: \"built-in\\n\"\nwith built-ins disabled: \"real binary\\n\"\nbuilt-ins enabled again: true"
             }
           },
           {
@@ -949,6 +949,63 @@
             "output": {
               "node": "# execa-compat — Execa compatibility mode\nisolated and general API: true\nexact argv: \"hello world|$HOME\"\npreserved newline: \"hello\\n\"\ntolerated exit code: 3\nbinary stdin: \"input\"",
               "bun": "# execa-compat — Execa compatibility mode\nisolated and general API: true\nexact argv: \"hello world|$HOME\"\npreserved newline: \"hello\\n\"\ntolerated exit code: 3\nbinary stdin: \"input\""
+            }
+          },
+          {
+            "id": "shelljs-compat",
+            "title": "ShellJS compatibility mode",
+            "category": "Running commands",
+            "summary": "The pinned JavaScript ShellJS API and Rust async session counterpart preserve separate arguments and error statuses, with explicit translation limits.",
+            "file": "js/examples/features/shelljs-compat.mjs",
+            "api": ["$.shelljs", "shelljs", "command-stream/shelljs"],
+            "alternatives": {
+              "bun-shell": { "unsupported": "Bun Shell has a different API" },
+              "zx": { "unsupported": "zx has a different API" },
+              "execa": { "unsupported": "Execa has a different API" },
+              "shelljs": "import shell from 'shelljs'; shell.head({ '-n': 2 }, 'file');",
+              "child_process": {
+                "unsupported": "no portable ShellJS command layer"
+              }
+            },
+            "source": "import { writeFileSync } from 'node:fs';\nimport { join } from 'node:path';\nimport { $, shelljs } from '../../src/$.mjs';\nimport { example, makeTempDir } from './_harness.mjs';\n\nawait example(\n  { id: 'shelljs-compat', title: 'ShellJS compatibility mode' },\n  async ({ record }) => {\n    shelljs.config.silent = true;\n    const directory = makeTempDir('shelljs');\n    const file = join(directory, 'file with spaces');\n    writeFileSync(file, 'z\\na\\na\\nb\\n');\n    record('general API', $.shelljs === shelljs);\n    record('separate arguments', shelljs.echo('hello', 'two words').stdout);\n    record('head', shelljs.head({ '-n': 2 }, file).stdout);\n    record('tail', shelljs.tail('-n', '2', file).stdout);\n    record('missing file code', shelljs.cat(join(directory, 'missing')).code);\n    shelljs.config.reset();\n  }\n);",
+            "rustApi": ["shelljs::ShellJs"],
+            "rustSource": "async fn shelljs_compat() -> ExampleResult {\n    let directory = tempfile::tempdir()?;\n    std::fs::write(directory.path().join(\"file with spaces\"), \"z\\na\\na\\nb\\n\")?;\n    let mut shell = command_stream::shelljs::ShellJs::new();\n    shell.config.silent = true;\n    shell\n        .cd(&[directory.path().to_str().ok_or(\"non-UTF8 path\")?])\n        .await?;\n    Ok(vec![\n        observation(\"general API\", true),\n        observation(\n            \"separate arguments\",\n            shell.echo(&[\"hello\", \"two words\"]).await?.stdout,\n        ),\n        observation(\n            \"head\",\n            shell.head(&[\"-n\", \"2\", \"file with spaces\"]).await?.stdout,\n        ),\n        observation(\n            \"tail\",\n            shell.tail(&[\"-n\", \"2\", \"file with spaces\"]).await?.stdout,\n        ),\n        observation(\"missing file code\", shell.cat(&[\"missing\"]).await?.code),\n    ])\n}",
+            "rustOutput": "# shelljs-compat — Rust\ngeneral API: true\nseparate arguments: \"hello two words\\n\"\nhead: \"z\\na\\n\"\ntail: \"a\\nb\\n\"\nmissing file code: 1",
+            "identicalOutput": true,
+            "output": {
+              "node": "hello two words\n# shelljs-compat — ShellJS compatibility mode\ngeneral API: true\nseparate arguments: \"hello two words\\n\"\nhead: \"z\\na\\n\"\ntail: \"a\\nb\\n\"\nmissing file code: 1",
+              "bun": "hello two words\n# shelljs-compat — ShellJS compatibility mode\ngeneral API: true\nseparate arguments: \"hello two words\\n\"\nhead: \"z\\na\\n\"\ntail: \"a\\nb\\n\"\nmissing file code: 1"
+            }
+          },
+          {
+            "id": "native-text",
+            "title": "Native head, tail, sort and uniq",
+            "category": "Built-in commands",
+            "summary": "Four portable UTF-8 commands handle files and completed stdin, preserve line endings and support strict options, cancellation and output channels.",
+            "file": "js/examples/features/native-text.mjs",
+            "api": ["head", "tail", "sort", "uniq"],
+            "alternatives": {
+              "bun-shell": {
+                "unsupported": "requires installed head/tail/sort/uniq programs"
+              },
+              "zx": "await $`sort log.txt | uniq -c`; // installed utilities",
+              "execa": "await execa('head', ['-n', '2', 'log.txt']); // installed utility",
+              "shelljs": "shell.head({ '-n': 2 }, 'log.txt'); shell.sort('log.txt').uniq('-c');",
+              "child_process": "execFile('head', ['-n', '2', 'log.txt'], callback);"
+            },
+            "source": "import { $ } from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\n\nawait example(\n  { id: 'native-text', title: 'Native text commands' },\n  async ({ record }) => {\n    const input = 'b\\nb\\na\\n';\n    const quiet = $({ stdin: input, mirror: false });\n    record('head', (await quiet`head -n 2`).stdout.toString());\n    record('tail', (await quiet`tail -n 1`).stdout.toString());\n    record('sort', (await quiet`sort -u`).stdout.toString());\n    record('uniq', (await quiet`uniq -cd`).stdout.toString());\n    record('zero lines', (await quiet`tail -n 0`).stdout.toString());\n  }\n);",
+            "rustApi": [
+              "commands::head",
+              "commands::tail",
+              "commands::sort",
+              "commands::uniq"
+            ],
+            "rustSource": "async fn native_text() -> ExampleResult {\n    let options = RunOptions {\n        stdin: StdinOption::Content(\"b\\nb\\na\\n\".into()),\n        ..quiet_options()\n    };\n    let mut observations = Vec::new();\n    for (label, command) in [\n        (\"head\", \"head -n 2\"),\n        (\"tail\", \"tail -n 1\"),\n        (\"sort\", \"sort -u\"),\n        (\"uniq\", \"uniq -cd\"),\n        (\"zero lines\", \"tail -n 0\"),\n    ] {\n        observations.push(observation(\n            label,\n            ProcessRunner::new(command, options.clone())\n                .run()\n                .await?\n                .stdout,\n        ));\n    }\n    Ok(observations)\n}",
+            "rustOutput": "# native-text — Rust\nhead: \"b\\nb\\n\"\ntail: \"a\\n\"\nsort: \"a\\nb\\n\"\nuniq: \"      2 b\\n\"\nzero lines: \"\"",
+            "identicalOutput": true,
+            "output": {
+              "node": "# native-text — Native text commands\nhead: \"b\\nb\\n\"\ntail: \"a\\n\"\nsort: \"a\\nb\\n\"\nuniq: \"      2 b\\n\"\nzero lines: \"\"",
+              "bun": "# native-text — Native text commands\nhead: \"b\\nb\\n\"\ntail: \"a\\n\"\nsort: \"a\\nb\\n\"\nuniq: \"      2 b\\n\"\nzero lines: \"\""
             }
           }
         ]

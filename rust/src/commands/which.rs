@@ -6,7 +6,8 @@ use crate::utils::{CommandResult, VirtualUtils};
 /// List of virtual (shell builtin) commands
 const VIRTUAL_COMMANDS: &[&str] = &[
     "echo", "pwd", "cd", "true", "false", "sleep", "cat", "ls", "mkdir", "rm", "touch", "cp", "mv",
-    "basename", "dirname", "env", "exit", "which", "yes", "seq", "tee", "test",
+    "basename", "dirname", "env", "exit", "which", "yes", "seq", "tee", "test", "head", "tail",
+    "sort", "uniq",
 ];
 
 /// Execute the which command

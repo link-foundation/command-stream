@@ -13,6 +13,9 @@ language implementations:
 - [Rust crate](./rust/README.md): Rust library and binary published to crates.io
   as `command-stream`.
 
+The [ShellJS migration guide](./js/docs/SHELLJS_MIGRATION.md) covers the pinned
+JavaScript compatibility API, Rust session API, and 26 native built-in commands.
+
 Both implementations focus on shell-like command execution, real-time output
 handling, pipeline support, and cross-platform behavior. Both also include a
 zx-compatible API (`command-stream/zx` and `$.zx` in JavaScript,

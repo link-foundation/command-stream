@@ -588,6 +588,42 @@ export const features = [
       },
     },
   },
+  {
+    id: 'shelljs-compat',
+    title: 'ShellJS compatibility mode',
+    category: 'Running commands',
+    summary:
+      'The pinned JavaScript ShellJS API and Rust async session counterpart preserve separate arguments and error statuses, with explicit translation limits.',
+    file: 'js/examples/features/shelljs-compat.mjs',
+    api: ['$.shelljs', 'shelljs', 'command-stream/shelljs'],
+    alternatives: {
+      'bun-shell': { unsupported: 'Bun Shell has a different API' },
+      zx: { unsupported: 'zx has a different API' },
+      execa: { unsupported: 'Execa has a different API' },
+      shelljs: "import shell from 'shelljs'; shell.head({ '-n': 2 }, 'file');",
+      child_process: { unsupported: 'no portable ShellJS command layer' },
+    },
+  },
+  {
+    id: 'native-text',
+    title: 'Native head, tail, sort and uniq',
+    category: 'Built-in commands',
+    summary:
+      'Four portable UTF-8 commands handle files and completed stdin, preserve line endings and support strict options, cancellation and output channels.',
+    file: 'js/examples/features/native-text.mjs',
+    api: ['head', 'tail', 'sort', 'uniq'],
+    alternatives: {
+      'bun-shell': {
+        unsupported: 'requires installed head/tail/sort/uniq programs',
+      },
+      zx: 'await $`sort log.txt | uniq -c`; // installed utilities',
+      execa:
+        "await execa('head', ['-n', '2', 'log.txt']); // installed utility",
+      shelljs:
+        "shell.head({ '-n': 2 }, 'log.txt'); shell.sort('log.txt').uniq('-c');",
+      child_process: "execFile('head', ['-n', '2', 'log.txt'], callback);",
+    },
+  },
 ];
 
 export const featuresById = new Map(
@@ -649,6 +685,13 @@ export const rustApiByFeature = new Map(
     ],
     'ansi-utils': ['AnsiUtils', 'AnsiConfig'],
     'execa-compat': ['execa', 'execa_compat', 'execa::Execa', 'execa::Options'],
+    'shelljs-compat': ['shelljs::ShellJs'],
+    'native-text': [
+      'commands::head',
+      'commands::tail',
+      'commands::sort',
+      'commands::uniq',
+    ],
     'zx-compat': ['zx!', 'zx::Shell', 'zx::within', 'zx::ProcessOutput'],
   })
 );

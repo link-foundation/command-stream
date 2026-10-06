@@ -95,6 +95,9 @@ jobs:
         uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: high
+          # No upstream patch; runtime depth guard and regression coverage are
+          # documented in .github/audit-ignore.txt. Other advisories still fail.
+          allow-ghsas: GHSA-vfj7-8cjw-p6xm
           comment-summary-in-pr: on-failure
 
   npm-audit:

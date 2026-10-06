@@ -1,3 +1,4 @@
+import shelljs from './shelljs/index.mjs';
 // command-stream - A unified shell command execution library
 // Main entry point - integrates all ProcessRunner modules
 
@@ -400,6 +401,11 @@ import yesCommand from './commands/$.yes.mjs';
 import seqCommand from './commands/$.seq.mjs';
 import teeCommand from './commands/$.tee.mjs';
 import testCommand from './commands/$.test.mjs';
+import headCommand from './commands/$.head.mjs';
+import tailCommand from './commands/$.tail.mjs';
+import sortCommand from './commands/$.sort.mjs';
+import uniqCommand from './commands/$.uniq.mjs';
+
 import { $ as bunShell } from './bun-shell/shell.mjs';
 
 // Built-in commands that match Bun.$ functionality
@@ -431,10 +437,16 @@ function registerBuiltins() {
   register('seq', seqCommand);
   register('tee', teeCommand);
   register('test', testCommand);
+  register('head', headCommand);
+  register('tail', tailCommand);
+  register('sort', sortCommand);
+  register('uniq', uniqCommand);
 }
 
 // Initialize built-in commands
+
 $tagged.spawn = crossSpawn;
+Object.defineProperty($tagged, 'shelljs', { get: () => shelljs });
 // `$.bun`: the Bun.$-compatible shell (also `command-stream/bun`).
 $tagged.bun = bunShell;
 
@@ -474,6 +486,7 @@ trace(
 );
 
 export {
+  shelljs,
   $tagged as $,
   execaCompat,
   execa,

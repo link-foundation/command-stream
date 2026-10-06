@@ -846,6 +846,12 @@ async function handleShellMode(runner, deps) {
     () => `BRANCH: spec.mode => shell | ${JSON.stringify({})}`
   );
 
+  // Virtual handlers consume completed input. Keep manual streams, pid and
+  // cancellation on this runner by spawning its real process directly.
+  if (runner.options.stdin === 'pipe') {
+    trace('ProcessRunner', () => 'Manual stdin pipe: using the real shell');
+    return null;
+  }
   const useShellOps = shouldUseShellOperators(runner, command);
   // Backslash escapes are removed by a real shell but not by our lightweight
   // tokenizer, so such commands always go to the system shell rather than to
