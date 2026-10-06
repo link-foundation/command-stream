@@ -50,6 +50,18 @@ probe so releases with the corrected platform table retain their names.
 Mocked Darwin tests cover the old and corrected tables; actual SIGUSR1 and
 SIGUSR2 tests exercise all execution paths in the macOS CI job.
 
+Shell file/args sync execution uses Bun's Node-compatible `spawnSync`, rather
+than its native sync API. The same normalization applies there. The isolated
+mock below reproduces CI's `1`/`140` statuses for SIGUSR1/SIGUSR2 on any host;
+it failed before fixing this path and now verifies `158`/`159` and an ordinary
+exit. It changes runtime/platform state only inside its own process and sends
+no real signals:
+
+```sh
+node experiments/issue-208/bun-darwin-node-sync.mjs
+bun experiments/issue-208/bun-darwin-node-sync.mjs
+```
+
 Run it under both runtimes:
 
 ```sh

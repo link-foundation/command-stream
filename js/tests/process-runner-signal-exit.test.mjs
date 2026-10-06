@@ -1,7 +1,9 @@
 // Shared regression suite for Bun and the Node 20/22/24 CI matrix (issue #208).
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { constants } from 'node:os';
 import { afterEach, test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { $, ProcessRunner, resetGlobalState, set } from '../src/$.mjs';
 import { getSyncStdinInput } from '../src/$.result.mjs';
 import { normalizeBunExitSignal } from '../src/$.process-runner-signal.mjs';
@@ -255,3 +257,20 @@ test('fixed Bun, ordinary exits, and other platforms retain their signals', () =
     'SIGUSR1'
   );
 });
+
+test(
+  'Bun Darwin shell file/args sync normalizes Node-compatible signal reports',
+  { timeout: 5000 },
+  () => {
+    const probe = fileURLToPath(
+      new URL(
+        '../../experiments/issue-208/bun-darwin-node-sync.mjs',
+        import.meta.url
+      )
+    );
+    // Isolate mocked runtime/platform state from the other tests.
+    const result = spawnSync(process.execPath, [probe], { encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /OK: Bun Darwin/);
+  }
+);

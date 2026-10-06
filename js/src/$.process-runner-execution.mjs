@@ -543,9 +543,12 @@ function executeSyncNode(argv, options) {
     return result;
   }
 
+  const signal = isBun
+    ? normalizeBunExitSignal(proc.status, proc.signal)
+    : (proc.signal ?? null);
   const result = createResult({
-    code: determineFinalExitCode(proc.status, proc.signal),
-    signal: proc.signal ?? null,
+    code: determineFinalExitCode(proc.status, signal),
+    signal,
     stdout: proc.stdout || '',
     stderr: proc.stderr || '',
     stdin: getStdinString(stdin),
