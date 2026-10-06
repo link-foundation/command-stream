@@ -36,7 +36,9 @@ Rust tests cover process-runner kill, streaming kill, zero grace, stream drop an
 
 The existing Bun and Rust matrices cover Windows, Linux and macOS. New jobs also exercise Node.js 20, 22 and 24 on Windows and macOS; the existing Node.js matrix covers Linux. Both normal and instant JavaScript releases require these jobs to succeed. The workflow regression test verifies the new release dependency and condition.
 
-Patch changesets for JavaScript and a Rust changelog fragment prepare both packages for their next automatic release. Platform behavior is documented in each package README.
+A JavaScript patch changeset and a Rust changelog fragment prepare both packages for their next automatic release. Platform behavior is documented in each package README.
+
+The [JavaScript changeset job in run 37478786882](https://github.com/link-foundation/command-stream/actions/runs/37478786882/job/112321159274) rejected the initially separate stdin and Windows changesets: `Multiple changesets found in this PR (2). Each PR should add exactly ONE changeset.` Lines 431–440 of the [preserved job log](./javascript-changeset-112321159274.log.gz) show the failure. The real validator reproduced it locally. The final changeset combines both fixes, respecting the release rule.
 
 ## Local verification
 
