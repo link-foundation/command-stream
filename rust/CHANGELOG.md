@@ -178,6 +178,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [1.5.1] - 2026-10-06
+
+### Fixed
+
+- Stop descendant processes on Windows when a process runner is killed or a streaming command is cancelled or dropped.
+- Escalate POSIX streaming cancellation to stop descendants that ignore the requested signal after their parent exits.
+
 ## [1.5.0] - 2026-10-06
 
 ### Added
