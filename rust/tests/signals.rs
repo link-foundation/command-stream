@@ -392,6 +392,44 @@ async fn stream_kill_lets_the_child_handle_the_signal() {
     );
 }
 
+/// A shell exits on SIGTERM while its worker ignores it. Reaping the shell
+/// must not suppress the escalation needed to stop the rest of the group.
+#[cfg(unix)]
+#[tokio::test]
+async fn stream_kill_escalates_after_the_parent_exits() {
+    let directory = tempfile::tempdir().unwrap();
+    let heartbeat = directory.path().join("heartbeat");
+    let command = format!(
+        "sh -c 'trap \"\" TERM; i=0; while [ \"$i\" -lt 200 ]; do echo tick >> {}; i=$((i+1)); sleep 0.05; done' & echo ready; wait",
+        heartbeat.display()
+    );
+    let mut stream = StreamingRunner::new(command).kill_grace_ms(100).stream();
+    tokio::time::timeout(Duration::from_secs(3), async {
+        while heartbeat_len(&heartbeat) == 0 {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .expect("worker did not become ready");
+    let group = stream.pid().unwrap();
+    stream.kill();
+    tokio::time::timeout(Duration::from_secs(3), async {
+        while stream.next().await.is_some() {}
+    })
+    .await
+    .expect("cancelled stream did not finish");
+    tokio::time::sleep(Duration::from_millis(150)).await;
+    let before = heartbeat_len(&heartbeat);
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    let after = heartbeat_len(&heartbeat);
+    // Clean up the worker even when the pre-fix assertion fails.
+    let _ = nix::sys::signal::kill(
+        nix::unistd::Pid::from_raw(-(group as i32)),
+        nix::sys::signal::Signal::SIGKILL,
+    );
+    assert_eq!(after, before, "worker survived after its shell exited");
+}
+
 /// `kill_grace_ms(0)` opts out of the grace period entirely.
 #[cfg(unix)]
 #[tokio::test]
