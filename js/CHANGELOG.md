@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.1
+
+### Patch Changes
+
+- 5393e75: Finish streams promptly when the supplied AbortSignal is already aborted, yielding exactly one exit chunk with the stored result code. Also finish iteration when the runner completed before stream listeners were attached.
+
 ## 1.6.0
 
 ### Minor Changes

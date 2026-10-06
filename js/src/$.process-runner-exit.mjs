@@ -9,6 +9,7 @@
 // and any stream() iterator — hanging indefinitely.
 
 import { trace } from './$.trace.mjs';
+import { normalizeBunExitSignal } from './$.process-runner-signal.mjs';
 
 const isBun = typeof globalThis.Bun !== 'undefined';
 
@@ -89,7 +90,7 @@ export function createExitPromise(child, runner) {
     if (!signal) {
       return child.exited.then((code) => ({
         code,
-        signal: child.signalCode ?? null,
+        signal: normalizeBunExitSignal(code, child.signalCode),
       }));
     }
     return new Promise((resolve) => {
@@ -102,7 +103,7 @@ export function createExitPromise(child, runner) {
         resolve({ code, signal: exitSignal });
       };
       child.exited.then(
-        (code) => settle(code, child.signalCode ?? null),
+        (code) => settle(code, normalizeBunExitSignal(code, child.signalCode)),
         () => settle(null)
       );
       const cancel = () =>
@@ -164,7 +165,10 @@ export function createExitPromise(child, runner) {
             signalCode: child.signalCode,
           })}`
       );
-      settle(code, exitSignal);
+      settle(
+        code,
+        isBun ? normalizeBunExitSignal(code, exitSignal) : exitSignal
+      );
     });
 
     // 'close' is still handled as a fallback in case 'exit' never fires.
@@ -181,7 +185,10 @@ export function createExitPromise(child, runner) {
             signalCode: child.signalCode,
           })}`
       );
-      settle(code, closeSignal);
+      settle(
+        code,
+        isBun ? normalizeBunExitSignal(code, closeSignal) : closeSignal
+      );
     });
   });
 }

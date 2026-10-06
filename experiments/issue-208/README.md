@@ -29,12 +29,26 @@ exits expose `signal: null`, including `exit 137`. Cancellation continues to
 report the requested stop signal. Sync stdio mode keywords are no longer input.
 
 The initial 43-case regression suite failed every case under Bun before the
-fix. The final suite adds two cases for running stream cancellation and explicit
-stdin's Node spawn path.
+fix. The final suite adds cases for running stream cancellation, explicit
+stdin's Node spawn path, and replaying a completed command's signal.
 
 The Node 20/24 runs additionally exposed an unhandled async stdin `EPIPE` when a
 child died during the write. The explicit-input path now installs the same
 traced error handler already used by the runner's other stdin pumps.
+
+Completed-stream replay also forwards the stored signal. After merging the
+latest default branch, the replay regression failed with `signal: undefined`
+instead of `SIGTERM`. The existing pre-aborted stream tests now verify the
+signal metadata while preserving their no-spawn and completion assertions.
+
+Bun 1.4.2 on macOS reported a real SIGUSR1 as `SIGPWR` in CI, so nine signal
+regressions returned 1 instead of 158. This matches
+[Bun's upstream issue #35296](https://github.com/oven-sh/bun/issues/35296).
+Async native statuses recover the OS signal number. For sync results and Bun's
+Node-compatible child processes, ambiguous names use a cached, finite capability
+probe so releases with the corrected platform table retain their names.
+Mocked Darwin tests cover the old and corrected tables; actual SIGUSR1 and
+SIGUSR2 tests exercise all execution paths in the macOS CI job.
 
 Run it under both runtimes:
 
@@ -44,7 +58,7 @@ node --test js/tests/process-runner-signal-exit.test.mjs
 ```
 
 The suite tests shell file/args, shell command strings, and exact-argv execution
-for SIGTERM, SIGKILL, SIGINT, and SIGUSR1; async/sync/stream status; signal metadata
+for SIGTERM, SIGKILL, SIGINT, SIGUSR1, and SIGUSR2; async/sync/stream status; signal metadata
 and events; normal exits; virtual commands; launch failure; cancellation;
 errexit; and sync stdin modes. POSIX-only cases skip on Windows. The suite also
 runs in the Node 20/22/24 CI matrix.

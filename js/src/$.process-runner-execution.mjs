@@ -2,6 +2,7 @@
 import cp from 'child_process';
 import { toStreamResult } from './$.result-streams.mjs';
 import { trace } from './$.trace.mjs';
+import { normalizeBunExitSignal } from './$.process-runner-signal.mjs';
 import {
   buildCommandArgv,
   describeCommand,
@@ -507,9 +508,10 @@ function executeSyncBun(argv, options) {
     return createExecutionErrorResult(error);
   }
 
+  const signal = normalizeBunExitSignal(proc.exitCode, proc.signalCode);
   const result = createResult({
-    code: determineFinalExitCode(proc.exitCode, proc.signalCode),
-    signal: proc.signalCode ?? null,
+    code: determineFinalExitCode(proc.exitCode, signal),
+    signal,
     stdout: proc.stdout?.toString('utf8') || '',
     stderr: proc.stderr?.toString('utf8') || '',
     stdin: getStdinString(stdin),

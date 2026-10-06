@@ -4,6 +4,7 @@ import { constants } from 'node:os';
 import { afterEach, test } from 'node:test';
 import { $, ProcessRunner, resetGlobalState, set } from '../src/$.mjs';
 import { getSyncStdinInput } from '../src/$.result.mjs';
+import { normalizeBunExitSignal } from '../src/$.process-runner-signal.mjs';
 
 const options = { mirror: false, capture: true, stdin: 'ignore' };
 const posix = { skip: process.platform === 'win32', timeout: 5000 };
@@ -16,7 +17,7 @@ const forms = {
 afterEach(() => resetGlobalState());
 
 for (const [form, makeSpec] of Object.entries(forms)) {
-  for (const signal of ['SIGTERM', 'SIGKILL', 'SIGINT', 'SIGUSR1']) {
+  for (const signal of ['SIGTERM', 'SIGKILL', 'SIGINT', 'SIGUSR1', 'SIGUSR2']) {
     const command = `kill -${signal.slice(3)} $$`;
     const code = 128 + constants.signals[signal];
 
@@ -74,6 +75,16 @@ for (const code of [0, 3, 137]) {
   });
 }
 
+test('stream replays the signal of a completed command', posix, async () => {
+  const runner = new ProcessRunner(forms.exec('kill -TERM $$'), options);
+  await runner;
+  const chunks = [];
+  for await (const chunk of runner.stream()) {
+    chunks.push(chunk);
+  }
+  assert.deepEqual(chunks, [{ type: 'exit', code: 143, signal: 'SIGTERM' }]);
+});
+
 test(
   'virtual commands and launch failures have no signal',
   { timeout: 5000 },
@@ -128,13 +139,15 @@ test(
   'explicit stdin preserves signal termination on the Node spawn path',
   posix,
   async () => {
-    for (const stdin of ['', Buffer.from('input')]) {
-      const result = await new ProcessRunner(forms.exec('kill -KILL $$'), {
-        ...options,
-        stdin,
-      });
-      assert.equal(result.code, 137);
-      assert.equal(result.signal, 'SIGKILL');
+    for (const signal of ['SIGKILL', 'SIGUSR2']) {
+      for (const stdin of ['', Buffer.from('input')]) {
+        const result = await new ProcessRunner(
+          forms.exec(`kill -${signal.slice(3)} $$`),
+          { ...options, stdin }
+        );
+        assert.equal(result.code, 128 + constants.signals[signal]);
+        assert.equal(result.signal, signal);
+      }
     }
   }
 );
@@ -163,4 +176,82 @@ test('sync stdio keywords are modes rather than input bytes', () => {
     assert.equal(getSyncStdinInput(mode), undefined);
   }
   assert.equal(getSyncStdinInput('hello').toString(), 'hello');
+});
+
+const darwinSignals = {
+  SIGEMT: 7,
+  SIGBUS: 10,
+  SIGSYS: 12,
+  SIGTERM: 15,
+  SIGURG: 16,
+  SIGSTOP: 17,
+  SIGTSTP: 18,
+  SIGCONT: 19,
+  SIGCHLD: 20,
+  SIGIO: 23,
+  SIGINFO: 29,
+  SIGUSR1: 30,
+  SIGUSR2: 31,
+};
+
+const oldBunSignals = [
+  'SIGBUS',
+  'SIGUSR1',
+  'SIGUSR2',
+  'SIGTERM',
+  'SIGSTKFLT',
+  'SIGCHLD',
+  'SIGCONT',
+  'SIGSTOP',
+  'SIGTSTP',
+  'SIGURG',
+  'SIGIO',
+  'SIGPWR',
+  'SIGSYS',
+];
+
+test('Bun Darwin native async statuses determine the actual signal', () => {
+  const config = {
+    platform: 'darwin',
+    signals: darwinSignals,
+    detectLinuxNames: () => assert.fail('numeric status needs no probe'),
+  };
+  Object.entries(darwinSignals).forEach(([signal, number], index) => {
+    assert.equal(
+      normalizeBunExitSignal(128 + number, oldBunSignals[index], config),
+      signal
+    );
+  });
+});
+
+test('old Bun Darwin sync and Node-compatible signals are normalized', () => {
+  const config = {
+    platform: 'darwin',
+    signals: darwinSignals,
+    detectLinuxNames: () => true,
+  };
+  Object.keys(darwinSignals).forEach((signal, index) => {
+    assert.equal(
+      normalizeBunExitSignal(null, oldBunSignals[index], config),
+      signal
+    );
+  });
+  assert.equal(normalizeBunExitSignal(null, 'SIG16', config), 'SIGURG');
+});
+
+test('fixed Bun, ordinary exits, and other platforms retain their signals', () => {
+  const config = {
+    platform: 'darwin',
+    signals: darwinSignals,
+    detectLinuxNames: () => false,
+  };
+  for (const signal of Object.keys(darwinSignals)) {
+    assert.equal(normalizeBunExitSignal(null, signal, config), signal);
+  }
+  assert.equal(normalizeBunExitSignal(137, null, config), null);
+  assert.equal(normalizeBunExitSignal(0, undefined, config), null);
+  assert.equal(
+    normalizeBunExitSignal(null, 'SIGUSR1', { platform: 'linux' }),
+    'SIGUSR1'
+  );
 });

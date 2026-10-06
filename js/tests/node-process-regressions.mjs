@@ -32,6 +32,39 @@ function missingExecutable() {
 
 afterEach(() => resetGlobalState());
 
+for (const [name, createRunner] of [
+  ['template command', (options) => $(options)`sleep 5`],
+  [
+    'shell file/args runner',
+    (options) =>
+      new ProcessRunner({ mode: 'shell', file: 'sleep', args: ['5'] }, options),
+  ],
+]) {
+  test(
+    `an already-aborted ${name} stream ends with its exit code in Node.js`,
+    { timeout: 2000 },
+    async () => {
+      const runner = createRunner({
+        ...processOptions,
+        signal: AbortSignal.abort(),
+      });
+      const chunks = [];
+      for await (const chunk of runner.stream()) {
+        chunks.push(chunk);
+      }
+      const result = await runner;
+
+      assert.equal(result.code, 143);
+      assert.deepEqual(chunks, [
+        { type: 'exit', code: result.code, signal: 'SIGTERM' },
+      ]);
+      assert.equal(result.signal, 'SIGTERM');
+      assert.equal(runner.finished, true);
+      assert.equal(runner._child, null);
+    }
+  );
+}
+
 test('explicit stdin is written exactly once in Node.js', async () => {
   const input = 'first line\nsecond line\n';
   const result = await exec(
