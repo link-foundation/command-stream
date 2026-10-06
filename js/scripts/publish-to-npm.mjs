@@ -56,6 +56,7 @@ import {
   sleep,
 } from './publish-retry.mjs';
 import { loadUseM } from './use-m-loader.mjs';
+import { runChecked } from './run-checked.mjs';
 
 const FALLBACK_PACKAGE_NAME = 'command-stream';
 
@@ -213,7 +214,7 @@ async function main() {
   try {
     if (shouldPull) {
       // Pull the latest changes we just pushed
-      await $`git pull origin main`;
+      await runChecked($`git pull origin main`);
     }
 
     // Get current version

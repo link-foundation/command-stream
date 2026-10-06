@@ -5,6 +5,7 @@
 //! `cargo run --example language_features -- await-result`.
 
 use command_stream::commands::{CommandContext, VirtualCommandRegistry};
+use command_stream::zx;
 use command_stream::{
     cmd, create, exec, run, run_sync, set_shell_option, unset_shell_option, AnsiUtils,
     CommandResult, EventData, EventType, OutputChunk, Pipeline, ProcessRunner, RunOptions,
@@ -448,6 +449,131 @@ async fn ansi_utils() -> ExampleResult {
 }
 // endfeature:ansi-utils
 
+// feature:zx-compat
+async fn zx_compat() -> ExampleResult {
+    // Interpolated values are quoted the zx way, so spaces survive.
+    let words = "hello world";
+    let greeting = zx!("echo {}", words).await?;
+
+    // Failing commands return Err(ProcessOutput), unless `nothrow` is set.
+    let rejected = zx!("exit 2").await.unwrap_err();
+    let tolerated = zx!(zx::Shell::new().nothrow(true), "exit 3").await?;
+
+    let sorted = zx!("printf 'b\\na\\n'").pipe(zx!("sort")).await?;
+
+    // `within` scopes settings such as the working directory.
+    let dir = std::env::temp_dir().canonicalize()?;
+    let inside = zx::within(async {
+        zx::configure(|options| options.cwd = Some(dir.clone()));
+        zx!("pwd").await
+    })
+    .await?;
+
+    Ok(vec![
+        observation("interpolation", greeting.stdout),
+        observation("rejected exit code", rejected.exit_code),
+        observation("nothrow exit code", tolerated.exit_code),
+        observation("pipe", sorted.lines()),
+        observation("within cwd", inside.stdout.trim() == dir.to_string_lossy()),
+        observation("cwd restored", zx::current_options().cwd.is_none()),
+    ])
+}
+// endfeature:zx-compat
+
+// feature:execa-compat
+async fn execa_compat() -> ExampleResult {
+    use command_stream::execa::{Execa, Options};
+    let isolated = command_stream::execa::execa("node", ["--version"]).await?;
+    let general = command_stream::execa("node", ["--version"]).await?;
+    let argv = command_stream::execa(
+        "node",
+        [
+            "-e",
+            "process.stdout.write(process.argv.slice(1).join('|'))",
+            "hello world",
+            "$HOME",
+        ],
+    )
+    .await?;
+    let api = Execa::new(Options {
+        strip_final_newline: false,
+        ..Options::default()
+    });
+    let newline = api.command("node", ["-e", "console.log('hello')"]).await?;
+    let tolerated = api
+        .command("node", ["-e", "process.exit(3)"])
+        .reject(false)
+        .await?;
+    let input = command_stream::execa("node", ["-e", "process.stdin.pipe(process.stdout)"])
+        .input(b"input".to_vec())
+        .await?;
+    Ok(vec![
+        observation(
+            "isolated and general API",
+            isolated.stdout == general.stdout,
+        ),
+        observation("exact argv", argv.text()),
+        observation("preserved newline", newline.text()),
+        observation("tolerated exit code", tolerated.exit_code),
+        observation("binary stdin", input.text()),
+    ])
+}
+// endfeature:execa-compat
+
+// feature:shelljs-compat
+async fn shelljs_compat() -> ExampleResult {
+    let directory = tempfile::tempdir()?;
+    std::fs::write(directory.path().join("file with spaces"), "z\na\na\nb\n")?;
+    let mut shell = command_stream::shelljs::ShellJs::new();
+    shell.config.silent = true;
+    shell
+        .cd(&[directory.path().to_str().ok_or("non-UTF8 path")?])
+        .await?;
+    Ok(vec![
+        observation("general API", true),
+        observation(
+            "separate arguments",
+            shell.echo(&["hello", "two words"]).await?.stdout,
+        ),
+        observation(
+            "head",
+            shell.head(&["-n", "2", "file with spaces"]).await?.stdout,
+        ),
+        observation(
+            "tail",
+            shell.tail(&["-n", "2", "file with spaces"]).await?.stdout,
+        ),
+        observation("missing file code", shell.cat(&["missing"]).await?.code),
+    ])
+}
+// endfeature:shelljs-compat
+
+// feature:native-text
+async fn native_text() -> ExampleResult {
+    let options = RunOptions {
+        stdin: StdinOption::Content("b\nb\na\n".into()),
+        ..quiet_options()
+    };
+    let mut observations = Vec::new();
+    for (label, command) in [
+        ("head", "head -n 2"),
+        ("tail", "tail -n 1"),
+        ("sort", "sort -u"),
+        ("uniq", "uniq -cd"),
+        ("zero lines", "tail -n 0"),
+    ] {
+        observations.push(observation(
+            label,
+            ProcessRunner::new(command, options.clone())
+                .run()
+                .await?
+                .stdout,
+        ));
+    }
+    Ok(observations)
+}
+// endfeature:native-text
+
 async fn execute(id: &str) -> ExampleResult {
     match id {
         "await-result" => await_result().await,
@@ -475,6 +601,10 @@ async fn execute(id: &str) -> ExampleResult {
         "interpolation" => interpolation().await,
         "shell-settings" => shell_settings().await,
         "ansi-utils" => ansi_utils().await,
+        "zx-compat" => zx_compat().await,
+        "execa-compat" => execa_compat().await,
+        "shelljs-compat" => shelljs_compat().await,
+        "native-text" => native_text().await,
         _ => Err(format!("unknown feature: {id}").into()),
     }
 }

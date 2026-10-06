@@ -1,0 +1,193 @@
+--- js-template/scripts/merge-changesets.mjs
++++ js/scripts/merge-changesets.mjs
+@@ -9,10 +9,11 @@
+  * - Preserves all descriptions in chronological order (by file modification time)
+  * - Removes the individual changeset files after merging
+  * - Does nothing if there's only one or no changesets
+- * - Fails if any changeset cannot be parsed
+  *
+  * This script is run before `changeset version` to ensure a clean release
+  * even when multiple PRs have merged before a release cycle.
++ *
++ * IMPORTANT: Update the package name below to match your package.json
+  */
+ 
+ import {
+@@ -24,13 +25,8 @@
+ } from 'fs';
+ import { join } from 'path';
+ 
+-import { getChangesetDir, getJsRoot, parseJsRootConfig } from './js-paths.mjs';
+-import {
+-  formatChangesetHeader,
+-  getChangesetVersionTypeRegex,
+-  readPackageInfo,
+-} from './package-info.mjs';
+-import { printUntrusted } from './github-actions-log.mjs';
++const PACKAGE_NAME = 'command-stream';
++const CHANGESET_DIR = '.changeset';
+ 
+ // Version bump type priority (higher number = higher priority)
+ const BUMP_PRIORITY = {
+@@ -116,45 +112,41 @@
+ /**
+  * Parse a changeset file and extract its metadata
+  * @param {string} filePath
+- * @param {string} packageName
+- * @returns {{type: string, description: string, mtime: Date}}
+- */
+-function parseChangeset(filePath, packageName) {
+-  let content;
+-  let stats;
+-
++ * @returns {{type: string, description: string, mtime: Date} | null}
++ */
++function parseChangeset(filePath) {
+   try {
+-    content = readFileSync(filePath, 'utf-8');
+-    stats = statSync(filePath);
++    const content = readFileSync(filePath, 'utf-8');
++    const stats = statSync(filePath);
++
++    // Extract version type - support both quoted and unquoted package names
++    const versionTypeRegex = new RegExp(
++      `^['"]?${PACKAGE_NAME.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"]?:\\s+(major|minor|patch)`,
++      'm'
++    );
++    const versionTypeMatch = content.match(versionTypeRegex);
++
++    if (!versionTypeMatch) {
++      console.warn(
++        `Warning: Could not parse version type from ${filePath}, skipping`
++      );
++      return null;
++    }
++
++    // Extract description
++    const parts = content.split('---');
++    const description =
++      parts.length >= 3 ? parts.slice(2).join('---').trim() : '';
++
++    return {
++      type: versionTypeMatch[1],
++      description,
++      mtime: stats.mtime,
++    };
+   } catch (error) {
+-    throw new Error(`Failed to read ${filePath}: ${error.message}`);
+-  }
+-
+-  // Extract version type - support both quoted and unquoted package names
+-  const versionTypeRegex = getChangesetVersionTypeRegex(packageName, {
+-    requireQuotes: false,
+-  });
+-  const versionTypeMatch = content.match(versionTypeRegex);
+-
+-  if (!versionTypeMatch) {
+-    throw new Error(
+-      `Could not parse version type from ${filePath}. Expected a changeset header like ${formatChangesetHeader(
+-        packageName,
+-        'patch'
+-      )} with version type major, minor, or patch.`
+-    );
+-  }
+-
+-  // Extract description
+-  const parts = content.split('---');
+-  const description =
+-    parts.length >= 3 ? parts.slice(2).join('---').trim() : '';
+-
+-  return {
+-    type: versionTypeMatch[1],
+-    description,
+-    mtime: stats.mtime,
+-  };
++    console.warn(`Warning: Failed to parse ${filePath}: ${error.message}`);
++    return null;
++  }
+ }
+ 
+ /**
+@@ -176,14 +168,13 @@
+  * Create a merged changeset file
+  * @param {string} type
+  * @param {string[]} descriptions
+- * @param {string} packageName
+  * @returns {string}
+  */
+-function createMergedChangeset(type, descriptions, packageName) {
++function createMergedChangeset(type, descriptions) {
+   const combinedDescription = descriptions.join('\n\n');
+ 
+   return `---
+-${formatChangesetHeader(packageName, type)}
++'${PACKAGE_NAME}': ${type}
+ ---
+ 
+ ${combinedDescription}
+@@ -192,14 +183,9 @@
+ 
+ function main() {
+   console.log('Checking for multiple changesets to merge...');
+-  const jsRootConfig = parseJsRootConfig();
+-  const jsRoot = getJsRoot({ jsRoot: jsRootConfig, verbose: true });
+-  const changesetDir = getChangesetDir({ jsRoot });
+-  const { name: packageName } = readPackageInfo({ jsRoot });
+-  console.log(`Package: ${packageName}`);
+ 
+   // Get all changeset files
+-  const changesetFiles = readdirSync(changesetDir).filter(
++  const changesetFiles = readdirSync(CHANGESET_DIR).filter(
+     (file) => file.endsWith('.md') && file !== 'README.md'
+   );
+ 
+@@ -217,8 +203,8 @@
+   // Parse all changesets
+   const parsedChangesets = [];
+   for (const file of changesetFiles) {
+-    const filePath = join(changesetDir, file);
+-    const parsed = parseChangeset(filePath, packageName);
++    const filePath = join(CHANGESET_DIR, file);
++    const parsed = parseChangeset(filePath);
+     if (parsed) {
+       parsedChangesets.push({
+         file,
+@@ -252,15 +238,11 @@
+   console.log(`  Descriptions to merge: ${descriptions.length}`);
+ 
+   // Create merged changeset content
+-  const mergedContent = createMergedChangeset(
+-    highestBumpType,
+-    descriptions,
+-    packageName
+-  );
++  const mergedContent = createMergedChangeset(highestBumpType, descriptions);
+ 
+   // Generate a unique name for the merged changeset
+   const mergedFileName = `merged-${generateChangesetName()}.md`;
+-  const mergedFilePath = join(changesetDir, mergedFileName);
++  const mergedFilePath = join(CHANGESET_DIR, mergedFileName);
+ 
+   // Write the merged changeset
+   writeFileSync(mergedFilePath, mergedContent);
+@@ -274,16 +256,7 @@
+   }
+ 
+   console.log('\nChangeset merge completed successfully');
+-  console.log('\nMerged changeset content:');
+-  printUntrusted(mergedContent);
+-}
+-
+-try {
+-  main();
+-} catch (error) {
+-  console.error(`::error::${error.message}`);
+-  if (process.env.DEBUG) {
+-    console.error('Stack trace:', error.stack);
+-  }
+-  process.exit(1);
+-}
++  console.log(`\nMerged changeset content:\n${mergedContent}`);
++}
++
++main();

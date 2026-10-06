@@ -19,7 +19,7 @@ permissions:
 jobs:
   actionlint:
     name: Actionlint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     concurrency:
       group: check-${{ github.workflow }}-${{ github.ref }}-actionlint
@@ -45,14 +45,14 @@ jobs:
       # every `run:` block. A *native* actionlint binary without shellcheck on
       # PATH silently skips the shell checks and exits 0. Reproduce locally with
       # the same image:
-      #   docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -color
-      - uses: docker://rhysd/actionlint:1.7.7
+      #   docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 -color
+      - uses: docker://rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
         with:
           args: -color
 
   zizmor:
     name: Zizmor
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read

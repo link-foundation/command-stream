@@ -68,6 +68,8 @@ export declare class ShellPromise extends Promise<ShellOutput> {
   env(
     newEnv: Record<string, string | undefined> | NodeJS.ProcessEnv | undefined
   ): this;
+  /** Prefer project-local executables (command-stream extension). */
+  preferLocal(value?: boolean | string | string[]): this;
   /** Only buffer the output, without echoing it to stdout/stderr. */
   quiet(isQuiet?: boolean): this;
   /** stdout, line by line (implies `quiet()`). */
@@ -111,6 +113,8 @@ export interface BunShell {
   ): BunShell;
   /** Default working directory for commands created by this shell. */
   cwd(newCwd?: string): BunShell;
+  /** Prefer project-local executables by default (command-stream extension). */
+  preferLocal(value?: boolean | string | string[]): BunShell;
   nothrow(): BunShell;
   throws(shouldThrow: boolean): BunShell;
   /** Bash-like brace expansion: `braces('a{1,2}')` is `['a1', 'a2']`. */

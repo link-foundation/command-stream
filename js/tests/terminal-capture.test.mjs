@@ -125,13 +125,14 @@ describe('PTY terminal capture', () => {
 
     const capture = await captureTerminal({
       file: process.execPath,
-      args: [join(directory, 'fixtures/tui-styled-fixture.mjs')],
+      args: [join(directory, 'fixtures/tui-styled-fixture.mjs'), '600'],
       cols: 12,
       rows: 5,
       settleMilliseconds: 20,
       artifactDirectory,
       artifactOptions: {
         borderRadius: 0,
+        idleTimeLimit: Infinity,
         cellWidth: 10,
         cellHeight: 20,
         padding: 0,
@@ -173,8 +174,10 @@ describe('PTY terminal capture', () => {
     const duration = Number(
       recording.match(/animation-duration:([0-9.]+)s/)?.[1]
     );
-    expect(duration).toBeGreaterThanOrEqual(0.1);
-    expect(duration).toBeLessThan(0.5);
+    expect(capture.frames.length).toBeGreaterThanOrEqual(2);
+    expect(duration).toBeGreaterThanOrEqual(0.6);
+    // Retain the measured capture timing even when process scheduling is slow.
+    expect(duration).toBeCloseTo(capture.frames.at(-1).time, 1);
   });
 
   test('measures visible glyphs without stretching terminal row padding', async () => {

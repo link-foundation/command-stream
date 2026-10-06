@@ -51,8 +51,8 @@ Identical in Node.js and Bun:
 
 ```
 # builtin-catalog — The built-in command catalog
-available built-ins: ["basename","cat","cd","cp","dirname","echo","env","exit","false","ls","mkdir","mv","pwd","rm","seq","sleep","tee","test","touch","true","which","yes"]
-number of built-ins: 22
+available built-ins: ["basename","cat","cd","cp","dirname","echo","env","exit","false","head","ls","mkdir","mv","pwd","rm","seq","sleep","sort","tail","tee","test","touch","true","uniq","which","yes"]
+number of built-ins: 26
 with built-ins: "built-in\n"
 with built-ins disabled: "real binary\n"
 built-ins enabled again: true
@@ -82,8 +82,8 @@ async fn builtin_catalog() -> ExampleResult {
 
 ```
 # builtin-catalog — Rust
-available built-ins: ["basename","cat","cd","cp","dirname","echo","env","exit","false","ls","mkdir","mv","pwd","rm","seq","sleep","tee","test","touch","true","which","yes"]
-number of built-ins: 22
+available built-ins: ["basename","cat","cd","cp","dirname","echo","env","exit","false","head","ls","mkdir","mv","pwd","rm","seq","sleep","sort","tail","tee","test","touch","true","uniq","which","yes"]
+number of built-ins: 26
 ```
 
 ## The same thing in other libraries

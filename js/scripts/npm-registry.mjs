@@ -1,3 +1,5 @@
+import { debug } from './debug-print.mjs';
+
 export const DEFAULT_NPM_REGISTRY_URL = 'https://registry.npmjs.org';
 
 function getNpmRegistryFromEnv() {
@@ -56,6 +58,21 @@ export function buildPackageMetadataUrl(
   return `${normalizeRegistryUrl(registryUrl)}/${encodePackageName(packageName)}`;
 }
 
+export function buildPackageVersionUrl(packageName, version, registryUrl) {
+  return `${buildPackageMetadataUrl(packageName, registryUrl)}/${encodeURIComponent(version)}`;
+}
+
+function traceResponse(response, packageName, version) {
+  debug('npm verification response', {
+    packageName,
+    version,
+    status: response.status,
+    cacheStatus: response.headers?.get('cf-cache-status'),
+    cacheControl: response.headers?.get('cache-control'),
+    age: response.headers?.get('age'),
+  });
+}
+
 /**
  * Check whether a package version exists in npm registry metadata.
  * HTTP 404 means the package has not been published yet and is not an error.
@@ -72,18 +89,28 @@ export async function isPackageVersionPublished(
   {
     fetchFn = fetch,
     registryUrl = getNpmRegistryFromEnv() || DEFAULT_NPM_REGISTRY_URL,
+    timeoutMs = 10000,
   } = {}
 ) {
   if (typeof version !== 'string' || version.trim() === '') {
     throw new Error('Package version is required');
   }
 
-  const metadataUrl = buildPackageMetadataUrl(packageName, registryUrl);
-  const response = await fetchFn(metadataUrl, {
+  // A package-wide packument can stay cached for five minutes after a publish.
+  // Query the exact version and request a fresh response, as npm's registry
+  // API supports, rather than interpreting an old version list as a failed push.
+  const metadataUrl = new URL(
+    buildPackageVersionUrl(packageName, version, registryUrl)
+  );
+  metadataUrl.searchParams.set('cache-bust', String(Date.now()));
+  const response = await fetchFn(metadataUrl.toString(), {
     headers: {
       accept: 'application/json',
+      'cache-control': 'no-cache',
     },
+    signal: AbortSignal.timeout(timeoutMs),
   });
+  traceResponse(response, packageName, version);
 
   if (response.status === 404) {
     return false;
@@ -96,5 +123,5 @@ export async function isPackageVersionPublished(
   }
 
   const metadata = await response.json();
-  return Object.hasOwn(metadata?.versions || {}, version);
+  return metadata?.name === packageName && metadata?.version === version;
 }

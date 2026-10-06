@@ -545,6 +545,85 @@ export const features = [
       child_process: { unsupported: 'no helper; strip the codes yourself' },
     },
   },
+  {
+    id: 'zx-compat',
+    title: 'zx compatibility mode',
+    category: 'Running commands',
+    summary:
+      '`$.zx` (also `command-stream/zx`) runs zx scripts unchanged: zx quoting, ProcessPromise/ProcessOutput, pipes, `within`, `cd`, `nothrow` and the zx goods.',
+    file: 'js/examples/features/zx-compat.mjs',
+    api: ['$.zx', 'command-stream/zx', 'within', 'ProcessOutput'],
+    alternatives: {
+      'bun-shell': {
+        unsupported: 'Bun Shell has its own API; zx scripts need rewriting',
+      },
+      zx: 'import { $, within } from "zx"; await $`echo ${words}`;',
+      execa: {
+        unsupported: 'execa has its own API; zx scripts need rewriting',
+      },
+      shelljs: {
+        unsupported: 'ShellJS has its own API; zx scripts need rewriting',
+      },
+      child_process: {
+        unsupported: 'no zx layer; quote and spawn by hand',
+      },
+    },
+  },
+  {
+    id: 'execa-compat',
+    title: 'Execa compatibility mode',
+    category: 'Running commands',
+    summary:
+      'The isolated command-stream/execa entry and general $.execa expose Execa 9.6.1; Rust has portable exact-argv counterparts with explicit limits.',
+    file: 'js/examples/features/execa-compat.mjs',
+    api: ['$.execa', '$.execaCompat', 'command-stream/execa'],
+    alternatives: {
+      'bun-shell': { unsupported: 'Bun Shell has a different API' },
+      zx: { unsupported: 'zx has a different API' },
+      execa:
+        "import { execa } from 'execa'; await execa('node', ['--version']);",
+      shelljs: { unsupported: 'ShellJS has a different API' },
+      child_process: {
+        unsupported: 'spawn does not expose Execa results or helpers',
+      },
+    },
+  },
+  {
+    id: 'shelljs-compat',
+    title: 'ShellJS compatibility mode',
+    category: 'Running commands',
+    summary:
+      'The pinned JavaScript ShellJS API and Rust async session counterpart preserve separate arguments and error statuses, with explicit translation limits.',
+    file: 'js/examples/features/shelljs-compat.mjs',
+    api: ['$.shelljs', 'shelljs', 'command-stream/shelljs'],
+    alternatives: {
+      'bun-shell': { unsupported: 'Bun Shell has a different API' },
+      zx: { unsupported: 'zx has a different API' },
+      execa: { unsupported: 'Execa has a different API' },
+      shelljs: "import shell from 'shelljs'; shell.head({ '-n': 2 }, 'file');",
+      child_process: { unsupported: 'no portable ShellJS command layer' },
+    },
+  },
+  {
+    id: 'native-text',
+    title: 'Native head, tail, sort and uniq',
+    category: 'Built-in commands',
+    summary:
+      'Four portable UTF-8 commands handle files and completed stdin, preserve line endings and support strict options, cancellation and output channels.',
+    file: 'js/examples/features/native-text.mjs',
+    api: ['head', 'tail', 'sort', 'uniq'],
+    alternatives: {
+      'bun-shell': {
+        unsupported: 'requires installed head/tail/sort/uniq programs',
+      },
+      zx: 'await $`sort log.txt | uniq -c`; // installed utilities',
+      execa:
+        "await execa('head', ['-n', '2', 'log.txt']); // installed utility",
+      shelljs:
+        "shell.head({ '-n': 2 }, 'log.txt'); shell.sort('log.txt').uniq('-c');",
+      child_process: "execFile('head', ['-n', '2', 'log.txt'], callback);",
+    },
+  },
 ];
 
 export const featuresById = new Map(
@@ -605,5 +684,14 @@ export const rustApiByFeature = new Map(
       'unset_shell_option',
     ],
     'ansi-utils': ['AnsiUtils', 'AnsiConfig'],
+    'execa-compat': ['execa', 'execa_compat', 'execa::Execa', 'execa::Options'],
+    'shelljs-compat': ['shelljs::ShellJs'],
+    'native-text': [
+      'commands::head',
+      'commands::tail',
+      'commands::sort',
+      'commands::uniq',
+    ],
+    'zx-compat': ['zx!', 'zx::Shell', 'zx::within', 'zx::ProcessOutput'],
   })
 );

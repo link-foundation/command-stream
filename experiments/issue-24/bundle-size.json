@@ -1,0 +1,44 @@
+{
+  "generatedAt": "2026-10-05T13:49:14.541Z",
+  "environment": {
+    "arch": "x64",
+    "bun": "1.4.2",
+    "cpus": 6,
+    "node": "26.3.0",
+    "platform": "linux",
+    "runtime": "Bun 1.4.2"
+  },
+  "methodology": "npm pack sizes, recursive production dependency footprint, esbuild minified Node bundles, and fresh-process import memory deltas.",
+  "packages": [
+    {
+      "name": "command-stream/execa",
+      "version": "1.4.0",
+      "packedBytes": 578747,
+      "unpackedBytes": 2036392,
+      "fileCount": 620,
+      "installedBytes": 32127782,
+      "fullBundleBytes": 117547,
+      "minimalBundleBytes": 117177,
+      "treeShakingPercent": 0.3147677099373025,
+      "importMemory": {
+        "heapUsedBytes": 2944704,
+        "rssBytes": 24637440
+      }
+    },
+    {
+      "name": "execa",
+      "version": "9.6.1",
+      "packedBytes": 86474,
+      "unpackedBytes": 325374,
+      "fileCount": 142,
+      "installedBytes": 643001,
+      "fullBundleBytes": 116761,
+      "minimalBundleBytes": 116433,
+      "treeShakingPercent": 0.28091571672047566,
+      "importMemory": {
+        "heapUsedBytes": 2949248,
+        "rssBytes": 24383488
+      }
+    }
+  ]
+}

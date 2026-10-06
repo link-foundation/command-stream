@@ -1,11 +1,14 @@
 {
   "name": "command-stream",
-  "version": "1.3.0",
+  "version": "1.6.1",
   "description": "Modern $ shell utility library with streaming, async iteration, and EventEmitter support, optimized for Bun runtime",
   "type": "module",
   "main": "./src/$.cjs",
   "module": "./src/$.mjs",
   "types": "./types/index.d.ts",
+  "bin": {
+    "command-stream": "./src/zx/cli.mjs"
+  },
   "exports": {
     ".": {
       "import": {
@@ -22,6 +25,44 @@
       "types": "./types/process-runner.d.ts",
       "default": "./src/process-runner.mjs"
     },
+    "./zx": {
+      "import": {
+        "types": "./types/zx.d.ts",
+        "default": "./src/zx/index.mjs"
+      },
+      "require": {
+        "types": "./types/zx.d.cts",
+        "default": "./src/zx/index.cjs"
+      },
+      "default": "./src/zx/index.mjs"
+    },
+    "./zx/core": {
+      "import": {
+        "types": "./types/zx-core.d.ts",
+        "default": "./src/zx/core.mjs"
+      },
+      "require": {
+        "types": "./types/zx-core.d.cts",
+        "default": "./src/zx/core.cjs"
+      },
+      "default": "./src/zx/core.mjs"
+    },
+    "./zx/cli": {
+      "import": {
+        "types": "./types/zx-cli.d.ts",
+        "default": "./src/zx/cli.mjs"
+      },
+      "require": {
+        "types": "./types/zx-cli.d.cts",
+        "default": "./src/zx/cli.cjs"
+      },
+      "default": "./src/zx/cli.mjs"
+    },
+    "./zx/globals": {
+      "types": "./types/zx-globals.d.ts",
+      "require": "./src/zx/globals.cjs",
+      "default": "./src/zx/globals.mjs"
+    },
     "./bun": {
       "import": {
         "types": "./types/bun.d.ts",
@@ -33,7 +74,29 @@
       },
       "default": "./src/bun.mjs"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./execa": {
+      "import": {
+        "types": "./types/execa.d.ts",
+        "default": "./src/execa/index.mjs"
+      },
+      "require": {
+        "types": "./types/execa.d.cts",
+        "default": "./src/execa/index.cjs"
+      },
+      "default": "./src/execa/index.mjs"
+    },
+    "./shelljs": {
+      "import": {
+        "types": "./types/shelljs.d.ts",
+        "default": "./src/shelljs/index.mjs"
+      },
+      "require": {
+        "types": "./types/shelljs.d.cts",
+        "default": "./src/shelljs/index.cjs"
+      },
+      "default": "./src/shelljs/index.mjs"
+    }
   },
   "repository": {
     "type": "git",
@@ -112,12 +175,10 @@
     "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.6",
-    "execa": "9.6.1",
     "husky": "^9.1.7",
     "jscpd": "^4.3.0",
     "lint-staged": "^16.4.0",
     "prettier": "^3.9.6",
-    "shelljs": "0.10.0",
     "subset-font": "^2.7.0",
     "typescript": "7.0.2",
     "zx": "8.8.5"
@@ -127,6 +188,9 @@
     "@resvg/resvg-js": "^2.6.2",
     "@xterm/headless": "^6.0.0",
     "gifenc": "^1.0.3",
-    "node-pty": "^1.2.0-beta.15"
+    "node-pty": "^1.2.0-beta.15",
+    "execa": "9.6.1",
+    "shelljs": "0.10.0",
+    "@types/shelljs": "0.8.17"
   }
 }

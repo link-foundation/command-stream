@@ -45,13 +45,13 @@ and produce machine-readable and Markdown comparisons.
 
 ## Measurements
 
-| Suite       | Measurements                                                                                                 |
-| ----------- | ------------------------------------------------------------------------------------------------------------ |
-| Performance | Exact-argument spawn latency, buffered stdout, concurrency, and nonzero exits.                               |
-| Rust APIs   | command-stream buffering versus streaming, pipeline versus manual handoff, and built-in versus spawned echo. |
-| Crate size  | Resolved crate source bytes and unique transitive source-closure bytes.                                      |
-| Features    | Ported behavior and known-gap counts from immutable upstream Rust test corpora.                              |
-| Real-world  | Parallel CI checks, log analysis, file hashing, and a local HTTP health check.                               |
+| Suite       | Measurements                                                                                                    |
+| ----------- | --------------------------------------------------------------------------------------------------------------- |
+| Performance | Exact-argument spawn latency, buffered stdout, concurrency, and nonzero exits.                                  |
+| Rust APIs   | command-stream buffering versus streaming, pipeline versus manual handoff, and built-in versus spawned echo.    |
+| Crate size  | Resolved crate source bytes and unique transitive source-closure bytes, plus isolated `zx` and `execa` modules. |
+| Features    | Ported behavior and known-gap counts from immutable upstream Rust test corpora.                                 |
+| Real-world  | Parallel CI checks, log analysis, file hashing, and a local HTTP health check.                                  |
 
 In the output-mode comparison, the buffered case collects the full result.
 The streaming case counts each chunk without retaining the complete output,
@@ -67,6 +67,9 @@ resolved source tree once, excludes VCS/build output and this benchmark package,
 and reports `std::process` as zero because it ships with Rust. It measures source
 footprint, not final binary size; compiler settings and which APIs an application
 uses determine binary size.
+The isolated module rows report only that module's source bytes and retain the
+whole crate's dependency closure; they do not represent separately installable
+crates or smaller final executables.
 
 Feature counts come directly from `tests/competitor_dispositions.jsonl`, which
 pins upstream sources to immutable commits and records both executable ports and

@@ -1,3 +1,4 @@
+import shelljs from './shelljs/index.mjs';
 // command-stream - A unified shell command execution library
 // Main entry point - integrates all ProcessRunner modules
 
@@ -37,6 +38,7 @@ import {
 import { ProcessRunner } from './process-runner.mjs';
 import { toStreamResult } from './$.result-streams.mjs';
 import crossSpawn from 'cross-spawn';
+import { createRequire } from 'node:module';
 
 // Public APIs
 async function sh(commandString, options = {}) {
@@ -399,6 +401,11 @@ import yesCommand from './commands/$.yes.mjs';
 import seqCommand from './commands/$.seq.mjs';
 import teeCommand from './commands/$.tee.mjs';
 import testCommand from './commands/$.test.mjs';
+import headCommand from './commands/$.head.mjs';
+import tailCommand from './commands/$.tail.mjs';
+import sortCommand from './commands/$.sort.mjs';
+import uniqCommand from './commands/$.uniq.mjs';
+
 import { $ as bunShell } from './bun-shell/shell.mjs';
 
 // Built-in commands that match Bun.$ functionality
@@ -430,12 +437,46 @@ function registerBuiltins() {
   register('seq', seqCommand);
   register('tee', teeCommand);
   register('test', testCommand);
+  register('head', headCommand);
+  register('tail', tailCommand);
+  register('sort', sortCommand);
+  register('uniq', uniqCommand);
 }
 
 // Initialize built-in commands
+
 $tagged.spawn = crossSpawn;
+Object.defineProperty($tagged, 'shelljs', { get: () => shelljs });
 // `$.bun`: the Bun.$-compatible shell (also `command-stream/bun`).
 $tagged.bun = bunShell;
+
+// `$.zx` is the zx compatibility mode (issue #26): the `$` of
+// `command-stream/zx`. It is loaded on first access through `require(esm)`,
+// like `$.cjs`, so `command-stream` users who never touch it do not pay for
+// the zx layer.
+const requireZx = createRequire(import.meta.url);
+Object.defineProperty($tagged, 'zx', {
+  configurable: true,
+  enumerable: false,
+  get: () => requireZx('./zx/core.cjs').$,
+});
+
+// The isolated Execa entry is loaded only when this compatibility API is used.
+function execaCompat(options) {
+  trace('ExecaCompat', () => 'Loading the isolated Execa API');
+  return requireZx('./execa/index.cjs').execaCompat(options);
+}
+
+const execa = (...args) => execaCompat().execa(...args);
+const execaSync = (...args) => execaCompat().execaSync(...args);
+const execaNode = (...args) => execaCompat().execaNode(...args);
+const execaCommand = (...args) => execaCompat().execaCommand(...args);
+const execaCommandSync = (...args) => execaCompat().execaCommandSync(...args);
+
+Object.defineProperties($tagged, {
+  execa: { configurable: true, get: () => execaCompat().execa },
+  execaCompat: { configurable: true, value: execaCompat },
+});
 
 trace('Initialization', () => 'Registering built-in virtual commands');
 registerBuiltins();
@@ -445,7 +486,14 @@ trace(
 );
 
 export {
+  shelljs,
   $tagged as $,
+  execaCompat,
+  execa,
+  execaSync,
+  execaNode,
+  execaCommand,
+  execaCommandSync,
   sh,
   exec,
   crossSpawn as spawn,

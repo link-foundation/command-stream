@@ -106,4 +106,18 @@ Object.defineProperty($, 'default', {
 // output; non-enumerable to match the shape emitted by TypeScript and Babel.
 Object.defineProperty($, '__esModule', { value: true });
 
+// `$.zx` (zx compatibility mode) is a lazy getter on the ESM `$`; forward it
+// so the zx layer still loads only on first access.
+Object.defineProperty($, 'zx', {
+  enumerable: false,
+  configurable: true,
+  get: () => namespace.$.zx,
+});
+
 module.exports = $;
+
+// Match the lazy ESM compatibility properties without loading Execa at import.
+Object.defineProperties($, {
+  execa: { configurable: true, get: () => namespace.$.execa },
+  execaCompat: { configurable: true, value: namespace.execaCompat },
+});

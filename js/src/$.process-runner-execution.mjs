@@ -4,6 +4,7 @@ import { toStreamResult } from './$.result-streams.mjs';
 import { trace } from './$.trace.mjs';
 import {
   buildCommandArgv,
+  describeCommand,
   isShellArgvSpec,
   isShellCommandSpec,
   resolveSpawnCwd,
@@ -35,7 +36,6 @@ import {
 import { effectiveCwd, effectiveEnv } from './$.process-context.mjs';
 
 const isBun = typeof globalThis.Bun !== 'undefined';
-
 /** Check for shell operators in command. */
 function hasShellOperators(command) {
   return (
@@ -846,6 +846,12 @@ async function handleShellMode(runner, deps) {
     () => `BRANCH: spec.mode => shell | ${JSON.stringify({})}`
   );
 
+  // Virtual handlers consume completed input. Keep manual streams, pid and
+  // cancellation on this runner by spawning its real process directly.
+  if (runner.options.stdin === 'pipe') {
+    trace('ProcessRunner', () => 'Manual stdin pipe: using the real shell');
+    return null;
+  }
   const useShellOps = shouldUseShellOperators(runner, command);
   // Backslash escapes are removed by a real shell but not by our lightweight
   // tokenizer, so such commands always go to the system shell rather than to
@@ -1092,7 +1098,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
     this.started = true;
     this._mode = 'async';
     this._effectiveCwd = this.options.cwd;
-    this._effectiveEnv = this.options.env;
+    this._effectiveEnv = effectiveEnv(this);
 
     if (this._cancelled) {
       return (
@@ -1155,11 +1161,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
       );
 
       // Log command if tracing enabled
-      const traceCmd =
-        this.spec.mode === 'shell' && !shellArgv
-          ? this.spec.command
-          : argv.join(' ');
-      logShellTrace(shellSettings, traceCmd);
+      logShellTrace(shellSettings, describeCommand(this.spec));
 
       // Detect interactive mode
       const isInteractive = isInteractiveMode(stdin, this.options);
@@ -1440,15 +1442,12 @@ export function attachExecutionMethods(ProcessRunner, deps) {
     this._mode = 'sync';
     const shellSettings = { ...globalShellSettings };
 
-    const { cwd, env, stdin } = this.options;
+    const { cwd, stdin } = this.options;
+    const env = effectiveEnv(this);
     const shellArgv = isShellArgvSpec(this.spec);
     const argv = buildCommandArgv(this.spec, env);
 
-    const traceCmd =
-      this.spec.mode === 'shell' && !shellArgv
-        ? this.spec.command
-        : argv.join(' ');
-    logShellTrace(shellSettings, traceCmd);
+    logShellTrace(shellSettings, describeCommand(this.spec));
 
     const result = executeSyncProcess(argv, {
       cwd,

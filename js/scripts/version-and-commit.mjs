@@ -14,6 +14,12 @@
 
 import { readFileSync, appendFileSync, readdirSync } from 'fs';
 import { loadUseM } from './use-m-loader.mjs';
+import { runChecked } from './run-checked.mjs';
+import {
+  stageReleaseMetadata,
+  pushWithRetry,
+  commitReleaseVersion,
+} from './release-git.mjs';
 
 // Load use-m dynamically
 const use = await loadUseM();
@@ -125,9 +131,7 @@ function countChangesets() {
  */
 async function getVersion(source = 'local') {
   if (source === 'remote') {
-    const result = await $`git show origin/main:js/package.json`.run({
-      capture: true,
-    });
+    const result = await runChecked($`git show origin/main:js/package.json`);
     return JSON.parse(result.stdout).version;
   }
   return JSON.parse(readFileSync('./package.json', 'utf8')).version;
@@ -136,19 +140,19 @@ async function getVersion(source = 'local') {
 async function main() {
   try {
     // Configure git
-    await $`git config user.name "github-actions[bot]"`;
-    await $`git config user.email "github-actions[bot]@users.noreply.github.com"`;
+    await runChecked($`git config user.name "github-actions[bot]"`);
+    await runChecked(
+      $`git config user.email "41898282+github-actions[bot]@users.noreply.github.com"`
+    );
 
     // Check if remote main has advanced (handles re-runs after partial success)
     console.log('Checking for remote changes...');
-    await $`git fetch origin main`;
+    await runChecked($`git fetch origin main`);
 
-    const localHeadResult = await $`git rev-parse HEAD`.run({ capture: true });
+    const localHeadResult = await runChecked($`git rev-parse HEAD`);
     const localHead = localHeadResult.stdout.trim();
 
-    const remoteHeadResult = await $`git rev-parse origin/main`.run({
-      capture: true,
-    });
+    const remoteHeadResult = await runChecked($`git rev-parse origin/main`);
     const remoteHead = remoteHeadResult.stdout.trim();
 
     if (localHead !== remoteHead) {
@@ -164,7 +168,7 @@ async function main() {
       // Check if there are changesets to process
       const changesetCount = countChangesets();
 
-      if (changesetCount === 0) {
+      if (mode === 'changeset' && changesetCount === 0) {
         console.log('No changesets to process and remote has advanced.');
         console.log(
           'Assuming version bump was already completed in a previous attempt.'
@@ -175,7 +179,7 @@ async function main() {
         return;
       } else {
         console.log('Rebasing on remote main to incorporate changes...');
-        await $`git rebase origin/main`;
+        await runChecked($`git rebase origin/main`);
       }
     }
 
@@ -188,14 +192,18 @@ async function main() {
       // Run instant version bump script
       // Rely on command-stream's auto-quoting for proper argument handling
       if (description) {
-        await $`bun scripts/instant-version-bump.mjs --bump-type ${bumpType} --description ${description}`;
+        await runChecked(
+          $`bun scripts/instant-version-bump.mjs --bump-type ${bumpType} --description ${description}`
+        );
       } else {
-        await $`bun scripts/instant-version-bump.mjs --bump-type ${bumpType}`;
+        await runChecked(
+          $`bun scripts/instant-version-bump.mjs --bump-type ${bumpType}`
+        );
       }
     } else {
       console.log('Running changeset version...');
       // Run changeset version to bump versions and update CHANGELOG
-      await $`bun run changeset:version`;
+      await runChecked($`bun run changeset:version`);
     }
 
     // Get new version after bump
@@ -204,32 +212,22 @@ async function main() {
     setOutput('new_version', newVersion);
 
     // Check if there are changes to commit
-    const statusResult = await $`git status --porcelain`.run({ capture: true });
+    const statusResult = await runChecked($`git status --porcelain`);
     const status = statusResult.stdout.trim();
 
     if (status) {
       console.log('Changes detected, committing...');
 
       // Stage all changes (package.json, package-lock.json, CHANGELOG.md, deleted changesets)
-      await $`git add -A`;
+      stageReleaseMetadata();
 
       // Commit with version number as message
-      const commitMessage = newVersion;
-      const escapedMessage = commitMessage.replace(/"/g, '\\"');
-      await $`git commit -m "${escapedMessage}"`;
+      commitReleaseVersion(newVersion);
 
-      // Push directly to main.
-      // command-stream's `$` does NOT throw on a non-zero exit (errexit is off
-      // by default, see issue #156), so we check the result code explicitly.
-      // A silently-failed push would otherwise report version_committed=true and
-      // let the release job publish/release a version that is not on main (the
-      // same false-positive class that produced #166).
-      const pushResult = await $`git push origin main`.run({ capture: true });
-      if (pushResult.code !== 0) {
-        throw new Error(
-          `git push origin main failed (exit code ${pushResult.code}): ${pushResult.stderr?.trim() || 'no stderr'}`
-        );
-      }
+      await pushWithRetry({
+        push: () => $`git push origin main`.run({ capture: true }),
+        rebase: () => runChecked($`git pull --rebase origin main`),
+      });
 
       console.log('✅ Version bump committed and pushed to main');
       setOutput('version_committed', 'true');

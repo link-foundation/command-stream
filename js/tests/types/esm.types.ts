@@ -15,6 +15,12 @@ import $, {
   disableVirtualCommands,
   enableVirtualCommands,
   exec,
+  execa,
+  execaCompat,
+  execaSync,
+  execaNode,
+  execaCommand,
+  execaCommandSync,
   forceCleanupAll,
   getAnsiConfig,
   isPreQuotedPassthroughEnabled,
@@ -36,6 +42,7 @@ import $, {
   setQuoteContextEnabled,
   sh,
   shell,
+  shelljs,
   spawn,
   unregister,
   unrollTerminalFrames,
@@ -78,7 +85,12 @@ export async function taggedTemplates(): Promise<void> {
   expectType<Equal<Awaited<ReturnType<typeof result.text>>, string>>();
   use(text, lines, length, stdinText);
 
-  const withOptions = $({ mirror: false, cwd: '/tmp', stdin: 'data' });
+  const withOptions = $({
+    mirror: false,
+    cwd: '/tmp',
+    stdin: 'data',
+    preferLocal: true,
+  });
   expectType<Equal<typeof withOptions, CommandTag>>();
   expectType<Equal<ReturnType<typeof withOptions>, ProcessRunner>>();
 
@@ -91,11 +103,14 @@ export async function taggedTemplates(): Promise<void> {
   $({ stdin: 42 });
   // @ts-expect-error - killSignal must be a signal name
   $({ killSignal: 'SIGNOPE' });
+  // @ts-expect-error - preferLocal accepts paths or a boolean
+  $({ preferLocal: 42 });
   // @ts-expect-error - $ is not a plain function of a string
   $('echo hi');
 }
 
 export async function entryPoints(): Promise<void> {
+  use(execa, execaCompat, execaSync, execaNode, execaCommand, execaCommandSync);
   expectType<Equal<Awaited<ReturnType<typeof sh>>, StreamResult>>();
   expectType<Equal<Awaited<ReturnType<typeof exec>>, StreamResult>>();
   expectType<Equal<Awaited<ReturnType<typeof run>>, StreamResult>>();
@@ -115,6 +130,16 @@ export async function entryPoints(): Promise<void> {
   const syncResult = spawn.sync('node', ['--version']);
   expectType<Equal<typeof syncResult.status, number | null>>();
   use(child, same);
+
+  // `$.zx` is the zx-compatible `$` of `command-stream/zx`.
+  const zxOutput = await $.zx({ nothrow: true })`echo ${'hi'}`;
+  expectType<Equal<typeof zxOutput.exitCode, number | null>>();
+  const zxText: string = zxOutput.stdout;
+  const zxSync = $.zx.sync`echo hi`;
+  expectType<Equal<typeof zxSync.ok, boolean>>();
+  // @ts-expect-error - `$.zx` is read-only
+  $.zx = $.zx;
+  use(zxText);
 }
 
 export async function processRunner(runner: ProcessRunner): Promise<void> {
@@ -339,3 +364,6 @@ export function errors(error: unknown): void {
   const options: ProcessOptions = { signal: new AbortController().signal };
   use(options);
 }
+
+const shelljsOutput: string = shelljs.echo('typed').stdout;
+void shelljsOutput;

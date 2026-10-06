@@ -12,8 +12,9 @@
  * - lino-arguments: Unified configuration from CLI args, env vars, and .lenv files
  */
 
-import { readFileSync, writeFileSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { loadUseM } from './use-m-loader.mjs';
+import { runChecked } from './run-checked.mjs';
 
 // Load use-m dynamically
 const use = await loadUseM();
@@ -58,7 +59,7 @@ try {
   console.log(`Current version: ${oldVersion}`);
 
   // Bump version using npm version (doesn't create git tag)
-  await $`npm version ${bumpType} --no-git-tag-version`;
+  await runChecked($`npm version ${bumpType} --no-git-tag-version`);
 
   // Get new version
   const updatedPackageJson = JSON.parse(readFileSync('package.json', 'utf-8'));
@@ -105,13 +106,11 @@ try {
   writeFileSync(changelogPath, changelog, 'utf-8');
   console.log('✅ CHANGELOG.md updated');
 
-  // Synchronize package-lock.json if it exists
-  try {
-    console.log('\nSynchronizing package-lock.json...');
-    await $`npm install --package-lock-only`;
-  } catch {
-    // No package-lock.json or npm not available, skip
-    console.log('Skipping package-lock.json sync (not applicable)');
+  if (existsSync('package-lock.json')) {
+    console.log('Synchronizing package-lock.json...');
+    await runChecked(
+      $`npm install --package-lock-only --ignore-scripts --no-audit`
+    );
   }
 
   console.log('\n✅ Instant version bump complete');

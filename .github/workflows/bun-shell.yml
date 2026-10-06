@@ -39,7 +39,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-24.04, macos-15, windows-2025]
         target: [Bun.$ reference, port on Bun, port on Node.js, port on Deno]
     steps:
       - uses: actions/checkout@v6
@@ -84,7 +84,12 @@ jobs:
           if [ "$RUNNER_OS" = Windows ]; then ref_args=(--trace --concurrency 1); fi
           case "$TARGET" in
             'Bun.$ reference') bun conformance/bun-shell/run-bun-reference.mjs "${ref_args[@]}" ;;
-            'port on Bun') bun conformance/bun-shell/run-js.mjs ;;
+            'port on Bun')
+              if [ "$RUNNER_OS" = macOS ]; then
+                COMMAND_STREAM_TRACE_SUBPROCESS=1 bun conformance/bun-shell/run-js.mjs --trace
+              else
+                bun conformance/bun-shell/run-js.mjs
+              fi ;;
             'port on Node.js') node conformance/bun-shell/run-js.mjs ;;
             'port on Deno') deno run -A conformance/bun-shell/run-js.mjs ;;
           esac

@@ -245,9 +245,9 @@ describe('workflow linting is itself wired into CI', () => {
       .flatMap((job) => job.steps ?? [])
       .map((step) => step.uses)
       .filter(Boolean);
-    expect(uses.some((u) => u.startsWith('docker://rhysd/actionlint:'))).toBe(
-      true
-    );
+    expect(
+      uses.some((u) => u.startsWith('docker://rhysd/actionlint@sha256:'))
+    ).toBe(true);
   });
 
   test('zizmor runs with the repository policy at low confidence', () => {
@@ -369,12 +369,38 @@ describe('every shipped ecosystem is audited', () => {
     // package-lock.json and bun.lock resolve transitive versions
     // independently, so one can be clean while the other is not: they differed
     // by 8 high-severity advisories when this workflow was written.
-    expect(runs).toContain('npm audit --package-lock-only --audit-level=high');
+    // npm audit cannot ignore a single advisory, so a wrapper runs it at the
+    // same high-severity bar, minus the shared .github/audit-ignore.txt list.
+    expect(runs).toContain('node ../.github/scripts/npm-audit.mjs');
+    const wrapper = readFileSync(
+      join(repoRoot, '.github/scripts/npm-audit.mjs'),
+      'utf8'
+    );
+    expect(wrapper).toContain("['audit', '--package-lock-only', '--json']");
+    expect(wrapper).toContain("new Set(['high', 'critical'])");
     expect(runs).toContain('bun audit --audit-level=high');
+    expect(runs).toContain('../.github/audit-ignore.txt');
   });
 
   test('the Rust lockfile is audited', () => {
     expect(runs).toContain('cargo audit --file Cargo.lock');
+  });
+
+  test('dependency review uses only the documented unpatched advisory exceptions', () => {
+    const review = security.doc.jobs['dependency-review'].steps.find((step) =>
+      step.uses?.startsWith('actions/dependency-review-action@')
+    );
+    const ignored = readFileSync(
+      join(repoRoot, '.github/audit-ignore.txt'),
+      'utf8'
+    )
+      .split('\n')
+      .map((line) => line.replace(/#.*/, '').trim())
+      .filter(Boolean);
+    expect(
+      review.with['allow-ghsas'].split(',').map((id) => id.trim())
+    ).toEqual(ignored);
+    expect(review.with['fail-on-severity']).toBe('high');
   });
 
   test('CodeQL covers both languages and the workflows', () => {
@@ -513,7 +539,6 @@ describe('checks validate the merge result, not a stale preview', () => {
       'diffs base against head; a local merge changes neither side of that diff',
     ],
     ['rust.yml/changelog', 'same: the two guards it runs are diff-based'],
-    ['parity.yml/parity', 'same: it diffs the merge base against HEAD'],
     [
       'security.yml/codeql',
       'uploads results keyed to the checked-out commit, and GitHub rejects a commit it has never seen',

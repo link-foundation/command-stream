@@ -28,7 +28,7 @@ permissions:
 jobs:
   format:
     name: Check formatting of every tracked file
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     concurrency:
       group: check-${{ github.workflow }}-${{ github.ref }}-format
@@ -60,7 +60,7 @@ jobs:
       # root, where .prettierrc and .prettierignore are.
       - name: Install dependencies
         working-directory: js
-        run: bun install
+        run: bun install --frozen-lockfile
 
       - name: Check formatting
         working-directory: js
@@ -68,7 +68,7 @@ jobs:
 
   docs:
     name: Validate documentation
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     concurrency:
       group: check-${{ github.workflow }}-${{ github.ref }}-docs
@@ -102,7 +102,7 @@ jobs:
 
   hygiene:
     name: Check workflow invariants
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     concurrency:
       group: check-${{ github.workflow }}-${{ github.ref }}-hygiene

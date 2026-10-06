@@ -15,6 +15,7 @@
 import { writeFileSync } from 'fs';
 import { randomBytes } from 'crypto';
 import { loadUseM } from './use-m-loader.mjs';
+import { runChecked } from './run-checked.mjs';
 
 const PACKAGE_NAME = 'command-stream';
 
@@ -75,7 +76,7 @@ ${description}
 
   // Format with Prettier
   console.log('\nFormatting with Prettier...');
-  await $`bunx prettier --write "${changesetFile}"`;
+  await runChecked($`bunx prettier --write "${changesetFile}"`);
 
   console.log('\n✅ Changeset created and formatted successfully');
 } catch (error) {

@@ -4,7 +4,7 @@ import { describe, expect, test } from 'bun:test';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ProcessRunner } from '../src/$.mjs';
-import { buildCommandArgv } from '../src/$.shell.mjs';
+import { buildCommandArgv, describeCommand } from '../src/$.shell.mjs';
 import { isWindows } from './test-helper.mjs';
 
 const fixturesDir = path.join(
@@ -43,6 +43,19 @@ describe('ProcessRunner shell file/args mode', () => {
       );
     }
   );
+
+  test('describes commands for xtrace without the invocation env', () => {
+    expect(describeCommand({ mode: 'shell', command: 'printf done' })).toBe(
+      'printf done'
+    );
+    expect(
+      describeCommand({ mode: 'shell', file: 'code', args: ['--version'] })
+    ).toBe('code --version');
+    expect(describeCommand({ mode: 'shell', file: 'pwd' })).toBe('pwd');
+    expect(
+      describeCommand({ mode: 'exec', file: 'echo', args: ['a', 'b'] })
+    ).toBe('echo a b');
+  });
 
   test('runs argv through the platform shell asynchronously', async () => {
     const runner = new ProcessRunner(shellArgvSpec(), {

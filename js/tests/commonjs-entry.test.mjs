@@ -133,6 +133,7 @@ describe('CommonJS entry point (issue #189)', () => {
         "  throw new Error('expected require() to return a callable $');",
         '}',
         'const probe = $({ mirror: false })`echo launch-probe`.sync();',
+        'if (probe.code !== 0) console.error(probe.stderr);',
         'console.log(',
         '  JSON.stringify({',
         '    stdout: probe.stdout.trim(),',

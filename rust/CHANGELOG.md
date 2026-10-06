@@ -174,6 +174,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+
+
+
+## [1.5.0] - 2026-10-06
+
+### Added
+
+- Add portable native `head`, `tail`, `sort` and `uniq` commands, with shared
+  JavaScript/Rust conformance cases and progressive output channels.
+- Add the asynchronous `shelljs::ShellJs` session API, directory stack, text and
+  filesystem helpers, error/configuration handling, migration examples and a
+  bounded buffered-versus-streaming benchmark.
+
+## [1.4.1] - 2026-10-05
+
+### Fixed
+
+- Reject unknown Git and registry state during release checks, require new PR changelog fragments, and keep publish credentials out of command arguments.
+- Split large source and script modules while preserving public exports and behavior.
+- Reject unrelated staged or untracked release changes and create release tags only after successful push/rebase retries.
+
+## [1.4.0] - 2026-10-05
+
+### Added
+
+- Add `execa` module and general API exports for exact-argv async/sync commands,
+  reusable defaults, binary input/output, line views, combined output,
+  rejection, timeout, cancellation, bounded capture and live process streams.
+
+### Fixed
+
+- Write streaming stdin concurrently with stdout/stderr readers to prevent a
+  full-duplex pipe deadlock; preserve native signal metadata separately from
+  numeric exit codes and support replacing a streaming process environment.
+
+## [1.3.0] - 2026-10-05
+
+### Added
+
+- `command_stream::zx`: a zx-compatible API (issue #26) with the `zx!` macro
+  and `Shell` (the `$`), `ProcessPromise` (piping to processes and files,
+  `nothrow`, `quiet`, `timeout`, `kill`), `ProcessOutput` (zx-style accessors
+  and error messages), scoped `within`/`configure`/`cd`, the shell presets
+  and the goods (`sleep`, `retry`, `exp_backoff`, `spinner`, `echo`,
+  `tempdir`, `tempfile`, `which`, `glob`, `parse_argv`/`minimist`, `dotenv`,
+  `transform_markdown`, `log`). Its tests port the zx unit vectors.
+- `RunOptions::prefer_local` uses the same project-local executable resolver
+  as the zx and Bun shells, so the default `ProcessRunner` and
+  `StreamingRunner` can find local binaries.
+
 ## [1.2.0] - 2026-09-29
 
 ### Added

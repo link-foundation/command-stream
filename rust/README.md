@@ -1,11 +1,25 @@
 # command-stream for Rust
 
+The isolated `command_stream::execa` module and crate-root `execa`,
+`execa_sync`, `execa_node`, and `execa_compat` functions provide portable
+exact-argv execution, byte input/output, streaming, errors and cancellation.
+See the [Execa migration guide](../js/docs/EXECA_MIGRATION.md#rust) for API
+examples and the differences from JavaScript Execa.
+
 [![crates.io](https://img.shields.io/crates/v/command-stream.svg)](https://crates.io/crates/command-stream)
 [![Rust CI](https://github.com/link-foundation/command-stream/actions/workflows/rust.yml/badge.svg)](https://github.com/link-foundation/command-stream/actions/workflows/rust.yml)
 [![License](https://img.shields.io/badge/license-Unlicense-blue.svg)](../LICENSE)
 
 Rust implementation of command-stream: a shell command execution library with
 streaming, events, shell parsing, virtual commands, and built-in command support.
+
+## ShellJS compatibility
+
+`command_stream::shelljs::ShellJs` provides asynchronous command calls with
+session-local directory state. Native head, tail, sort and uniq bring the
+built-in catalog to 26 commands. See the [migration guide](../js/docs/SHELLJS_MIGRATION.md)
+and [runnable example](./examples/shelljs_migration.rs) for supported options and
+JavaScript translation limits.
 
 ## Installation
 

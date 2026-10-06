@@ -23,6 +23,19 @@ import type {
 import type { Readable, Writable } from 'node:stream';
 import type { BunShell } from './bun.cjs';
 
+/** Pinned ShellJS API, with its synchronous ShellString and configuration semantics. */
+export declare const shelljs: typeof import('./shelljs.cjs');
+
+export declare const execaCompat: typeof import('./execa-api.cjs').execaCompat;
+type ExecaExports = typeof import('execa', {
+  with: { 'resolution-mode': 'import' },
+});
+export declare const execa: ExecaExports['execa'];
+export declare const execaSync: ExecaExports['execaSync'];
+export declare const execaNode: ExecaExports['execaNode'];
+export declare const execaCommand: ExecaExports['execaCommand'];
+export declare const execaCommandSync: ExecaExports['execaCommandSync'];
+
 // ---------------------------------------------------------------------------
 // Options
 // ---------------------------------------------------------------------------
@@ -51,6 +64,8 @@ export interface ProcessOptions {
   cwd?: string;
   /** Environment of the command (replaces `process.env`, not merged). */
   env?: NodeJS.ProcessEnv | Record<string, string | undefined>;
+  /** Resolve project executables from `<cwd>/node_modules/.bin` (or explicit directories) first. */
+  preferLocal?: boolean | string | string[];
   /** Pass the TTY through to the command when stdin/stdout/stderr are TTYs. */
   interactive?: boolean;
   /** Let the built-in parser handle `&&`, `||`, `;` and subshells. Default: `true`. */
@@ -443,8 +458,15 @@ export interface CrossSpawn {
 
 /** The `$` export: a tagged template, or `$(options)` returning one. */
 export interface Dollar extends CommandTag {
+  readonly shelljs: typeof shelljs;
+  /** The isolated, lazy-loaded Execa method. */
+  readonly execa: ExecaExports['execa'];
+  /** Access all Execa methods and bind reusable defaults. */
+  readonly execaCompat: typeof execaCompat;
   (options: ProcessOptions): CommandTag;
   spawn: CrossSpawn;
+  /** zx compatibility mode: the `$` of `command-stream/zx`. */
+  readonly zx: typeof import('./zx-api.cjs').$;
   /** The Bun.$-compatible shell (the same as `command-stream/bun`). */
   bun: BunShell;
 }

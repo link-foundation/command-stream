@@ -7,7 +7,7 @@
 // Bun buffers (`Pipe`, and `Capture` for the non-quiet root stdout/stderr)
 // are collected and appended to the shell's buffers once the pipe closes.
 
-import { spawn } from 'node:child_process';
+import { spawn as spawnProcess } from 'node:child_process';
 import os from 'node:os';
 import { ByteList, ChannelTarget, FdTarget, StreamTarget } from './io.mjs';
 import { RedirectFlags } from './lexer.mjs';
@@ -393,6 +393,7 @@ function waitForClose(child) {
  * @param {import('./env.mjs').ShellExecEnv} opts.shell
  * @param {() => void} [opts.onSpawn] called once the child has started (the
  *   caller can close the redirect fds it handed over)
+ * @param {typeof spawnProcess} [opts.spawn] process launcher (test seam)
  * @returns {Promise<{exitCode: number} | {spawnError: Error}>}
  */
 export async function runSubprocess({
@@ -405,6 +406,7 @@ export async function runSubprocess({
   dup = null,
   shell,
   onSpawn,
+  spawn = spawnProcess,
 }) {
   const plans = [
     planIn(io.stdin, overrides.stdin),
@@ -438,25 +440,43 @@ export async function runSubprocess({
   } catch (e) {
     return { spawnError: e };
   }
+  // Bun's child_process shim has occasionally left macOS conformance cases
+  // pending. Trace the blocked phase when explicitly requested by CI.
+  let phase = 'spawn event';
+  const slowTimer =
+    process.env.COMMAND_STREAM_TRACE_SUBPROCESS === '1'
+      ? setTimeout(() => {
+          process.emitWarning(
+            `bun-shell: slow subprocess in ${phase} (${argv[0]}, pid ${child.pid ?? 'none'})`
+          );
+        }, 3000)
+      : null;
+  slowTimer?.unref?.();
+  // A short-lived child can write and exit before the spawn event's awaited
+  // promise resumes (observed with Bun's child_process shim on macOS).
+  // Subscribe to output and exit/close immediately so neither is lost.
+  const closed = waitForClose(child);
+  drainOutput(child.stdout, plans[1], child);
+  drainOutput(child.stderr, plans[2], child);
   const spawnError = await new Promise((resolve) => {
     child.once('spawn', () => resolve(null));
     child.once('error', resolve);
   });
   onSpawn?.();
   if (spawnError) {
+    clearTimeout(slowTimer);
     for (const s of child.stdio) {
       s?.destroy();
     }
     return { spawnError };
   }
 
+  phase = 'close event';
   let done = false;
-  const closed = waitForClose(child);
   feedStdin(child.stdin, plans[0], () => done);
-  drainOutput(child.stdout, plans[1], child);
-  drainOutput(child.stderr, plans[2], child);
 
   const { code, signal } = await closed;
+  phase = 'output flush';
   done = true;
   let exitCode = code ?? signalExitCode(signal);
   for (const plan of [plans[1], plans[2]]) {
@@ -469,5 +489,6 @@ export async function runSubprocess({
     }
     plan.capture?.append(plan.sink.slice());
   }
+  clearTimeout(slowTimer);
   return { exitCode };
 }

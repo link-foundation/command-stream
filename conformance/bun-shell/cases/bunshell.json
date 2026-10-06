@@ -6217,6 +6217,7 @@
       "cases": [
         {
           "id": "bunshell/deno-broken-pipe-subproc",
+          "oracleFlaky": "Bun 1.4.2 intermittently captures grep's Connection reset by peer diagnostic when the downstream builtin exits early; reproduced once in 20 isolated runs and in Linux CI (https://github.com/oven-sh/bun/issues/44602)",
           "template": ["grep hi src/js_parser/parser.rs | echo hi"],
           "files": {
             "src/js_parser/parser.rs": {
@@ -11405,6 +11406,7 @@
         },
         {
           "id": "bunshell/stdin-redirect-pipe-outlives-process-blob",
+          "oracleFlaky": "Bun 1.4.2 can also leave the Blob variant pending under corpus concurrency",
           "template": ["sh -c ", " < ", ""],
           "values": [
             {
@@ -11437,6 +11439,7 @@
       "cases": [
         {
           "id": "bunshell/stdin-redirect-pipe-outlives-process-pipeline",
+          "oracleFlaky": "Bun 1.4.2 can also leave the pipeline variant pending (seen on ubuntu-latest CI on main and on PR #120)",
           "template": ["sh -c ", " < ", " | cat"],
           "values": [
             {

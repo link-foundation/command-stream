@@ -21,7 +21,8 @@ permissions:
 jobs:
   deploy:
     name: Verify and deploy generated documentation
-    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
       contents: read
@@ -38,6 +39,11 @@ jobs:
         with:
           persist-credentials: false
 
+      # Pages must be enabled before a GITHUB_TOKEN can deploy. Check the
+      # repository setting before installing or building dependencies.
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v6
+
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
@@ -49,7 +55,9 @@ jobs:
           bun-version: latest
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable branch @ 2026-09-03
+        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-01
+        with:
+          toolchain: stable
 
       - name: Install JavaScript dependencies
         working-directory: js
@@ -59,9 +67,6 @@ jobs:
         run: |
           node scripts/check-parity.mjs
           node scripts/generate-docs.mjs --check
-
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v6
 
       - name: Upload website artifact
         uses: actions/upload-pages-artifact@v5

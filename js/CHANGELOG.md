@@ -1,5 +1,43 @@
 # Changelog
 
+## 1.6.1
+
+### Patch Changes
+
+- 5393e75: Finish streams promptly when the supplied AbortSignal is already aborted, yielding exactly one exit chunk with the stored result code. Also finish iteration when the runner completed before stream listeners were attached.
+
+## 1.6.0
+
+### Minor Changes
+
+- Add the pinned ShellJS 0.10.0 compatibility API through `$.shelljs`, the named
+  `shelljs` export, and the typed ESM/CommonJS `command-stream/shelljs` entry.
+  ShellJS is now a production dependency. Add portable native head, tail, sort and
+  uniq commands, preserve line endings, validate options strictly and stream file
+  output where possible. Include migration guidance and bounded output benchmarks.
+
+## 1.5.0
+
+### Minor Changes
+
+- Add the isolated Execa 9.6.1 API with ESM/CommonJS types, lazy `$.execa` and
+  `execaCompat()` access through the general API, plus migration examples and
+  reproducible streaming and size comparisons. Execa is now a production dependency.
+
+  Prevent false CI and release results by validating registry publication, release commands, pull request metadata, audit failures, and manual release gates.
+
+  Encode publisher package names safely, recognize actual npm badge images in release notes, and commit version messages without manual shell escaping.
+
+  Keep repeated metadata staging safe after consuming release fragments.
+
+## 1.4.0
+
+### Minor Changes
+
+- 836d2e3: Add a zx-compatible API (issue #26): `command-stream/zx`, `command-stream/zx/core`, `command-stream/zx/globals` and `command-stream/zx/cli` (ESM and CommonJS, with TypeScript types), `$.zx` on the main `$`, and a `command-stream` executable that runs zx scripts, including ones starting with `#!/usr/bin/env command-stream`. All 291 units of zx's test suite are ported and run on Node.js and Bun. See `docs/ZX_MIGRATION.md`.
+
+  Share project-local executable lookup with the default `$`, `run()`, and Bun Shell APIs through the `preferLocal` option.
+
 ## 1.3.0
 
 ### Minor Changes

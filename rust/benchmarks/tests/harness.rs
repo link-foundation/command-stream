@@ -4,11 +4,30 @@ use command_stream_benchmarks::model::{Configuration, Environment, Report, Runne
 use command_stream_benchmarks::regression::{compare_reports, comparison_markdown};
 use command_stream_benchmarks::report::{escape_html, write_reports};
 use command_stream_benchmarks::runner::{summarize_samples, BenchmarkCase, BenchmarkRunner};
-use command_stream_benchmarks::suites::features;
+use command_stream_benchmarks::suites::{crate_size, features};
 use serde_json::json;
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+
+#[test]
+fn streaming_probe_checks_complete_output_and_reports_both_modes() {
+    let result = std::process::Command::new(env!("CARGO_BIN_EXE_shelljs_streaming"))
+        .output()
+        .expect("run bounded streaming probe");
+    assert!(result.status.success(), "{:?}", result.stderr);
+    let report: serde_json::Value = serde_json::from_slice(&result.stdout).unwrap();
+    let observations = report["observations"].as_array().unwrap();
+    assert_eq!(observations.len(), 2);
+    for observation in observations {
+        assert_eq!(observation["received"], 524_288);
+        assert_eq!(observation["code"], 0);
+        assert!(
+            observation["firstByteMs"].as_f64().unwrap()
+                <= observation["totalMs"].as_f64().unwrap()
+        );
+    }
+}
 
 #[test]
 fn parses_and_validates_cli_options() {
@@ -103,6 +122,29 @@ fn feature_suite_is_derived_from_the_checked_in_corpus() {
         .all(|entry| entry["upstreamCommit"]
             .as_str()
             .is_some_and(|value| value.len() == 40)));
+}
+
+#[test]
+fn crate_size_reports_isolated_execa_with_the_shared_dependency_closure() {
+    let suite =
+        crate_size::run(Path::new(env!("CARGO_MANIFEST_DIR"))).expect("crate-size measurements");
+    let entries = suite["crates"].as_array().expect("crate entries");
+    let whole = entries
+        .iter()
+        .find(|entry| entry["name"] == "command-stream")
+        .expect("whole crate measurement");
+    let isolated = entries
+        .iter()
+        .find(|entry| entry["name"] == "command-stream::execa")
+        .expect("isolated Execa measurement");
+    let bytes = isolated["sourceBytes"].as_u64().expect("source bytes");
+    assert!(bytes > 0 && bytes < whole["sourceBytes"].as_u64().unwrap());
+    assert_eq!(isolated["version"], whole["version"]);
+    assert_eq!(
+        isolated["dependencyClosureBytes"],
+        whole["dependencyClosureBytes"]
+    );
+    assert_eq!(isolated["dependencyCount"], whole["dependencyCount"]);
 }
 
 #[test]

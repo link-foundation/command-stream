@@ -162,7 +162,7 @@ function getOrWaitForStream(self, streamName, checkVirtual = true) {
   if (self.finished) {
     return null;
   }
-  if (checkVirtual && isVirtualCommand(self)) {
+  if (checkVirtual && self.options.stdin !== 'pipe' && isVirtualCommand(self)) {
     return null;
   }
   if (!self.started) {
@@ -317,6 +317,7 @@ class ProcessRunner extends StreamEmitter {
       stdin: 'inherit',
       cwd: undefined,
       env: undefined,
+      preferLocal: false,
       interactive: false,
       shellOperators: true,
       killSignal: 'SIGTERM',

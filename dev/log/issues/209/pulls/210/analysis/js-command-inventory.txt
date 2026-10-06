@@ -1,0 +1,78 @@
+js/scripts/check-version.mjs:25:} catch (error) {
+js/scripts/debug-print.mjs:44:  } catch {
+js/scripts/debug-print.mjs:69:  } catch {
+js/scripts/npm-registry.mjs:11:  } catch {
+js/scripts/create-github-release.mjs:155:    await $`gh api repos/${repository}/releases -X POST --input -`.run({
+js/scripts/create-github-release.mjs:169:        `JavaScript GitHub release already exists: ${tag}. Skipping creation.`
+js/scripts/create-github-release.mjs:179:} catch (error) {
+js/scripts/changeset-version.mjs:26:  await $`bunx changeset version`;
+js/scripts/changeset-version.mjs:30:    await $`npm install --package-lock-only`;
+js/scripts/changeset-version.mjs:31:  } catch {
+js/scripts/changeset-version.mjs:33:    console.log('Skipping package-lock.json sync (not applicable)');
+js/scripts/changeset-version.mjs:37:} catch (error) {
+js/scripts/create-manual-changeset.mjs:78:  await $`bunx prettier --write "${changesetFile}"`;
+js/scripts/create-manual-changeset.mjs:81:} catch (error) {
+js/scripts/check-release-needed.mjs:20: * a catch-up publish.
+js/scripts/check-release-needed.mjs:104:      // (emitted above) still drives the catch-up publish of the current
+js/scripts/check-release-needed.mjs:125:  } catch (error) {
+js/scripts/publish-to-npm.mjs:10: *   off by default — see issue #156). A bare `await $`cmd`` therefore never
+js/scripts/publish-to-npm.mjs:11: *   rejects, so a try/catch around it can never observe a failure. An early
+js/scripts/publish-to-npm.mjs:12: *   version of this script relied on that catch, so a failed
+js/scripts/publish-to-npm.mjs:175:  const result = await $`bun run changeset:publish`.run({ capture: true });
+js/scripts/publish-to-npm.mjs:216:      await $`git pull origin main`;
+js/scripts/publish-to-npm.mjs:284:  } catch (error) {
+js/scripts/instant-version-bump.mjs:61:  await $`npm version ${bumpType} --no-git-tag-version`;
+js/scripts/instant-version-bump.mjs:111:    await $`npm install --package-lock-only`;
+js/scripts/instant-version-bump.mjs:112:  } catch {
+js/scripts/instant-version-bump.mjs:114:    console.log('Skipping package-lock.json sync (not applicable)');
+js/scripts/instant-version-bump.mjs:119:} catch (error) {
+js/scripts/use-m-loader.mjs:170:    } catch (error) {
+js/scripts/run-checked.mjs:4:  const result = await command.run({ capture: true });
+js/scripts/format-release-notes.mjs:78:  const result = await $`gh api repos/${repository}/releases/${releaseId}`.run({
+js/scripts/format-release-notes.mjs:156:        await $`gh api "repos/${repository}/commits/${commitShaToLookup}/pulls"`.run(
+js/scripts/format-release-notes.mjs:178:    } catch (error) {
+js/scripts/format-release-notes.mjs:205:  await $`gh api repos/${repository}/releases/${releaseId} -X PATCH --input -`.run(
+js/scripts/format-release-notes.mjs:215:} catch (error) {
+js/scripts/wait-for-npm.mjs:147:    const result = await $`npm view "${name}@${ver}" version`.run({
+js/scripts/wait-for-npm.mjs:175:  } catch (error) {
+js/scripts/format-github-release.mjs:69:      await $`gh api "repos/${repository}/releases/tags/${tag}" --jq '.id'`.run(
+js/scripts/format-github-release.mjs:73:  } catch {
+js/scripts/format-github-release.mjs:82:    await $`bun scripts/format-release-notes.mjs --release-id "${releaseId}" --release-version "${tag}" --repository "${repository}" --commit-sha "${commitSha}"`;
+js/scripts/format-github-release.mjs:85:} catch (error) {
+js/scripts/merge-changesets.mjs:146:  } catch (error) {
+js/scripts/setup-npm.mjs:187:  await $`npm install -g npm@11`;
+js/scripts/setup-npm.mjs:195:    await $`dirname $(dirname $(which node))`.run({ capture: true })
+js/scripts/setup-npm.mjs:200:  await $`rm -rf "${tempNpmDir}" && mkdir -p "${tempNpmDir}"`;
+js/scripts/setup-npm.mjs:201:  await $`curl -fsSL "${npmRelease.tarballUrl}" | tar xz --strip-components=1 -C "${tempNpmDir}" && rm -rf "${globalNpmDir}" && mv "${tempNpmDir}" "${globalNpmDir}"`;
+js/scripts/setup-npm.mjs:205:  await $`npx --yes npm@11 install -g npm@11`;
+js/scripts/setup-npm.mjs:209:  await $`corepack enable`;
+js/scripts/setup-npm.mjs:210:  await $`corepack prepare npm@11 --activate`;
+js/scripts/setup-npm.mjs:217:  } catch (error) {
+js/scripts/setup-npm.mjs:254:  const currentResult = await $`npm --version`.run({ capture: true });
+js/scripts/setup-npm.mjs:281:  const updatedResult = await $`npm --version`.run({ capture: true });
+js/scripts/setup-npm.mjs:308:  } catch (error) {
+js/scripts/publish-retry.mjs:108:    } catch (error) {
+js/scripts/version-and-commit.mjs:117:  } catch {
+js/scripts/version-and-commit.mjs:128:    const result = await $`git show origin/main:js/package.json`.run({
+js/scripts/version-and-commit.mjs:139:    await $`git config user.name "github-actions[bot]"`;
+js/scripts/version-and-commit.mjs:140:    await $`git config user.email "github-actions[bot]@users.noreply.github.com"`;
+js/scripts/version-and-commit.mjs:144:    await $`git fetch origin main`;
+js/scripts/version-and-commit.mjs:146:    const localHeadResult = await $`git rev-parse HEAD`.run({ capture: true });
+js/scripts/version-and-commit.mjs:149:    const remoteHeadResult = await $`git rev-parse origin/main`.run({
+js/scripts/version-and-commit.mjs:178:        await $`git rebase origin/main`;
+js/scripts/version-and-commit.mjs:191:        await $`bun scripts/instant-version-bump.mjs --bump-type ${bumpType} --description ${description}`;
+js/scripts/version-and-commit.mjs:193:        await $`bun scripts/instant-version-bump.mjs --bump-type ${bumpType}`;
+js/scripts/version-and-commit.mjs:198:      await $`bun run changeset:version`;
+js/scripts/version-and-commit.mjs:207:    const statusResult = await $`git status --porcelain`.run({ capture: true });
+js/scripts/version-and-commit.mjs:214:      await $`git add -A`;
+js/scripts/version-and-commit.mjs:219:      await $`git commit -m "${escapedMessage}"`;
+js/scripts/version-and-commit.mjs:227:      const pushResult = await $`git push origin main`.run({ capture: true });
+js/scripts/version-and-commit.mjs:240:  } catch (error) {
+js/scripts/validate-changeset.mjs:32:  } catch {
+js/scripts/validate-changeset.mjs:36:    } catch {
+js/scripts/validate-changeset.mjs:86:  } catch (error) {
+js/scripts/validate-changeset.mjs:102:    } catch {
+js/scripts/validate-changeset.mjs:110:  } catch (error) {
+js/scripts/validate-changeset.mjs:207:  } catch (error) {
+js/scripts/validate-changeset.mjs:257:    } catch {
+js/scripts/validate-changeset.mjs:266:} catch (error) {

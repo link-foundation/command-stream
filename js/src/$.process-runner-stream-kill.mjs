@@ -377,9 +377,6 @@ export function attachStreamKillMethods(ProcessRunner) {
     trace('ProcessRunner', () => `stream ENTER | started=${this.started}`);
     this._isStreaming = true;
     this._awaited = true;
-    if (!this.started) {
-      this._startAsync();
-    }
 
     let buffer = [];
     let resolve, _reject;
@@ -423,6 +420,20 @@ export function attachStreamKillMethods(ProcessRunner) {
     this.on('end', onEnd);
 
     try {
+      // Startup can finish synchronously when options.signal is already
+      // aborted, so subscribe before starting to retain data/end/exit events.
+      if (!this.started) {
+        this._startAsync();
+      }
+
+      // A previous start(), await, or kill() may have finished before the
+      // iterator subscribed. Replay only its exit code, without duplicating
+      // the exit chunk when the listeners observed completion during startup.
+      if (this.finished && !ended) {
+        onExit(this.result.code);
+        onEnd();
+      }
+
       while (!ended || buffer.length > 0) {
         if (killed) {
           break;

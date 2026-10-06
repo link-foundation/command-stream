@@ -18,10 +18,8 @@ permissions:
 jobs:
   parity:
     name: JS/Rust implementation parity
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
-    # Skip entirely when the PR is explicitly marked as a single-language change.
-    if: ${{ !contains(github.event.pull_request.labels.*.name, 'parity-exempt') }}
     concurrency:
       group: check-${{ github.workflow }}-${{ github.ref }}-parity
       cancel-in-progress: true
@@ -29,13 +27,21 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          # Read-only job: the parity script only diffs the checked-out history.
+          # Read-only job: diff, merge simulation and executable feature checks.
           persist-credentials: false
 
       - name: Check JavaScript/Rust implementation parity
+        if: ${{ !contains(github.event.pull_request.labels.*.name, 'parity-exempt') }}
         env:
           BASE_REF: ${{ github.base_ref }}
         run: bash .github/scripts/check-language-parity.sh
+
+      - name: Simulate a fresh merge with the base branch
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash .github/scripts/simulate-fresh-merge.sh
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -48,7 +54,9 @@ jobs:
           bun-version: latest
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable branch @ 2026-09-03
+        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-01
+        with:
+          toolchain: stable
 
       - name: Install JavaScript dependencies
         working-directory: js

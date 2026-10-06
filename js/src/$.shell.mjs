@@ -80,6 +80,18 @@ export function buildCommandArgv(spec, env) {
 }
 
 /**
+ * Describe a command for xtrace/verbose output. Built from the spec alone so
+ * the trace never includes values taken from the invocation environment.
+ * @param {object} spec - ProcessRunner command specification
+ * @returns {string}
+ */
+export function describeCommand(spec) {
+  return isShellCommandSpec(spec)
+    ? spec.command
+    : [spec.file, ...(spec.args ?? [])].join(' ');
+}
+
+/**
  * Pick a directory that is known to exist for spawning a child process.
  * @returns {string} An existing fallback directory
  */

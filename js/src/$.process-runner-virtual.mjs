@@ -164,12 +164,11 @@ async function runGeneratorHandler(runner, handler, argValues, stdinData) {
 
       if (!done && !runner._cancelled && !runner._streamBreaking) {
         const buf = Buffer.from(result.value);
-        chunks.push(buf);
-
-        if (runner.options.mirror) {
-          safeWrite(process.stdout, buf);
+        if (runner.options.capture) {
+          chunks.push(buf);
         }
-        runner._emitProcessedData('stdout', buf);
+
+        emitOutput(runner, 'stdout', buf);
       }
     }
   } finally {

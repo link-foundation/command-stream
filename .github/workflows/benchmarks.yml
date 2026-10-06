@@ -4,12 +4,14 @@ on:
   push:
     branches: [main]
     paths:
+      - 'js/src/**'
       - 'js/benchmarks/**'
       - 'js/tests/benchmark-suite.test.mjs'
       - 'js/tests/competitor-*'
       - 'js/package.json'
       - 'js/package-lock.json'
       - 'js/bun.lock'
+      - 'rust/src/**'
       - 'rust/benchmarks/**'
       - 'rust/tests/competitor_*'
       - 'rust/Cargo.toml'
@@ -18,12 +20,14 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
+      - 'js/src/**'
       - 'js/benchmarks/**'
       - 'js/tests/benchmark-suite.test.mjs'
       - 'js/tests/competitor-*'
       - 'js/package.json'
       - 'js/package-lock.json'
       - 'js/bun.lock'
+      - 'rust/src/**'
       - 'rust/benchmarks/**'
       - 'rust/tests/competitor_*'
       - 'rust/Cargo.toml'
@@ -48,7 +52,7 @@ permissions:
 jobs:
   javascript:
     name: JavaScript (${{ github.event_name == 'pull_request' && 'smoke' || inputs.profile || 'full' }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     concurrency:
       group: check-${{ github.workflow }}-${{ github.ref }}-javascript
@@ -145,7 +149,7 @@ jobs:
 
   rust:
     name: Rust (${{ github.event_name == 'pull_request' && 'smoke' || inputs.profile || 'full' }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     concurrency:
       group: check-${{ github.workflow }}-${{ github.ref }}-rust
@@ -164,8 +168,9 @@ jobs:
         run: bash .github/scripts/simulate-fresh-merge.sh
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable branch @ 2026-09-03
+        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-01
         with:
+          toolchain: stable
           components: rustfmt, clippy
 
       - name: Cache Cargo dependencies
