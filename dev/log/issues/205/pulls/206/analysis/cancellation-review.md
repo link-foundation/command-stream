@@ -41,8 +41,12 @@ Patch changesets for JavaScript and a Rust changelog fragment prepare both packa
 ## Local verification
 
 - Rust: 826 passing tests, including doctests; all features enabled with compiler and documentation warnings denied. Formatting, Clippy on all targets/features and generated API documentation passed.
-- Node.js: 563 passing tests, two skipped, covering the core regressions and the zx/Execa compatibility suites.
+- Node.js after integrating the latest default branch: 622 passing tests, two skipped, covering the core regressions and the zx/Execa compatibility suites.
 - Executable feature parity: all 29 features passed in JavaScript (Node and Bun) and Rust.
-- The full Bun suite passed, as did JavaScript lint, formatting, types and duplication checks. The full suite requires `jq`; the first local run exposed its absence, so subsequent runs include the official jq binary on `PATH`.
+- The full Bun suite passed after integrating the latest default branch: 2,527 passing tests and ten skipped. JavaScript lint, formatting, types and duplication checks also passed. The full suite requires `jq`; the first local run exposed its absence, so subsequent runs include the official jq binary on `PATH`.
+
+Final review also reproduced skipped child-listener cleanup on the Windows early-return path. The Windows mock regressions now require cleanup after both successful tree termination and fallback termination.
+
+GitHub reported two existing default-branch dependency alerts during the push: [braces #1](https://github.com/link-foundation/command-stream/security/dependabot/1) and [sprintf-js #2](https://github.com/link-foundation/command-stream/security/dependabot/2). Both alert records have `first_patched_version: null`. They remain open; this cancellation fix does not dismiss them or claim to resolve them.
 
 Final CI results are linked in the pull request description and must match its latest commit before it is marked ready.

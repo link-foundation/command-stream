@@ -28,6 +28,7 @@ for (const [name, result] of [
     const calls = [];
     const signals = [];
     const timers = [];
+    let cleanupCalls = 0;
     try {
       Object.defineProperty(process, 'platform', { value: 'win32' });
       childProcess.spawnSync = (...args) => {
@@ -41,6 +42,7 @@ for (const [name, result] of [
         return { unref() {} };
       };
       const runner = new Runner();
+      runner._child.removeAllListeners = () => cleanupCalls++;
       runner.kill('SIGINT');
 
       assert.deepEqual(calls, [
@@ -60,6 +62,7 @@ for (const [name, result] of [
       // taskkill already forces termination. A later PID-based retry could
       // target an unrelated process if Windows reuses the terminated PID.
       assert.equal(timers.length, 0);
+      assert.equal(cleanupCalls, 1);
       assert.equal(runner.result.code, 130);
       assert.equal(runner.result.signal, 'SIGINT');
       assert.equal(runner.finished, true);

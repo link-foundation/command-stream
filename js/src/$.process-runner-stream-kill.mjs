@@ -190,6 +190,7 @@ function killChildProcess(
   // Retrying after a grace period could kill a different process that reused
   // the terminated child's PID.
   if (process.platform === 'win32') {
+    child.removeAllListeners?.();
     return;
   }
 
