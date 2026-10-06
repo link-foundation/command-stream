@@ -1,9 +1,8 @@
 // ProcessRunner stream and kill methods - streaming and process termination
 // Part of the modular ProcessRunner architecture
 
-import os from 'os';
 import { trace } from './$.trace.mjs';
-import { createResult } from './$.result.mjs';
+import { createResult, getSignalExitCode } from './$.result.mjs';
 
 const isBun = typeof globalThis.Bun !== 'undefined';
 
@@ -269,30 +268,6 @@ function cleanupVirtualGenerator(generator, signal) {
 }
 
 /**
- * Get exit code for signal
- *
- * Uses the conventional 128 + signal-number mapping (so SIGTERM → 143,
- * SIGKILL → 137, SIGINT → 130, SIGHUP → 129, …) resolved from the runtime's
- * signal table so any configured signal reports a faithful exit code.
- * @param {string} signal - Signal name
- * @returns {number} Exit code
- */
-function getSignalExitCode(signal) {
-  const signals = os.constants?.signals || {};
-  if (typeof signals[signal] === 'number') {
-    return 128 + signals[signal];
-  }
-  // Fallbacks for runtimes that do not expose the signal table.
-  if (signal === 'SIGKILL') {
-    return 137;
-  }
-  if (signal === 'SIGTERM') {
-    return 143;
-  }
-  return 130;
-}
-
-/**
  * Kill the runner and create result
  * @param {object} runner - ProcessRunner instance
  * @param {string} signal - Kill signal
@@ -332,6 +307,7 @@ function killRunner(runner, signal) {
 
   const result = createResult({
     code: getSignalExitCode(signal),
+    signal,
     stdout: '',
     stderr: `Process killed with ${signal}`,
     stdin: '',
@@ -369,13 +345,13 @@ export function attachStreamKillMethods(ProcessRunner) {
       }
     };
 
-    // Yield an explicit { type: 'exit', code } chunk when the process exits so
+    // Yield an explicit { type: 'exit', code, signal } chunk when the process exits so
     // consumers can observe the exit code from within the async iterator (see
     // issue #155). 'exit' is emitted by finish() right after 'end', so the
     // chunk is queued before the iterator drains and terminates.
-    const onExit = (code) => {
+    const onExit = (code, signal) => {
       if (!killed) {
-        buffer.push({ type: 'exit', code });
+        buffer.push({ type: 'exit', code, signal });
         if (resolve) {
           resolve();
           resolve = _reject = null;
@@ -403,10 +379,10 @@ export function attachStreamKillMethods(ProcessRunner) {
       }
 
       // A previous start(), await, or kill() may have finished before the
-      // iterator subscribed. Replay only its exit code, without duplicating
+      // iterator subscribed. Replay its exit status, without duplicating
       // the exit chunk when the listeners observed completion during startup.
       if (this.finished && !ended) {
-        onExit(this.result.code);
+        onExit(this.result.code, this.result.signal);
         onEnd();
       }
 

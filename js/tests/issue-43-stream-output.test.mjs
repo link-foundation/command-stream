@@ -68,7 +68,7 @@ test('streams a virtual command before the next command in a sequence completes'
 
     const exit = await nextWithin(iterator);
     expect(exit.done).toBe(false);
-    expect(exit.value).toEqual({ type: 'exit', code: 0 });
+    expect(exit.value).toEqual({ type: 'exit', code: 0, signal: null });
 
     const end = await nextWithin(iterator);
     expect(end.done).toBe(true);
@@ -116,7 +116,7 @@ test('forwards output from a real command nested in a streamed sequence', async 
     expect(done.value.data.toString()).toBe('child-done\n');
 
     const exit = await nextWithin(iterator);
-    expect(exit.value).toEqual({ type: 'exit', code: 0 });
+    expect(exit.value).toEqual({ type: 'exit', code: 0, signal: null });
   } finally {
     writeFileSync(releaseFile, '');
     await iterator.return();

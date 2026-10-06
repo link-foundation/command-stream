@@ -76,6 +76,7 @@ export async function taggedTemplates(): Promise<void> {
   expectType<Equal<typeof result, StreamResult>>();
   expectType<Equal<typeof result.code, number>>();
   expectType<Equal<typeof result.exitCode, number>>();
+  expectType<Equal<typeof result.signal, NodeJS.Signals | null>>();
 
   // Captured output behaves like a string.
   const text: string | undefined = result.stdout?.trim();
@@ -203,6 +204,7 @@ export async function streaming(runner: ProcessRunner): Promise<void> {
         break;
       case 'exit':
         expectType<Equal<typeof chunk.code, number>>();
+        expectType<Equal<typeof chunk.signal, NodeJS.Signals | null>>();
         // @ts-expect-error - exit chunks carry no data
         use(chunk.data);
         break;
@@ -227,9 +229,11 @@ export function events(runner: ProcessRunner): void {
     })
     .once('end', (result) => {
       expectType<Equal<typeof result, CommandResult>>();
+      expectType<Equal<typeof result.signal, NodeJS.Signals | null>>();
     })
-    .on('exit', (code) => {
+    .on('exit', (code, signal) => {
       expectType<Equal<typeof code, number>>();
+      expectType<Equal<typeof signal, NodeJS.Signals | null | undefined>>();
     });
   expectType<Equal<typeof chained, ProcessRunner>>();
 
@@ -237,6 +241,7 @@ export function events(runner: ProcessRunner): void {
   const listener = (code: number): void => use(code);
   emitter.on('exit', listener).off('exit', listener);
   runner.emit('exit', 0);
+  runner.emit('exit', 143, 'SIGTERM');
 
   // @ts-expect-error - unknown event name
   runner.on('close', () => {});

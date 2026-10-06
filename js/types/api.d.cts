@@ -156,6 +156,8 @@ export interface ResultBase {
   code: number;
   /** Alias of `code`. */
   exitCode: number;
+  /** Terminating signal, or `null` for an ordinary exit. Cancellation reports the requested signal. */
+  signal: NodeJS.Signals | null;
   /** Resolves to the captured stdout text. */
   text(): Promise<string>;
 }
@@ -215,6 +217,7 @@ export interface OutputChunk<T extends OutputStreamName = OutputStreamName> {
 export interface ExitChunk {
   type: 'exit';
   code: number;
+  signal: NodeJS.Signals | null;
 }
 
 /** Items yielded by `ProcessRunner#stream()` and `for await ... of runner`. */
@@ -230,8 +233,8 @@ export interface ProcessRunnerEvents {
   data: [chunk: OutputChunk];
   /** The command finished; emitted before `'exit'`. */
   end: [result: CommandResult];
-  /** The exit code; emitted after `'end'`. */
-  exit: [code: number];
+  /** Exit code and terminating signal; emitted after `'end'`. Runners always supply the signal or `null`. */
+  exit: [code: number, signal?: NodeJS.Signals | null];
 }
 
 /** Name of a `ProcessRunner` event. */

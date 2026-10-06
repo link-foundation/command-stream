@@ -44,8 +44,11 @@ async function collect(iterator) {
 async function expectCancelledStream(runner, iterator = runner.stream()) {
   const chunks = await collect(iterator);
   const result = await runner;
-  expect(chunks).toEqual([{ type: 'exit', code: result.code }]);
+  expect(chunks).toEqual([
+    { type: 'exit', code: result.code, signal: result.signal },
+  ]);
   expect(result.code).toBe(143);
+  expect(result.signal).toBe('SIGTERM');
   expect(runner.finished).toBe(true);
   expect(runner._child).toBeNull();
   for (const event of ['data', 'exit', 'end']) {
@@ -69,7 +72,9 @@ describe('issue #207: stream completion with an already-aborted signal', () => {
       killSignal: 'SIGINT',
       mirror: false,
     })`sleep 5`;
-    expect(await collect(runner)).toEqual([{ type: 'exit', code: 130 }]);
+    expect(await collect(runner)).toEqual([
+      { type: 'exit', code: 130, signal: 'SIGINT' },
+    ]);
     expect((await runner).code).toBe(130);
   }, 2000);
 
@@ -95,7 +100,7 @@ describe('issue #207: stream completion with an already-aborted signal', () => {
     const runner = $({ mirror: false })`echo done`;
     const result = await runner;
     expect(await collect(runner.stream())).toEqual([
-      { type: 'exit', code: result.code },
+      { type: 'exit', code: result.code, signal: null },
     ]);
     expect(result.code).toBe(0);
   }, 2000);
@@ -119,7 +124,7 @@ describe('issue #207: stream completion with an already-aborted signal', () => {
     }
     expect(chunks.some((chunk) => chunk.type === 'stdout')).toBe(true);
     expect(chunks.filter((chunk) => chunk.type === 'exit')).toEqual([
-      { type: 'exit', code: 143 },
+      { type: 'exit', code: 143, signal: 'SIGTERM' },
     ]);
     expect((await runner).code).toBe(143);
   }, 5000);

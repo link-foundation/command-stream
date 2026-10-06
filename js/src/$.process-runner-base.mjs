@@ -572,6 +572,9 @@ class ProcessRunner extends StreamEmitter {
     if (result && result.exitCode === undefined && result.code !== undefined) {
       result.exitCode = result.code;
     }
+    if (result && result.signal === undefined) {
+      result.signal = null;
+    }
     ensureResultText(result);
 
     trace(
@@ -603,10 +606,11 @@ class ProcessRunner extends StreamEmitter {
 
     this.emit('end', result);
     trace('ProcessRunner', () => `'end' event emitted`);
-    this.emit('exit', result.code);
+    this.emit('exit', result.code, result.signal);
     trace(
       'ProcessRunner',
-      () => `'exit' event emitted with code ${result.code}`
+      () =>
+        `'exit' event emitted with code ${result.code}, signal ${result.signal}`
     );
 
     this.finished = true;

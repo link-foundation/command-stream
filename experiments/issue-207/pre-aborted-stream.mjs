@@ -30,8 +30,9 @@ try {
     for await (const chunk of runner.stream()) {
       chunks.push(chunk);
     }
-    assert.deepEqual(chunks, [{ type: 'exit', code: 143 }]);
+    assert.deepEqual(chunks, [{ type: 'exit', code: 143, signal: 'SIGTERM' }]);
     assert.equal((await runner).code, 143);
+    assert.equal(runner.result.signal, 'SIGTERM');
     assert.equal(runner._child, null);
   }
   console.log('OK: both streams yielded exit code 143');

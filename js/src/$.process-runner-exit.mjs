@@ -9,6 +9,7 @@
 // and any stream() iterator — hanging indefinitely.
 
 import { trace } from './$.trace.mjs';
+import { normalizeBunExitSignal } from './$.process-runner-signal.mjs';
 
 const isBun = typeof globalThis.Bun !== 'undefined';
 
@@ -65,13 +66,13 @@ export async function drainPumpsAfterExit(runner, pumps, pumpAbort) {
 /**
  * Create promise for child exit.
  *
- * Resolves with the child's exit code as soon as the process exits — or as
+ * Resolves with { code, signal } as soon as the process exits — or as
  * soon as the runner is cancelled — without waiting for the stdio pipes to
  * close (a grandchild may keep them open indefinitely, issue #155).
  *
  * @param {object} child - Child process
  * @param {object} [runner] - ProcessRunner instance (for cancellation)
- * @returns {Promise}
+ * @returns {Promise<{code: number|null, signal: string|null}>}
  */
 export function createExitPromise(child, runner) {
   // Bun's spawn exposes an `exited` promise. Note that even under Bun we may
@@ -87,22 +88,30 @@ export function createExitPromise(child, runner) {
 
   if (isBun && child.exited && typeof child.exited.then === 'function') {
     if (!signal) {
-      return child.exited;
+      return child.exited.then((code) => ({
+        code,
+        signal: normalizeBunExitSignal(code, child.signalCode),
+      }));
     }
     return new Promise((resolve) => {
       let resolved = false;
-      const settle = (code) => {
+      const settle = (code, exitSignal = null) => {
         if (resolved) {
           return;
         }
         resolved = true;
-        resolve(code);
+        resolve({ code, signal: exitSignal });
       };
-      child.exited.then(settle, () => settle(null));
+      child.exited.then(
+        (code) => settle(code, normalizeBunExitSignal(code, child.signalCode)),
+        () => settle(null)
+      );
+      const cancel = () =>
+        settle(null, runner._cancellationSignal ?? 'SIGTERM');
       if (signal.aborted) {
-        settle(null);
+        cancel();
       } else {
-        signal.addEventListener('abort', () => settle(null), { once: true });
+        signal.addEventListener('abort', cancel, { once: true });
       }
     });
   }
@@ -114,12 +123,12 @@ export function createExitPromise(child, runner) {
     );
 
     let resolved = false;
-    const settle = (code) => {
+    const settle = (code, exitSignal = null) => {
       if (resolved) {
         return;
       }
       resolved = true;
-      resolve(code);
+      resolve({ code, signal: exitSignal });
     };
 
     // killRunner() calls killChildProcess(), which removes all of the child's
@@ -128,10 +137,12 @@ export function createExitPromise(child, runner) {
     // forever on a kill/cancel. Resolve as soon as the runner is cancelled so
     // the caller can finalize with the signal-derived exit code.
     if (signal) {
+      const cancel = () =>
+        settle(null, runner._cancellationSignal ?? 'SIGTERM');
       if (signal.aborted) {
-        settle(null);
+        cancel();
       } else {
-        signal.addEventListener('abort', () => settle(null), { once: true });
+        signal.addEventListener('abort', cancel, { once: true });
       }
     }
 
@@ -154,7 +165,10 @@ export function createExitPromise(child, runner) {
             signalCode: child.signalCode,
           })}`
       );
-      settle(code);
+      settle(
+        code,
+        isBun ? normalizeBunExitSignal(code, exitSignal) : exitSignal
+      );
     });
 
     // 'close' is still handled as a fallback in case 'exit' never fires.
@@ -171,7 +185,10 @@ export function createExitPromise(child, runner) {
             signalCode: child.signalCode,
           })}`
       );
-      settle(code);
+      settle(
+        code,
+        isBun ? normalizeBunExitSignal(code, closeSignal) : closeSignal
+      );
     });
   });
 }
