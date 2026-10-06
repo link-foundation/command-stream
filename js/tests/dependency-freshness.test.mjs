@@ -1,5 +1,14 @@
 import { describe, expect, test } from 'bun:test';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import {
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  readFileSync,
+  chmodSync,
+  symlinkSync,
+  rmSync,
+} from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -15,6 +24,73 @@ const dependency = (version, extra = {}) => ({
   file: 'rust/Cargo.toml',
   line: 4,
   ...extra,
+});
+
+describe('Rust lockfile freshness workflow', () => {
+  for (const update of ['', 'Updating', 'Adding', 'Removing', 'Downgrading']) {
+    test.skipIf(process.platform === 'win32')(
+      `checks both manifests without ripgrep: ${update || 'current'}`,
+      () => {
+        const root = mkdtempSync(join(tmpdir(), 'lockfile-freshness-'));
+        try {
+          const bin = join(root, 'bin');
+          mkdirSync(bin);
+          for (const tool of ['mkdir', 'tr', 'tee', 'grep']) {
+            symlinkSync(
+              execFileSync('which', [tool], { encoding: 'utf8' }).trim(),
+              join(bin, tool)
+            );
+          }
+          const cargo = join(bin, 'cargo');
+          writeFileSync(
+            cargo,
+            '#!/bin/bash\n' +
+              'if [[ "$*" == *rust/benchmarks/Cargo.toml* && -n "$MOCK_UPDATE" ]]; then\n' +
+              '  if [[ "$CARGO_TERM_COLOR" == always ]]; then printf "\\033[1m"; fi\n' +
+              '  printf "    %s example v1.0.0 -> v1.0.1\\n" "$MOCK_UPDATE"\n' +
+              'else\n  printf "    Updating crates.io index\\n     Locking 0 packages to highest compatible versions\\n"\nfi\n'
+          );
+          chmodSync(cargo, 0o755);
+          const workflow = readFileSync(
+            new URL(
+              '../../.github/workflows/dependencies.yml',
+              import.meta.url
+            ),
+            'utf8'
+          );
+          const script = workflow
+            .split(
+              'name: Check Rust lockfiles have no compatible updates pending\n'
+            )[1]
+            .split('run: |\n')[1]
+            .split('\n')
+            .map((line) => line.slice(10))
+            .join('\n');
+          const result = spawnSync('/bin/bash', ['-c', script], {
+            cwd: root,
+            env: {
+              ...process.env,
+              PATH: bin,
+              CARGO_TERM_COLOR: 'always',
+              MOCK_UPDATE: update,
+            },
+            encoding: 'utf8',
+            timeout: 10_000,
+          });
+          expect(result.error).toBeUndefined();
+          expect(result.status).toBe(update ? 1 : 0);
+          expect(result.stderr).not.toContain('command not found');
+          if (update) {
+            expect(result.stdout).toContain(
+              'rust/benchmarks/Cargo.toml has pending lockfile updates'
+            );
+          }
+        } finally {
+          rmSync(root, { recursive: true, force: true });
+        }
+      }
+    );
+  }
 });
 
 const registry =

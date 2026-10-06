@@ -69,8 +69,8 @@ jobs:
           mkdir -p ci-logs
           for manifest in rust/Cargo.toml rust/benchmarks/Cargo.toml; do
             log="ci-logs/$(echo "$manifest" | tr / -).log"
-            cargo update --dry-run --manifest-path "$manifest" 2>&1 | tee "$log"
-            if rg '^\s+Updating \S+ v' "$log"; then
+            CARGO_TERM_COLOR=never cargo update --dry-run --manifest-path "$manifest" 2>&1 | tee "$log"
+            if grep -Eq '^[[:space:]]+(Updating|Adding|Removing|Downgrading) [^[:space:]]+ v' "$log"; then
               echo "::error::$manifest has pending lockfile updates"
               exit 1
             fi
