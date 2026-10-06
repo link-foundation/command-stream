@@ -4,6 +4,7 @@
 import { trace } from './$.trace.mjs';
 
 const isBun = typeof globalThis.Bun !== 'undefined';
+const streamsWithStdinErrorHandler = new WeakSet();
 
 // Stream utility functions for safe operations and error handling
 export const StreamUtils = {
@@ -24,6 +25,12 @@ export const StreamUtils = {
    */
   addStdinErrorHandler(stream, contextName = 'stdin', onNonEpipeError = null) {
     if (stream && typeof stream.on === 'function') {
+      if (!onNonEpipeError) {
+        if (streamsWithStdinErrorHandler.has(stream)) {
+          return;
+        }
+        streamsWithStdinErrorHandler.add(stream);
+      }
       stream.on('error', (error) => {
         const handled = this.handleStreamError(
           error,
@@ -272,6 +279,9 @@ export const StreamUtils = {
         );
       }
     } else if (this.isNodeStream(stream)) {
+      // A child can close stdin before reading the input. Node-style streams
+      // report EPIPE asynchronously, outside the try/catch around write().
+      this.addStdinErrorHandler(stream, contextName);
       try {
         stream.write(data);
         return true;
