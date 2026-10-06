@@ -27,6 +27,10 @@
 //! scheduled in, so delivering it first would make "no grace" a race rather
 //! than a guarantee. The exit code still reflects the signal that was asked
 //! for.
+//!
+//! Windows stops the tree immediately with `taskkill /PID <pid> /T /F` before
+//! the parent exits. There is no POSIX signal handler or grace period there;
+//! the caller falls back to terminating the direct child if taskkill fails.
 
 /// Default signal used to stop a process when no explicit signal is given.
 ///
@@ -138,8 +142,27 @@ pub(crate) fn send_signal_to_process(pid: u32, signal: &str, delivery: Delivery)
     let _ = kill(Pid::from_raw(pid as i32), sig);
 }
 
-/// On non-Unix platforms there is no signal delivery, and no process groups to
-/// deliver to; the forceful `start_kill()` escalation in the caller handles
-/// termination.
-#[cfg(not(unix))]
+/// Stop the Windows tree while the parent still identifies its descendants.
+/// The caller's `start_kill()` remains the fallback if taskkill cannot run.
+#[cfg(windows)]
+pub(crate) fn send_signal_to_process(pid: u32, _signal: &str, _delivery: Delivery) {
+    use std::os::windows::process::CommandExt;
+    use std::process::{Command, Stdio};
+
+    let result = Command::new("taskkill")
+        .args(["/PID", &pid.to_string(), "/T", "/F"])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .creation_flags(0x08000000) // CREATE_NO_WINDOW
+        .status();
+    crate::trace::trace_lazy("ProcessRunner", || match result {
+        Ok(status) if status.success() => format!("taskkill stopped process tree {pid}"),
+        Ok(status) => format!("taskkill failed for process {pid}: {status}"),
+        Err(error) => format!("taskkill failed for process {pid}: {error}"),
+    });
+}
+
+/// Other platforms use the caller's direct-child termination fallback.
+#[cfg(not(any(unix, windows)))]
 pub(crate) fn send_signal_to_process(_pid: u32, _signal: &str, _delivery: Delivery) {}

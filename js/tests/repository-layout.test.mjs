@@ -133,7 +133,13 @@ describe('repository language layout', () => {
         'release'
       );
 
-      expect(jsReleaseJob).toContain('needs: [lint, test]');
+      for (const job of [
+        jsReleaseJob,
+        getWorkflowJobBlock(jsWorkflowVariant, 'instant-release'),
+      ]) {
+        expect(job).toContain('needs: [lint, test, process-tree]');
+        expect(job).toContain("needs.process-tree.result == 'success'");
+      }
       expect(jsReleaseJob).toContain('!cancelled()');
       expect(jsReleaseJob).not.toContain('always()');
       expect(jsReleaseJob).toContain("github.ref == 'refs/heads/main'");

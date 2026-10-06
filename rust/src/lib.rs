@@ -672,14 +672,15 @@ impl ProcessRunner {
             return Ok(());
         };
 
-        // Windows has no signals to deliver and no handler for the child to
-        // run, so there is nothing to grant a grace period to: the forceful
-        // stop is the only way to end the process.
+        // Windows stops the tree before the parent exits, while its descendants
+        // can still be found. Direct-child termination is the fallback.
         // The `#[cfg(unix)]` block below is stripped on Windows, which leaves
         // this one as the function's tail expression - hence no `return`.
         #[cfg(not(unix))]
         {
-            let _ = signal;
+            if let Some(pid) = child.id() {
+                signal::send_signal_to_process(pid, signal, signal::Delivery::ProcessAndGroup);
+            }
             child.start_kill()?;
             Ok(())
         }

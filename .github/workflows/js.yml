@@ -298,6 +298,9 @@ jobs:
           node --test js/tests/node-terminal-artifacts.mjs
           node --test js/tests/node-commonjs-entry.mjs
           node --test js/tests/node-process-regressions.mjs
+          node --test js/tests/windows-tree-kill.test.mjs
+          node --test js/tests/node-windows-kill.mjs
+          node --test js/tests/stdin-epipe.test.mjs
           node --test js/tests/process-runner-signal-exit.test.mjs
           node --test js/tests/github-cli-body.test.mjs
 
@@ -315,9 +318,48 @@ jobs:
         shell: bash
         run: node --test --test-concurrency=1 js/tests/execa/*.test.mjs js/tests/execa-compat.test.mjs
 
+  process-tree:
+    name: Process trees (Node ${{ matrix.node-version }} on ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-process-tree-${{ matrix.os }}-${{ matrix.node-version }}
+      cancel-in-progress: true
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, windows-2025]
+        node-version: ['20.x', '22.x', '24.x']
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Simulate a fresh merge with the base branch
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash .github/scripts/simulate-fresh-merge.sh
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies for process tests
+        # These regressions use the core runner, without building native PTY
+        # extensions or the terminal font assets.
+        working-directory: js
+        run: npm ci --ignore-scripts
+
+      - name: Run descendant termination regressions
+        run: node --test js/tests/windows-tree-kill.test.mjs js/tests/node-windows-kill.mjs js/tests/stdin-epipe.test.mjs
+
   release:
     name: Release JavaScript package
-    needs: [lint, test]
+    needs: [lint, test, process-tree]
     # Required because lint/test depend on the pull-request-only changeset-check
     # job, which is skipped on push events.
     if: |
@@ -325,7 +367,8 @@ jobs:
       github.ref == 'refs/heads/main' &&
       github.event_name == 'push' &&
       needs.lint.result == 'success' &&
-      needs.test.result == 'success'
+      needs.test.result == 'success' &&
+      needs.process-tree.result == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -440,11 +483,12 @@ jobs:
 
   instant-release:
     name: Instant JavaScript release
-    needs: [lint, test]
+    needs: [lint, test, process-tree]
     if: >-
       !cancelled() && github.ref == 'refs/heads/main' &&
       github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'instant' &&
-      needs.lint.result == 'success' && needs.test.result == 'success'
+      needs.lint.result == 'success' && needs.test.result == 'success' &&
+      needs.process-tree.result == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:

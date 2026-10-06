@@ -2067,11 +2067,9 @@ The library provides **advanced CTRL+C handling** that properly manages signals 
 
 ### Sending Signals to a Running Command
 
-The behavior above is about signals arriving _at your script_. This section is
-the other direction: sending a signal _to the command you launched_.
+You can also send a signal to the command you launched.
 
-`kill()` stops a running command. It defaults to `SIGTERM`, and accepts any
-signal name:
+`kill()` stops a running command. It defaults to `SIGTERM` and accepts any signal name:
 
 ```javascript
 const cmd = $`ping 8.8.8.8`;
@@ -2084,8 +2082,7 @@ cmd.kill('SIGHUP'); // any signal name works
 
 #### What `kill()` actually does
 
-Stopping a process is not a single signal. Every `kill()` runs the same four
-steps:
+On Linux and macOS, `kill()` runs the following four steps:
 
 1. The requested signal is delivered to the child **and its process group**, so
    a grandchild behind a shell wrapper is reached too (see
@@ -2095,6 +2092,9 @@ steps:
 3. If it is still alive when the grace period expires, `SIGKILL` follows, so a
    process that ignores the signal is still guaranteed to terminate.
 4. The reported exit code is the conventional `128 + signal` value.
+
+On Windows, `kill()`, stream cancellation and an `AbortSignal` immediately stop the tree with `taskkill /PID <pid> /T /F` before the parent exits.
+`killGrace` applies only to POSIX shutdown. If `taskkill` fails, termination falls back to the direct child. Exit codes reflect the requested signal.
 
 Step 2 is what makes a shutdown _graceful_: without it, a child that traps
 SIGTERM to flush output, release a lock, or stop its own workers is destroyed
