@@ -1,0 +1,46 @@
+--- js-template/.lycheeignore
++++ .lycheeignore
+@@ -1,26 +1,19 @@
+-# Lychee ignore patterns - regex patterns for URLs to skip during link checking
+-#
+-# Add patterns here for:
+-# - Local/placeholder URLs
+-# - URLs that require authentication
+-# - Known false positives (rate-limited sites, etc.)
+-# - URLs intentionally used as examples
++# Patterns (regular expressions) that .github/workflows/links.yml excludes from
++# the external link check. Every entry needs the comment above it saying why the
++# link is unreachable from a runner but still correct in the document -- the
++# workflow-hygiene test fails on an uncommented line, so nothing can be muted
++# silently.
+ 
+-# Localhost and local development URLs
+-http://localhost
+-https://localhost
+-http://127.0.0.1
+-https://127.0.0.1
++# npmjs.com answers every unauthenticated non-browser request with 403, whether
++# the package exists or not:
++#   curl -sIL -o /dev/null -w '%{http_code}\n' https://www.npmjs.com/package/command-stream
++#   403
++# The README badges and the comparison table link there on purpose.
++^https://(www\.)?npmjs\.com/
+ 
+-# Example/placeholder URLs commonly used in documentation
+-https://example\.com
+-http://example\.com
+-
+-# npm.js returns 403 to link checkers (bot protection)
+-https://www\.npmjs\.com
+-
+-# Medium.com returns 403 to link checkers (bot protection)
+-https://medium\.com
+-
+-# Web Archive returns 502 to link checkers (bot protection)
+-https://web\.archive\.org
++# GitHub serves the stargazers list and every /settings/ page only to a signed-in
++# session; anonymously both answer 404 even for this public repository:
++#   curl -sIL -o /dev/null -w '%{http_code}\n' https://github.com/link-foundation/command-stream/stargazers
++#   404
++# docs/CI-CD.md links to the settings page as the place a maintainer has to visit.
++^https://github\.com/link-foundation/command-stream/(stargazers|settings/)

@@ -1,0 +1,113 @@
+--- rust-template/scripts/rust-paths.rs
++++ rust/scripts/rust-paths.rs
+@@ -23,28 +23,6 @@
+ use std::env;
+ use std::fs;
+ use std::path::{Path, PathBuf};
+-use std::process::Command;
+-
+-/// Normalize configured roots to Git's repository-relative, slash-separated paths.
+-pub fn repository_relative_root(root: &str) -> Result<String, String> {
+-    let root = fs::canonicalize(root).map_err(|e| format!("Invalid Rust root: {e}"))?;
+-    let output = Command::new("git")
+-        .current_dir(&root)
+-        .args(["rev-parse", "--show-toplevel"])
+-        .output()
+-        .map_err(|e| format!("Could not find repository root: {e}"))?;
+-    if !output.status.success() {
+-        return Err("Could not find repository root".to_string());
+-    }
+-    let repository = fs::canonicalize(String::from_utf8_lossy(&output.stdout).trim())
+-        .map_err(|e| e.to_string())?;
+-    let relative = root.strip_prefix(repository).map_err(|e| e.to_string())?;
+-    if relative.as_os_str().is_empty() {
+-        Ok(".".to_string())
+-    } else {
+-        Ok(relative.to_string_lossy().replace('\\', "/"))
+-    }
+-}
+ 
+ #[derive(Debug, Clone, PartialEq, Eq)]
+ pub struct PackageInfo {
+@@ -189,32 +167,10 @@
+     let content = fs::read_to_string(manifest_path)
+         .map_err(|e| format!("Failed to read {}: {}", manifest_path.display(), e))?;
+ 
+-    let name = find_value_in_table(&content, "package", "name").ok_or_else(|| {
+-        format!(
+-            "Could not find a [package] table with a `name` value in {}",
+-            manifest_path.display()
+-        )
+-    })?;
+-
+-    if package_version_is_inherited(&content) {
+-        return Err(format!(
+-            "The version of the package in {} is inherited from the workspace \
+-             (`version.workspace = true`), so it cannot be read from this manifest. \
+-             Set a literal version in [workspace.package] at the workspace root and \
+-             keep the publishing pipeline pointed at a manifest it can actually read.",
+-            manifest_path.display()
+-        ));
+-    }
+-
+-    let version = find_value_in_table(&content, "package", "version").ok_or_else(|| {
+-        format!(
+-            "Could not find a [package] table with a literal `version` value in {}. \
+-             Inherited versions (`version.workspace = true`) are not supported here, \
+-             and a version read from any other table (e.g. a dependency) could \
+-             publish the wrong package version.",
+-            manifest_path.display()
+-        )
+-    })?;
++    let name = find_manifest_value(&content, "name")
++        .ok_or_else(|| format!("Could not find name in {}", manifest_path.display()))?;
++    let version = find_manifest_value(&content, "version")
++        .ok_or_else(|| format!("Could not find version in {}", manifest_path.display()))?;
+ 
+     Ok(PackageInfo { name, version })
+ }
+@@ -294,40 +250,10 @@
+         .is_match(content)
+ }
+ 
+-/// Read `key = "..."` from one specific table of a Cargo.toml.
+-///
+-/// A manifest is a sequence of tables, not a flat key list: after
+-/// `[dependencies.serde]`, a `version = "1.0"` line is serde's version, not the
+-/// crate's. A table-blind first-match regex therefore publishes a dependency's
+-/// version whenever the real `[package].version` is missing or inherited, so
+-/// the current table header is tracked while scanning (issue #155).
+-fn find_value_in_table(content: &str, table: &str, key: &str) -> Option<String> {
+-    let key_line = Regex::new(&format!(r#"^{}\s*=\s*"([^"]+)""#, regex::escape(key))).unwrap();
+-    let header = Regex::new(r"^\[([^\]]+)\]\s*(?:#.*)?$").unwrap();
+-
+-    let mut current_table: Option<String> = None;
+-    for line in content.lines() {
+-        if let Some(caps) = header.captures(line) {
+-            current_table = Some(caps[1].trim().to_string());
+-            continue;
+-        }
+-        if current_table.as_deref() == Some(table) {
+-            if let Some(caps) = key_line.captures(line) {
+-                return Some(caps[1].to_string());
+-            }
+-        }
+-    }
+-    None
+-}
+-
+-/// True when the `[package]` table inherits its version from the workspace,
+-/// in either the dotted (`version.workspace = true`) or the inline-table
+-/// (`version = { workspace = true }`) form.
+-fn package_version_is_inherited(content: &str) -> bool {
+-    let dotted = Regex::new(r"(?m)^\s*version\.workspace\s*=\s*true\s*(#.*)?$").unwrap();
+-    let inline =
+-        Regex::new(r"(?m)^\s*version\s*=\s*\{\s*workspace\s*=\s*true\s*\}\s*(#.*)?$").unwrap();
+-    dotted.is_match(content) || inline.is_match(content)
++fn find_manifest_value(content: &str, key: &str) -> Option<String> {
++    let re = Regex::new(&format!(r#"(?m)^{}\s*=\s*"([^"]+)""#, regex::escape(key))).unwrap();
++    re.captures(content)
++        .and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()))
+ }
+ 
+ #[cfg(not(test))]

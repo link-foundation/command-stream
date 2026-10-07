@@ -1,0 +1,1192 @@
+[
+  {
+    "path": ".github/actions/setup-buildx-resilient/action.yml",
+    "sha256": "d8e95bff7fbc5d9a5338645acbd568de784626751198ecc2aa74aa2f5452f227",
+    "bytes": 5329,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": ".github/codeql/codeql-config.yml",
+    "sha256": "f88d4a292bb64a034d5898b5e8d51fc3fb54642c7507e9ee0a1dccdad902de21",
+    "bytes": 54,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": ".github/workflows/desktop-release.yml",
+    "sha256": "c56f7fca2f799f18486208217ff4de547f903d9368ea27e6de9407b6248d8c9d",
+    "bytes": 8400,
+    "ci_related": true,
+    "disposition": "Not applicable: command-stream publishes libraries, no container/chart/mobile/desktop artifacts"
+  },
+  {
+    "path": ".github/workflows/links.yml",
+    "sha256": "7ec2b9b49df86231e917a17e9deaae9455616a5dfc231e615a936a639587b0ef",
+    "bytes": 6260,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": ".github/workflows/release.yml",
+    "sha256": "38b93e0306e5d35b7789aa433347613e7931558b78d9230f9e7a543cf74bfe5a",
+    "bytes": 51869,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": ".github/workflows/security.yml",
+    "sha256": "18b2e37747fa2167a49dd984d4150fa24a3e82b0674cb1b800897831f7cdc2ce",
+    "bytes": 3342,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": ".github/workflows/workflows.yml",
+    "sha256": "20c935e206860ea3c8d6e9e221ed771d53281a7b885360ce5c65097a41ddaa3a",
+    "bytes": 5757,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": ".github/zizmor.yml",
+    "sha256": "6d2cb4217a13d406451f19e993064dbc3673577e4bf39759e39279e855ee2e44",
+    "bytes": 649,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": ".gitignore",
+    "sha256": "edacfe1c9cd34e38092834e03ccf4c0d5676a8e38645c6174159447d09388b3f",
+    "bytes": 991,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": ".lycheeignore",
+    "sha256": "9e3b5dd3c05718f4d48d2695fe0c0b2a08ff1c5b5d11e3c2b633ff7c4b5a4441",
+    "bytes": 377,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": ".pre-commit-config.yaml",
+    "sha256": "13e596b2b516edc0c22e426519a438642b41c7c16708529e9111cc7ee9425162",
+    "bytes": 836,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": ".secretlintrc.json",
+    "sha256": "1c0e86ca72216c22cc77b1c94c27f975b731aa9e104167f5d57a5befa654c10e",
+    "bytes": 92,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "CHANGELOG.md",
+    "sha256": "c1095933b80e21df3ca469ad2405b46504a79dff3e1cb31f695073cc32df9ce8",
+    "bytes": 187799,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "CONTRIBUTING.md",
+    "sha256": "b56178b977ebf86d02c4547bc18ec2efec611d95ab94e77433376871e3368d71",
+    "bytes": 10018,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "Cargo.lock",
+    "sha256": "1f453800b4d2b4e108b3ac76e0798d1d684ef495c1f7149f937811ede31ac05f",
+    "bytes": 10211,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "Cargo.toml",
+    "sha256": "1d21f89f1693919e45488f9332d10640d7e4dd216835db87d5d785cfe2edef4c",
+    "bytes": 1674,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "LICENSE",
+    "sha256": "6b0382b16279f26ff69014300541967a356a666eb0b91b422f6862f6b7dad17e",
+    "bytes": 1211,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "README.md",
+    "sha256": "04cddb379c841b6f0f4e9528144dba876ae15a2828351c49a499d43f4cc5777e",
+    "bytes": 18707,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/README.md",
+    "sha256": "759972cabb2c8b349ee676ae7da6d6631646717c3525833df7b9068dacca7f6f",
+    "bytes": 3235,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-11/README.md",
+    "sha256": "8ee40d4448c42027ae72d3fe863baa96bcb866a595564155fe49131b2eecb5f2",
+    "bytes": 8907,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-11/analysis-crates-io.md",
+    "sha256": "a039d2c60ba5c8bf2345ad27ad01ff67cc29f0324391329336d4c3d0bba1cd72",
+    "bytes": 6801,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-11/analysis-set-output.md",
+    "sha256": "ce70ecd61d6e23a93fd939394aae88470db2d0cb1b34beb02b04302cd134ea04",
+    "bytes": 4331,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-11/analysis-workflow-dispatch.md",
+    "sha256": "c93eceb2d21beb27a076ea457b7005cec086200dfedcfbfff2892e6ad5502346",
+    "bytes": 5375,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-11/online-research.md",
+    "sha256": "0b0750218786be21a104bf31048d58252e0d8cdb49192e554bed55d631819ae7",
+    "bytes": 6372,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-17/README.md",
+    "sha256": "84d23d8e21d89e5cd1a344ab37d853f12d3ee3aec085e16c8c886c9811e228f8",
+    "bytes": 5870,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-19/README.md",
+    "sha256": "71651010f5e3c593196ab162224fd29c01bd06836dff2dbd4e6f705c8633c2b7",
+    "bytes": 10930,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-19/ci-logs/ci-run-20885464993.log.gz",
+    "sha256": "d4eaf069fcaf9357a5a53242fb1118140ab2d878055a80d2548b7201db23bf84",
+    "bytes": 20042,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-19/pr-114-data/issue-113-details.txt",
+    "sha256": "b93dca3375b0c69ad14470a9b56f74873b85c82f45f56fd9d8c6350e74f68a20",
+    "bytes": 708,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-19/pr-114-data/pr-commits.json",
+    "sha256": "2ecc32d8fcf13f10eef0fe875bded153fb32ae445e3457cc912cf8f44dc95171",
+    "bytes": 3550,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-19/pr-114-data/pr-conversation-comments.json",
+    "sha256": "6d7e8b1239ef46dff1e46c6be6ceff514943098a68a6e9ab972337f928b54e66",
+    "bytes": 8310,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-19/pr-114-data/pr-details.json",
+    "sha256": "989c9e33b401427318563a9e603c71a01a5feed73e2c44c6774e4411c36637a8",
+    "bytes": 6727,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-19/pr-114-data/pr-diff.patch",
+    "sha256": "89a320b894f9e6a1b62f736ade2c5b0f8bab7b11ba102038a8dd9fcfd8da3cc1",
+    "bytes": 31790,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-19/pr-114-data/pr-review-comments.json",
+    "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "bytes": 2,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-19/pr-114-data/pr-reviews.json",
+    "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "bytes": 2,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-19/pr-114-data/solution-draft-log-1.txt.gz",
+    "sha256": "8867fd8924c0708f161b1661021f7ba91c9ac4251c4117629b278b51c1f59eb9",
+    "bytes": 89348,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-19/pr-114-data/solution-draft-log-2.txt.gz",
+    "sha256": "830b5b9a5a48d4a2833e11cefaac0b063f52cc2f15564d29721b58512fdb87ca",
+    "bytes": 69878,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-21/README.md",
+    "sha256": "a968d2c6957caa136304736c1ecc49a308a2c107c14447051a36d76f1d366aa0",
+    "bytes": 9651,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-21/browser-commander-issue-27.md",
+    "sha256": "eb5ef37f561d84c5402c614a713d9212fa41dc75e8efb3a8759d406184a3bc69",
+    "bytes": 3766,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-21/browser-commander-issue-29.md",
+    "sha256": "bb014603061dee2253f2880879798d65950eea22cb297e98a2dd48d130a242fd",
+    "bytes": 5448,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-21/browser-commander-issue-31.md",
+    "sha256": "3c9b3c44f4e1704816358cff86c5d75c9dca04c57335ffdb27563af6af521c4c",
+    "bytes": 4224,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-21/browser-commander-issue-33.md",
+    "sha256": "aed3223674ec1c0e8b3c27ec90054eb543b6073b09ca3c5aac2064e7c9271949",
+    "bytes": 6909,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-21/browser-commander-rust.yml",
+    "sha256": "b40e5fbc32d238342d9bb4ce34d550635a04025648c4ad78a6c4911702551a43",
+    "bytes": 14865,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-25/README.md",
+    "sha256": "bb57cd234f07426631e6baf39629eba51789e48531a91460c44ad14d48144c72",
+    "bytes": 4724,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-29/README.md",
+    "sha256": "8b3eb38a20035ec6309810206e2bbf2a87897bda21fe7a37743b1636e403feeb",
+    "bytes": 6614,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-32/README.md",
+    "sha256": "2e7b10501bd53d0804fe173177df80107ea86e214856d27c73c63e7de428ef0c",
+    "bytes": 5520,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-34/README.md",
+    "sha256": "62afac1ff0c2f91f1de59fa46e12583432e51d12d21a39e877575e470cbcd42f",
+    "bytes": 7573,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-38/README.md",
+    "sha256": "f237187858ea92800cca2f812275747873351744ec8f468058d66327ba1e14fc",
+    "bytes": 10260,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-38/raw-data/downstream-meta-after-run-24985948212.json",
+    "sha256": "6b7a2e716081186901f400f5f5773b16eb849a2ed2b07636aae141f7e7acdf55",
+    "bytes": 19101,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-38/raw-data/downstream-meta-after-run-24985948212.log.gz",
+    "sha256": "a826aa8a77c0e6e581b5c81e6129f4783aaf2fdac732d43b62baa6ea4de8d787",
+    "bytes": 106114,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-38/raw-data/downstream-meta-before-run-24983875003.json",
+    "sha256": "a7dac818450b78ec3a543fa2c1e4cecab0963989fab5be5c30542a0c8e16ef08",
+    "bytes": 18003,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-38/raw-data/downstream-meta-before-run-24983875003.log.gz",
+    "sha256": "7dff495f5da743e735f14046de4a76c8f7d5f86a67261da8bba34adeb7bb2c8d",
+    "bytes": 116384,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-38/raw-data/downstream-meta-ontology-issue-3.json",
+    "sha256": "69934739063e17305da47fdf04e254e0f716f834a721bc46184d34998e56e6a1",
+    "bytes": 2010,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-38/raw-data/downstream-meta-ontology-pr-4.json",
+    "sha256": "6af20b23c821b606fc3bdbee63290f8559f4e7a1dd6a716600ef02029835216f",
+    "bytes": 5352,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-38/raw-data/issue-38-comments.json",
+    "sha256": "8903caba6beddb0ba62ed0fdb4100aacc53161531e319eda867143963791948d",
+    "bytes": 3487,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-38/raw-data/issue-38.json",
+    "sha256": "d8e768bd690109343d491621736c3698c1dd464fb2d6ca94738ad9343dedef4f",
+    "bytes": 4414,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-38/raw-data/js-template-issue-search.json",
+    "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+    "bytes": 3,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-38/raw-data/main-run-24465255225.json",
+    "sha256": "38fbfda3ffce9516ffbc6fdee24c1193dcf579e691e30e9f910e330102c17249",
+    "bytes": 16733,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-38/raw-data/main-run-24465255225.log.gz",
+    "sha256": "38a477fbe09a419bdd14a61b3a075eb76ed57d6c64d10e2611d3968cb011fb50",
+    "bytes": 89367,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-38/raw-data/main-runs.json",
+    "sha256": "1b750ffb0515cad9b7a315715a1895af3db1ca8836993782b7a58db5d355251a",
+    "bytes": 3872,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-38/raw-data/pr-39-conversation-comments.json",
+    "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "bytes": 2,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-38/raw-data/pr-39-review-comments.json",
+    "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "bytes": 2,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-38/raw-data/pr-39-reviews.json",
+    "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "bytes": 2,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-38/raw-data/pr-39.json",
+    "sha256": "0934ecea09550600a9a4c534c274f34f12dc166adf48777107cbaa6b2bcab72a",
+    "bytes": 964,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-38/raw-data/pr-branch-runs.json",
+    "sha256": "3af7c4cf921fecc35bf671a0e84464266e56e4743b5ba4075ba778685c44a354",
+    "bytes": 396,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-38/raw-data/pr-run-25212295127.json",
+    "sha256": "e8f818329a6b55c5eb4c0d2261d95d47e2b8259f58e307ab387b54fd5c59c3f2",
+    "bytes": 10861,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-38/raw-data/pr-run-25212295127.log.gz",
+    "sha256": "40000602e640a9d80c1f1d7a13054694b8e96b6921841310fa15c2b43d1ca33c",
+    "bytes": 72323,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-38/raw-data/rust-template-issue-search.json",
+    "sha256": "41fcce6a75eae32827544bdb658cd623ab7a5b7ee93ff87ef6953d41207ba6b9",
+    "bytes": 276,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-38/template-data/js-template-ci-tree.txt",
+    "sha256": "8518ec4698afea656155d2c9530deada279fb740404d68fdda9ce257ce6a079d",
+    "bytes": 1719,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-38/template-data/js-template-links.yml",
+    "sha256": "ffbea7a4f51da8e5b123de24101d645b07c29bccdda8ed7519b35c7d6c8028a4",
+    "bytes": 3035,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-38/template-data/js-template-release.yml",
+    "sha256": "750798ec2296bf9b673f7ff41ba9105435c3856fc26a45efc02e2ac728c720d4",
+    "bytes": 19369,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-38/template-data/rust-template-ci-tree.txt",
+    "sha256": "454fe8545b1811d01617ebae1e96b7bcbaa26ef7289f30372cb721ab56d30244",
+    "bytes": 464,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-38/template-data/rust-template-release-after.yml",
+    "sha256": "cd2aa9bfa746565e22c0e9c6b20d57d36f2bc73fc061e4e8fee1a76c33d16b46",
+    "bytes": 16624,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-38/template-data/rust-template-release-before.yml",
+    "sha256": "b26748207be5bef4dd429f19d09b358c35c6666368f3a93986e81c99b5940905",
+    "bytes": 16372,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-52/README.md",
+    "sha256": "84462a3ae97e7b9cc0ed09256f921f852d21fa12545f5d24bd16883989e68928",
+    "bytes": 10308,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-52/raw-data/issue-52-comments.json",
+    "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "bytes": 2,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-52/raw-data/issue-52.json",
+    "sha256": "08d07401e11da71f7c50d1a6b6f4854f2899a70ff3eaf4ac4e4160cfeeda83ca",
+    "bytes": 4308,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-52/raw-data/js-issue-62.json",
+    "sha256": "e2d0afea8e0f301c3def42405a824357903a4c688981c18c25d6bd3a6752658e",
+    "bytes": 5592,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/case-studies/issue-52/raw-data/vk-bot-desktop-issue-51.json",
+    "sha256": "07ef0944b19bca7613610ec4f5b8d4777d24785048a194b7108b5431da6638e2",
+    "bytes": 5639,
+    "ci_related": false,
+    "disposition": "Not applicable: command-stream publishes libraries, no container/chart/mobile/desktop artifacts"
+  },
+  {
+    "path": "docs/case-studies/issue-52/raw-data/vk-bot-desktop-pr-52.json",
+    "sha256": "35708adb50c3ff28f4cca0447c8ae5d29b16bd21d86ecc55ce24fb547d3afe34",
+    "bytes": 24099,
+    "ci_related": false,
+    "disposition": "Not applicable: command-stream publishes libraries, no container/chart/mobile/desktop artifacts"
+  },
+  {
+    "path": "docs/case-studies/issue-69/README.md",
+    "sha256": "f163d495eb65376724e2f56a0ec4c2fa5946fca402f3ced17ce881f0bab1b7cc",
+    "bytes": 5046,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/ci-cd/troubleshooting.md",
+    "sha256": "ccbd092899e9f52b743134297ef3cb1439a668bd97a16315fc4a95beda9db62d",
+    "bytes": 12872,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/download/index.html",
+    "sha256": "d9de29116c0b52af91ac468c1ffa96e6c6314ee021c745466fabcae03a56158f",
+    "bytes": 1770,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/issue-188-analysis.md",
+    "sha256": "1139dfa912686c2cb6f092e25167370a7e5ba455c0c0b014f85d608ebe5012c1",
+    "bytes": 17624,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/screenshots/desktop-download-page.png",
+    "sha256": "b50c0d46cc12859cc5202d4fbbc9147abbbc7c138285139478e708070af7af35",
+    "bytes": 34806,
+    "ci_related": false,
+    "disposition": "Not applicable: command-stream publishes libraries, no container/chart/mobile/desktop artifacts"
+  },
+  {
+    "path": "examples/basic_usage.rs",
+    "sha256": "a37e1bbec3849e07749db32eae7869c3e8fee26d152f3104a5ac89945bebde62",
+    "bytes": 183,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "experiments/issue-139-multi-language-detect-code-changes.sh",
+    "sha256": "ccc8392c0e77c912a7f167a723aa43d9622fadaeb7d43ab98bae3f1e349409e9",
+    "bytes": 1303,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "experiments/issue-188-regressions.py",
+    "sha256": "f4d0f15dfa044ca67e936ae0bdc45077a90142b24e3190822efb85b7a7b1f5c2",
+    "bytes": 11661,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "experiments/test-changelog-parsing.rs",
+    "sha256": "89e0283ea0462bba7085badcdcfac22b87a4599cc28b0dd3b872c807f4f71120",
+    "bytes": 3100,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "experiments/test-crates-io-check.rs",
+    "sha256": "9061d2ac1fb805289812e0266115bc177568d837744c450df8d4496a2f4d622a",
+    "bytes": 2946,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "experiments/test-detect-code-changes.sh",
+    "sha256": "b6778e988a9c3c651ca0ab28677bd40df2c7441fba943ddc9109cc8abb2fa322",
+    "bytes": 3146,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "experiments/test-issue141-manifest-printf-quoting.sh",
+    "sha256": "460af7cf507aafe8a7fc7291ce89d05607abb8958fc993285665680cc1a748c8",
+    "bytes": 1705,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "experiments/test-issue143-throttled-crates-io-probe.rs",
+    "sha256": "fe81278f3e37bfd95235fe7fe6f8eeb8306f4fe3fac1a86fdb03485ccf348317",
+    "bytes": 3723,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "experiments/test-issue69-buildx-mirror-fallback.sh",
+    "sha256": "6bc9baed9b3baa3026ecbd87aaad114588d07f3f37d45344f8c997323c565e37",
+    "bytes": 5485,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "experiments/test-version-check-dependencies.sh",
+    "sha256": "fa3fd30d3575e138b4659c0a8e31ce0b5ea6f7d5e74885c5b5154ad2a8d63966",
+    "bytes": 812,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "experiments/test-version-check.sh",
+    "sha256": "dfd090114491a378783185df01246c5a8aa042179fcb35b13ce9c7b45ee4cc97",
+    "bytes": 1420,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "lychee.toml",
+    "sha256": "c9b31a6581d85f4c28353d07cc90309bff98bd46bae11a814746e62945805ccd",
+    "bytes": 219,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/bump-version.rs",
+    "sha256": "312e183f8bdfd584cc6ad5047fea5e9fcc20986c173e2d60f37d0adb72f28d65",
+    "bytes": 4940,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/check-cargo-lock.rs",
+    "sha256": "a33e9cf60561bcc90f4e772cf8a094f8ef108a3d58cc1f3500c7ee4ea2154f7c",
+    "bytes": 12441,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/check-cargo-warnings.sh",
+    "sha256": "e4b4de91c593933c5682cddf857e70656c4235b3722ee6be0164f479fd22da6b",
+    "bytes": 506,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/check-changelog-fragment.rs",
+    "sha256": "1c3c9b17e9b5e29b4924913a8cd1c29c14cb2dbba38bf0b2d56354e38e682f23",
+    "bytes": 7342,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/check-crate-size.rs",
+    "sha256": "bd3c7a6525985f2850be903a4a5d4a139e0e781cf4d111382e5d18e0de3d008d",
+    "bytes": 11312,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/check-file-size.rs",
+    "sha256": "9f1a5475031bc1772f95620356ac3233ed488cadc07fecf5ae1778a95d8eaa76",
+    "bytes": 16114,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/check-pipeline-status.sh",
+    "sha256": "dea61b6e6723135cf70537cf96a062f3819a2e9cbeed21465bc65e4120d7560c",
+    "bytes": 5155,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/check-release-needed.rs",
+    "sha256": "65bcb06c1d32e205b7bcc7cc43cae4e9a5ee1245a4a0b5c04f49717d39a26553",
+    "bytes": 13619,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/check-required-docs.sh",
+    "sha256": "79228c52e93e753bdf68273e20fc9cbe5530165c1f4f4435b8a69dcaa77a22d4",
+    "bytes": 3064,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/check-version-modification.rs",
+    "sha256": "3846bcc7b57e78c820a26af1511eceef8d9e995eea1f075373a41ef73a25c081",
+    "bytes": 4883,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/check-web-archive.mjs",
+    "sha256": "784da6c9b270e438a3d5594097b076b650631eea8f2aab73ff858560738fa041",
+    "bytes": 13412,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/check-web-archive.test.mjs",
+    "sha256": "bcc8b6b9ab8ff2e29d86cecb21944509f4636d34c408b92579b155984bb286e1",
+    "bytes": 3374,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/check-workflow-tools.rs",
+    "sha256": "c80413b95e36b3cd9d2c47f251e9cfb6894fd421fb836bbc384141da7afaa8e6",
+    "bytes": 12881,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/collect-changelog.rs",
+    "sha256": "e231a3bfbab5171773478c3b1d93f26f7e69e45d8744b8a72c780da526972efa",
+    "bytes": 7325,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/crates-publish-preflight.mjs",
+    "sha256": "6d27824c71b5f01aab8290671d1ab8b92c614720201e252be017c01ce4785e13",
+    "bytes": 2586,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/crates-publish-preflight.test.mjs",
+    "sha256": "35931482c525b0c95b5a3d758c20e062176517a4ae0775d0a6a61c4b9a51212c",
+    "bytes": 2628,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/create-changelog-fragment.rs",
+    "sha256": "3a9622220e24f1c71fd84ad98fb2b66df7c3d41234d189b0dbc3a0530c1cddca",
+    "bytes": 4749,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/create-github-release.rs",
+    "sha256": "a890b8b542bbc2ba0b7df537303ad2942b3bb56515a4a39164c3f82eeb452238",
+    "bytes": 17243,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/desktop-release-resolve.sh",
+    "sha256": "9d356f7ef6457691077745efea5115f5a43144391f2e43a02822aa9e119b62af",
+    "bytes": 1991,
+    "ci_related": true,
+    "disposition": "Not applicable: command-stream publishes libraries, no container/chart/mobile/desktop artifacts"
+  },
+  {
+    "path": "scripts/detect-code-changes.rs",
+    "sha256": "d5135dfb0cbe79c8bc55ba40f951afd90d37f9df1caf726fbd6f762851952052",
+    "bytes": 21470,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/fixtures/lychee-report.md",
+    "sha256": "b8bfe5337f8229c966c37430b50cedf7ace686a8951704d284c9e9238ced0812",
+    "bytes": 1320,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/get-bump-type.rs",
+    "sha256": "da45d4eb202e38358641077a4e8972baa9ddc9bc1dfedee80384604ef9434cc3",
+    "bytes": 5331,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/get-version.rs",
+    "sha256": "3455600bf9f711994dd23d0c4116d02f4e839ddd9768fe03a3fc815218b6de9a",
+    "bytes": 1964,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/git-config.rs",
+    "sha256": "c84a9af50fd383310fbe45527a247275b373ad8d6371dc651890833a5c9fd1f0",
+    "bytes": 1953,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/install-rust-script.sh",
+    "sha256": "aef5c2a22e3ec98aefdf58f982835d08c425274be21a727fb6e0bd989b87accf",
+    "bytes": 946,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/package-desktop.sh",
+    "sha256": "a889c83a11c610b60dcb25cf6b3eb4b947d02c37e2d24002aa99d0ecafd74677",
+    "bytes": 706,
+    "ci_related": true,
+    "disposition": "Not applicable: command-stream publishes libraries, no container/chart/mobile/desktop artifacts"
+  },
+  {
+    "path": "scripts/preflight-credentials.sh",
+    "sha256": "72531532c351a42164f4ab2038e2cc3978be76998bf00adfb6eb7f858880820d",
+    "bytes": 8788,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/publish-crate.rs",
+    "sha256": "c76ecdbdfc1b2f21c5485fe6f8ad47b0a667c9100516f802ee3aaca2388b176a",
+    "bytes": 13772,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/read-job-cancel-in-progress.sh",
+    "sha256": "ce412042897cdb82d00690b06c034e6b032d989b63a70371076b001db070cf9a",
+    "bytes": 2398,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/recheck-broken-links.mjs",
+    "sha256": "0cceaed1b0bc75a47a35fdd153737e0c380df40da9af2014960d8f8fb7c93a35",
+    "bytes": 10848,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/recheck-broken-links.test.mjs",
+    "sha256": "c4526183b05197f49e9ad2136a52124a7f1eb8aabac8d84ebbd8ea786b1a7df9",
+    "bytes": 16548,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/release-index.rs",
+    "sha256": "b3f1e55a0c108f0e7bc2ea773d8c12e01010c70ef037ead600ee81deac1e356d",
+    "bytes": 9184,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/release-naming.rs",
+    "sha256": "161eab5e8e42b72cd42b8dce2ced0fd781215425084f91030b72f3b743eef9b7",
+    "bytes": 3917,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/run-with-budget-warning.sh",
+    "sha256": "502c21f5e6fc59839fa000225482021f396cdd7b04c92df44566a72e3e089731",
+    "bytes": 6494,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/rust-paths.rs",
+    "sha256": "ec737d3c36515dd232ecd39beeb87182761b6b1f0ee50276892eba22a7d18a50",
+    "bytes": 11556,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/simulate-fresh-merge.sh",
+    "sha256": "d6fc6e49b5daa4aceb62696c1927d63bc0da65f27b3f8d7ffd3231172b821399",
+    "bytes": 4747,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/smoke-test-published-crate.rs",
+    "sha256": "d3592b70ee22256e9efb6c19c1b2f3a0933fca87549604791828bc21bdc8ba79",
+    "bytes": 17336,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/test-scripts.sh",
+    "sha256": "559ff53ce3778896a21ad27d6cefd5200152e6753914610df1b497e6987402c7",
+    "bytes": 1358,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/version-and-commit.rs",
+    "sha256": "f633bc60cac6cd00dc611a3a44161302aeabb2561f442e500f3eb5c3e3ddb1fa",
+    "bytes": 47284,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "scripts/wait-for-crate.rs",
+    "sha256": "5af32ea83ae420371268d8f8da7ee7bcf4a757a409c818604c01b40aba9ceda3",
+    "bytes": 18440,
+    "ci_related": true,
+    "disposition": "Compare/adapt CI policy and language package scripts to monorepo"
+  },
+  {
+    "path": "src/lib.rs",
+    "sha256": "4558a8587d0c657130b6f993186e60fef5f567a32d684a844b8525db691d7970",
+    "bytes": 32,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "src/main.rs",
+    "sha256": "45df092e64b6917ef4b4049333a9979c656e760bd584bc58977bae014315d220",
+    "bytes": 1860,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "src/sum.rs",
+    "sha256": "7aff3471cf0f9f83cb40faabd49a34fa59e035b15e59fdd3abf00818b8db36ff",
+    "bytes": 66,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/integration/mod.rs",
+    "sha256": "f86ac9492b3db4727e7852e8d1704da1fb63004dac02d27f8e69c32ca0132411",
+    "bytes": 9,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/integration/sum.rs",
+    "sha256": "ad26eb6f77d5a5a3dec91ff03dc15f549d8a54393f4422037ee22cf71d11fb0e",
+    "bytes": 1059,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/unit/ci-cd/changelog_parsing.rs",
+    "sha256": "96e9fc4d86e1b167ea04d4764a777c9f05be53e8188e0764d9cb5f66a764455b",
+    "bytes": 2308,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/unit/ci-cd/desktop_release_resolve.rs",
+    "sha256": "43bc7138e1927324e01809aea3e6645dda65dc9c8a0f0ccbc246777dcb9f84c8",
+    "bytes": 2394,
+    "ci_related": false,
+    "disposition": "Not applicable: command-stream publishes libraries, no container/chart/mobile/desktop artifacts"
+  },
+  {
+    "path": "tests/unit/ci-cd/issue_119.rs",
+    "sha256": "eabe716d63add3565cbd2cf3183a28f50693a060190a0c86b2d306900ff396f2",
+    "bytes": 993,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/unit/ci-cd/issue_127.rs",
+    "sha256": "7e8a731a2bb79ee55e9a213d4a0aa59bffb20d1dc8ffdc6d33415dc06ca623f7",
+    "bytes": 2836,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/unit/ci-cd/issue_135.rs",
+    "sha256": "28f6e9dd2c8359f0ed9c5cfe4efa8bbb75e07186c67450f203583290c087328f",
+    "bytes": 15337,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/unit/ci-cd/issue_141.rs",
+    "sha256": "8b1165e103cf60d6d34bb48c2633f6d82c3c671df9d308d076941ccc9bbe0fac",
+    "bytes": 3462,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/unit/ci-cd/issue_143.rs",
+    "sha256": "949e2735cfecb3908143579082e7578e1c3e8a815db255d85f76aec053ee3241",
+    "bytes": 3238,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/unit/ci-cd/issue_147.rs",
+    "sha256": "7cbbdf65fb5acde300d15d4ed55d59c7b5401c144aeee0f8a1405f6220dd924e",
+    "bytes": 7501,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/unit/ci-cd/issue_149.rs",
+    "sha256": "83af5329f5b29791c174ed5654c3f63beaa7937683d3cdb6472a7c4db596e82f",
+    "bytes": 4844,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/unit/ci-cd/issue_150.rs",
+    "sha256": "5d4ea827c35328fb04fe923e30c9d8e491ee0592f7609c055c89a8430010f137",
+    "bytes": 6592,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/unit/ci-cd/issue_156.rs",
+    "sha256": "9810147fb47af6c739b2e720eca1a88b0504927980bb54b780e009a2eea85aa4",
+    "bytes": 5723,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/unit/ci-cd/issue_157.rs",
+    "sha256": "4136b7f4bd1328361d0bcca20334885ce9fc77f96208839014a3c6c7bb5e0120",
+    "bytes": 8711,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/unit/ci-cd/issue_160.rs",
+    "sha256": "358bfc404f32e895f8dd70a802ecb5f63cbf64229e7bf0a34a2af9d224de102f",
+    "bytes": 3182,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/unit/ci-cd/issue_161.rs",
+    "sha256": "4349d9d87b7d453a71a36de220630a71eacdbfb1eced6d399641f586d8dd11aa",
+    "bytes": 9132,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/unit/ci-cd/issue_163.rs",
+    "sha256": "9558ff1802dea021cb4987a4964adcd89d7bbf64faa236e2c0ce5ebb534ca7f2",
+    "bytes": 13089,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/unit/ci-cd/issue_168.rs",
+    "sha256": "6b2f36af7bd57aaf096a24aeca1ba6df0b32c0a359fa877949db98c6608a73c7",
+    "bytes": 4334,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/unit/ci-cd/issue_171.rs",
+    "sha256": "2e0b2264e92d6b152155d88d6ea67079eb34091ba6f061beebb8f84f006a2acf",
+    "bytes": 3422,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/unit/ci-cd/issue_172.rs",
+    "sha256": "561cd8b97eb602050f93b4a03bcd501248e547d060ba3c6f5197257c750d9e0b",
+    "bytes": 1556,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/unit/ci-cd/issue_188.rs",
+    "sha256": "0b8a7b814d5ce4316f9a6733d510fa633b81d2d1aab62b2606547b484d4a0137",
+    "bytes": 4356,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/unit/ci-cd/mod.rs",
+    "sha256": "a34150b68385adce445b3dce689bce4f89934b223e5b7d93267890317ccbed10",
+    "bytes": 2069,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/unit/ci-cd/release_naming_tests.rs",
+    "sha256": "26662bdddcfd5c249bc467d44ba42875b86b906ccf572ea150b416d348a0ced1",
+    "bytes": 2502,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/unit/ci-cd/version_and_commit_behind_check.rs",
+    "sha256": "f705312235fa29368839f7464e4b645ea927e0298b07c06e067b53a0f29c983c",
+    "bytes": 1010,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/unit/ci-cd/version_and_commit_tag_order.rs",
+    "sha256": "c45fa7f64c08d8afcfba79a3a7199fb5d5acee31e5ea02a6d50266493345396e",
+    "bytes": 1336,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/unit/ci-cd/workflow_desktop_release.rs",
+    "sha256": "01638895c0de38dcb5747253bd719b7572a826b62bfd770b2e54d6fe5d3385eb",
+    "bytes": 2572,
+    "ci_related": false,
+    "disposition": "Not applicable: command-stream publishes libraries, no container/chart/mobile/desktop artifacts"
+  },
+  {
+    "path": "tests/unit/ci-cd/workflow_release.rs",
+    "sha256": "1cc8ae15173bf5c440abd979a215718797e5c5ff8e967a5cb4eb2e4b7fffcaef",
+    "bytes": 38062,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/unit/ci-cd/workflow_security.rs",
+    "sha256": "7dea45a1964f099f416a189cbd4839960a8c41eae5d0e436a8937c92227c12e8",
+    "bytes": 13726,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/unit/ci-cd/workspace_manifest_resolution.rs",
+    "sha256": "2eb58c4443baee53bab1b8625b303af2290bd77ca34833ac3dbb2fc9a005930a",
+    "bytes": 7308,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/unit/mod.rs",
+    "sha256": "12d83b8ce19cf1c94bf337fcbbc673f8ae9f97a2fc755732ff61c3ab1f8d5457",
+    "bytes": 46,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/unit/sum.rs",
+    "sha256": "b7a34152d2e2bd937ec20787717a605cd342f964cb31570e2ef355764718b837",
+    "bytes": 417,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  }
+]

@@ -1,0 +1,21 @@
+--- js-template/.github/codeql/codeql-config.yml
++++ .github/codeql/codeql-config.yml
+@@ -1,4 +1,16 @@
+-name: Shipped code and pipeline scripts
++name: Shipped code, tests and pipeline scripts
++# Analyse what this repository runs and ships. The ignored trees are evidence
++# and scratch code, never executed by the package or by CI (issue #216):
++# - docs/case-studies: verbatim archived copies of other repositories' files,
++#   kept as evidence; a fix here would falsify the record. They held 6 of the
++#   26 open alerts. zizmor skips them for the same reason (workflows.yml).
++# - dev/log: collected CI logs and analysis for issues and pull requests.
++# - experiments, js/experiments: one-off reproduction and debug scripts, as in
++#   both pipeline templates' CodeQL configuration.
++# js/examples stays analysed, unlike in the JavaScript template: the npm package
++# ships it (js/package.json `files`), so users run and copy those scripts.
+ paths-ignore:
++  - docs/case-studies
++  - dev/log
+   - experiments
+-  - examples
++  - js/experiments
