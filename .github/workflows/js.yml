@@ -161,6 +161,17 @@ jobs:
         working-directory: js
         run: bun run check:types
 
+      # Runs the exact versioning command the release job runs after a merge,
+      # on the same runner image, and discards the result. Without it a change
+      # that breaks `changeset version` (issue #216: Changesets 3 spawning a
+      # Deno formatter the runner does not have) only fails on main.
+      - name: Dry-run release versioning
+        working-directory: js
+        run: |
+          bun run changeset:version
+          git status --short
+          git checkout -- .
+
   test:
     # The Node entries differ only by version, so the version has to be part of
     # the name; without it three jobs shared the name "Test JavaScript (node on

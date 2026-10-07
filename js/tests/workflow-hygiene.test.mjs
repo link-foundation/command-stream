@@ -762,3 +762,35 @@ describe('external links are checked without gating pull requests', () => {
     expect(patterns.length).toBeGreaterThan(0);
   });
 });
+
+describe('the release versioning step is exercised before a merge', () => {
+  // Issue #216: the Changesets 3 upgrade passed every pull-request check and
+  // then failed every release on main, because nothing before the merge ran
+  // `changeset version` -- the only command that formats the changelog.
+  const js = workflows.find((w) => w.name === 'js.yml');
+  const runs = (job) => (job.steps ?? []).map((step) => step.run ?? '');
+
+  test('the lint job dry-runs the versioning script after the fresh merge', () => {
+    const steps = runs(js.doc.jobs.lint);
+    const merge = steps.findIndex((run) =>
+      run.includes('simulate-fresh-merge.sh')
+    );
+    const dryRun = steps.findIndex((run) =>
+      run.includes('bun run changeset:version')
+    );
+    expect(merge).not.toBe(-1);
+    expect(dryRun).toBeGreaterThan(merge);
+  });
+
+  test('the release job versions through the same script', () => {
+    // A dry run of a different command would not protect the real one.
+    const version = readFileSync(
+      join(repoRoot, 'js', 'scripts', 'version-and-commit.mjs'),
+      'utf8'
+    );
+    expect(runs(js.doc.jobs.release).join('\n')).toContain(
+      'scripts/version-and-commit.mjs --mode changeset'
+    );
+    expect(version).toContain('bun run changeset:version');
+  });
+});
