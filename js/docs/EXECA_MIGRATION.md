@@ -1,9 +1,23 @@
 # Migrating from Execa
 
-The isolated `command-stream/execa` entry point exports the **Execa 9.6.1 API**.
+The isolated `command-stream/execa` entry point exports the **Execa 10.1.0 API**.
 It delegates to the pinned production dependency: result types, subprocess
 methods, errors, transformations, IPC, cancellation, and execution options keep
 Execa's behavior. The native command-stream shell remains available alongside it.
+
+## Updating from Execa 9
+
+Execa 10 returns a promise with process controls instead of a Node
+`ChildProcess`. Access Node-specific methods such as `.on()`, `.send()`,
+`.ref()`, and `.unref()` through `subprocess.nodeChildProcess`.
+command-stream retains `execaCommand()` and `execaCommandSync()` (removed
+upstream) using Execa's `parseCommandString()` and execution methods; their
+options presets, factories, and TypeScript declarations remain available.
+
+Use `ipc: true` instead of the undocumented `stdio: [..., 'ipc']` form.
+Explicit `input` or `inputFile` now takes precedence over inherited stdin;
+combine inputs with an array if both are required. See the
+[Execa 10 release notes](https://github.com/sindresorhus/execa/releases/tag/v10.0.0).
 
 ```js
 // Before:
@@ -13,7 +27,7 @@ import { execa, execaSync, execaNode, $ } from 'execa';
 import { execa, execaSync, execaNode, $ } from 'command-stream/execa';
 ```
 
-Execa targets Node.js. Ordinary execution also runs in Bun, but Execa 9.6.1's
+Execa 10 requires Node.js 22 or later. Ordinary execution also runs in Bun, but Execa 10.1.0's
 IPC helpers rely on Node's counted IPC-channel references, which Bun does not
 implement. Use Node for IPC; for non-IPC `execaNode` calls in Bun, pass
 `{ ipc: false }`. Deno compatibility is not claimed for this entry. These
@@ -24,7 +38,7 @@ PATH with `extendEnv: false`; other inherited user variables are cleared. The
 adapter preserves these upstream/runtime behaviors.
 
 CommonJS uses `require('command-stream/execa')`. Like the Bun and zx entries,
-this uses `require(esm)` and needs Node >=20.19 or >=22.12, or Bun.
+this uses `require(esm)` and needs Node >=22.12, or Bun.
 
 ## Using the general API
 
@@ -68,7 +82,7 @@ any object with a `pid` as an Execa subprocess.
 
 All upstream exports are retained, including `ExecaError`, `ExecaSyncError`,
 `parseCommandString`, `sendMessage`, `getOneMessage`, `getEachMessage`, and
-`getCancelSignal`. See the [Execa 9.6.1 API reference](https://github.com/sindresorhus/execa/blob/v9.6.1/docs/api.md)
+`getCancelSignal`. See the [Execa 10.1.0 API reference](https://github.com/sindresorhus/execa/blob/v10.1.0/docs/api.md)
 for the full option and subprocess contracts.
 
 Execa templates parse argv; they do not interpret shell operators. Interpolated

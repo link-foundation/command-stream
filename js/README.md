@@ -25,7 +25,7 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 - 🎯 **Bun.$ Everywhere**: the full Bun Shell API as `command-stream/bun` (or `$.bun`) on Node.js, Bun and Deno, tested with Bun's own tests ([guide](docs/BUN_SHELL.md))
 - 🔧 **Built-in Commands**: 26 essential commands work identically across platforms
 - 🆔 **Process Identity**: Read the process id with `command.pid`, before, during and after the run
-- 🔄 **Migration**: [Cross-spawn guide for JavaScript and Rust](docs/CROSS_SPAWN_MIGRATION.md); zx scripts run unchanged via `$.zx`, `command-stream/zx` or `#!/usr/bin/env command-stream`, with all 291 zx test units ported ([zx guide](docs/ZX_MIGRATION.md)); Execa 9.6.1 runs via `command-stream/execa`, `$.execa` and `$.execaCompat()` ([guide and runtime limits](docs/EXECA_MIGRATION.md))
+- 🔄 **Migration**: [Cross-spawn guide for JavaScript and Rust](docs/CROSS_SPAWN_MIGRATION.md); zx scripts run unchanged via `$.zx`, `command-stream/zx` or `#!/usr/bin/env command-stream`, with all 291 zx test units ported ([zx guide](docs/ZX_MIGRATION.md)); Execa 10.1.0 runs via `command-stream/execa`, `$.execa` and `$.execaCompat()` ([guide and runtime limits](docs/EXECA_MIGRATION.md))
 - 🟦 **TypeScript**: Bundled strict declarations for ESM and CommonJS, with typed events, streams, pipelines and virtual commands ([guide and Rust mapping](docs/TYPESCRIPT.md))
 
 ## Comparison with Other Libraries
@@ -241,7 +241,7 @@ registrations, shell settings, and cleanup state are shared no matter how the
 package was loaded.
 
 `require('command-stream')` needs a runtime with `require(esm)` support:
-Node.js >= 20.19.0, Node.js >= 22.12.0, or Bun. On older Node.js versions the
+Node.js >= 22.12.0, or Bun. On older Node.js versions the
 package throws an explicit error asking you to upgrade or to use
 `await import('command-stream')` instead.
 
@@ -2434,7 +2434,7 @@ npm run test:signal      # CTRL+C signal handling tests
 ## Requirements
 
 - **Bun**: >= 1.0.0 (primary runtime)
-- **Node.js**: >= 20.0.0 (compatibility support)
+- **Node.js**: >= 22.0.0 (compatibility support)
 
 ## Roadmap
 

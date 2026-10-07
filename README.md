@@ -92,6 +92,20 @@ cargo clippy --all-targets --all-features
 cargo test --all-features
 ```
 
+Check dependency freshness from the repository root:
+
+```bash
+bun scripts/check-dependencies.mjs
+```
+
+CI compares all package, benchmark, release-script, and pinned CI-tool
+dependencies with the registries' latest stable releases, runs `npm outdated`,
+and rejects pending compatible updates in both Rust lockfiles. A Rust
+dependency may carry a blocker comment on its manifest line, for example
+`# https://github.com/owner/repo/issues/123: explanation`. The referenced issue
+must remain open; closed issues and lookup failures fail the check. The policy
+also runs weekly so new releases are detected between repository changes.
+
 ## License
 
 Command-stream is released under the [Unlicense](./LICENSE).

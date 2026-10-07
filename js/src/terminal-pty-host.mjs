@@ -1,7 +1,26 @@
 import ptyModule from 'node-pty';
 import { createInterface } from 'node:readline';
+import { createRequire } from 'node:module';
+import { dirname, resolve } from 'node:path';
 
-import { stopTerminal } from './terminal-pty-host-platform.mjs';
+import {
+  prepareSpawnHelper,
+  stopTerminal,
+} from './terminal-pty-host-platform.mjs';
+
+if (process.platform === 'darwin') {
+  const require = createRequire(import.meta.url);
+  // Match the binding selected by node-pty, including locally built binaries.
+  const native = require('node-pty/lib/utils.js').loadNativeModule('pty');
+  const helper = resolve(
+    dirname(require.resolve('node-pty')),
+    native.dir,
+    'spawn-helper'
+  )
+    .replace('app.asar', 'app.asar.unpacked')
+    .replace('node_modules.asar', 'node_modules.asar.unpacked');
+  prepareSpawnHelper(helper);
+}
 
 const send = (message, callback) => {
   process.stdout.write(`${JSON.stringify(message)}\n`, callback);

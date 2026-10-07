@@ -89,7 +89,7 @@ All 29 examples were executed in JavaScript and Rust. JavaScript was checked in 
 - [Function and builder APIs](features/function-api.md) — Commands can also be built from plain strings instead of template literals.
 - [Killing and cancelling commands](features/cancellation.md) — A running command can be killed, and cancelling one leaves the rest of the script running.
 - [zx compatibility mode](features/zx-compat.md) — `$.zx` (also `command-stream/zx`) runs zx scripts unchanged: zx quoting, ProcessPromise/ProcessOutput, pipes, `within`, `cd`, `nothrow` and the zx goods.
-- [Execa compatibility mode](features/execa-compat.md) — The isolated command-stream/execa entry and general $.execa expose Execa 9.6.1; Rust has portable exact-argv counterparts with explicit limits.
+- [Execa compatibility mode](features/execa-compat.md) — The isolated command-stream/execa entry and general $.execa expose Execa 10.1.0; Rust has portable exact-argv counterparts with explicit limits.
 - [ShellJS compatibility mode](features/shelljs-compat.md) — The pinned JavaScript ShellJS API and Rust async session counterpart preserve separate arguments and error statuses, with explicit translation limits.
 
 ### Reading output

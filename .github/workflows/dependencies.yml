@@ -1,0 +1,77 @@
+name: Dependency freshness
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
+  schedule:
+    - cron: '23 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  freshness:
+    name: Check every direct dependency against latest releases
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-freshness
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Simulate a fresh merge with the base branch
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash .github/scripts/simulate-fresh-merge.sh
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7.0.0
+        with:
+          node-version: '24.x'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-06
+        with:
+          toolchain: stable
+
+      - name: Test freshness policy
+        run: bun test js/tests/dependency-freshness.test.mjs --timeout 10000
+
+      - name: Check package, benchmark and release-script declarations
+        run: bun scripts/check-dependencies.mjs
+
+      - name: Install locked JavaScript dependencies
+        working-directory: js
+        run: bun install --frozen-lockfile
+
+      - name: Check installed JavaScript dependencies
+        working-directory: js
+        run: npm outdated
+
+      - name: Check Rust lockfiles have no compatible updates pending
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ci-logs
+          for manifest in rust/Cargo.toml rust/benchmarks/Cargo.toml; do
+            log="ci-logs/$(echo "$manifest" | tr / -).log"
+            CARGO_TERM_COLOR=never cargo update --dry-run --manifest-path "$manifest" 2>&1 | tee "$log"
+            if grep -Eq '^[[:space:]]+(Updating|Adding|Removing|Downgrading) [^[:space:]]+ v' "$log"; then
+              echo "::error::$manifest has pending lockfile updates"
+              exit 1
+            fi
+          done

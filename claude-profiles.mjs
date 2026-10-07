@@ -498,7 +498,9 @@ async function verifyProfile(profileName) {
         const zipBuffer = Buffer.from(base64Data, 'base64');
         await fsPromises.writeFile(zipPath, zipBuffer);
       } catch (err) {
-        throw new Error(`Failed to decode profile data: ${err.message}`);
+        throw new Error(`Failed to decode profile data: ${err.message}`, {
+          cause: err,
+        });
       }
 
       // Extract to verify contents

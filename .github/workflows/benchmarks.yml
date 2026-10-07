@@ -58,7 +58,7 @@ jobs:
       group: check-${{ github.workflow }}-${{ github.ref }}-javascript
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -70,7 +70,7 @@ jobs:
           BASE_REF: ${{ github.base_ref }}
         run: bash .github/scripts/simulate-fresh-merge.sh
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7.0.0
         with:
           node-version: '24.x'
 
@@ -135,7 +135,7 @@ jobs:
             benchmarks/results
 
       - name: Upload JSON and HTML reports
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: command-stream-javascript-benchmarks-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
@@ -155,7 +155,7 @@ jobs:
       group: check-${{ github.workflow }}-${{ github.ref }}-rust
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -168,13 +168,13 @@ jobs:
         run: bash .github/scripts/simulate-fresh-merge.sh
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-01
+        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-06
         with:
           toolchain: stable
           components: rustfmt, clippy
 
       - name: Cache Cargo dependencies
-        uses: actions/cache@v5
+        uses: actions/cache@v6.1.0
         with:
           path: |
             ~/.cargo/registry
@@ -247,7 +247,7 @@ jobs:
             --output benchmarks/results
 
       - name: Upload JSON and HTML reports
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: command-stream-rust-benchmarks-${{ github.run_id }}-${{ github.run_attempt }}
           path: |

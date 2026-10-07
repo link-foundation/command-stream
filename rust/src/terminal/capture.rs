@@ -169,7 +169,7 @@ fn resize_terminal(
             pixel_height: 0,
         })
         .map_err(|error| TerminalCaptureError::new(error.to_string(), None))?;
-    parser.set_size(resize.rows, resize.cols);
+    parser.screen_mut().set_size(resize.rows, resize.cols);
     Ok(())
 }
 

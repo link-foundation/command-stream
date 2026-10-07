@@ -45,7 +45,7 @@ export function jsToString(value) {
     return `${value}`;
   } catch (e) {
     if (e instanceof TypeError && /symbol/i.test(e.message)) {
-      throw new TypeError('Cannot convert a symbol to a string');
+      throw new TypeError('Cannot convert a symbol to a string', { cause: e });
     }
     throw e;
   }

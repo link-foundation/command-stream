@@ -149,6 +149,9 @@ pub(crate) fn send_signal_to_process(pid: u32, _signal: &str, _delivery: Deliver
     use std::os::windows::process::CommandExt;
     use std::process::{Command, Stdio};
 
+    crate::trace::trace_lazy("ProcessRunner", || {
+        format!("taskkill starting for process tree {pid}")
+    });
     let result = Command::new("taskkill")
         .args(["/PID", &pid.to_string(), "/T", "/F"])
         .stdin(Stdio::null())

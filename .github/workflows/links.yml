@@ -41,7 +41,7 @@ jobs:
       group: check-${{ github.workflow }}-${{ github.ref }}-links
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
 
@@ -50,7 +50,7 @@ jobs:
       # into the tree they came from and are not this repository's to fix. The
       # same directories are skipped by js/tests/docs-validation.test.mjs.
       - name: Check links with lychee
-        uses: lycheeverse/lychee-action@v2
+        uses: lycheeverse/lychee-action@v2.9.0
         with:
           args: >-
             --verbose

@@ -1,6 +1,6 @@
 # Execa compatibility mode
 
-The isolated command-stream/execa entry and general $.execa expose Execa 9.6.1; Rust has portable exact-argv counterparts with explicit limits.
+The isolated command-stream/execa entry and general $.execa expose Execa 10.1.0; Rust has portable exact-argv counterparts with explicit limits.
 
 **Category:** Running commands
 

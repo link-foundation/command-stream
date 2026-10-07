@@ -7,15 +7,15 @@ default-run = "command-stream-benchmarks"
 
 [dependencies]
 async-process = "=2.5.0"
-chrono = "=0.4.42"
+chrono = "=0.4.45"
 command-stream = { path = ".." }
 duct = "=1.1.2"
 futures = "=0.3.34"
-serde = { version = "=1.0.228", features = ["derive"] }
-serde_json = "=1.0.148"
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.151"
 subprocess = "=1.2.1"
 tempfile = "=3.27.0"
-tokio = { version = "=1.53.1", features = ["full", "process"] }
+tokio = { version = "=1.53.2", features = ["full", "process"] }
 xshell = "=0.2.7"
 
 [lints.rust]
