@@ -184,9 +184,11 @@ fn main() {
         &[
             "diff",
             "--name-only",
-            // A fragment is mostly frontmatter, so rename detection pairs a new
-            // one with any fragment removed in the range and reports R, not A.
-            "--no-renames",
+            // A fragment is mostly frontmatter, so default rename detection
+            // pairs a new one with any fragment removed in the range and
+            // reports R, not A. Exact renames only: a byte-identical move of
+            // a pending fragment is still not a new one.
+            "--find-renames=100%",
             "--diff-filter=A",
             &format!("origin/{}...HEAD", base_ref),
         ],

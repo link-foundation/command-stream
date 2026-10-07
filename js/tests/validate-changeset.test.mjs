@@ -13,6 +13,7 @@ function validate({
   code = false,
   added = false,
   replaced = false,
+  moved = false,
   fragment: addedFragment,
 } = {}) {
   const cwd = mkdtempSync(join(tmpdir(), 'changeset-'));
@@ -47,6 +48,9 @@ function validate({
     }
     if (replaced) {
       rmSync(join(cwd, '.changeset/existing.md'));
+    }
+    if (moved) {
+      git('mv', '.changeset/existing.md', '.changeset/moved.md');
     }
     git('add', '.');
     git('commit', '-m', 'change');
@@ -88,6 +92,9 @@ test('a fragment added while another is removed still counts (#216)', () => {
     fragment: '---\n"command-stream": patch\n---\n\nFix a bug again.\n',
   });
   expect(result.status).toBe(0);
+});
+test('moving a pending changeset does not add one (#216)', () => {
+  expect(validate({ code: true, moved: true }).status).not.toBe(0);
 });
 test('the version type is read from the frontmatter only (#216)', () => {
   const result = validate({
