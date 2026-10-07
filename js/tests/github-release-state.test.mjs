@@ -73,10 +73,11 @@ describe('githubReleaseExists', () => {
 });
 
 test('the release job re-runs publishing when only the GitHub release is missing', () => {
+  // A Windows checkout converts LF to CRLF; the splits below match on `\n`.
   const workflow = readFileSync(
     new URL('../../.github/workflows/js.yml', import.meta.url),
     'utf8'
-  );
+  ).replace(/\r\n/g, '\n');
   const check = workflow
     .split('- name: Check if release is needed\n')[1]
     .split('- name:')[0];

@@ -17,8 +17,11 @@ const workflowFiles = readdirSync(workflowDir)
   .filter((name) => name.endsWith('.yml') || name.endsWith('.yaml'))
   .sort();
 
+// A Windows checkout converts LF to CRLF; the assertions below match on `\n`.
+const readText = (path) => readFileSync(path, 'utf8').replace(/\r\n/g, '\n');
+
 const workflows = workflowFiles.map((name) => {
-  const text = readFileSync(join(workflowDir, name), 'utf8');
+  const text = readText(join(workflowDir, name));
   return { name, text, doc: Bun.YAML.parse(text) };
 });
 
@@ -784,7 +787,7 @@ describe('external links are checked without gating pull requests', () => {
     // A github.com page answered 503 in the 2026-09-28 run (#216). Spacing out
     // requests to the host makes that less likely; the Rust template does it.
     expect(String(lycheeStep().with.args)).toContain('--config lychee.toml');
-    const config = readFileSync(join(repoRoot, 'lychee.toml'), 'utf8');
+    const config = readText(join(repoRoot, 'lychee.toml'));
     expect(config).toMatch(
       /\[hosts\."github\.com"\]\nconcurrency = 2\nrequest_interval = "1s"/
     );
