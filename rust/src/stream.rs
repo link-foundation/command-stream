@@ -73,7 +73,7 @@ use crate::{CommandResult, Result};
 /// Default grace period (in milliseconds) to keep draining the stdio pipes
 /// after the process has exited before aborting any lingering readers. Mirrors
 /// the JavaScript `exitPumpGrace` default.
-const DEFAULT_EXIT_PUMP_GRACE_MS: u64 = 100;
+pub(crate) const DEFAULT_EXIT_PUMP_GRACE_MS: u64 = 100;
 
 /// A chunk of output from a streaming process
 #[derive(Debug, Clone)]

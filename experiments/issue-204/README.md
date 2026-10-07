@@ -45,7 +45,29 @@ cargo test --manifest-path rust/Cargo.toml --all-features --test child_access --
 ```
 
 Each native-child check runs in a separate test process with a ten-second
-deadline. The probe enables `COMMAND_STREAM_TRACE` only in that subprocess.
+deadline and gives output collection two seconds to return. Windows attempts
+alternate with tracing off and on, checking production behavior as well as
+diagnostic behavior.
 The retained runner traces distinguish taskkill startup/completion, direct-child
 termination, output draining, and process exit. Production tracing remains off
 by default.
+
+In the next Windows run, 37549925907, taskkill completed at 00:08:05 UTC
+(lines 1188–1191), but output collection waited until 00:08:10 UTC
+(lines 1193–1198), when the finite ping command naturally finished. Successful
+tree termination did not guarantee EOF on the inherited pipes.
+
+The Unix regression reproduces that wait deterministically with a finite
+descendant holding both output pipes in a separate process group:
+
+```sh
+cargo test --manifest-path rust/Cargo.toml --all-features --test cancelled_output
+```
+
+Before the fix, `cancelled_runner_keeps_buffered_output_without_waiting_for_pipe_eof`
+exceeds its 500-millisecond deadline. The fix continues draining during graceful
+shutdown, then allows 100 milliseconds after child exit for remaining output,
+matching the streaming runner's existing grace period. Captured bytes survive
+that deadline. A second regression checks a finite 256-KiB signal-handler output
+to ensure graceful shutdown remains fully captured without pipe-buffer deadlock.
+The helper has two- and four-second lifetimes plus explicit test cleanup.

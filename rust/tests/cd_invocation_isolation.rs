@@ -242,6 +242,9 @@ async fn cd_is_scoped_to_each_invocation() {
     let failed_pwd = std::env::var_os("PWD");
     let failed_oldpwd = std::env::var_os("OLDPWD");
 
+    // Virtual sleep needs no wall-clock time. Advance the paused clock to the
+    // cancellation deadline so host load cannot make both timers ready at once.
+    tokio::time::pause();
     let cancelled_pipeline = tokio::time::timeout(
         std::time::Duration::from_millis(25),
         Pipeline::new()
@@ -251,6 +254,7 @@ async fn cd_is_scoped_to_each_invocation() {
             .run(),
     )
     .await;
+    tokio::time::resume();
     let cancelled_cwd = std::env::current_dir().unwrap();
     let cancelled_pwd = std::env::var_os("PWD");
     let cancelled_oldpwd = std::env::var_os("OLDPWD");

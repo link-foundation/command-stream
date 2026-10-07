@@ -133,14 +133,14 @@ async fn collect_child_output<R>(
     reader: Option<R>,
     mirror: bool,
     target: ChildOutput,
-) -> std::io::Result<Vec<u8>>
+    collected: &mut Vec<u8>,
+) -> std::io::Result<()>
 where
     R: AsyncRead + Unpin,
 {
     let Some(mut reader) = reader else {
-        return Ok(Vec::new());
+        return Ok(());
     };
-    let mut collected = Vec::new();
     let mut buffer = [0_u8; 8192];
 
     loop {
@@ -167,7 +167,7 @@ where
         }
     }
 
-    Ok(collected)
+    Ok(())
 }
 
 fn fallback_cwd() -> PathBuf {
@@ -532,30 +532,74 @@ impl ProcessRunner {
         // Drain both pipes concurrently and preserve their newline framing. The
         // previous line reader appended `\n` to every final line, changing
         // output from commands such as `printf` that omit a newline (issue #37).
-        let stdout = child.stdout.take();
-        let stderr = child.stderr.take();
+        let stdout_reader = child.stdout.take();
+        let stderr_reader = child.stderr.take();
+        let mut stdout = Vec::new();
+        let mut stderr = Vec::new();
         utils::trace_lazy("ProcessRunner", || {
             format!("Draining child output | pid={:?}", self.pid)
         });
-        let collected = tokio::try_join!(
-            collect_child_output(stdout, self.options.mirror, ChildOutput::Stdout),
-            collect_child_output(stderr, self.options.mirror, ChildOutput::Stderr),
-        );
-        let (stdout, stderr) = match collected {
-            Ok(output) => output,
-            Err(error) => {
-                // `try_join!` drops the other pipe reader after an error. Stop
-                // and reap the child so it cannot remain blocked on that pipe.
-                let _ = child.start_kill();
-                let _ = child.wait().await;
-                return Err(error.into());
-            }
+        let drain = async {
+            tokio::try_join!(
+                collect_child_output(
+                    stdout_reader,
+                    self.options.mirror,
+                    ChildOutput::Stdout,
+                    &mut stdout,
+                ),
+                collect_child_output(
+                    stderr_reader,
+                    self.options.mirror,
+                    ChildOutput::Stderr,
+                    &mut stderr,
+                ),
+            )
+            .map(|_| ())
         };
+        let (collected, status) = if self.cancelled {
+            // Keep draining while a graceful signal handler runs. After the
+            // child exits, a descendant can still retain either pipe. Like
+            // the streaming runner, bound that remaining drain; the outside
+            // buffers survive cancellation of the reader.
+            tokio::pin!(drain);
+            let mut status = None;
+            let collected = tokio::select! {
+                output = &mut drain => output,
+                child_status = child.wait() => {
+                    status = Some(child_status?);
+                    match tokio::time::timeout(
+                        std::time::Duration::from_millis(stream::DEFAULT_EXIT_PUMP_GRACE_MS),
+                        &mut drain,
+                    ).await {
+                        Ok(output) => output,
+                        Err(_) => {
+                            utils::trace_lazy("ProcessRunner", || {
+                                "Cancelled output drain timed out; retaining buffered bytes".to_string()
+                            });
+                            Ok(())
+                        }
+                    }
+                }
+            };
+            (collected, status)
+        } else {
+            (drain.await, None)
+        };
+        if let Err(error) = collected {
+            // `try_join!` drops the other pipe reader after an error. Stop
+            // and reap the child so it cannot remain blocked on that pipe.
+            let _ = child.start_kill();
+            let _ = child.wait().await;
+            return Err(error.into());
+        }
 
         utils::trace_lazy("ProcessRunner", || {
             format!("Child output drained | pid={:?}", self.pid)
         });
-        let status = child.wait().await?;
+        let status = match status {
+            Some(status) => status,
+            None => child.wait().await?,
+        };
         utils::trace_lazy("ProcessRunner", || {
             format!("Child exited | pid={:?} status={status}", self.pid)
         });

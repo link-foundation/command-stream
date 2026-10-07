@@ -34,7 +34,10 @@ fn run_bounded(test_name: &str) -> bool {
         let mut child = std::process::Command::new(std::env::current_exe().unwrap())
             .args([test_name, "--exact", "--nocapture"])
             .env(PROBE, test_name)
-            .env("COMMAND_STREAM_TRACE", "true")
+            .env(
+                "COMMAND_STREAM_TRACE",
+                if attempt % 2 == 0 { "false" } else { "true" },
+            )
             .spawn()
             .unwrap();
         let deadline = Instant::now() + Duration::from_secs(10);
@@ -77,7 +80,9 @@ async fn child_exposes_the_native_process_after_start() {
     }
 
     runner.kill().unwrap();
-    let _ = runner.run().await;
+    let _ = tokio::time::timeout(Duration::from_secs(2), runner.run())
+        .await
+        .expect("cancelled child waited for inherited output pipes");
 }
 
 #[tokio::test]
@@ -94,7 +99,10 @@ async fn child_handle_can_stop_the_process() {
         .kill_with("SIGTERM")
         .unwrap();
 
-    let result = runner.run().await.unwrap();
+    let result = tokio::time::timeout(Duration::from_secs(2), runner.run())
+        .await
+        .expect("cancelled child waited for inherited output pipes")
+        .unwrap();
     assert_ne!(result.code, 0);
     assert!(runner.is_finished());
     assert!(runner.child().is_none());
