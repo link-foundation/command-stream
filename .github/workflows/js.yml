@@ -303,6 +303,7 @@ jobs:
           node --test js/tests/stdin-epipe.test.mjs
           node --test js/tests/process-runner-signal-exit.test.mjs
           node --test js/tests/github-cli-body.test.mjs
+          node --test js/tests/virtual-exit.test.mjs
 
       # The zx-compatible API (issue #26) ports google/zx's own test suite; the
       # files run one at a time because several upstream cases are timing based.

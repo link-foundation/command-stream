@@ -422,7 +422,7 @@ function registerBuiltins() {
   register('true', trueCommand);
   register('false', falseCommand);
   register('which', createWhichCommand(virtualCommands));
-  register('exit', createExitCommand(globalShellSettings));
+  register('exit', createExitCommand());
   register('env', envCommand);
   register('cat', catCommand);
   register('ls', lsCommand);
