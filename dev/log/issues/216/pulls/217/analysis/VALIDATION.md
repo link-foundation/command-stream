@@ -18,6 +18,9 @@ Every log named here is in `../validation/`. Unless a log says otherwise, "befor
 | F11 rename detection (git only) | `rename-detection-repro.sh` | see the table in REPORT.md F11 | replaced, moved and code-out all classified correctly | `rename-detection-repro.log` |
 | F11 Rust fragment check | `changelog-fragment-check.sh` | `renamed` exits 1 (valid PR rejected) | `renamed` 0, `moved` 1 | `changelog-fragment-check-renames.log` |
 | F12 lychee retries | `lychee-retry-503.py` (local mock server, `python3 -I`) | 1 request per 503 for every `--max-retries` / `--retry-wait-time` combination | Re-check step recovers or fails per link (tests below) | `lychee-retry-503.log`, `link-recheck.log`, `lychee-0.24.2-report-sample.md` |
+| F13 CRLF workflow text | `crlf-workflow-tests.sh <commit>` (CRLF copies in a worktree) | 3 of 215 tests fail at `a17623c` | 215 pass at `a7da368` | `crlf-workflow-tests-{before,after}.log` |
+| F14 runtime drop waits on a pipe read | `runtime-drop-waits-for-pipe-read.rs` (rust-script, tokio) | plain drop: 3.01 s | `shutdown_timeout(100 ms)`: 0.21 s | `runtime-drop-waits-for-pipe-read.log` |
+| F14 probe timings in CI | `child-access-timing.py` over 8 Windows jobs | about half of the probes take ~5.1 s; 2 jobs exceed 10 s | measured by the CI run after the push (below) | `../ci-logs/child-access/SUMMARY.txt` |
 
 ## Final local checks (`local-checks.log`, at `71f7c25`)
 
@@ -52,6 +55,8 @@ All 28 local failures are jq tests (`jq.test.mjs`, `jq-color-behavior.test.mjs` 
 - `js/tests/cargo-warnings-gate.test.mjs`: runs the real clippy step with a mock `cargo` (F10).
 - `js/tests/validate-changeset.test.mjs`, `js/tests/language-parity.test.mjs`: replaced, moved and renamed paths (F11).
 - `js/tests/recheck-transient-links.test.mjs`: 8 tests against a local `Bun.serve` (F12).
+- `js/tests/workflow-hygiene.test.mjs`, `js/tests/github-release-state.test.mjs`: CRLF-normalised reads (F13).
+- `rust/tests/child_access.rs`: probes shut their runtime down with a timeout and list the surviving processes on overrun (F14). `cargo fmt --check`, clippy `-D warnings` and `cargo test --test child_access` pass locally (4 tests).
 
 ## CI on the pull request
 

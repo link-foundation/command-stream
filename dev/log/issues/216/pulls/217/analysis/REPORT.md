@@ -22,8 +22,8 @@ This archive supports [issue 216](https://github.com/link-foundation/command-str
 
 | Requirement (issue 216) | Where it is addressed |
 | --- | --- |
-| Find every false positive, false negative, warning and error in the cited runs | All 10 cited runs, the two earlier failing JS runs on main and the last three scheduled link checks were downloaded. Every error and warning line was classified: F1–F12 below, then "Reviewed warnings that need no change". |
-| Fix them all | F1–F4 and F6–F12 are fixed in this PR. For F5, the cause is fixed; recreating the five historical releases is a maintainer action (see F5). |
+| Find every false positive, false negative, warning and error in the cited runs | All 10 cited runs, the two earlier failing JS runs on main and the last three scheduled link checks were downloaded. Every error and warning line was classified: F1–F12 below, then "Reviewed warnings that need no change". The PR's own CI runs were reviewed the same way: F13–F15. |
+| Fix them all | F1–F4 and F6–F14 are fixed in this PR. For F5, the cause is fixed; recreating the five historical releases is a maintainer action (see F5). F15 occurred once; its tracing is now on, and the cause is open (see Limits). |
 | Compare the full file tree with the JS, Rust and Python templates | 423, 170 and 103 tracked template files inventoried; 68 local CI files compared, diffs preserved. The template changes since the previous comparison are audited in `TEMPLATE-DELTA-AUDIT.md`. |
 | Reuse the templates' best practices | Taken from the templates: lychee github.com throttle (Rust), Cargo warning gate (Rust #181), top-level-only fragments (Rust #182 / Python #93), single doc-test run (Rust #185), CodeQL scoping (JS/Rust), GitHub-release self-heal (JS #212), zizmor pin awareness (JS). Not taken, with the reason in each finding: excluding `js/examples` from CodeQL, and the templates' rename handling, which is wrong (F11). |
 | Report shared defects upstream | js-template#214 (deno formatter), js-template#215, rust-template#190 and python-template#100 (rename detection). Each has a reproduction, a workaround and a suggested fix. The lychee 5xx-retry gap is already tracked in lycheeverse/lychee#2193, so it was not filed again. |
@@ -31,7 +31,7 @@ This archive supports [issue 216](https://github.com/link-foundation/command-str
 | Collect logs and data in `dev/log/issues/216/pulls/217` | This archive. |
 | Timeline, requirements, root causes, solutions and plans | Timeline below; root cause, options and the chosen fix per finding; `plan.md` is the execution checklist. |
 | Search for existing components and libraries | "Existing components used" below. |
-| Add debug output where the evidence was insufficient | `.github/scripts/recheck-transient-links.mjs` traces each re-check through `js/scripts/debug-print.mjs`. It is off by default and turned on by `CI_SCRIPTS_DEBUG=1`, `RUNNER_DEBUG=1` or `ACTIONS_STEP_DEBUG=true`. |
+| Add debug output where the evidence was insufficient | `.github/scripts/recheck-transient-links.mjs` traces each re-check through `js/scripts/debug-print.mjs`. It is off by default and turned on by `CI_SCRIPTS_DEBUG=1`, `RUNNER_DEBUG=1` or `ACTIONS_STEP_DEBUG=true`. `rust/tests/child_access.rs` lists the surviving processes when a probe overruns (F14). The existing `COMMAND_STREAM_TRACE_SUBPROCESS` warnings now also run in the Windows conformance jobs (F15). |
 | Apply each fix everywhere it occurs | Rename handling fixed in all three change checks (JS changeset, Rust fragment, Rust code changes) and in language parity. Sleep-based signal tests fixed in both languages. Gist URL matching fixed in every example, test and `claude-profiles.mjs`. |
 | One PR, with a changeset / fragment | `js/.changeset/issue-216-release-formatter.md` (patch); `rust/changelog.d/20261007_060000_signal_test_readiness.md` and `20261007_080000_changelog_fragment_check.md` (patch). |
 
@@ -50,6 +50,8 @@ This archive supports [issue 216](https://github.com/link-foundation/command-str
 | 05:56–06:55 | Fixes committed one finding at a time (`2e4b618` … `71f7c25`). Upstream reports filed. | `git log origin/main..` |
 | 06:44 → 06:53 | Self-review: `--no-renames` (`4edb764`) turned a byte-identical move of a pending fragment into an "added" one, so the check passed falsely. Replaced by `--find-renames=100%` (`9d8b43d`). | `validation/rename-detection-repro.log`, `changelog-fragment-check-renames.log` |
 | 07:06 | Final local checks | `validation/local-checks.log` |
+| 06:56–07:20 | Branch CI at `71f7c25` … `a17623c`: Windows Bun fails 3 workflow tests (F13). Windows Rust fails `child_access` twice (F14). Deno on Windows fails 3 conformance cases once (F15). | `ci-logs/branch/`, `ci-logs/child-access/` |
+| 07:20–07:40 | F13 reproduced with CRLF files and fixed (`a7da368`). F14's runtime-drop wait reproduced and the probes fixed (`e607232`). F15 tracing enabled (`2511329`). | `validation/crlf-workflow-tests-{before,after}.log`, `validation/runtime-drop-waits-for-pipe-read.log` |
 
 ## Findings, root causes and fixes
 
@@ -186,6 +188,41 @@ This archive supports [issue 216](https://github.com/link-foundation/command-str
 - **Relation to the templates.** All three templates already re-check transient failures outside lychee (`scripts/recheck-broken-links.mjs` in JS and Rust, `scripts/recheck_broken_links.py` in Python), citing lycheeverse/lychee#2297 for connection resets in the connect phase. Their scripts always exit 0, publish an `all_recovered` output, and feed later web-archive and fail steps. This repository's links workflow has none of those steps. Porting the whole chain was weighed against a single fail-closed step, and the single step was chosen: its exit code is the verdict, so a crashed or skipped re-check cannot turn into a pass. The idea is the same as the templates'; the code is smaller, and it is tested against a local server.
 - **Note.** The 404 in the same runs was a real broken link, already fixed by issue 209.
 
+### F13: workflow tests fail on Windows checkouts (false failure introduced by this PR, fixed before merge)
+
+- **Evidence.** At `a17623c`, `Test JavaScript (bun on windows-2025)` failed in run 37586000490 and in three earlier branch runs (`ci-logs/branch/js-*-windows-bun.log.gz`). Three tests failed: "the release job re-runs publishing when only the GitHub release is missing", "zizmor runs with the repository policy at low confidence" and "github.com is throttled by the configuration lychee loads".
+- **Root cause.** On Windows, the checkout converts the workflow files and `lychee.toml` to CRLF. The new assertions in `js/tests/workflow-hygiene.test.mjs` and `js/tests/github-release-state.test.mjs` split and match on `\n`. The repository's `.gitattributes` pins line endings only for the zx fixtures.
+- **Fix (`a7da368`).** Both files normalise `\r\n` to `\n` after reading, as the JS template's `tests/security-workflow.test.js` and `tests/links-workflow.test.js` already do.
+  - `experiments/issue-216/crlf-workflow-tests.sh <commit>` converts the files to CRLF in a throwaway worktree and runs the two test files.
+  - At `a17623c` the 3 tests fail. After the fix all pass (`validation/crlf-workflow-tests-{before,after}.log`).
+
+### F14: `child_access` probes on Windows wait 5 s, sometimes more than 10 s, for a process that survived the kill (flaky false failure)
+
+- **Evidence.** `rust/tests/child_access.rs` cancels `bash -c 'sleep …'` and requires each attempt to finish within 10 s. Eight Windows Rust jobs were collected: main at `a171ef3`, PR 204's branch, and this branch (`ci-logs/child-access/`, summary in `SUMMARY.txt`, produced by `experiments/issue-216/child-access-timing.py`):
+  - About half of all probes take 5.07–5.27 s; the rest take 0.06–0.16 s.
+  - Two jobs failed with `child_handle_can_stop_the_process, attempt 0: cancellation exceeded 10 seconds`: 37583836154 (job 112669859843) and 37584217861 (job 112671191150).
+  - The test was unchanged by this PR until the fix. The same 5 s pattern appears on main and on PR 204's branch, so the flake predates this PR.
+- **Root cause of the 5 s probes (proven).**
+  - On Windows, Tokio wraps child pipes in `Blocking` (`tokio/src/process/windows.rs`), so each read runs on a `spawn_blocking` thread.
+  - `taskkill /PID <pid> /T /F` (`rust/src/signal.rs`) can miss a descendant created during the kill, such as the `sleep` that Git Bash is still starting. The surviving process keeps the pipe's write end open.
+  - The library returns after its bounded drain (`DEFAULT_EXIT_PUMP_GRACE_MS`). Then `#[tokio::test]` drops its runtime, and dropping a runtime waits for every blocking task, including the read that only ends when `sleep 5` exits.
+  - `experiments/issue-216/runtime-drop-waits-for-pipe-read.rs` reproduces the runtime half: a plain drop takes 3.01 s, `shutdown_timeout(100 ms)` takes 0.21 s (`validation/runtime-drop-waits-for-pipe-read.log`).
+- **Root cause of the more-than-10 s attempts (not established).** The failing jobs ran without process tracing, so the survivors are unknown.
+- **Fix (`e607232`).**
+  - The probes run on a current-thread runtime that is shut down with `shutdown_timeout(100 ms)`. The test still asserts the library's own deadline but no longer waits on an orphan's pipe.
+  - Debug output: if the deadline is missed again, the panic message lists the processes still running (`Get-CimInstance Win32_Process` on Windows, `ps` on Unix), taken before the cleanup kill. The overrun path was exercised locally by setting the deadline to 0.
+- **Remaining library defect (documented, not fixed).** A program whose runtime outlives a cancelled command can still keep an orphaned grandchild and a blocking read. Killing the whole tree reliably needs a Windows Job Object, which needs `unsafe` FFI. `rust/Cargo.toml` sets `unsafe_code = "forbid"`, so that is a design decision for the maintainers rather than a CI fix (see Limits).
+
+### F15: Deno on Windows lost the output of three `node -e` cases once (flaky false failure, diagnostics added)
+
+- **Evidence.** In `Bun Shell conformance`, run 37584217932 (`port on Deno on windows-2025`, job 112670557069, `ci-logs/branch/conformance-37584217932-job-112670557069-deno-windows-FAIL.log.gz`), three cases failed with `stdout … got ""` and the correct exit code, after 3163–3317 ms each:
+  - `bunshell/change-env-child-process-env-again`;
+  - `bunshell/stacktrace-child-uncaught-error-2to1`;
+  - `bunshell/input-pipe-between-processes`.
+  - The same cases passed on that target at `ab115e3`, `da76227` and `a17623c`. Earlier conformance failures on main (runs 37358951220, 37254239257) were in different cases.
+- **Hypothesis (unconfirmed).** `waitForClose` in `js/src/bun-shell/subprocess.mjs` resolves with the exit status 2 s (`CLOSE_GRACE_MS`) after `exit` if `close` never arrives. Any output not drained by then is lost, and the 3.2 s timings fit a slow Node.js start plus that 2 s grace. The code already has default-off tracing for this (`COMMAND_STREAM_TRACE_SUBPROCESS=1` emits `no 'close' 2000ms after exit` and `slow subprocess in <phase>`), but CI enabled it only for Bun on macOS.
+- **Change (`2511329`).** `bun-shell.yml` now sets `COMMAND_STREAM_TRACE_SUBPROCESS=1` on Windows and macOS for all targets. The trace only prints warnings, so the results are unchanged. A recurrence will show whether the grace fired. Changing the grace without that evidence could hide hangs that it exists to bound, so it is left as is.
+
 ## Reviewed warnings that need no change
 
 | Warning | Where | Decision |
@@ -228,7 +265,9 @@ This archive supports [issue 216](https://github.com/link-foundation/command-str
 - **CodeQL `paths-ignore`** in a config file, as in both templates.
 - **git's own `--find-renames=<n>` and `--no-renames`** instead of parsing paths by hand (F11).
 - **lychee per-host configuration** (`[hosts."<host>"] concurrency/request_interval`) and lychee-action's `exit_code` / `output` outputs. lycheeverse/lychee#2193 and #2297 were read, along with the templates' `recheck-broken-links` scripts, before deciding that a re-check step is still needed.
-- **Debug output** reuses `js/scripts/debug-print.mjs` instead of adding another flag.
+- **Debug output** reuses `js/scripts/debug-print.mjs` and the existing `COMMAND_STREAM_TRACE_SUBPROCESS` instead of adding more flags.
+- **CRLF normalisation** follows the JS template's workflow tests (F13).
+- **Tokio's `Runtime::shutdown_timeout`** stops the probes waiting on blocking reads instead of a custom executor (F14).
 
 ## Upstream reports
 
@@ -243,6 +282,7 @@ Not filed:
 - The lychee 5xx retry gap is already discussed in lycheeverse/lychee#2193.
 - All three templates already re-check transient link failures (`recheck-broken-links`), so there is nothing to report to them.
 - The deploy-pages DEP0040 warning is already reported in actions/deploy-pages#413 and #434.
+- F13 to F15 are specific to this repository. The JS template already normalises CRLF, and the templates have no process-tree tests or shell port.
 
 ## Limits
 
@@ -253,3 +293,7 @@ Not filed:
   - `bun-version: latest` → `1.x` (TEMPLATE-DELTA-AUDIT J6e);
   - longer `wait-for-crate` defaults (R187b).
 - Locally, 28 jq tests fail because jq is not installed in the sandbox. CI installs jq, and every other test passes (see `VALIDATION.md`).
+- F14:
+  - The cause of the two child_access attempts that took more than 10 s is unknown. The next overrun prints the surviving processes.
+  - The library can still leave a grandchild that `taskkill /T` missed on Windows. Fixing that needs Job Objects and therefore a change to the `unsafe_code = "forbid"` policy.
+- F15 has occurred once. The 2 s close-grace hypothesis is unconfirmed until a traced run reproduces it.

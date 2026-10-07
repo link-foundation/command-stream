@@ -10,7 +10,9 @@
 - [x] Add default-off debug tracing (`CI_SCRIPTS_DEBUG`) to the new link re-check.
 - [x] Run the local checks (`validation/local-checks.log`).
 - [x] Write the analysis documents (`REPORT.md`, `VALIDATION.md`).
-- [ ] Commit the archive and experiments, push, and verify CI on the latest SHA.
+- [x] Commit the archive and experiments.
+- [x] Review the PR's own CI runs. Fix the Windows CRLF tests (F13) and the `child_access` runtime wait (F14). Enable tracing for the one-off Deno failure (F15).
+- [ ] Push and verify CI on the latest SHA.
 - [ ] Merge main if it moved, review every comment channel, update the PR description, and mark the PR ready.
 
 Maintainer actions outside this PR:
