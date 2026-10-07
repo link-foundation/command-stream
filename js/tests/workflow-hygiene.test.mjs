@@ -266,6 +266,15 @@ describe('workflow linting is itself wired into CI', () => {
     // repositories' workflows, kept as evidence. Auditing those reported 30
     // findings in files that never run here and that a fix would falsify.
     expect(step.with.inputs).toBe('.github/workflows');
+    // The local reproduction in the comment above the step must audit the same
+    // way; it said `--min-confidence medium` while CI ran `low` (issue #216).
+    const reproduction = lintWorkflow.text.match(
+      /pipx run zizmor==[\d.]+ --config (\S+) \\\n\s*# +--min-confidence (\w+)/
+    );
+    expect(reproduction?.slice(1)).toEqual([
+      step.with.config,
+      String(step.with['min-confidence']),
+    ]);
   });
 
   test.each(workflows.map((w) => [w.name, w]))(
