@@ -1,0 +1,32 @@
+## repo lychee.toml loads in lychee 0.24.2
+🔍 1 Total (in 422ms) 🔗 1 Unique ✅ 1 OK 🚫 0 Errors
+
+exit=0
+
+## re-check of a real lychee 0.24.2 markdown report (mock server stopped, so transient entries stay broken)
+### Errors in /tmp/lychee-216-fixture/a.md
+
+* [ERROR] <http://127.0.0.1:1/refused> (at 6:1) | Connection refused - server may be down or port blocked
+* [503] <http://127.0.0.1:40223/flaky> (at 1:1) | Rejected status code: 503 Service Unavailable
+* [404] <http://127.0.0.1:40223/gone> (at 2:1) | Rejected status code: 404 Not Found
+* [429] <http://127.0.0.1:40223/limited> (at 3:1) | Rejected status code: 429 Too Many Requests
+
+## Timeouts per input
+
+### Timeouts in /tmp/lychee-216-fixture/a.md
+
+* [TIMEOUT] <http://127.0.0.1:40223/slow> (at 5:1) | Request timed out
+
+::error::[ERROR] http://127.0.0.1:1/refused still failing after re-checks (last: ERROR).
+::error::[503] http://127.0.0.1:40223/flaky still failing after re-checks (last: ERROR).
+::error::[404] http://127.0.0.1:40223/gone
+::error::[429] http://127.0.0.1:40223/limited still failing after re-checks (last: ERROR).
+::error::[TIMEOUT] http://127.0.0.1:40223/slow still failing after re-checks (last: ERROR).
+0 of 5 reported links recovered; 5 broken.
+exit=1
+
+## lychee 0.24.2 sends one request for a 503 regardless of --max-retries
+503s before success=2 args=['--max-retries', '2'] -> exit=2 requests=1
+503s before success=2 args=['--max-retries', '3', '--retry-wait-time', '5'] -> exit=2 requests=1
+503s before success=3 args=['--max-retries', '2'] -> exit=2 requests=1
+503s before success=3 args=['--max-retries', '3', '--retry-wait-time', '5'] -> exit=2 requests=1

@@ -49,10 +49,17 @@ jobs:
       # repositories' documents, kept as evidence: their relative links point
       # into the tree they came from and are not this repository's to fix. The
       # same directories are skipped by js/tests/docs-validation.test.mjs.
+      #
+      # lychee.toml throttles github.com. The action does not fail the job
+      # itself: lychee never retries a 503 (lycheeverse/lychee#2193), so the
+      # next step fetches 429/5xx/timeout links again with a backoff and fails
+      # on anything still broken, and at once on any other status (#216).
       - name: Check links with lychee
+        id: lychee
         uses: lycheeverse/lychee-action@v2.9.0
         with:
           args: >-
+            --config lychee.toml
             --verbose
             --no-progress
             --max-retries 2
@@ -60,9 +67,16 @@ jobs:
             --exclude-path dev/log
             --exclude-path docs/case-studies
             './**/*.md'
-          fail: true
+          fail: false
+          output: lychee/out.md
           jobSummary: true
         env:
           # Raises GitHub's anonymous rate limit, which this repository's
           # documents would otherwise hit on their own issue and pull links.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Re-check transient failures
+        # always(): an empty exit code (the action itself broke) fails here.
+        if: always()
+        env:
+          LYCHEE_EXIT_CODE: ${{ steps.lychee.outputs.exit_code }}
+        run: node .github/scripts/recheck-transient-links.mjs lychee/out.md

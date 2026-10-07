@@ -765,10 +765,29 @@ describe('external links are checked without gating pull requests', () => {
   });
 
   test('a broken link fails the scheduled run', () => {
-    // `fail: false` is what the templates use, because a later step decides;
-    // there is no later step here, so the action itself has to fail the job or
-    // the schedule reports success no matter what it found.
-    expect(lycheeStep().with.fail).toBe(true);
+    // `fail: false` hands the verdict to the re-check step, which must run
+    // even when an earlier step failed and must see lychee's exit code, or
+    // the schedule reports success no matter what lychee found.
+    const steps = Object.values(links.doc.jobs).flatMap((job) => job.steps);
+    const recheck = steps[steps.indexOf(lycheeStep()) + 1];
+    expect(lycheeStep().with.fail).toBe(false);
+    expect(recheck.if).toBe('always()');
+    expect(recheck.env.LYCHEE_EXIT_CODE).toBe(
+      `\${{ steps.${lycheeStep().id}.outputs.exit_code }}`
+    );
+    expect(recheck.run).toBe(
+      `node .github/scripts/recheck-transient-links.mjs ${lycheeStep().with.output}`
+    );
+  });
+
+  test('github.com is throttled by the configuration lychee loads', () => {
+    // A github.com page answered 503 in the 2026-09-28 run (#216). Spacing out
+    // requests to the host makes that less likely; the Rust template does it.
+    expect(String(lycheeStep().with.args)).toContain('--config lychee.toml');
+    const config = readFileSync(join(repoRoot, 'lychee.toml'), 'utf8');
+    expect(config).toMatch(
+      /\[hosts\."github\.com"\]\nconcurrency = 2\nrequest_interval = "1s"/
+    );
   });
 
   test('archived copies of other repositories are excluded', () => {
