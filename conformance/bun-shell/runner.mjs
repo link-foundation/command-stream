@@ -33,6 +33,7 @@ const DEFAULT_TIMEOUT = 10_000;
  * @param {object} [opts.factory] corpus value factory overrides
  * @param {boolean} [opts.retryFlaky] retry `oracleFlaky` cases (oracle only)
  * @param {string[]} [opts.argv] command line arguments
+ * @param {(line: string) => void} [opts.log] report sink (tests capture it)
  * @returns {Promise<{PASS: number, FAIL: number, SKIP: number}>}
  */
 export async function runCorpus({
@@ -43,6 +44,7 @@ export async function runCorpus({
   factory = {},
   retryFlaky = false,
   argv = process.argv.slice(2),
+  log = console.log,
 }) {
   const opt = (name, def) => {
     const i = argv.indexOf(name);
@@ -187,17 +189,17 @@ export async function runCorpus({
     const r = results[i];
     counts[r.status]++;
     if (r.status === 'PASS' && !verbose) {
-      console.log(`PASS ${c.id}`);
+      log(`PASS ${c.id}`);
       continue;
     }
-    console.log(`${r.status} ${c.id}  (${c.source}:${c.unitLine}, ${r.ms}ms)`);
+    log(`${r.status} ${c.id}  (${c.source}:${c.unitLine}, ${r.ms}ms)`);
     for (const d of r.details) {
-      console.log(`     - ${d}`);
+      log(`     - ${d}`);
     }
   }
-  console.log('');
-  console.log(`${label} on ${process.platform}; node for {{NODE}}: ${node}`);
-  console.log(
+  log('');
+  log(`${label} on ${process.platform}; node for {{NODE}}: ${node}`);
+  log(
     `Total ${cases.length}: ${counts.PASS} passed, ${counts.FAIL} failed, ${counts.SKIP} skipped in ${((Date.now() - started) / 1000).toFixed(1)}s`
   );
   return counts;
