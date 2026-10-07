@@ -419,6 +419,29 @@ describe('every shipped ecosystem is audited', () => {
     expect(languages).toContain('actions');
   });
 
+  test('CodeQL skips archived evidence but never shipped files', () => {
+    const init = security.doc.jobs.codeql.steps.find((step) =>
+      step.uses?.startsWith('github/codeql-action/init@')
+    );
+    const config = Bun.YAML.parse(
+      readFileSync(join(repoRoot, init.with['config-file']), 'utf8')
+    );
+    // Archived copies of other repositories' files held 6 of the 26 open
+    // alerts; fixing them would falsify the record (issue #216).
+    expect(config['paths-ignore']).toContain('docs/case-studies');
+    const shipped = JSON.parse(
+      readFileSync(join(repoRoot, 'js/package.json'), 'utf8')
+    ).files.map((entry) => `js/${entry.replace(/\/$/, '')}`);
+    for (const ignored of config['paths-ignore']) {
+      expect(
+        shipped.filter(
+          (entry) => entry === ignored || entry.startsWith(`${ignored}/`)
+        )
+      ).toEqual([]);
+      expect(['src', 'scripts', '.github'].includes(ignored)).toBe(false);
+    }
+  });
+
   test('the working tree is scanned for committed credentials', () => {
     // Nothing looked for credentials in the tree: CodeQL does not, and the
     // audit jobs only read lockfiles (issue #199, best practice #11).
