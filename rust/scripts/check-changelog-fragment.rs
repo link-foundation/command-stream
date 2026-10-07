@@ -70,6 +70,8 @@ fn get_changed_files() -> Vec<String> {
         &[
             "diff",
             "--name-only",
+            // Both sides of a move: code moved out of src/ is still a change.
+            "--no-renames",
             &format!("origin/{}...HEAD", base_ref),
         ],
     );
@@ -182,6 +184,9 @@ fn main() {
         &[
             "diff",
             "--name-only",
+            // A fragment is mostly frontmatter, so rename detection pairs a new
+            // one with any fragment removed in the range and reports R, not A.
+            "--no-renames",
             "--diff-filter=A",
             &format!("origin/{}...HEAD", base_ref),
         ],
