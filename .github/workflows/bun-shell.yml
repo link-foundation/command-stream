@@ -82,11 +82,17 @@ jobs:
           # the log names the case that crashed it.
           ref_args=()
           if [ "$RUNNER_OS" = Windows ]; then ref_args=(--trace --concurrency 1); fi
+          # Subprocess tracing (warnings only) for the runners where the port
+          # has lost a child's output or hung: Bun on macOS, Deno on Windows
+          # (issue #216: three `node -e` cases returned empty stdout after ~3.2s).
+          if [ "$RUNNER_OS" = macOS ] || [ "$RUNNER_OS" = Windows ]; then
+            export COMMAND_STREAM_TRACE_SUBPROCESS=1
+          fi
           case "$TARGET" in
             'Bun.$ reference') bun conformance/bun-shell/run-bun-reference.mjs "${ref_args[@]}" ;;
             'port on Bun')
               if [ "$RUNNER_OS" = macOS ]; then
-                COMMAND_STREAM_TRACE_SUBPROCESS=1 bun conformance/bun-shell/run-js.mjs --trace
+                bun conformance/bun-shell/run-js.mjs --trace
               else
                 bun conformance/bun-shell/run-js.mjs
               fi ;;
