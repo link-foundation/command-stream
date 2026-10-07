@@ -507,6 +507,13 @@ describe('the shipped quality gates are actually invoked', () => {
     }
   });
 
+  test('each Rust test job runs the doc tests once', () => {
+    // `cargo test` already runs "Doc-tests command_stream"; a second
+    // `cargo test --doc` step ran them twice on every OS (issue #216).
+    expect(rustRuns).toContain('cargo test --all-features');
+    expect(rustRuns).not.toContain('cargo test --doc');
+  });
+
   test('both languages enforce a maximum file length', () => {
     // Principle #2 of the hive-mind CI/CD best practices. JavaScript gets this
     // from eslint; Rust had the script but no caller.

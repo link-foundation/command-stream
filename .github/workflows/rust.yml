@@ -214,13 +214,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
+      # `cargo test` already runs the doc tests ("Doc-tests command_stream");
+      # a separate `cargo test --doc` step ran them a second time on every OS
+      # (issue #216).
       - name: Run tests
         working-directory: rust
         run: cargo test --all-features --verbose
-
-      - name: Run doc tests
-        working-directory: rust
-        run: cargo test --doc --all-features --verbose
 
   scripts:
     name: Test Rust scripts and check sizes
