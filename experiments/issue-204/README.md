@@ -29,3 +29,23 @@ shared current nix 0.31.3. portable-pty 0.9.0 is its latest stable release;
 eliminating that remaining transitive duplicate requires an upstream update
 or a separate replacement of the PTY backend. No duplicate vt100 or which
 remains. The PR records this limit rather than claiming a duplicate-free graph.
+
+## Windows cancellation probe
+
+The Windows job for run 37546397534 stalled in
+`child_handle_can_stop_the_process`; its log reported the test running for over
+60 seconds at line 1208 before the 30-minute job limit cancelled it. Compilation
+and the other native-child test had already passed.
+
+Run the bounded native-child regression tests, including eight attempts for
+each cancellation path on Windows:
+
+```sh
+cargo test --manifest-path rust/Cargo.toml --all-features --test child_access -- --nocapture
+```
+
+Each native-child check runs in a separate test process with a ten-second
+deadline. The probe enables `COMMAND_STREAM_TRACE` only in that subprocess.
+The retained runner traces distinguish taskkill startup/completion, direct-child
+termination, output draining, and process exit. Production tracing remains off
+by default.

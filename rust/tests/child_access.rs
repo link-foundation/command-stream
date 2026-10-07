@@ -7,6 +7,7 @@
 //! process-group-aware termination behavior.
 
 use command_stream::{ProcessRunner, RunOptions};
+use std::time::{Duration, Instant};
 
 #[cfg(unix)]
 const IDLE_COMMAND: &str = "/bin/sleep 5";
@@ -21,6 +22,38 @@ fn quiet() -> RunOptions {
     }
 }
 
+// A synchronous Windows taskkill or an inherited output pipe can block the
+// Tokio runtime itself. A separate test process keeps either failure bounded
+// and exposes opt-in runner traces instead of consuming the whole CI job.
+fn run_bounded(test_name: &str) -> bool {
+    const PROBE: &str = "COMMAND_STREAM_CHILD_ACCESS_PROBE";
+    if std::env::var(PROBE).as_deref() == Ok(test_name) {
+        return false;
+    }
+    for attempt in 0..if cfg!(windows) { 8 } else { 1 } {
+        let mut child = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([test_name, "--exact", "--nocapture"])
+            .env(PROBE, test_name)
+            .env("COMMAND_STREAM_TRACE", "true")
+            .spawn()
+            .unwrap();
+        let deadline = Instant::now() + Duration::from_secs(10);
+        loop {
+            if let Some(status) = child.try_wait().unwrap() {
+                assert!(status.success(), "{test_name}, attempt {attempt}: {status}");
+                break;
+            }
+            if Instant::now() >= deadline {
+                child.kill().unwrap();
+                child.wait().unwrap();
+                panic!("{test_name}, attempt {attempt}: cancellation exceeded 10 seconds");
+            }
+            std::thread::sleep(Duration::from_millis(10));
+        }
+    }
+    true
+}
+
 #[tokio::test]
 async fn child_is_none_before_start() {
     let mut runner = ProcessRunner::new(IDLE_COMMAND, quiet());
@@ -30,6 +63,9 @@ async fn child_is_none_before_start() {
 
 #[tokio::test]
 async fn child_exposes_the_native_process_after_start() {
+    if run_bounded("child_exposes_the_native_process_after_start") {
+        return;
+    }
     let mut runner = ProcessRunner::new(IDLE_COMMAND, quiet());
     runner.start().await.unwrap();
     let runner_pid = runner.pid();
@@ -46,6 +82,9 @@ async fn child_exposes_the_native_process_after_start() {
 
 #[tokio::test]
 async fn child_handle_can_stop_the_process() {
+    if run_bounded("child_handle_can_stop_the_process") {
+        return;
+    }
     let mut runner = ProcessRunner::new(IDLE_COMMAND, quiet());
     runner.start().await.unwrap();
 

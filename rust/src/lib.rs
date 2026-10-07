@@ -534,6 +534,9 @@ impl ProcessRunner {
         // output from commands such as `printf` that omit a newline (issue #37).
         let stdout = child.stdout.take();
         let stderr = child.stderr.take();
+        utils::trace_lazy("ProcessRunner", || {
+            format!("Draining child output | pid={:?}", self.pid)
+        });
         let collected = tokio::try_join!(
             collect_child_output(stdout, self.options.mirror, ChildOutput::Stdout),
             collect_child_output(stderr, self.options.mirror, ChildOutput::Stderr),
@@ -549,7 +552,13 @@ impl ProcessRunner {
             }
         };
 
+        utils::trace_lazy("ProcessRunner", || {
+            format!("Child output drained | pid={:?}", self.pid)
+        });
         let status = child.wait().await?;
+        utils::trace_lazy("ProcessRunner", || {
+            format!("Child exited | pid={:?} status={status}", self.pid)
+        });
         let code = status.code().unwrap_or(-1);
 
         let mut result = CommandResult::new(
@@ -682,6 +691,9 @@ impl ProcessRunner {
                 signal::send_signal_to_process(pid, signal, signal::Delivery::ProcessAndGroup);
             }
             child.start_kill()?;
+            utils::trace_lazy("ProcessRunner", || {
+                "Direct-child termination requested".to_string()
+            });
             Ok(())
         }
 
