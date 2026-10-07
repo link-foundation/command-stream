@@ -180,6 +180,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [1.5.3] - 2026-10-07
+
+### Changed
+
+- Make the signal handling tests wait until each child has installed its trap
+  before signalling it, and poll for handler markers and heartbeats with a
+  bounded wait instead of fixed sleeps, matching the JavaScript suite.
+
+### Fixed
+
+- The changelog fragment check now accepts only `.md` files directly in
+  `rust/changelog.d/`, the only ones the release reads, and rejects a `bump:`
+  value other than `patch`, `minor` or `major` instead of releasing it as the
+  default patch bump.
+- A fragment added while another is removed in the same pull request is no
+  longer missed by git's rename detection, an existing fragment moved
+  unchanged still does not count as a new one, and code moved out of the
+  source tree still counts as a code change.
+
 ## [1.5.2] - 2026-10-07
 
 ### Changed
