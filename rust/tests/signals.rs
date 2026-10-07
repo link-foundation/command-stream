@@ -20,11 +20,14 @@ use std::time::Duration;
 /// signal" from "the child was destroyed before it could": an exit code alone
 /// cannot tell the two apart, because the reported code is derived from the
 /// signal that was requested either way.
+///
+/// It also appends `ready` to the marker once the trap is installed, which is
+/// what the tests wait for before signalling: see [`child_ready`].
 #[cfg(unix)]
 fn graceful_child(marker: &std::path::Path) -> String {
     format!(
         "trap 'echo handled >> {marker}; exit 0' TERM INT; \
-         echo ready; \
+         echo ready >> {marker}; echo ready; \
          while true; do sleep 0.05; done",
         marker = marker.display()
     )
@@ -106,6 +109,32 @@ fn handler_ran(marker: &std::path::Path) -> bool {
         .unwrap_or(false)
 }
 
+/// Whether a [`graceful_child`] has installed its trap.
+#[cfg(unix)]
+fn child_ready(marker: &std::path::Path) -> bool {
+    std::fs::read_to_string(marker)
+        .map(|text| text.contains("ready"))
+        .unwrap_or(false)
+}
+
+/// Poll `condition` until it holds, giving up after five seconds.
+///
+/// Fixed sleeps raced the scheduler on loaded runners (issue #216): a child
+/// could still be starting when the signal was sent, or still running its
+/// handler when the marker was checked. Returning the result rather than
+/// panicking keeps each assertion's own message.
+#[cfg(unix)]
+async fn eventually(mut condition: impl FnMut() -> bool) -> bool {
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(5);
+    while !condition() {
+        if tokio::time::Instant::now() >= deadline {
+            return false;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    true
+}
+
 // ============================================================================
 // Exit-code convention
 // ============================================================================
@@ -159,12 +188,14 @@ async fn process_runner_kill_lets_the_child_handle_sigterm() {
         },
     );
     runner.start().await.unwrap();
-    tokio::time::sleep(Duration::from_millis(300)).await;
+    assert!(
+        eventually(|| child_ready(&marker)).await,
+        "the child never started"
+    );
     runner.kill().unwrap();
-    tokio::time::sleep(Duration::from_millis(400)).await;
 
     assert!(
-        handler_ran(&marker),
+        eventually(|| handler_ran(&marker)).await,
         "the child's SIGTERM handler never ran: kill() destroyed it before it could clean up"
     );
 }
@@ -185,12 +216,17 @@ async fn process_runner_kill_with_sends_the_requested_signal() {
         },
     );
     runner.start().await.unwrap();
-    tokio::time::sleep(Duration::from_millis(300)).await;
+    assert!(
+        eventually(|| child_ready(&marker)).await,
+        "the child never started"
+    );
     // SIGINT is the signal CTRL+C sends.
     runner.kill_with("SIGINT").unwrap();
-    tokio::time::sleep(Duration::from_millis(400)).await;
 
-    assert!(handler_ran(&marker), "the child's SIGINT handler never ran");
+    assert!(
+        eventually(|| handler_ran(&marker)).await,
+        "the child's SIGINT handler never ran"
+    );
 }
 
 /// A configured `kill_signal` is what an argument-less `kill()` delivers.
@@ -204,7 +240,7 @@ async fn process_runner_honors_the_configured_kill_signal() {
         // Only INT is trapped, so the marker proves SIGINT (not the SIGTERM
         // default) was the signal actually delivered.
         format!(
-            "trap 'echo handled >> {marker}; exit 0' INT; echo ready; while true; do sleep 0.05; done",
+            "trap 'echo handled >> {marker}; exit 0' INT; echo ready >> {marker}; echo ready; while true; do sleep 0.05; done",
             marker = marker.display()
         ),
         RunOptions {
@@ -215,12 +251,14 @@ async fn process_runner_honors_the_configured_kill_signal() {
         },
     );
     runner.start().await.unwrap();
-    tokio::time::sleep(Duration::from_millis(300)).await;
+    assert!(
+        eventually(|| child_ready(&marker)).await,
+        "the child never started"
+    );
     runner.kill().unwrap();
-    tokio::time::sleep(Duration::from_millis(400)).await;
 
     assert!(
-        handler_ran(&marker),
+        eventually(|| handler_ran(&marker)).await,
         "kill() did not deliver the configured SIGINT"
     );
 }
@@ -241,11 +279,8 @@ async fn process_runner_escalates_to_sigkill_when_the_signal_is_ignored() {
         },
     );
     runner.start().await.unwrap();
-    tokio::time::sleep(Duration::from_millis(300)).await;
-
-    let while_running = heartbeat_len(&heartbeat);
     assert!(
-        while_running > 0,
+        eventually(|| heartbeat_len(&heartbeat) > 0).await,
         "the child never started: no heartbeat was written"
     );
 
@@ -287,9 +322,8 @@ async fn process_runner_kill_reaches_grandchildren() {
         },
     );
     runner.start().await.unwrap();
-    tokio::time::sleep(Duration::from_millis(400)).await;
     assert!(
-        heartbeat_len(&heartbeat) > 0,
+        eventually(|| heartbeat_len(&heartbeat) > 0).await,
         "the grandchild never started: no heartbeat was written"
     );
 
@@ -335,10 +369,10 @@ async fn process_runner_kill_reaches_a_grandchild_whose_parent_already_exited() 
         },
     );
     runner.start().await.unwrap();
-    // Long enough for the shell to have exited and the worker to be ticking.
+    // Long enough for the shell to have exited, then until the worker ticks.
     tokio::time::sleep(Duration::from_millis(400)).await;
     assert!(
-        heartbeat_len(&heartbeat) > 0,
+        eventually(|| heartbeat_len(&heartbeat) > 0).await,
         "the grandchild never started: no heartbeat was written"
     );
 
@@ -383,11 +417,9 @@ async fn stream_kill_lets_the_child_handle_the_signal() {
             _ => {}
         }
     }
-    tokio::time::sleep(Duration::from_millis(300)).await;
-
     assert_eq!(exit_code, Some(143), "expected the SIGTERM exit code");
     assert!(
-        handler_ran(&marker),
+        eventually(|| handler_ran(&marker)).await,
         "the child's SIGTERM handler never ran"
     );
 }
@@ -513,7 +545,11 @@ async fn process_runner_zero_grace_leaves_no_room_for_the_handler() {
             },
         );
         runner.start().await.unwrap();
-        tokio::time::sleep(Duration::from_millis(200)).await;
+        // Signalling before the trap exists would pass without testing anything.
+        assert!(
+            eventually(|| child_ready(&marker)).await,
+            "attempt {attempt}: the child never started"
+        );
         runner.kill().unwrap();
         tokio::time::sleep(Duration::from_millis(200)).await;
 
