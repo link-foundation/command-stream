@@ -18,7 +18,7 @@ function git(directory, ...args) {
   return execFileSync('git', args, { cwd: directory, encoding: 'utf8' });
 }
 
-function parityResult(changedFiles) {
+function parityResult(changedFiles, { moves = [], env = {} } = {}) {
   const directory = mkdtempSync(join(tmpdir(), 'command-stream-parity-'));
   repositories.push(directory);
   git(directory, 'init', '--initial-branch=main', '--quiet');
@@ -42,13 +42,16 @@ function parityResult(changedFiles) {
   for (const path of changedFiles) {
     writeFileSync(join(directory, path), 'changed\n');
   }
+  for (const [from, to] of moves) {
+    git(directory, 'mv', from, to);
+  }
   git(directory, 'add', '.');
   git(directory, 'commit', '--quiet', '--message', 'feature');
 
   return spawnSync('bash', [parityScript], {
     cwd: directory,
     encoding: 'utf8',
-    env: { ...process.env, BASE_REF: 'main' },
+    env: { ...process.env, BASE_REF: 'main', ...env },
   });
 }
 
@@ -97,5 +100,25 @@ describe.skipIf(process.platform === 'win32')('language parity guard', () => {
 
     expect(result.status).toBe(1);
     expect(result.stdout?.toString()).toContain('Rust source');
+  });
+
+  test('moving source out of a language tree counts as a change to it (#216)', () => {
+    // With rename detection, `git diff --name-only` lists only the destination,
+    // so the source tree the file left looked untouched.
+    const result = parityResult([], { moves: [['js/src/.keep', 'js/.keep']] });
+
+    expect(result.status).toBe(1);
+    expect(result.stdout?.toString()).toContain('Rust source');
+  });
+
+  test('an unresolvable base fails in CI instead of skipping (#216)', () => {
+    const result = parityResult(['js/src/.keep'], {
+      env: { BASE_REF: 'missing', CI: 'true' },
+    });
+
+    expect(result.status).toBe(1);
+    expect(result.stdout?.toString()).toContain(
+      "Could not resolve base ref 'missing'"
+    );
   });
 });

@@ -96,12 +96,21 @@ fn has_ref(reference: &str) -> bool {
 fn get_changed_files() -> Vec<String> {
     let output = if is_merge_commit() {
         if has_ref("HEAD^2^") {
-            exec("git", &["diff", "--name-only", "HEAD^2^", "HEAD^2"])
+            exec(
+                "git",
+                &["diff", "--name-only", "--no-renames", "HEAD^2^", "HEAD^2"],
+            )
         } else {
-            exec("git", &["diff", "--name-only", "HEAD^", "HEAD^2"])
+            exec(
+                "git",
+                &["diff", "--name-only", "--no-renames", "HEAD^", "HEAD^2"],
+            )
         }
     } else if has_ref("HEAD^") {
-        exec("git", &["diff", "--name-only", "HEAD^", "HEAD"])
+        exec(
+            "git",
+            &["diff", "--name-only", "--no-renames", "HEAD^", "HEAD"],
+        )
     } else {
         exec("git", &["ls-tree", "--name-only", "-r", "HEAD"])
     };

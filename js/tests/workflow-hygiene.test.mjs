@@ -17,8 +17,11 @@ const workflowFiles = readdirSync(workflowDir)
   .filter((name) => name.endsWith('.yml') || name.endsWith('.yaml'))
   .sort();
 
+// A Windows checkout converts LF to CRLF; the assertions below match on `\n`.
+const readText = (path) => readFileSync(path, 'utf8').replace(/\r\n/g, '\n');
+
 const workflows = workflowFiles.map((name) => {
-  const text = readFileSync(join(workflowDir, name), 'utf8');
+  const text = readText(join(workflowDir, name));
   return { name, text, doc: Bun.YAML.parse(text) };
 });
 
@@ -266,6 +269,15 @@ describe('workflow linting is itself wired into CI', () => {
     // repositories' workflows, kept as evidence. Auditing those reported 30
     // findings in files that never run here and that a fix would falsify.
     expect(step.with.inputs).toBe('.github/workflows');
+    // The local reproduction in the comment above the step must audit the same
+    // way; it said `--min-confidence medium` while CI ran `low` (issue #216).
+    const reproduction = lintWorkflow.text.match(
+      /pipx run zizmor==[\d.]+ --config (\S+) \\\n\s*# +--min-confidence (\w+)/
+    );
+    expect(reproduction?.slice(1)).toEqual([
+      step.with.config,
+      String(step.with['min-confidence']),
+    ]);
   });
 
   test.each(workflows.map((w) => [w.name, w]))(
@@ -410,6 +422,29 @@ describe('every shipped ecosystem is audited', () => {
     expect(languages).toContain('actions');
   });
 
+  test('CodeQL skips archived evidence but never shipped files', () => {
+    const init = security.doc.jobs.codeql.steps.find((step) =>
+      step.uses?.startsWith('github/codeql-action/init@')
+    );
+    const config = Bun.YAML.parse(
+      readFileSync(join(repoRoot, init.with['config-file']), 'utf8')
+    );
+    // Archived copies of other repositories' files held 6 of the 26 open
+    // alerts; fixing them would falsify the record (issue #216).
+    expect(config['paths-ignore']).toContain('docs/case-studies');
+    const shipped = JSON.parse(
+      readFileSync(join(repoRoot, 'js/package.json'), 'utf8')
+    ).files.map((entry) => `js/${entry.replace(/\/$/, '')}`);
+    for (const ignored of config['paths-ignore']) {
+      expect(
+        shipped.filter(
+          (entry) => entry === ignored || entry.startsWith(`${ignored}/`)
+        )
+      ).toEqual([]);
+      expect(['src', 'scripts', '.github'].includes(ignored)).toBe(false);
+    }
+  });
+
   test('the working tree is scanned for committed credentials', () => {
     // Nothing looked for credentials in the tree: CodeQL does not, and the
     // audit jobs only read lockfiles (issue #199, best practice #11).
@@ -505,6 +540,13 @@ describe('the shipped quality gates are actually invoked', () => {
         `${script}: true`
       );
     }
+  });
+
+  test('each Rust test job runs the doc tests once', () => {
+    // `cargo test` already runs "Doc-tests command_stream"; a second
+    // `cargo test --doc` step ran them twice on every OS (issue #216).
+    expect(rustRuns).toContain('cargo test --all-features');
+    expect(rustRuns).not.toContain('cargo test --doc');
   });
 
   test('both languages enforce a maximum file length', () => {
@@ -726,10 +768,29 @@ describe('external links are checked without gating pull requests', () => {
   });
 
   test('a broken link fails the scheduled run', () => {
-    // `fail: false` is what the templates use, because a later step decides;
-    // there is no later step here, so the action itself has to fail the job or
-    // the schedule reports success no matter what it found.
-    expect(lycheeStep().with.fail).toBe(true);
+    // `fail: false` hands the verdict to the re-check step, which must run
+    // even when an earlier step failed and must see lychee's exit code, or
+    // the schedule reports success no matter what lychee found.
+    const steps = Object.values(links.doc.jobs).flatMap((job) => job.steps);
+    const recheck = steps[steps.indexOf(lycheeStep()) + 1];
+    expect(lycheeStep().with.fail).toBe(false);
+    expect(recheck.if).toBe('always()');
+    expect(recheck.env.LYCHEE_EXIT_CODE).toBe(
+      `\${{ steps.${lycheeStep().id}.outputs.exit_code }}`
+    );
+    expect(recheck.run).toBe(
+      `node .github/scripts/recheck-transient-links.mjs ${lycheeStep().with.output}`
+    );
+  });
+
+  test('github.com is throttled by the configuration lychee loads', () => {
+    // A github.com page answered 503 in the 2026-09-28 run (#216). Spacing out
+    // requests to the host makes that less likely; the Rust template does it.
+    expect(String(lycheeStep().with.args)).toContain('--config lychee.toml');
+    const config = readText(join(repoRoot, 'lychee.toml'));
+    expect(config).toMatch(
+      /\[hosts\."github\.com"\]\nconcurrency = 2\nrequest_interval = "1s"/
+    );
   });
 
   test('archived copies of other repositories are excluded', () => {
@@ -760,5 +821,37 @@ describe('external links are checked without gating pull requests', () => {
       expect(() => new RegExp(value)).not.toThrow();
     });
     expect(patterns.length).toBeGreaterThan(0);
+  });
+});
+
+describe('the release versioning step is exercised before a merge', () => {
+  // Issue #216: the Changesets 3 upgrade passed every pull-request check and
+  // then failed every release on main, because nothing before the merge ran
+  // `changeset version` -- the only command that formats the changelog.
+  const js = workflows.find((w) => w.name === 'js.yml');
+  const runs = (job) => (job.steps ?? []).map((step) => step.run ?? '');
+
+  test('the lint job dry-runs the versioning script after the fresh merge', () => {
+    const steps = runs(js.doc.jobs.lint);
+    const merge = steps.findIndex((run) =>
+      run.includes('simulate-fresh-merge.sh')
+    );
+    const dryRun = steps.findIndex((run) =>
+      run.includes('bun run changeset:version')
+    );
+    expect(merge).not.toBe(-1);
+    expect(dryRun).toBeGreaterThan(merge);
+  });
+
+  test('the release job versions through the same script', () => {
+    // A dry run of a different command would not protect the real one.
+    const version = readFileSync(
+      join(repoRoot, 'js', 'scripts', 'version-and-commit.mjs'),
+      'utf8'
+    );
+    expect(runs(js.doc.jobs.release).join('\n')).toContain(
+      'scripts/version-and-commit.mjs --mode changeset'
+    );
+    expect(version).toContain('bun run changeset:version');
   });
 });

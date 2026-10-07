@@ -161,6 +161,17 @@ jobs:
         working-directory: js
         run: bun run check:types
 
+      # Runs the exact versioning command the release job runs after a merge,
+      # on the same runner image, and discards the result. Without it a change
+      # that breaks `changeset version` (issue #216: Changesets 3 spawning a
+      # Deno formatter the runner does not have) only fails on main.
+      - name: Dry-run release versioning
+        working-directory: js
+        run: |
+          bun run changeset:version
+          git status --short
+          git checkout -- .
+
   test:
     # The Node entries differ only by version, so the version has to be part of
     # the name; without it three jobs shared the name "Test JavaScript (node on
@@ -425,6 +436,8 @@ jobs:
         working-directory: js
         env:
           HAS_CHANGESETS: ${{ steps.check_changesets.outputs.has_changesets }}
+          # Read-only lookup of the js-v<version> GitHub release (issue #216).
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bun scripts/check-release-needed.mjs
 
       - name: Merge multiple changesets
@@ -446,10 +459,14 @@ jobs:
         # changeset is present, so it also covers the #166 "failed to do any
         # deploy" restart, where a changeset existed locally but the bump had
         # already been consumed on origin/main, leaving v0.10.2 stranded.
+        # `github_release_missing` re-runs this path for a version already on
+        # npm whose GitHub release was never created (npm 1.0.0-1.4.0, #216);
+        # the publish is then a no-op that reports the version as published.
         if: >-
           steps.version.outputs.version_committed == 'true' ||
           steps.version.outputs.already_released == 'true' ||
-          steps.check_release.outputs.current_unpublished == 'true'
+          steps.check_release.outputs.current_unpublished == 'true' ||
+          steps.check_release.outputs.github_release_missing == 'true'
         id: publish
         working-directory: js
         run: bun scripts/publish-to-npm.mjs --should-pull

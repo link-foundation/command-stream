@@ -1,0 +1,238 @@
+--- js-template/scripts/validate-changeset.mjs
++++ js/scripts/validate-changeset.mjs
+@@ -5,108 +5,100 @@
+  *
+  * Key behavior:
+  * - Only checks changeset files ADDED by the current PR (not pre-existing ones)
+- * - Uses git diff to compare PR head against base branch
++ * - Compares the PR head with its merge base, failing on unavailable refs
+  * - Validates that the PR adds exactly one changeset with proper format
+- * - Fails on unavailable comparisons; local scanning requires ALLOW_LOCAL_CHANGESET_SCAN=true
++ * - Documentation-only changes do not force a package release
++ * - Local development without CI refs can check all pending changesets
++ *
++ * IMPORTANT: Update the package name below to match your package.json
+  */
+ 
+-import { readFileSync, readdirSync, existsSync } from 'fs';
+-import { join } from 'path';
++import { execFileSync } from 'node:child_process';
++import { readFileSync, readdirSync, existsSync } from 'node:fs';
++import { join } from 'node:path';
+ 
+-import { getChangesetDir, getJsRoot, parseJsRootConfig } from './js-paths.mjs';
+-import {
+-  getChangesetVersionTypeRegex,
+-  readPackageInfo,
+-} from './package-info.mjs';
+-import { printUntrusted } from './github-actions-log.mjs';
+-import {
+-  getPrComparison,
+-  getPrChanges,
+-  isTrustedReleasePr,
+-} from './pr-comparison.mjs';
++const PACKAGE_NAME = 'command-stream';
++const CHANGESET_DIR = '.changeset';
++const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
+ 
+-/** Directory scanning is an explicit local mode, never a CI fallback. */
+-function getAddedChangesetFiles(changesetDir, jsRoot) {
+-  if (process.env.ALLOW_LOCAL_CHANGESET_SCAN === 'true') {
+-    if (
+-      process.env.CI ||
+-      process.env.GITHUB_ACTIONS ||
+-      process.env.GITHUB_EVENT_NAME
+-    ) {
+-      throw new Error('Local changeset scanning is forbidden in CI');
++function getAddedChangesetFiles() {
++  const base =
++    process.env.GITHUB_BASE_SHA ||
++    process.env.BASE_SHA ||
++    (process.env.GITHUB_BASE_REF && `origin/${process.env.GITHUB_BASE_REF}`);
++  if (!base) {
++    if (process.env.CI || process.env.GITHUB_ACTIONS) {
++      throw new Error('A base reference is required in CI');
+     }
+-    console.log('Explicit local mode: scanning the changeset directory');
+-    return existsSync(changesetDir)
+-      ? readdirSync(changesetDir).filter(
++    console.log('Local validation: checking all pending changesets');
++    return existsSync(CHANGESET_DIR)
++      ? readdirSync(CHANGESET_DIR).filter(
+           (file) => file.endsWith('.md') && file !== 'README.md'
+         )
+       : [];
+   }
+-  const changes = getPrChanges(getPrComparison());
+-  if (isTrustedReleasePr()) {
+-    console.log('Skipping changeset validation for a trusted release PR');
+-    return null;
+-  }
+-  const packageRoot = jsRoot.replaceAll('\\', '/').replace(/^\.\//, '');
+-  const prefix =
+-    packageRoot === '.' ? '' : `${packageRoot.replace(/\/$/, '')}/`;
+-  const packagePaths = changes
+-    .map((change) => change.path)
++  const head = process.env.GITHUB_HEAD_SHA || process.env.HEAD_SHA || 'HEAD';
++  const ancestor = git('merge-base', base, head);
++  const prefix = git('rev-parse', '--show-prefix');
++  // Exact renames only: changesets are mostly frontmatter, so default rename
++  // detection pairs a new fragment with any one removed in the same range and
++  // reports `R`, and the new fragment would not be counted. A byte-identical
++  // move of a pending changeset is still a rename, not a new one (issue #216).
++  const entries = git(
++    'diff',
++    '--name-status',
++    '--find-renames=100%',
++    ancestor,
++    head,
++    '--',
++    '.'
++  )
++    .split('\n')
++    .filter(Boolean)
++    .map((line) => line.split('\t'));
++  // Both sides of a rename: moving a file out of src/ changes the package.
++  const packagePaths = entries.flatMap(([, ...paths]) =>
++    paths.map((file) => file.slice(prefix.length))
++  );
++  const needsRelease = packagePaths.some(
++    (file) =>
++      /^(src|scripts|types)\//.test(file) ||
++      ['package.json', 'package-lock.json', 'bun.lock'].includes(file)
++  );
++  const added = entries
+     .filter(
+-      (path) => path.startsWith(prefix) || path.startsWith('.github/workflows/')
++      ([status, file]) =>
++        status === 'A' &&
++        file.startsWith(`${prefix}${CHANGESET_DIR}/`) &&
++        file.endsWith('.md') &&
++        !file.endsWith('/README.md')
+     )
+-    .map((path) =>
+-      path.startsWith(prefix) ? path.slice(prefix.length) : path
+-    );
+-  const ignored = [
+-    'docs/',
+-    'examples/',
+-    'experiments/',
+-    'dev/log/',
+-    '.changeset/',
+-  ];
+-  const requiresChangeset = packagePaths.some(
+-    (path) =>
+-      !path.endsWith('.md') && !ignored.some((dir) => path.startsWith(dir))
+-  );
+-  const changesetPrefix = `${changesetDir.replaceAll('\\', '/').replace(/^\.\//, '')}/`;
+-  const added = changes
+-    .filter(
+-      (change) =>
+-        change.status === 'A' &&
+-        change.path.startsWith(changesetPrefix) &&
+-        change.path.endsWith('.md') &&
+-        change.path !== `${changesetPrefix}README.md`
+-    )
+-    .map((change) => change.path.slice(changesetPrefix.length));
+-  if (!requiresChangeset && added.length === 0) {
+-    console.log(
+-      'Documentation-only or excluded package paths: no changeset required'
+-    );
+-    return null;
+-  }
+-  return added;
++    .map(([, file]) => file.slice(`${prefix}${CHANGESET_DIR}/`.length));
++  return needsRelease || added.length ? added : null;
+ }
+ 
+ /**
+  * Validate a single changeset file
+  * @param {string} filePath Full path to the changeset file
+- * @param {string} packageName
+  * @returns {{valid: boolean, type?: string, description?: string, error?: string}}
+  */
+-function validateChangesetFile(filePath, packageName) {
++function validateChangesetFile(filePath) {
+   try {
+     const content = readFileSync(filePath, 'utf-8');
+ 
+-    // Check if changeset has a valid type (major, minor, or patch)
+-    const versionTypeRegex = getChangesetVersionTypeRegex(packageName);
+-    const frontmatter = content.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
+-    const versionTypeMatch = frontmatter?.[1].match(versionTypeRegex);
++    // Check if changeset has a valid type (major, minor, or patch). Only the
++    // frontmatter declares it; the same text in the description does not.
++    const frontmatter = content.match(/^---\r?\n([\s\S]*?)\r?\n---/)?.[1];
++    const versionTypeRegex = new RegExp(
++      `^['"]${PACKAGE_NAME.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"]:\\s+(major|minor|patch)`,
++      'm'
++    );
++    const versionTypeMatch = frontmatter?.match(versionTypeRegex);
+ 
+     if (!versionTypeMatch) {
+       return {
+         valid: false,
+-        error: `Changeset must specify a version type: major, minor, or patch\nExpected format:\n---\n'${packageName}': patch\n---\n\nYour description here`,
++        error: `Changeset must specify a version type: major, minor, or patch\nExpected format:\n---\n'${PACKAGE_NAME}': patch\n---\n\nYour description here`,
+       };
+     }
+ 
+@@ -143,15 +135,11 @@
+ 
+ try {
+   console.log('Validating changesets added by this PR...');
+-  const jsRootConfig = parseJsRootConfig();
+-  const jsRoot = getJsRoot({ jsRoot: jsRootConfig, verbose: true });
+-  const changesetDir = getChangesetDir({ jsRoot });
+-  const { name: packageName } = readPackageInfo({ jsRoot });
+-  console.log(`Package: ${packageName}`);
+ 
+   // Get changeset files added in this PR
+-  const addedChangesetFiles = getAddedChangesetFiles(changesetDir, jsRoot);
++  const addedChangesetFiles = getAddedChangesetFiles();
+   if (addedChangesetFiles === null) {
++    console.log('No JavaScript release changes; a changeset is optional');
+     process.exit(0);
+   }
+   const changesetCount = addedChangesetFiles.length;
+@@ -165,7 +153,7 @@
+   // Ensure exactly one changeset file was added
+   if (changesetCount === 0) {
+     console.error(
+-      "::error::No changeset found in this PR. Please add a changeset by running 'npm run changeset' and commit the result."
++      "::error::No changeset found in this PR. Please add a changeset by running 'bun run changeset' and commit the result."
+     );
+     process.exit(1);
+   } else if (changesetCount > 1) {
+@@ -181,18 +169,16 @@
+   }
+ 
+   // Validate the single changeset file
+-  const changesetFile = join(changesetDir, addedChangesetFiles[0]);
++  const changesetFile = join(CHANGESET_DIR, addedChangesetFiles[0]);
+   console.log(`Validating changeset: ${changesetFile}`);
+ 
+-  const validation = validateChangesetFile(changesetFile, packageName);
++  const validation = validateChangesetFile(changesetFile);
+ 
+   if (!validation.valid) {
+     console.error(`::error::${validation.error}`);
+     console.error(`\nFile content of ${changesetFile}:`);
+     try {
+-      printUntrusted(readFileSync(changesetFile, 'utf-8'), {
+-        stream: process.stderr,
+-      });
++      console.error(readFileSync(changesetFile, 'utf-8'));
+     } catch {
+       console.error('(could not read file)');
+     }
+@@ -201,8 +187,7 @@
+ 
+   console.log('Changeset validation passed');
+   console.log(`   Type: ${validation.type}`);
+-  console.log('   Description:');
+-  printUntrusted(validation.description);
++  console.log(`   Description: ${validation.description}`);
+ } catch (error) {
+   console.error('Error during changeset validation:', error.message);
+   if (process.env.DEBUG) {

@@ -1,0 +1,39 @@
+# old = origin/main (1fc9e3a), new = working tree
+root/old: exit 0
+    Changelog fragments added: 1
+    Changelog check passed (source files changed: 1, fragments added: 1)
+root/new: exit 1
+    Changelog fragments added: 0
+    ::warning file=changelog.d/20261007_probe.md::Not a changelog fragment: the release only reads .md files directly in rust/changelog.d/
+    ::error::No changelog fragment found in this PR. Please add a changelog entry in rust/changelog.d/
+nested/old: exit 0
+    Changelog fragments added: 1
+    Changelog check passed (source files changed: 1, fragments added: 1)
+nested/new: exit 1
+    Changelog fragments added: 0
+    ::warning file=rust/changelog.d/old/20261007_probe.md::Not a changelog fragment: the release only reads .md files directly in rust/changelog.d/
+    ::error::No changelog fragment found in this PR. Please add a changelog entry in rust/changelog.d/
+typo/old: exit 0
+    Changelog fragments added: 1
+    Changelog check passed (source files changed: 1, fragments added: 1)
+typo/new: exit 1
+    Changelog fragments added: 1
+    ::error file=rust/changelog.d/20261007_probe.md::Invalid bump 'majr': use patch, minor or major
+good/old: exit 0
+    Changelog fragments added: 1
+    Changelog check passed (source files changed: 1, fragments added: 1)
+good/new: exit 0
+    Changelog fragments added: 1
+    Changelog check passed (source files changed: 1, fragments added: 1)
+renamed/old: exit 1
+    Changelog fragments added: 0
+    ::error::No changelog fragment found in this PR. Please add a changelog entry in changelog.d/
+renamed/new: exit 0
+    Changelog fragments added: 1
+    Changelog check passed (source files changed: 1, fragments added: 1)
+moved/old: exit 1
+    Changelog fragments added: 0
+    ::error::No changelog fragment found in this PR. Please add a changelog entry in changelog.d/
+moved/new: exit 1
+    Changelog fragments added: 0
+    ::error::No changelog fragment found in this PR. Please add a changelog entry in rust/changelog.d/

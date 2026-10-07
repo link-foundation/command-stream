@@ -1,0 +1,67 @@
+--- js-template/scripts/check-version.mjs
++++ js/scripts/check-version.mjs
+@@ -1,40 +1,33 @@
+ #!/usr/bin/env node
+-
+-// Compare committed JSON values, so formatting changes do not request releases.
+-// Git/ref/JSON errors fail the guard. Only same-repository release PRs from the
+-// configured release actor (github-actions[bot] by default) are exempt.
+-import {
+-  getJsRoot,
+-  getPackageJsonPath,
+-  parseJsRootConfig,
+-} from './js-paths.mjs';
+-import { parsePackageInfo } from './package-info.mjs';
+-import { getPrComparison, git, isTrustedReleasePr } from './pr-comparison.mjs';
++// Compare semantic values, not added diff lines, and fail if Git cannot supply
++// either side. Versions are changed only by the release pipeline on main.
++import { execFileSync } from 'node:child_process';
+ 
+ try {
+-  const { mergeBase, head } = getPrComparison();
+-  const jsRoot = getJsRoot({ jsRoot: parseJsRootConfig() });
+-  const manifest = getPackageJsonPath({ jsRoot })
+-    .replaceAll('\\', '/')
+-    .replace(/^\.\//, '');
+-  const before = parsePackageInfo(
+-    git(['show', `${mergeBase}:${manifest}`]),
+-    manifest
+-  );
+-  const after = parsePackageInfo(
+-    git(['show', `${head}:${manifest}`]),
+-    manifest
+-  );
+-  if (before.version !== after.version && !isTrustedReleasePr()) {
++  const git = (...args) =>
++    execFileSync('git', args, { encoding: 'utf8' }).trim();
++  const base =
++    process.env.GITHUB_BASE_SHA ||
++    `origin/${process.env.GITHUB_BASE_REF || 'main'}`;
++  const head = process.env.GITHUB_HEAD_SHA || 'HEAD';
++  const ancestor = git('merge-base', base, head);
++  // The workflow invokes this script inside js/. Git paths are repository
++  // relative, so determine the prefix instead of assuming a single-package tree.
++  const manifest = `${git('rev-parse', '--show-prefix')}package.json`;
++  const readVersion = (ref) => {
++    const { version } = JSON.parse(git('show', `${ref}:${manifest}`));
++    if (typeof version !== 'string' || version.trim() === '') {
++      throw new Error(`Missing package version at ${ref}`);
++    }
++    return version;
++  };
++  if (readVersion(ancestor) !== readVersion(head)) {
+     throw new Error(
+-      `Manual version change in ${manifest}: ${before.version} -> ${after.version}. Add a changeset; CI manages versions.`
++      'Manual package version changes are prohibited; add a changeset instead'
+     );
+   }
+-  console.log('No manual version changes detected - check passed');
++  console.log('No manual package version changes detected');
+ } catch (error) {
+-  console.error(`::error::Version check failed: ${error.message}`);
+-  if (process.env.DEBUG) {
+-    console.error(error.stack);
+-  }
++  console.error(`::error::Version validation failed: ${error.message}`);
+   process.exitCode = 1;
+ }

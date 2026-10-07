@@ -36,13 +36,9 @@ describe.skipIf(isWindows)('GitHub CLI (gh) commands', () => {
     // If authenticated (exit code 0), output should contain success indicators
     // If not authenticated (exit code 1), that's also fine - we're testing $.mjs works
     if (result.code === 0) {
-      const output = result.stdout;
-      const isAuthenticated =
-        output.includes('Logged in to') ||
-        output.includes('✓') ||
-        output.includes('github.com');
-      // Don't fail if indicators aren't found - different gh versions may have different output
-      expect(output.length).toBeGreaterThan(0);
+      // Different gh versions word the status differently, so only check that
+      // there is some output.
+      expect(result.stdout.length).toBeGreaterThan(0);
     } else {
       // Exit code 1 means not authenticated, which is OK for our test purposes
       expect(result.stdout.length).toBeGreaterThanOrEqual(0);

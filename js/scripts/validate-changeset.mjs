@@ -40,12 +40,25 @@ function getAddedChangesetFiles() {
   const head = process.env.GITHUB_HEAD_SHA || process.env.HEAD_SHA || 'HEAD';
   const ancestor = git('merge-base', base, head);
   const prefix = git('rev-parse', '--show-prefix');
-  const entries = git('diff', '--name-status', ancestor, head, '--', '.')
+  // Exact renames only: changesets are mostly frontmatter, so default rename
+  // detection pairs a new fragment with any one removed in the same range and
+  // reports `R`, and the new fragment would not be counted. A byte-identical
+  // move of a pending changeset is still a rename, not a new one (issue #216).
+  const entries = git(
+    'diff',
+    '--name-status',
+    '--find-renames=100%',
+    ancestor,
+    head,
+    '--',
+    '.'
+  )
     .split('\n')
     .filter(Boolean)
     .map((line) => line.split('\t'));
-  const packagePaths = entries.map((entry) =>
-    entry.at(-1).slice(prefix.length)
+  // Both sides of a rename: moving a file out of src/ changes the package.
+  const packagePaths = entries.flatMap(([, ...paths]) =>
+    paths.map((file) => file.slice(prefix.length))
   );
   const needsRelease = packagePaths.some(
     (file) =>
@@ -73,12 +86,14 @@ function validateChangesetFile(filePath) {
   try {
     const content = readFileSync(filePath, 'utf-8');
 
-    // Check if changeset has a valid type (major, minor, or patch)
+    // Check if changeset has a valid type (major, minor, or patch). Only the
+    // frontmatter declares it; the same text in the description does not.
+    const frontmatter = content.match(/^---\r?\n([\s\S]*?)\r?\n---/)?.[1];
     const versionTypeRegex = new RegExp(
       `^['"]${PACKAGE_NAME.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"]:\\s+(major|minor|patch)`,
       'm'
     );
-    const versionTypeMatch = content.match(versionTypeRegex);
+    const versionTypeMatch = frontmatter?.match(versionTypeRegex);
 
     if (!versionTypeMatch) {
       return {

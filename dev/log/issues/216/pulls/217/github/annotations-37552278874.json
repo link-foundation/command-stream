@@ -1,0 +1,16 @@
+{
+  "Test Rust (macos-15)": [
+    {
+      "path": ".github",
+      "blob_href": "https://github.com/link-foundation/command-stream/blob/a171ef3ca38a9a81d1fb9958fcb874e78b01755d/.github",
+      "start_line": 1,
+      "start_column": null,
+      "end_line": 1,
+      "end_column": null,
+      "annotation_level": "notice",
+      "title": "",
+      "message": "Due to capacity constraints, jobs targeting macOS arm64 runners may experience longer queue times.",
+      "raw_details": ""
+    }
+  ]
+}

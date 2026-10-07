@@ -8,7 +8,14 @@ const script =
   process.env.VALIDATE_CHANGESET_SCRIPT ||
   resolve(import.meta.dir, '../scripts/validate-changeset.mjs');
 
-function validate({ base = 'main', code = false, added = false } = {}) {
+function validate({
+  base = 'main',
+  code = false,
+  added = false,
+  replaced = false,
+  moved = false,
+  fragment: addedFragment,
+} = {}) {
   const cwd = mkdtempSync(join(tmpdir(), 'changeset-'));
   const git = (...args) => execFileSync('git', args, { cwd, stdio: 'pipe' });
   try {
@@ -34,7 +41,16 @@ function validate({ base = 'main', code = false, added = false } = {}) {
     }
     writeFileSync(join(cwd, code ? 'src/code.mjs' : 'README.md'), 'change');
     if (added) {
-      writeFileSync(join(cwd, '.changeset/added.md'), fragment);
+      writeFileSync(
+        join(cwd, '.changeset/added.md'),
+        addedFragment ?? fragment
+      );
+    }
+    if (replaced) {
+      rmSync(join(cwd, '.changeset/existing.md'));
+    }
+    if (moved) {
+      git('mv', '.changeset/existing.md', '.changeset/moved.md');
     }
     git('add', '.');
     git('commit', '-m', 'change');
@@ -65,4 +81,29 @@ test('documentation changes do not require a release', () => {
 test('code changes require a newly added fragment', () => {
   expect(validate({ code: true }).status).not.toBe(0);
   expect(validate({ code: true, added: true }).status).toBe(0);
+});
+test('a fragment added while another is removed still counts (#216)', () => {
+  // Changesets are mostly frontmatter, so git's rename detection pairs the two
+  // files and reports R instead of A unless the diff disables renames.
+  const result = validate({
+    code: true,
+    added: true,
+    replaced: true,
+    fragment: '---\n"command-stream": patch\n---\n\nFix a bug again.\n',
+  });
+  expect(result.status).toBe(0);
+});
+test('moving a pending changeset does not add one (#216)', () => {
+  expect(validate({ code: true, moved: true }).status).not.toBe(0);
+});
+test('the version type is read from the frontmatter only (#216)', () => {
+  const result = validate({
+    code: true,
+    added: true,
+    fragment: 'Fix a bug.\n\n"command-stream": patch\n',
+  });
+  expect(result.status).not.toBe(0);
+  expect(result.stdout + result.stderr).toContain(
+    'Changeset must specify a version type'
+  );
 });

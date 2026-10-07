@@ -202,16 +202,14 @@ Each .zip.base64 file contains a backup of:
     await fsPromises.unlink(tempFile);
 
     if (createResult.code !== 0) {
-      if (createResult.stdout.includes('gist.github.com')) {
-        // Sometimes gh returns non-zero but still creates the gist
-        const gistUrl = createResult.stdout.match(
-          /https:\/\/gist\.github\.com\/\S+/
-        )?.[0];
-        if (gistUrl) {
-          const gistId = gistUrl.split('/').pop();
-          console.log(`✅ Gist created successfully`);
-          return gistId;
-        }
+      // Sometimes gh returns non-zero but still creates the gist
+      const gistUrl = createResult.stdout.match(
+        /https:\/\/gist\.github\.com\/\S+/
+      )?.[0];
+      if (gistUrl) {
+        const gistId = gistUrl.split('/').pop();
+        console.log(`✅ Gist created successfully`);
+        return gistId;
       }
 
       // Parse error message for common issues

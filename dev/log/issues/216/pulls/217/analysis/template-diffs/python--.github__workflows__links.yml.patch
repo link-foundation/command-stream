@@ -1,0 +1,186 @@
+--- python-template/.github/workflows/links.yml
++++ .github/workflows/links.yml
+@@ -1,131 +1,82 @@
+-name: Broken Link Checker
++name: Link check
++
++# External link rot is checked here, on a schedule, and deliberately not on
++# pull requests.
++#
++# The pipeline templates run lychee as a pull-request gate. Doing the same here
++# would have made every pull request red for reasons no pull request caused:
++# a run over this tree reports 20 errors, and all 20 are links that are correct
++# in the document and unreachable from a runner -- npmjs.com answers 403 to any
++# non-browser client, and GitHub serves the stargazers list and the settings
++# pages only to a signed-in session. That is exactly the class of false positive
++# issue #199 is about, so the split is:
++#
++#   - relative links, which a change can actually break, are resolved offline on
++#     every pull request by js/tests/docs-validation.test.mjs (quality.yml),
++#   - external links, which only the rest of the world can break, are fetched
++#     here once a week and on demand.
++#
++# A failure of this workflow therefore never blocks a merge; it says a link that
++# used to work has stopped working. Known-unreachable-but-correct URLs go in
++# .lycheeignore, one commented entry each.
+ 
+ on:
+-  push:
+-    branches:
+-      - main
+-    paths:
+-      - '**.md'
+-      - '**.html'
+-      - '.github/workflows/links.yml'
+-      - 'scripts/check_web_archive.py'
+-      - 'scripts/recheck_broken_links.py'
+-  pull_request:
+-    types: [opened, synchronize, reopened]
+-    paths:
+-      - '**.md'
+-      - '**.html'
+-      - '.github/workflows/links.yml'
+-      - 'scripts/check_web_archive.py'
+-      - 'scripts/recheck_broken_links.py'
++  schedule:
++    # Mondays at 06:00 UTC, an hour after the weekly security audit.
++    - cron: '0 6 * * 1'
+   workflow_dispatch:
+ 
++# Least-privilege default; nothing here writes.
+ permissions:
+   contents: read
+ 
+-env:
+-  GIT_CONFIG_COUNT: '1'
+-  GIT_CONFIG_KEY_0: init.defaultBranch
+-  GIT_CONFIG_VALUE_0: main
+-
+ jobs:
+-  link-checker:
+-    name: Check Links
++  links:
++    name: Check external links
+     runs-on: ubuntu-24.04
+-    timeout-minutes: 10
++    # A run over this repository takes seconds; the budget is for a slow or
++    # unresponsive third-party host.
++    timeout-minutes: 15
+     concurrency:
+-      group: check-${{ github.workflow }}-${{ github.ref }}-link-checker
++      group: check-${{ github.workflow }}-${{ github.ref }}-links
+       cancel-in-progress: true
+-    permissions:
+-      contents: read
+     steps:
+-      - uses: actions/checkout@v6
++      - uses: actions/checkout@v7.0.1
+         with:
+           persist-credentials: false
+ 
++      # dev/log and docs/case-studies hold verbatim copies of other
++      # repositories' documents, kept as evidence: their relative links point
++      # into the tree they came from and are not this repository's to fix. The
++      # same directories are skipped by js/tests/docs-validation.test.mjs.
++      #
++      # lychee.toml throttles github.com. The action does not fail the job
++      # itself: lychee never retries a 503 (lycheeverse/lychee#2193), so the
++      # next step fetches 429/5xx/timeout links again with a backoff and fails
++      # on anything still broken, and at once on any other status (#216).
+       - name: Check links with lychee
+         id: lychee
+-        uses: lycheeverse/lychee-action@v2
++        uses: lycheeverse/lychee-action@v2.9.0
+         with:
+           args: >-
++            --config lychee.toml
+             --verbose
+             --no-progress
+-            --cache
+-            --max-cache-age 1d
+-            --max-retries 3
++            --max-retries 2
+             --timeout 30
++            --exclude-path dev/log
+             --exclude-path docs/case-studies
+             './**/*.md'
+-            './**/*.html'
+           fail: false
+           output: lychee/out.md
+           jobSummary: true
+         env:
++          # Raises GitHub's anonymous rate limit, which this repository's
++          # documents would otherwise hit on their own issue and pull links.
+           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+-
+-      - name: Re-check transient and unanswered links
+-        # Retry transport failures and 429/5xx responses with backoff.
+-        # Throttled GitHub blob/tree pages also use the Contents API.
+-        # Other status-coded failures remain final.
+-        if: steps.lychee.outputs.exit_code != 0
+-        id: recheck
+-        run: python scripts/recheck_broken_links.py
++      - name: Re-check transient failures
++        # always(): an empty exit code (the action itself broke) fails here.
++        if: always()
+         env:
+-          LYCHEE_OUTPUT: lychee/out.md
+-          RECOVERED_OUTPUT: lychee/recovered.txt
+-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+-
+-      - name: Check broken links against Web Archive
+-        # `!= 'true'`, never `== 'false'`: a skipped re-check leaves the
+-        # output empty, and only the != form fails safe.
+-        if: >-
+-          steps.lychee.outputs.exit_code != 0 &&
+-          steps.recheck.outputs.all_recovered != 'true'
+-        id: webarchive
+-        run: python scripts/check_web_archive.py
+-        env:
+-          LYCHEE_OUTPUT: lychee/out.md
+-          RECOVERED_URLS: lychee/recovered.txt
+-
+-      - name: Fail if broken links were found
+-        if: >-
+-          always() &&
+-          steps.lychee.outputs.exit_code != 0 &&
+-          steps.recheck.outputs.all_recovered != 'true'
+-        run: |
+-          echo "::error::Broken live links were detected."
+-          echo ""
+-          echo "What happened:"
+-          echo "  lychee found one or more broken links in the *.md and *.html files of this repository."
+-          echo "  An available Web Archive snapshot is a suggested replacement; it does not make the live link valid."
+-          echo ""
+-          echo "How to fix:"
+-          echo "  1. Review the 'Check links with lychee' step above for the broken links."
+-          echo "  2. Replace links with suggested archive.org URLs when available."
+-          echo "  3. Otherwise find an updated URL, remove the link, or add a known false positive to .lycheeignore."
+-          echo ""
+-          echo "Report location: lychee/out.md."
+-          exit 1
+-
+-  # Terminal status gate (issue #69): GitHub reports jobs killed by
+-  # timeout-minutes as cancelled. Observe every other job so a timeout on main
+-  # becomes a visible failure instead of a grey run, while a run that was
+-  # superseded by a newer commit is recognised as expected churn.
+-  pipeline-status:
+-    name: Pipeline Status
+-    needs:
+-      - link-checker
+-    if: always()
+-    runs-on: ubuntu-24.04
+-    timeout-minutes: 5
+-    steps:
+-      - uses: actions/checkout@v6
+-        with:
+-          persist-credentials: false
+-
+-      - name: Check aggregate pipeline status
+-        env:
+-          NEEDS_JSON: ${{ toJSON(needs) }}
+-          RUN_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+-          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+-        run: bash scripts/check-pipeline-status.sh
++          LYCHEE_EXIT_CODE: ${{ steps.lychee.outputs.exit_code }}
++        run: node .github/scripts/recheck-transient-links.mjs lychee/out.md

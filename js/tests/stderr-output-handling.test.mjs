@@ -200,7 +200,9 @@ done
 
         // Extract and clean up second gist
         const lines = result2.stdout.trim().split('\n');
-        const url2 = lines.find((line) => line.includes('gist.github.com'));
+        const url2 = lines.find((line) =>
+          line.startsWith('https://gist.github.com/')
+        );
         if (url2) {
           gistId = url2.split('/').pop();
           await $`gh gist delete ${gistId} --yes`.run({

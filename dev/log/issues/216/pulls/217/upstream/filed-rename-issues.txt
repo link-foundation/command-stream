@@ -1,0 +1,3 @@
+rust: https://github.com/link-foundation/rust-ai-driven-development-pipeline-template/issues/190
+python: https://github.com/link-foundation/python-ai-driven-development-pipeline-template/issues/100
+js: https://github.com/link-foundation/js-ai-driven-development-pipeline-template/issues/215

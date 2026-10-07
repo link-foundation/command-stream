@@ -1,0 +1,41 @@
+== run-37315903872-attempt-2.log.gz
+== run-37487515414.log.gz
+      1 Test JavaScript (node 24 on ubuntu-24.04)	npm warn deprecated glob@11.1.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may
+      1 Test JavaScript (node 22 on ubuntu-24.04)	npm warn deprecated glob@11.1.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may
+      1 Test JavaScript (node 20 on ubuntu-24.04)	npm warn deprecated glob@11.1.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may
+      1 Test JavaScript (bun on windows-2025)	Warning from cmd2
+      1 Test JavaScript (bun on windows-2025)	Warning from cmd1
+      1 Test JavaScript (bun on ubuntu-24.04)	Warning from cmd2
+      1 Test JavaScript (bun on ubuntu-24.04)	Warning from cmd1
+      1 Test JavaScript (bun on macos-15)	Warning from cmd2
+      1 Test JavaScript (bun on macos-15)	Warning from cmd1
+      1 Process trees (Node 24.x on windows-2025)	npm warn deprecated glob@11.1.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may
+      1 Process trees (Node 24.x on macos-15)	npm warn deprecated glob@11.1.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be 
+      1 Process trees (Node 22.x on windows-2025)	npm warn deprecated glob@11.1.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may
+      1 Process trees (Node 22.x on macos-15)	npm warn deprecated glob@11.1.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be 
+      1 Process trees (Node 20.x on windows-2025)	npm warn deprecated glob@11.1.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may
+      1 Process trees (Node 20.x on macos-15)	npm warn deprecated glob@11.1.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be 
+== run-37552278874.log.gz
+== run-37552278965.log.gz
+== run-37552278989.log.gz
+      1 Test JavaScript (bun on windows-2025)	Warning from cmd2
+      1 Test JavaScript (bun on windows-2025)	Warning from cmd1
+      1 Test JavaScript (bun on ubuntu-24.04)	Warning from cmd2
+      1 Test JavaScript (bun on ubuntu-24.04)	Warning from cmd1
+      1 Test JavaScript (bun on macos-15)	Warning from cmd2
+      1 Test JavaScript (bun on macos-15)	Warning from cmd1
+== run-37573347983.log.gz
+      2 Check every direct dependency against latest releases	warning: not updating lockfile due to dry run
+== run-37573348103.log.gz
+== run-37573348121.log.gz
+== run-37573348129.log.gz
+== run-37573348160.log.gz
+      1 Verify and deploy generated documentation	(node:6148) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+== run-37573348181.log.gz
+      1 Test JavaScript (bun on windows-2025)	Warning from cmd2
+      1 Test JavaScript (bun on windows-2025)	Warning from cmd1
+      1 Test JavaScript (bun on ubuntu-24.04)	Warning from cmd2
+      1 Test JavaScript (bun on ubuntu-24.04)	Warning from cmd1
+      1 Test JavaScript (bun on macos-15)	Warning from cmd2
+      1 Test JavaScript (bun on macos-15)	Warning from cmd1
+== run-37573348238.log.gz

@@ -1,0 +1,239 @@
+--- js-template/scripts/check-release-needed.mjs
++++ js/scripts/check-release-needed.mjs
+@@ -1,125 +1,155 @@
+-#!/usr/bin/env node
++#!/usr/bin/env bun
+ 
+ /**
+- * Check if a release is needed based on changesets and npm registry state
++ * Check if a release is needed based on changesets and npm registry state.
+  *
+  * This script checks:
+- * 1. If there are changeset files to process
+- * 2. If the current version has already been published to npm
+- * 3. If an npm-published version also has its GitHub release
++ *   1. If there are changeset files to process, and
++ *   2. If the current package.json version has already been published to npm.
+  *
+- * npm publication and a GitHub release are independent requirements. If npm
+- * already has the version but its GitHub release is missing, the next main
+- * push retries publication verification and creates that release without a bump.
+- * Unknown GitHub state does not trigger a release.
++ * IMPORTANT: This checks npm (the source of truth for JS packages), NOT git
++ * tags / GitHub releases. This is critical because:
++ *   - Git tags and GitHub releases can exist without the package being on npm
++ *     (exactly what produced the false-positive `js-v0.10.1` release in #166),
++ *   - Only npm publication means users can actually `npm install` the package.
+  *
+- * Analogous to check-release-needed.rs in the Rust template.
++ * Self-healing: if a previous release attempt bumped the version and committed
++ * it to main but the npm publish failed or was skipped, the repo version is
++ * left permanently ahead of npm. By comparing package.json against the
++ * registry, the next push to main detects the unpublished version and triggers
++ * a catch-up publish.
+  *
+- * Supports both single-language and multi-language repository structures:
+- * - Single-language: package.json in repository root
+- * - Multi-language: package.json in js/ subfolder
++ * IMPORTANT — this is a deliberate improvement over the upstream template
++ * (link-foundation/js-ai-driven-development-pipeline-template,
++ * scripts/check-release-needed.mjs, issue #36). The template only probes npm
++ * when `has_changesets` is false. But issue #166's "failed to do any deploy"
++ * restart (run 27224046292) had `has_changesets=true` *locally* while the
++ * version bump had already been consumed on `origin/main` by a prior run — so
++ * `changeset version` found nothing, the version step committed nothing, and
++ * the publish was gated off, leaving v0.10.2 stranded (npm was still at 0.9.5).
++ * To close that gap we ALWAYS probe npm and emit `current_unpublished`, which
++ * the workflow uses to publish the current version whether or not a changeset
++ * is present. See docs/case-studies/issue-166/.
+  *
+- * Usage: node scripts/check-release-needed.mjs [--js-root <path>]
++ * An exact-version registry query distinguishes a missing version (404) from
++ * registry/authentication outages, which must fail before any release output.
++ *
++ * Self-healing also covers the GitHub release: when the version is on npm but
++ * `js-v<version>` has no GitHub release (npm 1.0.0-1.4.0 were left that way
++ * after the publish step falsely failed in #209, and nothing ever retried),
++ * the release path runs again. Re-publishing is a no-op for a version already
++ * on npm, so this only creates the missing release. An unknown GitHub state
++ * (outage, no token) never triggers a release (issue #216).
++ *
++ * Usage: bun scripts/check-release-needed.mjs
++ *   (run with working-directory: js, so ./package.json is the JS package)
+  *
+  * Environment variables:
+- *   - HAS_CHANGESETS: 'true' if changeset files exist (from check-changesets.mjs)
++ *   - HAS_CHANGESETS: 'true' if changeset files exist (from the changeset check)
++ *   - GITHUB_REPOSITORY, GITHUB_TOKEN, GITHUB_API_URL: GitHub release lookup
+  *
+  * Outputs (written to GITHUB_OUTPUT):
+  *   - should_release: 'true' if a release should be created
+- *   - skip_bump: 'true' when recovering the existing version without changesets
++ *   - skip_bump: 'true' if the version bump should be skipped (version already
++ *                bumped but not yet published — self-healing path)
++ *   - current_unpublished: 'true' if the current package.json version is NOT on
++ *                npm. This is the authoritative publish trigger: it is true
++ *                whenever the committed version still needs to reach the
++ *                registry, regardless of whether a changeset is present, which
++ *                is what makes the self-heal cover the #166 restart case.
++ *   - github_release_missing: 'true' if the version is on npm but its GitHub
++ *                release definitely does not exist (HTTP 404).
+  */
+ 
+-import { appendFileSync } from 'fs';
+-
+-import { getJsRoot, parseJsRootConfig } from './js-paths.mjs';
++import { readFileSync, appendFileSync } from 'fs';
+ import { isPackageVersionPublished } from './npm-registry.mjs';
+-import { readPackageInfo } from './package-info.mjs';
+-import { buildReleaseTag } from './release-naming.mjs';
+ import { githubReleaseExists } from './github-release-state.mjs';
+ 
+-const jsRootConfig = parseJsRootConfig();
+-const jsRoot = getJsRoot({ jsRoot: jsRootConfig, verbose: true });
+-
+ /**
+- * Write output to GitHub Actions output file
+- * @param {string} name - Output name
+- * @param {string} value - Output value
++ * Append to the GitHub Actions output file (and echo for the run log).
++ * @param {string} key
++ * @param {string} value
+  */
+-function setOutput(name, value) {
++function setOutput(key, value) {
+   const outputFile = process.env.GITHUB_OUTPUT;
+   if (outputFile) {
+-    appendFileSync(outputFile, `${name}=${value}\n`);
++    appendFileSync(outputFile, `${key}=${value}\n`);
+   }
+-  console.log(`Output: ${name}=${value}`);
++  console.log(`Output: ${key}=${value}`);
+ }
+ 
+ /**
+- * Get the package name and version from package.json
++ * Read the package name and version from the local package.json.
+  * @returns {{ name: string, version: string }}
+  */
+ function getPackageInfo() {
+-  return readPackageInfo({ jsRoot });
+-}
+-
+-/**
+- * Check if a specific version is published on npm
+- * @param {string} packageName
+- * @param {string} version
+- * @returns {Promise<boolean>}
+- */
+-function checkVersionOnNpm(packageName, version) {
+-  return isPackageVersionPublished(packageName, version);
++  const packageJson = JSON.parse(readFileSync('./package.json', 'utf8'));
++  return { name: packageJson.name, version: packageJson.version };
+ }
+ 
+ async function main() {
+-  const hasChangesets = process.env.HAS_CHANGESETS === 'true';
+-  const { name: packageName, version: currentVersion } = getPackageInfo();
++  try {
++    const hasChangesets = process.env.HAS_CHANGESETS === 'true';
++    const { name: packageName, version: currentVersion } = getPackageInfo();
+ 
+-  console.log(`Package: ${packageName}`);
+-  console.log(`Current version: ${currentVersion}`);
+-  console.log(`Has changesets: ${hasChangesets}`);
++    console.log(`Package: ${packageName}`);
++    console.log(`Current version: ${currentVersion}`);
++    console.log(`Has changesets: ${hasChangesets}`);
+ 
+-  if (hasChangesets) {
+-    console.log('Found changesets, proceeding with release');
+-    setOutput('should_release', 'true');
+-    setOutput('skip_bump', 'false');
+-    return;
+-  }
++    // Always probe npm — even with changesets — so a committed-but-unpublished
++    // version is detected no matter how the release got into that state (#166).
++    console.log(
++      `Checking if ${packageName}@${currentVersion} is published on npm...`
++    );
++    const isPublished = await isPackageVersionPublished(
++      packageName,
++      currentVersion
++    );
++    console.log(`Published on npm: ${isPublished}`);
++    setOutput('current_unpublished', isPublished ? 'false' : 'true');
+ 
+-  console.log(
+-    `Checking if ${packageName}@${currentVersion} is published on npm...`
+-  );
+-  const isPublished = await checkVersionOnNpm(packageName, currentVersion);
+-  console.log(`Published on npm: ${isPublished}`);
++    if (hasChangesets) {
++      // A changeset normally produces a NEW version via the bump step, so let
++      // the bump run (skip_bump=false). If the changeset turns out to be already
++      // consumed on the remote, the bump is a no-op and `current_unpublished`
++      // (emitted above) still drives the catch-up publish of the current
++      // version — the #166 restart case the template's design missed.
++      console.log('Found changesets, proceeding with release');
++      setOutput('should_release', 'true');
++      setOutput('skip_bump', 'false');
++      return;
++    }
+ 
+-  if (isPublished) {
+-    const tag = buildReleaseTag(currentVersion, { jsRoot });
+-    const releaseExists = await githubReleaseExists(tag);
+-    if (releaseExists === false) {
++    if (isPublished) {
++      const tag = `js-v${currentVersion}`;
++      const releaseExists = await githubReleaseExists(tag);
++      if (releaseExists === false) {
++        console.log(
++          `${tag} is on npm but has no GitHub release — release needed (self-healing)`
++        );
++        setOutput('github_release_missing', 'true');
++        setOutput('should_release', 'true');
++        setOutput('skip_bump', 'true');
++        return;
++      }
+       console.log(
+-        `${tag} is on npm but has no GitHub release — self-healing release creation`
++        releaseExists === null
++          ? `No changesets and v${currentVersion} already published on npm; GitHub release state unknown — no release will run`
++          : `No changesets and v${currentVersion} already published on npm and GitHub — no release needed`
++      );
++      setOutput('should_release', 'false');
++      setOutput('skip_bump', 'false');
++    } else {
++      console.log(
++        `No changesets but v${currentVersion} not yet published to npm — release needed (self-healing)`
+       );
+       setOutput('should_release', 'true');
+       setOutput('skip_bump', 'true');
+-    } else {
+-      console.log(
+-        releaseExists === null
+-          ? 'GitHub state unknown — no release will run'
+-          : `${tag} is already published on npm and GitHub — no release needed`
+-      );
+-      setOutput('should_release', 'false');
+-      setOutput('skip_bump', 'false');
+     }
+-  } else {
+-    console.log(
+-      `No changesets but v${currentVersion} not yet published to npm — release needed (self-healing)`
+-    );
+-    setOutput('should_release', 'true');
+-    setOutput('skip_bump', 'true');
++  } catch (error) {
++    console.error('Error:', error.message);
++    process.exit(1);
+   }
+ }
+ 
+-main().catch((error) => {
+-  console.error('Error:', error.message);
+-  process.exit(1);
+-});
++main();

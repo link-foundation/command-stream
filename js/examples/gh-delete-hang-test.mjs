@@ -21,7 +21,9 @@ const createResult =
   );
 
 const lines = createResult.stdout.trim().split('\n');
-const gistUrl = lines.find((line) => line.includes('gist.github.com'));
+const gistUrl = lines.find((line) =>
+  line.startsWith('https://gist.github.com/')
+);
 if (!gistUrl) {
   console.error('Failed to create test gist');
   process.exit(1);

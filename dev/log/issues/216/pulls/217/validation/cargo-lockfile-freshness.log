@@ -1,0 +1,31 @@
+Preparing worktree (detached HEAD b5caa65)
+--- step on the committed lockfiles
+    Updating crates.io index
+     Locking 0 packages to latest compatible versions
+    Updating crates.io index
+     Locking 0 packages to latest compatible versions
+exit 0
+    Updating crates.io index
+ Downgrading itoa v1.0.18 -> v1.0.15
+--- step with itoa pinned to 1.0.15
+    Updating crates.io index
+     Locking 1 package to latest compatible version
+    Updating itoa v1.0.15 -> v1.0.18
+diff --git a/rust/Cargo.lock b/rust/Cargo.lock
+index 0cdcbd8..904b241 100644
+--- a/rust/Cargo.lock
++++ b/rust/Cargo.lock
+@@ -325,9 +325,9 @@ dependencies = [
+ 
+ [[package]]
+ name = "itoa"
+-version = "1.0.15"
++version = "1.0.18"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
++checksum = "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
+ 
+ [[package]]
+ name = "js-sys"
+::error::rust/Cargo.toml has pending lockfile updates
+exit 1

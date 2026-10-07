@@ -78,10 +78,12 @@ jobs:
 
       # actionlint cannot see workflow *security* defects: unpinned third-party
       # actions, checkouts that persist `GITHUB_TOKEN` in `.git/config`, or
-      # template injection into `run:` blocks. zizmor covers those. Reproduce
-      # locally with the same configuration:
-      #   pipx run zizmor --config .github/zizmor.yml \
-      #     --min-confidence medium --persona regular .github/workflows
+      # template injection into `run:` blocks. zizmor covers those. The action
+      # release pins zizmor itself: v0.6.4 maps its default `version: latest` to
+      # the 1.30.1 image digest, so a newer zizmor arrives only with an action
+      # bump. Reproduce locally with the same version and configuration:
+      #   pipx run zizmor==1.30.1 --config .github/zizmor.yml \
+      #     --min-confidence low .github/workflows
       #
       # Annotations instead of SARIF: code scanning is not enabled on forks, and
       # the job should fail loudly either way.

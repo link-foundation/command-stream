@@ -1,0 +1,10 @@
+# lychee configuration, passed explicitly by .github/workflows/links.yml.
+#
+# Many external links in this repository's documents point at github.com, and
+# one of them answered 503 in the scheduled run of 2026-09-28 (#216). Spacing
+# out requests to the host makes that less likely; the throttle is the Rust
+# pipeline template's. lychee 0.24 does not retry a 503 itself, so the
+# workflow's re-check step handles the ones that still happen.
+[hosts."github.com"]
+concurrency = 2
+request_interval = "1s"

@@ -7,6 +7,7 @@ async function probe(
   filter = 'deno-broken-pipe-subproc'
 ) {
   let calls = 0;
+  const report = [];
   const shell = () => {
     const failed = ++calls <= failUntil;
     const result = Promise.resolve({
@@ -28,7 +29,11 @@ async function probe(
     defaultNode: process.execPath,
     retryFlaky,
     argv: ['--filter', filter, '--concurrency', '1'],
+    // Keeps the expected `FAIL ...` lines of these probes out of the CI log,
+    // where they read like a real conformance failure (issue #216).
+    log: (line) => report.push(line),
   });
+  expect(report.at(-1)).toStartWith(`Total 1: ${counts.PASS} passed`);
   return { calls, ...counts };
 }
 

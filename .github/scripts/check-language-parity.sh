@@ -28,13 +28,19 @@ if git rev-parse --verify --quiet "origin/${BASE_REF}" >/dev/null; then
   BASE="origin/${BASE_REF}"
 elif git rev-parse --verify --quiet "${BASE_REF}" >/dev/null; then
   BASE="${BASE_REF}"
+elif [ -n "${CI:-}" ]; then
+  # Skipping would report a pass the check never made (issue #216).
+  echo "::error::Could not resolve base ref '${BASE_REF}'; cannot check parity."
+  exit 1
 else
   echo "::warning::Could not resolve base ref '${BASE_REF}'; skipping parity check."
   exit 0
 fi
 
 MERGE_BASE="$(git merge-base "${BASE}" HEAD 2>/dev/null || echo "${BASE}")"
-CHANGED="$(git diff --name-only "${MERGE_BASE}" HEAD)"
+# --no-renames lists both sides of a move, so source moved out of js/src or
+# rust/src still counts as a change there (issue #216).
+CHANGED="$(git diff --name-only --no-renames "${MERGE_BASE}" HEAD)"
 
 echo "Comparing against ${BASE} (merge-base ${MERGE_BASE})"
 echo "Changed files:"
