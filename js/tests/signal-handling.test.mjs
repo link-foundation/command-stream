@@ -20,6 +20,29 @@ const isWindows = process.platform === 'win32';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// Poll until `condition` holds, failing with a clear message after `timeout`
+// milliseconds rather than hanging or racing a fixed sleep. Fixed sleeps were
+// what made these tests flaky on loaded runners (issue #216).
+const waitFor = async (condition, what, timeout = 5000) => {
+  const deadline = Date.now() + timeout;
+  while (!condition()) {
+    if (Date.now() > deadline) {
+      throw new Error(`Timed out after ${timeout} ms waiting for ${what}`);
+    }
+    await sleep(10);
+  }
+};
+
+/**
+ * Grace period for the tests that assert a handler ran. The 100 ms default is
+ * the documented contract, but a busy runner can take longer than that to
+ * schedule the shell and run its trap, at which point the SIGKILL escalation
+ * legitimately cuts the handler off: macOS run 37487515414 failed that way.
+ * The escalation is skipped once the child exits, so a prompt handler costs
+ * nothing extra. Matches GRACEFUL_KILL_GRACE_MS in rust/tests/signals.rs.
+ */
+const GRACEFUL_KILL_GRACE = 2000;
+
 describe.skipIf(isWindows)('Signal handling', () => {
   let workDir;
 
@@ -61,26 +84,39 @@ describe.skipIf(isWindows)('Signal handling', () => {
     }
   };
 
+  // Start a command and wait until it prints `ready`. Every command here
+  // installs its traps before printing it, so a signal sent afterwards cannot
+  // arrive before the handler exists. The runner is wrapped because it is
+  // thenable: an async function returning it bare would wait for it to exit.
+  const startReady = async (command, options) => {
+    const cmd = $({ mirror: false, ...options })`sh -c ${command}`;
+    let output = '';
+    cmd.on('stdout', (chunk) => {
+      output += chunk;
+    });
+    cmd.start();
+    await waitFor(() => output.includes('ready'), 'the child to start');
+    return { cmd };
+  };
+
   // Start a command, wait for it to be running, then stop it.
   const startAndKill = async (command, options, kill) => {
-    const cmd = $({ mirror: false, ...options })`sh -c ${command}`;
-    cmd.start();
-    await sleep(300);
+    const { cmd } = await startReady(command, options);
     kill(cmd);
-    const result = await cmd;
-    await sleep(300);
-    return result;
+    return await cmd;
   };
 
   describe('graceful termination', () => {
     it('lets the child run its SIGTERM handler before exiting', async () => {
       const marker = join(workDir, 'marker');
 
-      const result = await startAndKill(gracefulChild(marker), {}, (cmd) =>
-        cmd.kill()
+      const result = await startAndKill(
+        gracefulChild(marker),
+        { killGrace: GRACEFUL_KILL_GRACE },
+        (cmd) => cmd.kill()
       );
 
-      expect(handlerRan(marker)).toBe(true);
+      await waitFor(() => handlerRan(marker), 'the signal handler');
       expect(result.code).toBe(143); // 128 + SIGTERM(15)
     });
 
@@ -88,11 +124,13 @@ describe.skipIf(isWindows)('Signal handling', () => {
       const marker = join(workDir, 'marker');
 
       // SIGINT is the signal CTRL+C sends.
-      const result = await startAndKill(gracefulChild(marker), {}, (cmd) =>
-        cmd.kill('SIGINT')
+      const result = await startAndKill(
+        gracefulChild(marker),
+        { killGrace: GRACEFUL_KILL_GRACE },
+        (cmd) => cmd.kill('SIGINT')
       );
 
-      expect(handlerRan(marker)).toBe(true);
+      await waitFor(() => handlerRan(marker), 'the signal handler');
       expect(result.code).toBe(130); // 128 + SIGINT(2)
     });
 
@@ -103,11 +141,11 @@ describe.skipIf(isWindows)('Signal handling', () => {
       // default) was the signal actually delivered.
       const result = await startAndKill(
         gracefulChild(marker, 'INT'),
-        { killSignal: 'SIGINT' },
+        { killSignal: 'SIGINT', killGrace: GRACEFUL_KILL_GRACE },
         (cmd) => cmd.kill()
       );
 
-      expect(handlerRan(marker)).toBe(true);
+      await waitFor(() => handlerRan(marker), 'the signal handler');
       expect(result.code).toBe(130);
     });
   });
@@ -121,11 +159,8 @@ describe.skipIf(isWindows)('Signal handling', () => {
         `trap '' TERM INT; echo ready; ` +
         `while true; do echo tick >> ${heartbeat}; sleep 0.05; done`;
 
-      const cmd = $({ mirror: false, killGrace: 50 })`sh -c ${command}`;
-      cmd.start();
-      await sleep(300);
-
-      expect(fileSize(heartbeat)).toBeGreaterThan(0);
+      const { cmd } = await startReady(command, { killGrace: 50 });
+      await waitFor(() => fileSize(heartbeat) > 0, 'the first heartbeat');
 
       cmd.kill();
       // Wait out the grace period plus the SIGKILL escalation.
@@ -149,6 +184,8 @@ describe.skipIf(isWindows)('Signal handling', () => {
       // The reported code still reflects the requested signal, even though the
       // process was actually stopped by the SIGKILL escalation.
       expect(result.code).toBe(143);
+      // Give a handler that wrongly survived time to write its marker.
+      await sleep(300);
       // With no grace period the child never gets to run its handler.
       expect(handlerRan(marker)).toBe(false);
     });
@@ -164,11 +201,10 @@ describe.skipIf(isWindows)('Signal handling', () => {
         `sh -c 'while true; do echo tick >> ${heartbeat}; sleep 0.05; done' & ` +
         `echo ready; wait`;
 
-      const cmd = $({ mirror: false, killGrace: 50 })`sh -c ${command}`;
-      cmd.start();
-      await sleep(400);
-
-      expect(fileSize(heartbeat)).toBeGreaterThan(0);
+      const { cmd } = await startReady(command, { killGrace: 50 });
+      // `ready` comes from the waiting shell; the grandchild may not have
+      // written yet.
+      await waitFor(() => fileSize(heartbeat) > 0, 'the first heartbeat');
 
       cmd.kill();
       // Past the grace period, so the escalation has been delivered too.
