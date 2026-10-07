@@ -1,5 +1,38 @@
 # Changelog
 
+## 2.0.0
+
+### Major Changes
+
+- Update all JavaScript runtime and development dependencies to their latest
+  stable releases, including Execa 10.1.0 and the ShellJS 0.10 declarations.
+  Execa 10 requires Node.js 22 or later; command-stream now requires Node.js 22.
+  The Node.js CI matrix covers 22, 24, and 26. Use node-pty's latest stable 1.1.0
+  release in place of the development prerelease.
+  Repair its packaged macOS spawn-helper's missing executable permission before
+  starting the PTY host so terminal capture continues to work on macOS.
+
+  Preserve the public execaCommand and execaCommandSync helpers with typed
+  wrappers around Execa 10. Update npm publishing to npm 12 and its supported
+  Node.js ranges. Refresh GitHub Actions dependencies.
+
+  Add dependency freshness CI for both language packages, Rust benchmarks, and
+  embedded release-script manifests, with verified open-issue blockers for Rust.
+
+  Pin the Changesets formatter to Prettier so release versioning no longer tries
+  to run Deno, which the release runner does not have; create the GitHub release
+  of a version that reached npm without one; make the signal handling tests wait
+  for the child to be ready instead of sleeping; and run `bun test` in the test
+  runner examples without a shell, so a checkout path with spaces no longer fails
+  every file.
+
+  Stop descendant processes on Windows when a command is killed or aborted.
+  Avoid delayed retries against reused Windows PIDs.
+  Handle asynchronous stdin EPIPE when a command exits without reading its input, and reuse error handlers across repeated writes to avoid listener warnings.
+
+  Keep virtual `exit` statuses silent: nonzero exits have empty stderr and no
+  mirrored diagnostic, while `exit 0` succeeds with errexit enabled.
+
 ## 1.6.2
 
 ### Patch Changes
