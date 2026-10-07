@@ -1,0 +1,72 @@
+{
+  "Process trees (Node 26.x on macos-15)": [
+    {
+      "path": ".github",
+      "blob_href": "https://github.com/link-foundation/command-stream/blob/a171ef3ca38a9a81d1fb9958fcb874e78b01755d/.github",
+      "start_line": 1,
+      "start_column": null,
+      "end_line": 1,
+      "end_column": null,
+      "annotation_level": "notice",
+      "title": "",
+      "message": "Due to capacity constraints, jobs targeting macOS arm64 runners may experience longer queue times.",
+      "raw_details": ""
+    }
+  ],
+  "Process trees (Node 24.x on macos-15)": [
+    {
+      "path": ".github",
+      "blob_href": "https://github.com/link-foundation/command-stream/blob/a171ef3ca38a9a81d1fb9958fcb874e78b01755d/.github",
+      "start_line": 1,
+      "start_column": null,
+      "end_line": 1,
+      "end_column": null,
+      "annotation_level": "notice",
+      "title": "",
+      "message": "Due to capacity constraints, jobs targeting macOS arm64 runners may experience longer queue times.",
+      "raw_details": ""
+    }
+  ],
+  "Process trees (Node 22.x on macos-15)": [
+    {
+      "path": ".github",
+      "blob_href": "https://github.com/link-foundation/command-stream/blob/a171ef3ca38a9a81d1fb9958fcb874e78b01755d/.github",
+      "start_line": 1,
+      "start_column": null,
+      "end_line": 1,
+      "end_column": null,
+      "annotation_level": "notice",
+      "title": "",
+      "message": "Due to capacity constraints, jobs targeting macOS arm64 runners may experience longer queue times.",
+      "raw_details": ""
+    }
+  ],
+  "Test JavaScript (bun on macos-15)": [
+    {
+      "path": ".github",
+      "blob_href": "https://github.com/link-foundation/command-stream/blob/a171ef3ca38a9a81d1fb9958fcb874e78b01755d/.github",
+      "start_line": 1,
+      "start_column": null,
+      "end_line": 1,
+      "end_column": null,
+      "annotation_level": "notice",
+      "title": "",
+      "message": "Due to capacity constraints, jobs targeting macOS arm64 runners may experience longer queue times.",
+      "raw_details": ""
+    }
+  ],
+  "Release JavaScript package": [
+    {
+      "path": ".github",
+      "blob_href": "https://github.com/link-foundation/command-stream/blob/a171ef3ca38a9a81d1fb9958fcb874e78b01755d/.github",
+      "start_line": 35,
+      "start_column": null,
+      "end_line": 35,
+      "end_column": null,
+      "annotation_level": "failure",
+      "title": "",
+      "message": "Process completed with exit code 1.",
+      "raw_details": ""
+    }
+  ]
+}

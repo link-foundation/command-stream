@@ -1,0 +1,2 @@
+{"shell":"sh","runs":60,"killGrace":100,"waitForReady":"yes","notReadyAtKill":0,"handlerMissing":12,"p50":"77.7","p90":"158.4","max":"565.3"}
+{"shell":"sh","runs":60,"killGrace":5000,"waitForReady":"yes","notReadyAtKill":0,"handlerMissing":0,"p50":"100.9","p90":"199.9","max":"308.8"}

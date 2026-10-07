@@ -1,0 +1,17 @@
+template commit: 1e43fdb4fb26d69376b8663674c170212eb01765
+files: .changeset .prettierignore .prettierrc CHANGELOG.md deno.json deno.lock node_modules package-lock.json package.json 
+devEngines: {"packageManager":{"name":"npm"}}
+config.format = "prettier"
+deno on PATH: none
+🦋 changeset v3.0.3
+
+All files have been updated. Review them and commit at your leisure
+changeset version exit status: 0
+pending changesets left: 0
+# @link-foundation/example-package-name
+
+## 0.11.32
+
+### Patch Changes
+
+- Check the release versioning step.

@@ -1,0 +1,13 @@
+before iteration 3:
+(fail) Signal handling > graceful termination > lets the child run its SIGTERM handler before exiting [1095.01ms]
+before iteration 5:
+(fail) Signal handling > graceful termination > delivers the configured killSignal when kill() takes no argument [910.19ms]
+before iteration 6:
+(fail) Signal handling > graceful termination > delivers the configured killSignal when kill() takes no argument [682.98ms]
+before iteration 10:
+(fail) Signal handling > graceful termination > lets the child run its SIGTERM handler before exiting [1356.63ms]
+before iteration 16:
+(fail) Signal handling > graceful termination > lets the child run its SIGTERM handler before exiting [1389.04ms]
+before: 5 / 20 runs failed (load processes: 96)
+after: 0 / 20 runs failed (load processes: 96)
+full suite: 0 / 15 runs failed (load processes: 96)

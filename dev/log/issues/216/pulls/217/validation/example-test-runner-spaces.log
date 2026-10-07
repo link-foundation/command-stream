@@ -1,0 +1,48 @@
+## old (execSync with an interpolated path)
+🧪 Running 2 test files individually...
+
+⚠️  a.test.mjs: Error running test
+⚠️  b.test.mjs: Error running test
+
+============================================================
+📊 Summary:
+   Total tests passed: 0
+   Total tests failed: 0
+   Files with failures: 2
+
+❌ Failed test files:
+   - a.test.mjs
+   - b.test.mjs
+exit 1
+## new (spawnSync with argv)
+🧪 Running 2 test files individually...
+
+✅ a.test.mjs: 1 pass
+❌ b.test.mjs: 0 pass, 1 fail
+
+============================================================
+📊 Summary:
+   Total tests passed: 1
+   Total tests failed: 1
+   Files with failures: 1
+
+❌ Failed test files:
+   - b.test.mjs
+exit 1
+## new batched
+🧪 Running 2 test files in 1 batches...
+
+
+📦 Batch 1/1: a.test.mjs, b.test.mjs
+   ❌ 1 pass, 1 fail
+
+============================================================
+📊 Summary:
+   Total tests passed: 1
+   Total tests failed: 1
+   Batches with issues: 2
+
+❌ Files with potential issues:
+   - a.test.mjs
+   - b.test.mjs
+exit 1

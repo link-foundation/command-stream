@@ -1,0 +1,328 @@
+Check external links	UNKNOWN STEP	﻿2026-10-05T17:35:54.4559678Z Current runner version: '2.337.0'
+Check external links	UNKNOWN STEP	2026-10-05T17:35:54.4583905Z ##[group]Runner Image Provisioner
+Check external links	UNKNOWN STEP	2026-10-05T17:35:54.4584705Z Hosted Compute Agent
+Check external links	UNKNOWN STEP	2026-10-05T17:35:54.4585260Z Version: 20260901.588
+Check external links	UNKNOWN STEP	2026-10-05T17:35:54.4585833Z Commit: f88ec8081b781fac6c440065ac7ff9e710ce3d0b
+Check external links	UNKNOWN STEP	2026-10-05T17:35:54.4586488Z Build Date: 2026-09-01T19:56:44Z
+Check external links	UNKNOWN STEP	2026-10-05T17:35:54.4587124Z Worker ID: {a928f93d-9359-4de1-94ff-45b99476eb67}
+Check external links	UNKNOWN STEP	2026-10-05T17:35:54.4587874Z Azure Region: westus3
+Check external links	UNKNOWN STEP	2026-10-05T17:35:54.4588376Z ##[endgroup]
+Check external links	UNKNOWN STEP	2026-10-05T17:35:54.4589865Z ##[group]Operating System
+Check external links	UNKNOWN STEP	2026-10-05T17:35:54.4590457Z Ubuntu
+Check external links	UNKNOWN STEP	2026-10-05T17:35:54.4590982Z 24.04.5
+Check external links	UNKNOWN STEP	2026-10-05T17:35:54.4591435Z LTS
+Check external links	UNKNOWN STEP	2026-10-05T17:35:54.4591875Z ##[endgroup]
+Check external links	UNKNOWN STEP	2026-10-05T17:35:54.4592398Z ##[group]Runner Image
+Check external links	UNKNOWN STEP	2026-10-05T17:35:54.4592920Z Image: ubuntu-24.04
+Check external links	UNKNOWN STEP	2026-10-05T17:35:54.4593456Z Version: 20260927.320.1
+Check external links	UNKNOWN STEP	2026-10-05T17:35:54.4594599Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+Check external links	UNKNOWN STEP	2026-10-05T17:35:54.4595988Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260927.320
+Check external links	UNKNOWN STEP	2026-10-05T17:35:54.4596842Z ##[endgroup]
+Check external links	UNKNOWN STEP	2026-10-05T17:35:54.4598201Z ##[group]GITHUB_TOKEN Permissions
+Check external links	UNKNOWN STEP	2026-10-05T17:35:54.4600290Z Contents: read
+Check external links	UNKNOWN STEP	2026-10-05T17:35:54.4600856Z Metadata: read
+Check external links	UNKNOWN STEP	2026-10-05T17:35:54.4601361Z ##[endgroup]
+Check external links	UNKNOWN STEP	2026-10-05T17:35:54.4603376Z Secret source: Actions
+Check external links	UNKNOWN STEP	2026-10-05T17:35:54.4604309Z Cache mode: write
+Check external links	UNKNOWN STEP	2026-10-05T17:35:54.4604955Z Prepare workflow directory
+Check external links	UNKNOWN STEP	2026-10-05T17:35:54.4926099Z Prepare all required actions
+Check external links	UNKNOWN STEP	2026-10-05T17:35:54.4974185Z Getting action download info
+Check external links	UNKNOWN STEP	2026-10-05T17:35:54.8509383Z Download action repository 'actions/checkout@v6' (SHA:d23441a48e516b6c34aea4fa41551a30e30af803)
+Check external links	UNKNOWN STEP	2026-10-05T17:35:54.9550150Z Download action repository 'lycheeverse/lychee-action@v2' (SHA:e7477775783ea5526144ba13e8db5eec57747ce8)
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.4121162Z Complete job name: Check external links
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.4807333Z ##[group]Run actions/checkout@v6
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.4808548Z with:
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.4809036Z   persist-credentials: false
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.4809643Z   repository: link-foundation/command-stream
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.4813162Z   token: ***
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.4813625Z   ssh-strict: true
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.4814127Z   ssh-user: git
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.4814581Z   clean: true
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.4815061Z   sparse-checkout-cone-mode: true
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.4815619Z   fetch-depth: 1
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.4816098Z   fetch-tags: false
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.4816588Z   show-progress: true
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.4817064Z   lfs: false
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.4817544Z   submodules: false
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.4818164Z   set-safe-directory: true
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.4818722Z   allow-unsafe-pr-checkout: false
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.4819582Z ##[endgroup]
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.5961537Z Syncing repository: link-foundation/command-stream
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.5963983Z ##[group]Getting Git version info
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.5965191Z Working directory is '/home/runner/work/command-stream/command-stream'
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.5966898Z [command]/usr/bin/git version
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.5967894Z git version 2.55.0
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.5970238Z ##[endgroup]
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.5974547Z Temporarily overriding HOME='/home/runner/work/_temp/a54173fd-a9a0-485b-8b93-5af4c939b646' before making global git config changes
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.5975746Z Adding repository directory to the temporary git global config as a safe directory
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.5977013Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/command-stream/command-stream
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6007899Z Deleting the contents of '/home/runner/work/command-stream/command-stream'
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6013476Z ##[group]Determining repository object format
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6015504Z ##[endgroup]
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6016780Z ##[group]Initializing the repository
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6022262Z [command]/usr/bin/git init /home/runner/work/command-stream/command-stream
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6148851Z hint: Using 'master' as the name for the initial branch. This default branch name
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6150846Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6152359Z hint: to use in all of your new repositories, which will suppress this warning,
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6153676Z hint: call:
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6154298Z hint:
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6155073Z hint: 	git config --global init.defaultBranch <name>
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6155988Z hint:
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6156971Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6158957Z hint: 'development'. The just-created branch can be renamed via this command:
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6160030Z hint:
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6160719Z hint: 	git branch -m <name>
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6161470Z hint:
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6162430Z hint: Disable this message with "git config set advice.defaultBranchName false"
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6164195Z Initialized empty Git repository in /home/runner/work/command-stream/command-stream/.git/
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6167093Z [command]/usr/bin/git remote add origin https://github.com/link-foundation/command-stream
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6225412Z ##[endgroup]
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6226706Z ##[group]Disabling automatic garbage collection
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6230952Z [command]/usr/bin/git config --local gc.auto 0
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6260515Z ##[endgroup]
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6262208Z ##[group]Setting up auth
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6263187Z Removing SSH command configuration
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6267828Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6303568Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6652523Z Removing HTTP extra header
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6660478Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6694891Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6887026Z Removing includeIf entries pointing to credentials config files
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6894421Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.6926520Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.7114567Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-88b965ca-9781-4c27-b628-758fef5b5460.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.7151532Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/command-stream/command-stream/.git.path /home/runner/work/_temp/git-credentials-88b965ca-9781-4c27-b628-758fef5b5460.config
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.7180843Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/command-stream/command-stream/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-88b965ca-9781-4c27-b628-758fef5b5460.config
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.7215076Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-88b965ca-9781-4c27-b628-758fef5b5460.config
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.7246542Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-88b965ca-9781-4c27-b628-758fef5b5460.config
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.7279666Z ##[endgroup]
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.7280855Z ##[group]Fetching the repository
+Check external links	UNKNOWN STEP	2026-10-05T17:35:55.7289963Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +d9abbee10793e3c192aa43df97aaf5fbc4bcee1d:refs/remotes/origin/main
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.3576626Z From https://github.com/link-foundation/command-stream
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.3578085Z  * [new ref]         d9abbee10793e3c192aa43df97aaf5fbc4bcee1d -> origin/main
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.3587095Z [command]/usr/bin/git branch --list --remote origin/main
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.3610223Z   origin/main
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.3617830Z [command]/usr/bin/git rev-parse refs/remotes/origin/main
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.3637249Z d9abbee10793e3c192aa43df97aaf5fbc4bcee1d
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.3640381Z ##[endgroup]
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.3641259Z ##[group]Determining the checkout info
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.3642467Z ##[endgroup]
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.3645875Z [command]/usr/bin/git sparse-checkout disable
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.3687271Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.3711530Z ##[group]Checking out the ref
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.3714730Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.4840922Z Switched to a new branch 'main'
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.4842679Z branch 'main' set up to track 'origin/main'.
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.4852936Z ##[endgroup]
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.4894247Z [command]/usr/bin/git log -1 --format=%H
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.4917302Z d9abbee10793e3c192aa43df97aaf5fbc4bcee1d
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.4936187Z ##[group]Removing auth
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.4936805Z Removing SSH command configuration
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.4937511Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.4957900Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.5145243Z Removing HTTP extra header
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.5150124Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.5181469Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.5379378Z Removing includeIf entries pointing to credentials config files
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.5383119Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.5408518Z includeif.gitdir:/home/runner/work/command-stream/command-stream/.git.path
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.5409266Z includeif.gitdir:/home/runner/work/command-stream/command-stream/.git/worktrees/*.path
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.5410044Z includeif.gitdir:/github/workspace/.git.path
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.5410597Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.5416347Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/command-stream/command-stream/.git.path
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.5437461Z /home/runner/work/_temp/git-credentials-88b965ca-9781-4c27-b628-758fef5b5460.config
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.5446462Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/command-stream/command-stream/.git.path /home/runner/work/_temp/git-credentials-88b965ca-9781-4c27-b628-758fef5b5460.config
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.5478594Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/command-stream/command-stream/.git/worktrees/*.path
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.5498979Z /home/runner/work/_temp/git-credentials-88b965ca-9781-4c27-b628-758fef5b5460.config
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.5506713Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/command-stream/command-stream/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-88b965ca-9781-4c27-b628-758fef5b5460.config
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.5538704Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.5560904Z /github/runner_temp/git-credentials-88b965ca-9781-4c27-b628-758fef5b5460.config
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.5570039Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-88b965ca-9781-4c27-b628-758fef5b5460.config
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.5633995Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.5654345Z /github/runner_temp/git-credentials-88b965ca-9781-4c27-b628-758fef5b5460.config
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.5662815Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-88b965ca-9781-4c27-b628-758fef5b5460.config
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.5693598Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.5869686Z Removing credentials config '/home/runner/work/_temp/git-credentials-88b965ca-9781-4c27-b628-758fef5b5460.config'
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.5879371Z ##[endgroup]
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6164291Z ##[group]Run lycheeverse/lychee-action@v2
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6164666Z with:
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6165243Z   args: --verbose --no-progress --max-retries 2 --timeout 30 --exclude-path dev/log --exclude-path docs/case-studies './**/*.md'
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6165843Z   fail: true
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6166077Z   jobSummary: true
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6166324Z   debug: false
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6166563Z   failIfEmpty: true
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6166805Z   format: markdown
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6167056Z   lycheeVersion: v0.24.2
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6167330Z   output: lychee/out.md
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6167589Z   checkbox: true
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6170294Z   token: ***
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6170541Z   workingDirectory: .
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6170794Z env:
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6173114Z   GITHUB_TOKEN: ***
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6173358Z ##[endgroup]
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6239570Z ##[start-action display=Set up environment;id=__lycheeverse_lychee-action.__run]
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6280366Z ##[group]Run # Install into $RUNNER_TEMP (not $HOME) so the install path is stable
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6281096Z ^[[36;1m# Install into $RUNNER_TEMP (not $HOME) so the install path is stable^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6281635Z ^[[36;1m# across composite steps. On some runners $HOME is overridden per step^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6282193Z ^[[36;1m# (e.g. actions/checkout temporarily sets it), which made the PATH^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6282686Z ^[[36;1m# entry from one step and the install in another step diverge.^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6283137Z ^[[36;1mecho "$RUNNER_TEMP/lychee/bin" >> "$GITHUB_PATH"^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6283514Z ^[[36;1mmkdir -p "$RUNNER_TEMP/lychee/bin"^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6471332Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6471785Z env:
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6474277Z   GITHUB_TOKEN: ***
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6474542Z ##[endgroup]
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6589626Z ##[end-action id=__lycheeverse_lychee-action.__run;outcome=success;conclusion=success;duration_ms=34]
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6594426Z ##[start-action display=Download and extract lychee in temp directory;id=__lycheeverse_lychee-action.lychee-setup]
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6612904Z ##[group]Run # Create a temporary directory for downloads and extraction
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6613498Z ^[[36;1m# Create a temporary directory for downloads and extraction^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6613925Z ^[[36;1mTEMP_DIR="${RUNNER_TEMP}/lychee-download"^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6614321Z ^[[36;1mrm -rf "${TEMP_DIR}" && mkdir -p "${TEMP_DIR}"^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6614662Z ^[[36;1mcd "${TEMP_DIR}"^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6614920Z ^[[36;1m^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6615159Z ^[[36;1mARCH=$(uname -m)^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6615497Z ^[[36;1m# Determine filename and download URL based on version^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6615930Z ^[[36;1mif [[ "${LYCHEE_VERSION}" =~ ^v0\.0|^v0\.1[0-5]\. ]]; then^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6616402Z ^[[36;1m  FILENAME="lychee-${LYCHEE_VERSION}-${ARCH}-unknown-linux-gnu.tar.gz"^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6617099Z ^[[36;1m  DOWNLOAD_URL="https://github.com/lycheeverse/lychee/releases/download/${LYCHEE_VERSION}/${FILENAME}"^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6617618Z ^[[36;1melse^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6618151Z ^[[36;1m  FILENAME="lychee-${ARCH}-unknown-linux-gnu.tar.gz"^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6618692Z ^[[36;1m  if [[ "${LYCHEE_VERSION}" == 'nightly' ]]; then^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6619318Z ^[[36;1m    DOWNLOAD_URL="https://github.com/lycheeverse/lychee/releases/download/nightly/${FILENAME}"^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6619862Z ^[[36;1m  elif [[ "${LYCHEE_VERSION}" == 'latest' ]]; then^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6620506Z ^[[36;1m    DOWNLOAD_URL="https://github.com/lycheeverse/lychee/releases/latest/download/${FILENAME}"^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6620999Z ^[[36;1m  else^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6621489Z ^[[36;1m    DOWNLOAD_URL="https://github.com/lycheeverse/lychee/releases/download/lychee-${LYCHEE_VERSION}/${FILENAME}"^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6622032Z ^[[36;1m  fi^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6622262Z ^[[36;1mfi^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6622496Z ^[[36;1m^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6622915Z ^[[36;1mecho "Downloading from: ${DOWNLOAD_URL}"^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6623267Z ^[[36;1mcurl -sfLO "${DOWNLOAD_URL}"^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6623561Z ^[[36;1m^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6623808Z ^[[36;1mecho "Extracting ${FILENAME}"^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6624133Z ^[[36;1mtar -xvzf "${FILENAME}"^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6624436Z ^[[36;1mrm -rv "${FILENAME}"^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6624715Z ^[[36;1m^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6625038Z ^[[36;1m# Detect if lychee binary is in a subfolder within the tar.gz^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6625470Z ^[[36;1mif ! [[ -f "${TEMP_DIR}/lychee" ]]; then^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6625903Z ^[[36;1m  TEMP_DIR="$(echo "${TEMP_DIR}"/lychee-*)"  # need `echo` to evaluate glob^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6626301Z ^[[36;1mfi^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6626558Z ^[[36;1mif ! [[ -f "${TEMP_DIR}/lychee" ]]; then^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6627032Z ^[[36;1m  echo "Cannot find lychee binary in $TEMP_DIR. Did the archive structure change?" >&2^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6627475Z ^[[36;1m  exit 1^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6627847Z ^[[36;1mfi^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6628071Z ^[[36;1m^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6628349Z ^[[36;1m# Output temp directory for use in later steps^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6628743Z ^[[36;1mecho "temp_dir=${TEMP_DIR}" >> $GITHUB_OUTPUT^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6669889Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6670293Z env:
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6672720Z   GITHUB_TOKEN: ***
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6672994Z   LYCHEE_VERSION: v0.24.2
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6673268Z ##[endgroup]
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.6765322Z Downloading from: https://github.com/lycheeverse/lychee/releases/download/lychee-v0.24.2/lychee-x86_64-unknown-linux-gnu.tar.gz
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.9948152Z Extracting lychee-x86_64-unknown-linux-gnu.tar.gz
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.9972676Z lychee-x86_64-unknown-linux-gnu/
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.9973291Z lychee-x86_64-unknown-linux-gnu/README.md
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.9973884Z lychee-x86_64-unknown-linux-gnu/docs/
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.9974487Z lychee-x86_64-unknown-linux-gnu/docs/lychee.1
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.9975427Z lychee-x86_64-unknown-linux-gnu/docs/TROUBLESHOOTING.md
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.9976199Z lychee-x86_64-unknown-linux-gnu/docs/PRE_COMMIT.md
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.9976688Z lychee-x86_64-unknown-linux-gnu/complete/
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.9977113Z lychee-x86_64-unknown-linux-gnu/complete/_lychee.ps1
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.9977757Z lychee-x86_64-unknown-linux-gnu/complete/lychee.elv
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.9978303Z lychee-x86_64-unknown-linux-gnu/complete/lychee.fish
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.9978727Z lychee-x86_64-unknown-linux-gnu/complete/lychee.bash
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.9979131Z lychee-x86_64-unknown-linux-gnu/complete/_lychee
+Check external links	UNKNOWN STEP	2026-10-05T17:35:57.9979506Z lychee-x86_64-unknown-linux-gnu/lychee
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.1315527Z removed 'lychee-x86_64-unknown-linux-gnu.tar.gz'
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.1348212Z ##[end-action id=__lycheeverse_lychee-action.lychee-setup;outcome=success;conclusion=success;duration_ms=475]
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.1354173Z ##[start-action display=Install lychee;id=__lycheeverse_lychee-action.__run_2]
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.1394899Z ##[group]Run # Install lychee from the temporary directory
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.1395368Z ^[[36;1m# Install lychee from the temporary directory^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.1396014Z ^[[36;1minstall -t "$RUNNER_TEMP/lychee/bin" -D "/home/runner/work/_temp/lychee-download/lychee-x86_64-unknown-linux-gnu/lychee"^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.1436239Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.1436665Z env:
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.1439215Z   GITHUB_TOKEN: ***
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.1439469Z ##[endgroup]
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.1585683Z ##[end-action id=__lycheeverse_lychee-action.__run_2;outcome=success;conclusion=success;duration_ms=23]
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.1595103Z ##[start-action display=Run Lychee;id=__lycheeverse_lychee-action.run-lychee]
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.1613643Z ##[group]Run /home/runner/work/_actions/lycheeverse/lychee-action/v2/entrypoint.sh
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.1614234Z ^[[36;1m/home/runner/work/_actions/lycheeverse/lychee-action/v2/entrypoint.sh^[[0m
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.1653622Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.1654058Z env:
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.1656467Z   GITHUB_TOKEN: ***
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.1658944Z   INPUT_TOKEN: ***
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.1659540Z   INPUT_ARGS: --verbose --no-progress --max-retries 2 --timeout 30 --exclude-path dev/log --exclude-path docs/case-studies './**/*.md'
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.1660160Z   INPUT_DEBUG: false
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.1660413Z   INPUT_FAIL: true
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.1660666Z   INPUT_FAILIFEMPTY: true
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.1660939Z   INPUT_FORMAT: markdown
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.1661211Z   INPUT_JOBSUMMARY: true
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.1661466Z   INPUT_CHECKBOX: true
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.1661725Z   INPUT_OUTPUT: lychee/out.md
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.1662253Z   SUMMARY_URL: https://github.com/link-foundation/command-stream/actions/runs/37315903872#summary-111896825296
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.1662769Z ##[endgroup]
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.3559759Z [EXCLUDED] https://www.npmjs.com/package/command-stream (at 3:1) | This is due to your 'exclude' values
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.3573575Z [EXCLUDED] https://github.com/link-foundation/command-stream/stargazers (at 6:1) | This is due to your 'exclude' values
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.3579458Z [EXCLUDED] https://github.com/link-foundation/command-stream/settings/security_analysis (at 137:2) | This is due to your 'exclude' values
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.8988108Z [EXCLUDED] https://npmjs.com/command-stream (at 1:1) | This is due to your 'exclude' values
+Check external links	UNKNOWN STEP	2026-10-05T17:35:58.8989651Z [EXCLUDED] https://github.com/link-foundation/command-stream/stargazers (at 4:1) | This is due to your 'exclude' values
+Check external links	UNKNOWN STEP	2026-10-05T17:35:59.0063917Z [EXCLUDED] https://www.npmjs.com/package/command-stream (at 35:35) | This is due to your 'exclude' values
+Check external links	UNKNOWN STEP	2026-10-05T17:35:59.0307000Z [EXCLUDED] https://www.npmjs.com/package/execa (at 35:141) | This is due to your 'exclude' values
+Check external links	UNKNOWN STEP	2026-10-05T17:35:59.0454496Z [EXCLUDED] https://www.npmjs.com/package/cross-spawn (at 35:229) | This is due to your 'exclude' values
+Check external links	UNKNOWN STEP	2026-10-05T17:35:59.0455919Z [EXCLUDED] https://www.npmjs.com/package/shelljs (at 35:390) | This is due to your 'exclude' values
+Check external links	UNKNOWN STEP	2026-10-05T17:35:59.0456585Z [EXCLUDED] https://www.npmjs.com/package/zx (at 35:482) | This is due to your 'exclude' values
+Check external links	UNKNOWN STEP	2026-10-05T17:35:59.0458085Z [EXCLUDED] https://www.npmjs.com/package/execa (at 77:26) | This is due to your 'exclude' values
+Check external links	UNKNOWN STEP	2026-10-05T17:35:59.0458984Z [EXCLUDED] https://www.npmjs.com/package/cross-spawn (at 78:28) | This is due to your 'exclude' values
+Check external links	UNKNOWN STEP	2026-10-05T17:35:59.0460016Z [EXCLUDED] https://www.npmjs.com/package/command-stream (at 77:246) | This is due to your 'exclude' values
+Check external links	UNKNOWN STEP	2026-10-05T17:35:59.0460801Z [EXCLUDED] https://www.npmjs.com/package/zx (at 77:200) | This is due to your 'exclude' values
+Check external links	UNKNOWN STEP	2026-10-05T17:35:59.0461845Z [EXCLUDED] https://www.npmjs.com/package/shelljs (at 77:143) | This is due to your 'exclude' values
+Check external links	UNKNOWN STEP	2026-10-05T17:35:59.0463023Z [EXCLUDED] https://www.npmjs.com/package/cross-spawn (at 77:78) | This is due to your 'exclude' values
+Check external links	UNKNOWN STEP	2026-10-05T17:35:59.0463843Z [EXCLUDED] https://www.npmjs.com/package/execa (at 78:93) | This is due to your 'exclude' values
+Check external links	UNKNOWN STEP	2026-10-05T17:35:59.0464678Z [EXCLUDED] https://www.npmjs.com/package/shelljs (at 78:146) | This is due to your 'exclude' values
+Check external links	UNKNOWN STEP	2026-10-05T17:35:59.0466146Z [EXCLUDED] https://www.npmjs.com/package/zx (at 78:202) | This is due to your 'exclude' values
+Check external links	UNKNOWN STEP	2026-10-05T17:35:59.0466824Z [EXCLUDED] https://www.npmjs.com/package/command-stream (at 78:249) | This is due to your 'exclude' values
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.5352938Z # Summary
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.5357483Z 
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.5358318Z | Status         | Count |
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.5358835Z |----------------|-------|
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.5359444Z | 🔍 Total       | 502   |
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.5359865Z | 🔗 Unique      | 181   |
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.5360251Z | ✅ Successful  | 482   |
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.5360667Z | ⏳ Timeouts    | 0     |
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.5361087Z | 🔀 Redirected  | 3     |
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.5361608Z | 👻 Excluded    | 20    |
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.5362411Z | ❓ Unknown     | 0     |
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.5362896Z | 🚫 Errors      | 0     |
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.5363325Z | ⛔ Unsupported | 0     |
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.5363576Z 
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.5363721Z ## Redirects per input
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.5363978Z 
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.5364124Z ### Redirects in js/README.md
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.5364374Z 
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.5366537Z * https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=link-foundation/command-stream --[302]--> https://github.com/login?return_to=https%3A%2F%2Fgithub.com%2Fcodespaces%2Fnew%3Fhide_repo_select%3Dtrue%26ref%3Dmain%26repo%3Dlink-foundation%2Fcommand-stream
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.5371558Z * https://github.com/user-attachments/assets/b1656450-0a2a-43f5-917c-4f15c3ffccaa --[302]--> https://github-production-user-asset-6210df.s3.amazonaws.com/1431904/481331178-b1656450-0a2a-43f5-917c-4f15c3ffccaa.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAVCODYLSA53PQK4ZA%2F20261005%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20261005T173600Z&X-Amz-Expires=300&X-Amz-Signature=357a8e56279ced22cac0d7ed5c1db94b08e32222d869ced2152a7a32c1070f85&X-Amz-SignedHeaders=host&response-content-type=image%2Fpng
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.5374945Z 
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.5375189Z ### Redirects in rust/changelog.d/README.md
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.5375554Z 
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.5375965Z * https://scriv.readthedocs.io/ --[302]--> https://scriv.readthedocs.io/en/latest/
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.5376977Z 
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.5377040Z 
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.5405323Z ##[notice]Summary report available at: https://github.com/link-foundation/command-stream/actions/runs/37315903872#summary-111896825296
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.5428249Z ##[end-action id=__lycheeverse_lychee-action.run-lychee;outcome=success;conclusion=success;duration_ms=3383]
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.5587319Z Post job cleanup.
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.6425306Z [command]/usr/bin/git version
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.6466127Z git version 2.55.0
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.6504480Z Temporarily overriding HOME='/home/runner/work/_temp/3d4be744-f8a7-4cc4-ae0c-8ad04efdef0b' before making global git config changes
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.6506075Z Adding repository directory to the temporary git global config as a safe directory
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.6510462Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/command-stream/command-stream
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.6549394Z Removing SSH command configuration
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.6557085Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.6590556Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.6794595Z Removing HTTP extra header
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.6801151Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.6832281Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.7035957Z Removing includeIf entries pointing to credentials config files
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.7043192Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.7083117Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Check external links	UNKNOWN STEP	2026-10-05T17:36:01.7472328Z Cleaning up orphan processes

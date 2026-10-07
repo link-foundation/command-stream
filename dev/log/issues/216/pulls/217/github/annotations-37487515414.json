@@ -1,0 +1,70 @@
+{
+  "Process trees (Node 20.x on macos-15)": [
+    {
+      "path": ".github",
+      "blob_href": "https://github.com/link-foundation/command-stream/blob/eba546e1d6244e509a113b917ac8e4ce37234a51/.github",
+      "start_line": 1,
+      "start_column": null,
+      "end_line": 1,
+      "end_column": null,
+      "annotation_level": "notice",
+      "title": "",
+      "message": "Due to capacity constraints, jobs targeting macOS arm64 runners may experience longer queue times.",
+      "raw_details": ""
+    }
+  ],
+  "Process trees (Node 22.x on macos-15)": [
+    {
+      "path": ".github",
+      "blob_href": "https://github.com/link-foundation/command-stream/blob/eba546e1d6244e509a113b917ac8e4ce37234a51/.github",
+      "start_line": 1,
+      "start_column": null,
+      "end_line": 1,
+      "end_column": null,
+      "annotation_level": "notice",
+      "title": "",
+      "message": "Due to capacity constraints, jobs targeting macOS arm64 runners may experience longer queue times.",
+      "raw_details": ""
+    }
+  ],
+  "Process trees (Node 24.x on macos-15)": [
+    {
+      "path": ".github",
+      "blob_href": "https://github.com/link-foundation/command-stream/blob/eba546e1d6244e509a113b917ac8e4ce37234a51/.github",
+      "start_line": 1,
+      "start_column": null,
+      "end_line": 1,
+      "end_column": null,
+      "annotation_level": "notice",
+      "title": "",
+      "message": "Due to capacity constraints, jobs targeting macOS arm64 runners may experience longer queue times.",
+      "raw_details": ""
+    }
+  ],
+  "Test JavaScript (bun on macos-15)": [
+    {
+      "path": ".github",
+      "blob_href": "https://github.com/link-foundation/command-stream/blob/eba546e1d6244e509a113b917ac8e4ce37234a51/.github",
+      "start_line": 6830,
+      "start_column": null,
+      "end_line": 6830,
+      "end_column": null,
+      "annotation_level": "failure",
+      "title": "",
+      "message": "Process completed with exit code 1.",
+      "raw_details": ""
+    },
+    {
+      "path": "js/tests/signal-handling.test.mjs",
+      "blob_href": "https://github.com/link-foundation/command-stream/blob/eba546e1d6244e509a113b917ac8e4ce37234a51/js/tests/signal-handling.test.mjs",
+      "start_line": 110,
+      "start_column": 34,
+      "end_line": 110,
+      "end_column": 34,
+      "annotation_level": "failure",
+      "title": "error: expect(received).toBe(expected)",
+      "message": "Expected: true\nReceived: false\n\n      at <anonymous> (/Users/runner/work/command-stream/command-stream/js/tests/signal-handling.test.mjs:110:34)",
+      "raw_details": ""
+    }
+  ]
+}
