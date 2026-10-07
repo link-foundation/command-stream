@@ -27,7 +27,7 @@ try {
   console.log('Stderr:', result.stderr?.trim());
 
   // Cleanup
-  if (result.stdout?.includes('gist.github.com')) {
+  if (/^https:\/\/gist\.github\.com\//m.test(result.stdout ?? '')) {
     const gistId = result.stdout.trim().split('/').pop();
     await $`gh gist delete ${gistId} --yes`.run({
       capture: true,
