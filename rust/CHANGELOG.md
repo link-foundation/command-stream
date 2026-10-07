@@ -179,6 +179,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [1.5.2] - 2026-10-07
+
+### Changed
+
+- Update every direct runtime, development, benchmark, and release-script
+  dependency to its latest stable release, including nix 0.31.3, vt100 0.16.2,
+  and which 8.0.6. Refresh both Cargo lockfiles.
+- Migrate release scripts to ureq 3 headers, status errors, and body readers,
+  and toml 1.1. Use rust-script 0.36 in CI.
+- Check dependency freshness in CI on pull requests, main, and weekly. A Rust
+  manifest-line blocker must reference an open GitHub issue.
+- Bound native-child cancellation regression tests and retain opt-in termination
+  and output-draining traces for diagnosing Windows hangs.
+- Stop cancelled output collection from waiting indefinitely for inherited
+  pipes after child exit. Preserve buffered output and continue draining during
+  graceful shutdown.
+
 ## [1.5.1] - 2026-10-06
 
 ### Fixed
