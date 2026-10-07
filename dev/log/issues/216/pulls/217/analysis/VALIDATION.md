@@ -20,7 +20,7 @@ Every log named here is in `../validation/`. Unless a log says otherwise, "befor
 | F12 lychee retries | `lychee-retry-503.py` (local mock server, `python3 -I`) | 1 request per 503 for every `--max-retries` / `--retry-wait-time` combination | Re-check step recovers or fails per link (tests below) | `lychee-retry-503.log`, `link-recheck.log`, `lychee-0.24.2-report-sample.md` |
 | F13 CRLF workflow text | `crlf-workflow-tests.sh <commit>` (CRLF copies in a worktree) | 3 of 215 tests fail at `a17623c` | 215 pass at `a7da368` | `crlf-workflow-tests-{before,after}.log` |
 | F14 runtime drop waits on a pipe read | `runtime-drop-waits-for-pipe-read.rs` (rust-script, tokio) | plain drop: 3.01 s | `shutdown_timeout(100 ms)`: 0.21 s | `runtime-drop-waits-for-pipe-read.log` |
-| F14 probe timings in CI | `child-access-timing.py` over 8 Windows jobs | about half of the probes take ~5.1 s; 2 jobs exceed 10 s | measured by the CI run after the push (below) | `../ci-logs/child-access/SUMMARY.txt` |
+| F14 probe timings in CI | `child-access-timing.py` over 8 Windows jobs | about half of the probes take ~5.1 s; 2 jobs exceed 10 s | max 0.32 s; test binary 2.00 s (was 15.9–40.9 s) | `../ci-logs/child-access/SUMMARY.txt` |
 
 ## Final local checks (`local-checks.log`, at `71f7c25`)
 
@@ -60,4 +60,17 @@ All 28 local failures are jq tests (`jq.test.mjs`, `jq-color-behavior.test.mjs` 
 
 ## CI on the pull request
 
-The latest-SHA CI result is recorded in the PR description after the final push.
+All 8 workflows passed at `7f77232`, the last commit that changed code or workflows:
+
+| Run | Workflow | Result |
+| --- | --- | --- |
+| 37588395289 | JavaScript checks and release | success (Bun on Windows included: F13) |
+| 37588395288 | Rust checks and release | success |
+| 37588395197 | Bun Shell conformance | success (Deno on Windows: 1127 passed, 0 failed, tracing on, no warnings) |
+| 37588395219 | Security | success |
+| 37588395643 | Language parity check | success |
+| 37588395211 | Workflows | success |
+| 37588395216 | Repository quality checks | success |
+| 37588395308 | Dependency freshness | success |
+
+`../ci-logs/final/` keeps the Windows Rust job and the three Windows port conformance jobs from these runs. The `child_access` probes took 0.08–0.32 s, and the test binary 2.00 s (F14). Later commits change only this archive. Their CI result is in the PR description.

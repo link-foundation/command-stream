@@ -12,7 +12,7 @@
 - [x] Write the analysis documents (`REPORT.md`, `VALIDATION.md`).
 - [x] Commit the archive and experiments.
 - [x] Review the PR's own CI runs. Fix the Windows CRLF tests (F13) and the `child_access` runtime wait (F14). Enable tracing for the one-off Deno failure (F15).
-- [ ] Push and verify CI on the latest SHA.
+- [x] Push and verify CI on the latest SHA (`7f77232`: 8 of 8 workflows pass).
 - [ ] Merge main if it moved, review every comment channel, update the PR description, and mark the PR ready.
 
 Maintainer actions outside this PR:
