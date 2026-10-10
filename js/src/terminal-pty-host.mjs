@@ -1,4 +1,3 @@
-import ptyModule from 'node-pty';
 import { createInterface } from 'node:readline';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
@@ -8,8 +7,21 @@ import {
   stopTerminal,
 } from './terminal-pty-host-platform.mjs';
 
+const require = createRequire(import.meta.url);
+let ptyModule;
+try {
+  ptyModule = require('node-pty');
+} catch (error) {
+  console.error(
+    'command-stream: PTY support is unavailable. Install node-pty with ' +
+      'lifecycle scripts enabled and a native build toolchain (Python, make, ' +
+      'and a C/C++ compiler), then run npm rebuild node-pty.\n' +
+      `Original error: ${error.message}`
+  );
+  process.exit(1);
+}
+
 if (process.platform === 'darwin') {
-  const require = createRequire(import.meta.url);
   // Match the binding selected by node-pty, including locally built binaries.
   const native = require('node-pty/lib/utils.js').loadNativeModule('pty');
   const helper = resolve(

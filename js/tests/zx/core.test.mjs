@@ -805,25 +805,52 @@ describe('core', () => {
         });
 
         test('[zx:test/core.test.js:787:9:registration] several $ halted > $ halted', async () => {
-          const $h = $({ halt: true });
-          const p1 = $`echo foo`;
-          // Upstream spaces the lines 50 ms apart and sleeps 0.4 s in p4; both
-          // orderings raced on loaded runners, so the gaps are doubled here.
-          const p2 = $h`echo a && sleep 0.2 && echo c && sleep 0.4 && echo e`;
-          const p3 = $h`sleep 0.1 && echo b && sleep 0.2 && echo d`;
-          // p4 starts now, p2 only at `p5.run()` after `await p1`.
-          const p4 = $`sleep 1.5 && echo bar`;
+          const controller = new AbortController();
+          const run = $({ signal: controller.signal, timeout: 5000 });
+          const $h = run({ halt: true });
+          const p1 = run`echo foo`;
+          // Each producer waits until cat acknowledges the preceding line.
+          // Sleep gaps cannot guarantee this ordering on loaded runners.
+          const p2 = $h`read -r next && echo a && read -r next && echo c && read -r next && echo e`;
+          const p3 = $h`read -r next && echo b && read -r next && echo d`;
+          const p4 = run`read -r next && echo bar`;
           const p5 = $h`cat`;
 
-          await p1;
-          p1.pipe(p5);
-          p2.pipe(p5);
-          p3.pipe(p5);
-          p4.pipe(p5);
+          try {
+            await p1;
+            p1.pipe(p5);
+            p2.pipe(p5);
+            p3.pipe(p5);
+            p4.pipe(p5);
 
-          const { stdout } = await p5.run();
+            const gates = new Map([
+              ['foo', p2],
+              ['a', p3],
+              ['b', p2],
+              ['c', p3],
+              ['d', p2],
+              ['e', p4],
+            ]);
+            let pending = '';
+            p5.stdout.on('data', (chunk) => {
+              pending += chunk.toString();
+              const lines = pending.split('\n');
+              pending = lines.pop();
+              for (const line of lines) {
+                gates.get(line)?.write('next\n');
+              }
+            });
 
-          assert.equal(stdout, 'foo\na\nb\nc\nd\ne\nbar\n');
+            const { stdout } = await p5.run();
+            assert.equal(stdout, 'foo\na\nb\nc\nd\ne\nbar\n');
+          } finally {
+            controller.abort();
+            await Promise.allSettled(
+              [p1, p2, p3, p4, p5].filter(
+                (runner) => runner.isRunning() || runner.isSettled()
+              )
+            );
+          }
         });
 
         test('[zx:test/core.test.js:806:9:registration] $ > stream', async () => {

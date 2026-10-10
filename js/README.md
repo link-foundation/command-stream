@@ -192,12 +192,12 @@ and let the system binary run.
 ## Installation
 
 ```bash
-# Using npm
-npm install command-stream
-
-# Using bun
-bun add command-stream
+npm install command-stream # npm
+bun add command-stream # Bun
 ```
+
+Core execution works without native builds or lifecycle scripts. See
+[optional PTY installation](docs/INSTALLATION.md) for terminal setup.
 
 ### Lightweight ProcessRunner entry point
 

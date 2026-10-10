@@ -330,6 +330,64 @@ jobs:
         shell: bash
         run: node --test --test-concurrency=1 js/tests/execa/*.test.mjs js/tests/execa-compat.test.mjs
 
+  production-install:
+    name: Production install (Node ${{ matrix.node-version }}, ${{ matrix.mode }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    needs: [lint]
+    if: ${{ !cancelled() && needs.lint.result == 'success' }}
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-production-install-${{ matrix.node-version }}-${{ matrix.mode }}
+      cancel-in-progress: true
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [22, 24, 26]
+        mode: [scripts-enabled, scripts-disabled, omit-optional]
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Simulate a fresh merge with the base branch
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash .github/scripts/simulate-fresh-merge.sh
+
+      - name: Setup Node.js for packing
+        uses: actions/setup-node@v7.0.0
+        with:
+          node-version: '24.x'
+
+      - name: Pack the published artifact
+        working-directory: js
+        run: |
+          mkdir -p ../ci-install-logs
+          npm pack --ignore-scripts --pack-destination ../ci-install-logs
+
+      - name: Install locally and globally without a build toolchain
+        env:
+          NODE_VERSION: ${{ matrix.node-version }}
+          INSTALL_MODE: ${{ matrix.mode }}
+        run: |
+          set -euo pipefail
+          archive="$(find "$PWD/ci-install-logs" -name '*.tgz' -print -quit)"
+          docker run --rm --memory=512m --cpus=2 \
+            -v "$PWD:/repo:ro" -v "$archive:/package.tgz:ro" \
+            "node:${NODE_VERSION}-bookworm-slim" \
+            bash /repo/js/scripts/test-production-install.sh /package.tgz "$INSTALL_MODE" \
+            2>&1 | tee ci-install-logs/install.log
+
+      - name: Preserve production installation diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: production-install-${{ matrix.node-version }}-${{ matrix.mode }}
+          path: ci-install-logs/install.log
+          if-no-files-found: error
+
   process-tree:
     name: Process trees (Node ${{ matrix.node-version }} on ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -371,7 +429,7 @@ jobs:
 
   release:
     name: Release JavaScript package
-    needs: [lint, test, process-tree]
+    needs: [lint, test, process-tree, production-install]
     # Required because lint/test depend on the pull-request-only changeset-check
     # job, which is skipped on push events.
     if: |
@@ -380,7 +438,8 @@ jobs:
       github.event_name == 'push' &&
       needs.lint.result == 'success' &&
       needs.test.result == 'success' &&
-      needs.process-tree.result == 'success'
+      needs.process-tree.result == 'success' &&
+      needs.production-install.result == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -501,12 +560,12 @@ jobs:
 
   instant-release:
     name: Instant JavaScript release
-    needs: [lint, test, process-tree]
+    needs: [lint, test, process-tree, production-install]
     if: >-
       !cancelled() && github.ref == 'refs/heads/main' &&
       github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'instant' &&
       needs.lint.result == 'success' && needs.test.result == 'success' &&
-      needs.process-tree.result == 'success'
+      needs.process-tree.result == 'success' && needs.production-install.result == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
