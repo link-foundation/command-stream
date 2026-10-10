@@ -181,6 +181,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [1.5.4] - 2026-10-10
+
+### Changed
+
+- Refresh the version validation script's TOML dependency to keep the dependency
+  freshness check passing.
+
 ## [1.5.3] - 2026-10-07
 
 ### Changed
