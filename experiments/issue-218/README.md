@@ -48,3 +48,17 @@ shows a signal-only exit before construction versus exit code 130 afterward:
 ```bash
 node experiments/issue-218/signal-readiness.mjs
 ```
+
+## Concurrent pipeline fixture ordering
+
+A later macOS run exposed another existing fixture's reliance on sleep gaps
+to interleave concurrent producers. This bounded probe delays one producer
+until the other emits `c`, reproducing `a,c,b,d,e` without losing any output:
+
+```bash
+node experiments/issue-218/pipeline-order.mjs
+```
+
+The fixture now acknowledges each line from the consumer before releasing the
+next producer. It keeps the exact `foo,a,b,c,d,e,bar` assertion and covers
+completed, running and halted sources without scheduling assumptions.

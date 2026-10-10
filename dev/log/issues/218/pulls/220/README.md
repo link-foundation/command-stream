@@ -46,6 +46,15 @@ installs SIGINT handling. Lines 1518–1529 of
 ordering (null code / SIGINT) and verifies the corrected ordering (130 / no
 signal). The test now constructs the runner before printing its marker.
 
+The next CI run at SHA `f0f687e` passed the signal test but exposed a separate
+timing assumption in the zx concurrent-producer fixture. Lines 6740–6758 of
+`ci-logs/javascript-macos-114179848362.log.gz` show `a,c,b,d,e` instead of
+`a,b,c,d,e`. The fixture had already widened sleep gaps to reduce races;
+`experiments/issue-218/pipeline-order.mjs` reproduces the reordered output
+with a deliberately delayed producer. The fixture now uses consumer
+acknowledgments to release producers, retains its exact output assertion and
+adds bounded process timeouts and cleanup. It passes 20 Bun repetitions.
+
 Final local verification: the full Bun suite passes (2613 passed, 10 skipped,
 zero failures across 158 files); Node integration has 104 passing tests and
 zx/Execa compatibility has 528 passing tests with two skips. Rust all-feature
