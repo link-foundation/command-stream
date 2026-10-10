@@ -177,18 +177,45 @@ function expandRange(inner) {
  * @returns {string[]}
  */
 export function expandBraces(pattern) {
+  const pending = [String(pattern)];
+  const expanded = [];
+  // Use an explicit work list instead of recursive walkers. Also bound the
+  // Cartesian product of consecutive brace groups before allocating it.
+  while (pending.length) {
+    const current = pending.pop();
+    const next = expandBraceOnce(current);
+    if (next === null) {
+      expanded.push(current);
+    } else {
+      pending.push(...next);
+    }
+    if (pending.length + expanded.length > MAX_RANGE) {
+      throw new SyntaxError('Glob brace expansion exceeds 10000 patterns');
+    }
+  }
+  return expanded;
+}
+
+function expandBraceOnce(pattern) {
   const str = String(pattern);
   for (let i = 0; i < str.length; i++) {
     if (str[i] === '\\') {
       i++;
       continue;
     }
+    if (str[i] === '[') {
+      const cls = parseClass(str, i);
+      if (cls) {
+        i = cls.end;
+        continue;
+      }
+    }
     if (str[i] !== '{') {
       continue;
     }
     const close = findClosing(str, i, '{', '}');
     if (close === -1) {
-      return [str];
+      return null;
     }
     const inner = str.slice(i + 1, close);
     const parts = splitTopLevel(inner, ',');
@@ -196,10 +223,10 @@ export function expandBraces(pattern) {
     if (alts) {
       const pre = str.slice(0, i);
       const post = str.slice(close + 1);
-      return alts.flatMap((alt) => expandBraces(pre + alt + post));
+      return alts.map((alt) => pre + alt + post).reverse();
     }
   }
-  return [str];
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -878,7 +905,8 @@ function collect(patterns, options, isAsync) {
     runGlobOp(patterns, options, (entry) => {
       results.push(entry);
     }),
-    isAsync
+    isAsync,
+    options?.fs
   );
   return isAsync ? done.then(() => results) : results;
 }

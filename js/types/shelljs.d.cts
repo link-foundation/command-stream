@@ -1,4 +1,4 @@
-import upstream = require('shelljs');
+import * as upstream from './shelljs-upstream.cjs';
 
 /** ShellJS 0.10 helpers corrected from the older upstream declarations. */
 declare const shelljs: Omit<typeof upstream, 'error' | 'tempdir' | 'cmd'> & {

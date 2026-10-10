@@ -86,6 +86,16 @@
       },
       "default": "./src/execa/index.mjs"
     },
+    "./shelljs/plugin": {
+      "import": {
+        "types": "./types/shelljs-plugin.d.ts",
+        "default": "./src/shelljs/plugin.mjs"
+      },
+      "require": {
+        "types": "./types/shelljs-plugin.d.cts",
+        "default": "./src/shelljs/plugin.cjs"
+      }
+    },
     "./shelljs": {
       "import": {
         "types": "./types/shelljs.d.ts",
@@ -171,6 +181,7 @@
     "@changesets/cli": "^3.0.3",
     "@eslint/js": "^10.0.1",
     "@types/node": "26.6.5",
+    "@types/shelljs": "0.10.0",
     "chalk": "^6.0.1",
     "dejavu-fonts-ttf": "^2.37.3",
     "esbuild": "0.28.2",
@@ -181,6 +192,7 @@
     "jscpd": "^5.4.1",
     "lint-staged": "^17.6.0",
     "prettier": "^3.9.10",
+    "shelljs": "0.10.0",
     "subset-font": "^2.9.0",
     "typescript": "7.0.2",
     "zx": "8.8.5"
@@ -190,9 +202,7 @@
     "@resvg/resvg-js": "^2.6.2",
     "@xterm/headless": "^6.0.0",
     "gifenc": "^1.0.3",
-    "execa": "10.1.0",
-    "shelljs": "0.10.0",
-    "@types/shelljs": "0.10.0"
+    "execa": "10.1.0"
   },
   "optionalDependencies": {
     "node-pty": "^1.1.0"

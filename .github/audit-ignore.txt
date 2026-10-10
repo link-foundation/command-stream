@@ -7,12 +7,10 @@
 
 # braces <= 3.0.3: stack exhaustion on deeply nested brace patterns. No patched
 # version exists (3.0.3 is the latest release). Dev tooling (@changesets/cli and
-# jscpd via micromatch) expands repository-controlled patterns. Runtime ShellJS
-# uses js/src/shelljs/glob-safety.cjs: before fast-glob's synchronous entry points
-# it bounds pattern length and combined brace/parenthesis AST depth, including
-# ignore patterns. js/tests/shelljs-glob-safety.test.mjs reproduces the advisory
-# in a bounded child and verifies rejection before recursive parsing. Direct
-# imports of braces or fast-glob's async API are outside this mitigation.
+# jscpd via micromatch) and the pinned upstream ShellJS reference use this tree
+# only in development. Published ShellJS compatibility uses bundled commands,
+# declarations and dependency-free globbing. No production dependency resolves
+# braces; packed consumer installations are audited separately without exceptions.
 # Dependency review uses this same single advisory exception in security.yml.
-# Remove the exception and guard together when a patched release ships.
+# Remove this development-only exception when a patched release ships.
 GHSA-vfj7-8cjw-p6xm

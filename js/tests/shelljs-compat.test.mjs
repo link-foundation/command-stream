@@ -33,7 +33,6 @@ describe('ShellJS compatibility entry points', () => {
     expect(esm.default).toBe(shelljs);
     expect(cjs).toBe(shelljs);
     expect(require('../src/$.cjs').shelljs).toBe(shelljs);
-    expect(shelljs).toBe(upstream);
     expect(Object.keys(shelljs).sort()).toEqual(Object.keys(upstream).sort());
   });
 
@@ -117,6 +116,21 @@ describe('ShellJS compatibility entry points', () => {
     }
     expect(shelljs.env).toBe(process.env);
     expect(typeof shelljs.config.reset).toBe('function');
+  });
+
+  test('plugin registration updates the shared local ShellJS instance', async () => {
+    const plugin = require('command-stream/shelljs/plugin');
+    expect((await import('command-stream/shelljs/plugin')).default).toBe(
+      plugin
+    );
+    const name = 'commandStreamPluginTest';
+    try {
+      plugin.register(name, () => 'plugin output');
+      expect(shelljs[name]().stdout).toBe('plugin output');
+      expect($.shelljs[name]().stdout).toBe('plugin output');
+    } finally {
+      delete shelljs[name];
+    }
   });
 
   test('supports file writes, append and grep/sed without shell interpolation', () => {
