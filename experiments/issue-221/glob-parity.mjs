@@ -23,7 +23,8 @@ try {
     '{a,b}.txt',
     'quoted/a.txt',
     "a'quote.txt",
-    'a"quote.txt',
+    // Windows filenames cannot contain a double quote.
+    ...(process.platform === 'win32' ? [] : ['a"quote.txt']),
   ]) {
     mkdirSync(join(cwd, name, '..'), { recursive: true });
     writeFileSync(join(cwd, name), name);
@@ -47,7 +48,7 @@ try {
     ['*.txt', { baseNameMatch: true }],
     ['"{a,b}".txt', {}],
     ["a'quote.txt", {}],
-    ['a"quote.txt', {}],
+    ...(process.platform === 'win32' ? [] : [['a"quote.txt', {}]]),
     ['[{a,b}]*', {}],
   ];
   let failed = 0;
