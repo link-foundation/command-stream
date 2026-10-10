@@ -52,12 +52,16 @@ const result = await build({
 // esm.sh replaces require.resolve with an identity function, and rewrites
 // literal require calls to static imports. Dynamic createRequire calls still
 // use Deno's real node:module implementation.
+function stringLiteral(value) {
+  // Escape HTML delimiters as well as quotes in generated JavaScript.
+  return JSON.stringify(value).replace(/</g, '\\u003c');
+}
 const imports = [...commonJsImports].map(
-  ([path, name]) => `import * as ${name} from ${JSON.stringify(path)};`
+  ([path, name]) => `import * as ${name} from ${stringLiteral(path)};`
 );
 const cases = [...commonJsImports].map(
   ([path, name]) =>
-    `case ${JSON.stringify(path)}: return ${name}.default ?? ${name};`
+    `case ${stringLiteral(path)}: return ${name}.default ?? ${name};`
 );
 const bundle = [
   'import process from "node:process";',
