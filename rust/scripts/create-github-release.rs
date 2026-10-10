@@ -10,7 +10,7 @@
 //! [dependencies]
 //! regex = "1.13.1"
 //! serde = { version = "1.0.229", features = ["derive"] }
-//! serde_json = "1.0.151"
+//! serde_json = "1.0.152"
 //! ```
 
 use regex::Regex;
