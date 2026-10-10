@@ -816,8 +816,9 @@ describe.skipIf(isWindows)('CTRL+C with Different stdin Modes', () => {
         stdout += data.toString();
       });
 
-      // Let it run for a bit then interrupt
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Wait for module startup before signalling; a fixed delay can interrupt
+      // Node before command-stream installs its handler on a loaded runner.
+      await waitForOutput(() => stdout, 'RUNTIME: NODE');
       child.kill('SIGINT');
 
       const exitCode = await new Promise((resolve) => {
