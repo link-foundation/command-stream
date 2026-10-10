@@ -37,7 +37,7 @@
 //! regex = "1.13.1"
 //! ureq = "3.4.2"
 //! serde = { version = "1.0.229", features = ["derive"] }
-//! serde_json = "1.0.151"
+//! serde_json = "1.0.152"
 //! ```
 
 use serde::Deserialize;

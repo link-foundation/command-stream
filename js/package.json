@@ -191,6 +191,7 @@
     "@xterm/headless": "^6.0.0",
     "gifenc": "^1.0.3",
     "execa": "10.1.0",
+    "fast-glob": "3.3.3",
     "shelljs": "0.10.0",
     "@types/shelljs": "0.10.0"
   },
