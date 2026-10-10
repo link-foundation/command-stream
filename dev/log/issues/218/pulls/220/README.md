@@ -38,6 +38,14 @@ for the runtime marker using the adjacent tests' readiness helper, and all
 13 signal tests pass. Install instructions were moved into a linked guide to
 respect the README's 2500-line limit.
 
+The first implementation CI run at SHA `ee58b0a` exposed the remaining ordering
+race on macOS: the runtime marker still preceded runner construction, which
+installs SIGINT handling. Lines 1518–1529 of
+`ci-logs/javascript-macos-114178127795.log.gz` show the null exit status.
+`experiments/issue-218/signal-readiness.mjs` deterministically reproduces that
+ordering (null code / SIGINT) and verifies the corrected ordering (130 / no
+signal). The test now constructs the runner before printing its marker.
+
 Final local verification: the full Bun suite passes (2613 passed, 10 skipped,
 zero failures across 158 files); Node integration has 104 passing tests and
 zx/Execa compatibility has 528 passing tests with two skips. Rust all-feature

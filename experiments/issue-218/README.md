@@ -37,3 +37,14 @@ bun test js/tests/optional-pty.test.mjs
 The supported stable node-pty version stays in use. PTY consumers on Linux
 still need a build toolchain; this fix makes native PTY installation optional
 for consumers that only need process execution.
+
+## Signal test readiness
+
+The first CI run exposed a startup race in an existing signal test. Its runtime
+marker preceded runner construction, so the parent could signal Node before
+the SIGINT handler existed. The bounded probe below forces that ordering and
+shows a signal-only exit before construction versus exit code 130 afterward:
+
+```bash
+node experiments/issue-218/signal-readiness.mjs
+```

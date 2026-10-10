@@ -793,10 +793,11 @@ describe.skipIf(isWindows)('CTRL+C with Different stdin Modes', () => {
       import { $ } from './js/src/$.mjs';
       
       const isBun = typeof globalThis.Bun !== 'undefined';
+      const runner = $\`sleep 2\`;
       console.log('RUNTIME: ' + (isBun ? 'BUN' : 'NODE'));
       
       try {
-        const result = await $\`sleep 2\`;
+        const result = await runner;
         console.log('SLEEP_COMPLETED: ' + result.code);
       } catch (error) {
         console.log('SLEEP_ERROR: ' + error.message);
@@ -816,8 +817,7 @@ describe.skipIf(isWindows)('CTRL+C with Different stdin Modes', () => {
         stdout += data.toString();
       });
 
-      // Wait for module startup before signalling; a fixed delay can interrupt
-      // Node before command-stream installs its handler on a loaded runner.
+      // The marker follows runner construction, which installs SIGINT handling.
       await waitForOutput(() => stdout, 'RUNTIME: NODE');
       child.kill('SIGINT');
 
