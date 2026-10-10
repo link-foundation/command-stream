@@ -388,6 +388,65 @@ jobs:
           path: ci-install-logs/install.log
           if-no-files-found: error
 
+  deno-cdn:
+    name: Import HTTP package on Deno with esm.sh dependencies
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    needs: [lint]
+    if: ${{ !cancelled() && needs.lint.result == 'success' }}
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-deno-cdn
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Simulate a fresh merge with the base branch
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash .github/scripts/simulate-fresh-merge.sh
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7.0.0
+        with:
+          node-version: '24.x'
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: latest
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+        with:
+          deno-version: v2.x
+
+      - name: Install dependencies
+        working-directory: js
+        run: bun install --frozen-lockfile
+
+      - name: Test current checkout with CDN resolution
+        shell: bash
+        env:
+          COMMAND_STREAM_CDN_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          COMMAND_STREAM_CDN_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -o pipefail
+          mkdir -p ci-test-logs
+          node js/scripts/test-deno-cdn.mjs 2>&1 | tee ci-test-logs/deno-cdn.log
+
+      - name: Preserve Deno CDN diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: deno-cdn
+          path: ci-test-logs/
+          retention-days: 7
+
   process-tree:
     name: Process trees (Node ${{ matrix.node-version }} on ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -429,7 +488,7 @@ jobs:
 
   release:
     name: Release JavaScript package
-    needs: [lint, test, process-tree, production-install]
+    needs: [lint, test, process-tree, production-install, deno-cdn]
     # Required because lint/test depend on the pull-request-only changeset-check
     # job, which is skipped on push events.
     if: |
@@ -439,7 +498,8 @@ jobs:
       needs.lint.result == 'success' &&
       needs.test.result == 'success' &&
       needs.process-tree.result == 'success' &&
-      needs.production-install.result == 'success'
+      needs.production-install.result == 'success' &&
+      needs.deno-cdn.result == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -560,12 +620,13 @@ jobs:
 
   instant-release:
     name: Instant JavaScript release
-    needs: [lint, test, process-tree, production-install]
+    needs: [lint, test, process-tree, production-install, deno-cdn]
     if: >-
       !cancelled() && github.ref == 'refs/heads/main' &&
       github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'instant' &&
       needs.lint.result == 'success' && needs.test.result == 'success' &&
-      needs.process-tree.result == 'success' && needs.production-install.result == 'success'
+      needs.process-tree.result == 'success' && needs.production-install.result == 'success' &&
+      needs.deno-cdn.result == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:

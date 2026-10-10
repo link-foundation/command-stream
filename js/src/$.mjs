@@ -454,17 +454,23 @@ $tagged.bun = bunShell;
 // `command-stream/zx`. It is loaded on first access through `require(esm)`,
 // like `$.cjs`, so `command-stream` users who never touch it do not pay for
 // the zx layer.
-const requireZx = createRequire(import.meta.url);
+let compatibilityRequire;
+function requireCompat(specifier) {
+  // HTTP module URLs are not valid createRequire bases. Core CDN imports do
+  // not need this filesystem-backed loader; initialize it only on use.
+  compatibilityRequire ??= createRequire(import.meta.url);
+  return compatibilityRequire(specifier);
+}
 Object.defineProperty($tagged, 'zx', {
   configurable: true,
   enumerable: false,
-  get: () => requireZx('./zx/core.cjs').$,
+  get: () => requireCompat('./zx/core.cjs').$,
 });
 
 // The isolated Execa entry is loaded only when this compatibility API is used.
 function execaCompat(options) {
   trace('ExecaCompat', () => 'Loading the isolated Execa API');
-  return requireZx('./execa/index.cjs').execaCompat(options);
+  return requireCompat('./execa/index.cjs').execaCompat(options);
 }
 
 const execa = (...args) => execaCompat().execa(...args);

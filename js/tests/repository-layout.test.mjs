@@ -138,10 +138,11 @@ describe('repository language layout', () => {
         getWorkflowJobBlock(jsWorkflowVariant, 'instant-release'),
       ]) {
         expect(job).toContain(
-          'needs: [lint, test, process-tree, production-install]'
+          'needs: [lint, test, process-tree, production-install, deno-cdn]'
         );
         expect(job).toContain("needs.process-tree.result == 'success'");
         expect(job).toContain("needs.production-install.result == 'success'");
+        expect(job).toContain("needs.deno-cdn.result == 'success'");
       }
       expect(jsReleaseJob).toContain('!cancelled()');
       expect(jsReleaseJob).not.toContain('always()');
