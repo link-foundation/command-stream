@@ -40,6 +40,15 @@ head through esm.sh's GitHub registry. Automatic and manual JavaScript release
 jobs both require this smoke job to succeed. Existing package versions remain
 unchanged; JavaScript and Rust release fragments prepare patch releases.
 
+The first real CDN probe exposed an error in the test's global dependency pins:
+pinning the unused Execa 10 adapter also replaced ShellJS's Execa 5 dependency.
+`validation/deno-real-cdn-wrong-pins.log.gz` records the resulting missing
+`traversePathUp` export. The same failure appears at line 702 of the archived
+CI job log `validation/deno-cdn-38095300057.log.gz`, run at 23:31:00 UTC against
+`c96b95d`. The probe now pins only dependencies imported by the core entry.
+`validation/deno-real-cdn-after.log.gz` verifies the actual esm.sh build of
+`c96b95d`: import, command execution and glob protection all pass.
+
 ## Validation observations
 
 The first full JavaScript run exposed the release-gate assertion's old list of
@@ -47,6 +56,9 @@ prerequisites; it was updated to include and enforce the new Deno gate. The
 first Rust run observed incomplete stdout in the existing graceful-cancellation
 test at `rust/tests/cancelled_output.rs:106`. Its focused rerun passed without
 source changes; the complete suite was rerun to verify the dependency refresh.
+The final local Bun run passed 2,621 tests with 10 skips; the Rust all-feature
+suite and doctests passed 830 tests. Node integration passed 104 tests and
+zx/Execa compatibility passed 528 tests with two skips.
 
 Local Docker execution could not enter this host's cgroup. The pinned
 Actionlint, ShellCheck and Zizmor binaries were extracted from the workflow

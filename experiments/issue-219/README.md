@@ -29,15 +29,18 @@ Both the original ShellJS loader and the independently restored eager main
 loader fail this probe. The fixed checkout passes it.
 
 CI also imports the immutable PR head through esm.sh's GitHub registry, with
-the dependency versions from the package manifest. This verifies the real CDN
-compiler before release; the local HTTP probe covers the fresh merge result.
+the entry point's dependency versions from the package manifest. Only imported
+dependencies are pinned: globally pinning the unused Execa 10 adapter would
+replace ShellJS's Execa 5 dependency and break its transitive imports. This
+verifies the real CDN compiler before release; the local HTTP probe covers the
+fresh merge result.
 
 The unit tests exercise bare specifiers and HTTP URLs without a network, and
 verify that local installations still guard ShellJS's own fast-glob dependency
 in an isolated dependency tree. The CI HTTP test gates automatic and manual
 JavaScript releases and preserves its diagnostics as an artifact.
 
-This tests current source with real CDN dependencies and a real CDN build. Importing a newly
-published npm version through esm.sh can be checked by passing its URL to the
-probe. Filesystem loaders for `$.zx` and Execa remain available in local
-Node/Bun installs; they are initialized only when those APIs are used.
+This tests current source with real CDN dependencies and a real CDN build.
+Importing a newly published npm version through esm.sh can be checked by passing
+its URL to the probe. Filesystem loaders for `$.zx` and Execa remain available in
+local Node/Bun installs; they are initialized only when those APIs are used.

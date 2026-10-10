@@ -12,6 +12,7 @@ const manifest = JSON.parse(
   readFileSync(new URL('package.json', packageDirectory), 'utf8')
 );
 const commonJsImports = new Map();
+const cdnDependencies = new Set();
 const builtins = new Set(
   builtinModules.map((name) => name.replace(/^node:/, ''))
 );
@@ -35,6 +36,7 @@ const result = await build({
             if (!version) {
               throw new Error(`Undeclared CDN dependency: ${args.path}`);
             }
+            cdnDependencies.add(args.path);
             path = `https://esm.sh/${args.path}@${version}?target=denonext`;
           }
           if (args.kind === 'require-call') {
@@ -89,8 +91,10 @@ if (process.env.COMMAND_STREAM_CDN_REVISION) {
   url.searchParams.set('target', 'denonext');
   url.searchParams.set(
     'deps',
-    Object.entries(manifest.dependencies)
-      .map(([name, version]) => `${name}@${version}`)
+    // Pin only this entry point's imports: pinning unrelated adapters would
+    // also override dependencies inside ShellJS (which uses Execa 5).
+    [...cdnDependencies]
+      .map((name) => `${name}@${manifest.dependencies[name]}`)
       .join(',')
   );
   await runProbe(url.href);
