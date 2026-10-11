@@ -36,6 +36,25 @@ import {
 } from './terminal-capture.mjs';
 
 import { ProcessRunner } from './process-runner.mjs';
+import { command, CommandBuilder } from './command-builder.mjs';
+import { fy } from './fy.mjs';
+import { stream, merge, StreamPipeline } from './stream-processing.mjs';
+import { TerminalBuffer } from './terminal-buffer.mjs';
+import {
+  createCommand,
+  extend,
+  inherit,
+  compose,
+  install,
+  marketplace,
+  commandMetadata,
+} from './command-packages.mjs';
+import {
+  startRepl as createRepl,
+  dev as createDev,
+  PipelineDebugger,
+} from './development.mjs';
+import { testing } from './testing.mjs';
 import { toStreamResult } from './$.result-streams.mjs';
 import crossSpawn from 'cross-spawn';
 import { createRequire } from 'node:module';
@@ -198,7 +217,10 @@ function $tagged(strings, ...values) {
   return runner;
 }
 
-function create(defaultOptions = {}) {
+function create(defaultOptions = {}, handler, metadata) {
+  if (typeof defaultOptions === 'string') {
+    return createCommand(defaultOptions, handler, metadata);
+  }
   trace(
     'API',
     () => `create ENTER | ${JSON.stringify({ defaultOptions }, null, 2)}`
@@ -345,6 +367,7 @@ function register(name, handler) {
     () => `register ENTER | ${JSON.stringify({ name }, null, 2)}`
   );
   virtualCommands.set(name, handler);
+  commandMetadata.delete(name);
   trace(
     'VirtualCommands',
     () => `register EXIT | ${JSON.stringify({ registered: true }, null, 2)}`
@@ -358,6 +381,7 @@ function unregister(name) {
     () => `unregister ENTER | ${JSON.stringify({ name }, null, 2)}`
   );
   const deleted = virtualCommands.delete(name);
+  commandMetadata.delete(name);
   trace(
     'VirtualCommands',
     () => `unregister EXIT | ${JSON.stringify({ deleted }, null, 2)}`
@@ -446,6 +470,36 @@ function registerBuiltins() {
 // Initialize built-in commands
 
 $tagged.spawn = crossSpawn;
+$tagged.command = command;
+$tagged.fy = fy;
+$tagged.stream = stream;
+$tagged.merge = merge;
+$tagged.TerminalBuffer = TerminalBuffer;
+Object.assign($tagged, {
+  create,
+  register,
+  unregister,
+  listCommands,
+  extend,
+  inherit,
+  compose,
+  install,
+  marketplace,
+});
+const developmentApi = {
+  $: $tagged,
+  sh,
+  register,
+  unregister,
+  listCommands,
+  command,
+  stream,
+  merge,
+  PipelineDebugger,
+};
+const startRepl = (options) => createRepl(developmentApi, options);
+const dev = (options) => createDev(developmentApi, options);
+Object.assign($tagged, { dev, startRepl, PipelineDebugger, testing });
 Object.defineProperty($tagged, 'shelljs', { get: () => shelljs });
 // `$.bun`: the Bun.$-compatible shell (also `command-stream/bun`).
 $tagged.bun = bunShell;
@@ -492,6 +546,22 @@ trace(
 );
 
 export {
+  dev,
+  startRepl,
+  PipelineDebugger,
+  testing,
+  extend,
+  inherit,
+  compose,
+  install,
+  marketplace,
+  TerminalBuffer,
+  stream,
+  merge,
+  StreamPipeline,
+  command,
+  CommandBuilder,
+  fy,
   shelljs,
   $tagged as $,
   execaCompat,

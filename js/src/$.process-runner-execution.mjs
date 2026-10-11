@@ -1,3 +1,4 @@
+import { pumpInheritedStdin } from './$.process-runner-stdin.mjs';
 // ProcessRunner execution methods - start, sync, async, and related methods
 import cp from 'child_process';
 import { toStreamResult } from './$.result-streams.mjs';
@@ -10,7 +11,7 @@ import {
   isShellCommandSpec,
   resolveSpawnCwd,
 } from './$.shell.mjs';
-import { StreamUtils, safeWrite, asBuffer } from './$.stream-utils.mjs';
+import { StreamUtils, safeWrite } from './$.stream-utils.mjs';
 import { pumpReadable } from './$.quote.mjs';
 import {
   attachExitCodeAlias,
@@ -121,8 +122,8 @@ function spawnWithBun(argv, config) {
     cwd,
     env,
     stdin: 'pipe',
-    stdout: 'pipe',
-    stderr: 'pipe',
+    stdout: config.stdout ?? 'pipe',
+    stderr: config.stderr ?? 'pipe',
     detached: process.platform !== 'win32',
   });
 }
@@ -162,7 +163,7 @@ function spawnWithNode(argv, config) {
     cwd,
     env,
     shell,
-    stdio: ['pipe', 'pipe', 'pipe'],
+    stdio: ['pipe', config.stdout ?? 'pipe', config.stderr ?? 'pipe'],
     detached: process.platform !== 'win32',
   });
 
@@ -286,6 +287,7 @@ function createStdoutPump(runner, childPid, signal) {
       }
 
       runner._emitProcessedData('stdout', buf);
+      return runner._waitForStreamCapacity();
     },
     signal
   );
@@ -325,6 +327,7 @@ function createStderrPump(runner, childPid, signal) {
       }
 
       runner._emitProcessedData('stderr', buf);
+      return runner._waitForStreamCapacity();
     },
     signal
   );
@@ -345,7 +348,7 @@ function handleInheritStdin(runner, isInteractive) {
     return Promise.resolve();
   }
 
-  const isPipedIn = process.stdin && process.stdin.isTTY === false;
+  const isPipedIn = process.stdin && !process.stdin.isTTY;
   trace(
     'ProcessRunner',
     () =>
@@ -906,7 +909,11 @@ async function handleShellMode(runner, deps) {
 async function executeChildProcess(runner, argv, config) {
   const { stdin, isInteractive } = config;
 
-  runner._child = spawnChild(argv, config);
+  runner._child = spawnChild(argv, {
+    ...config,
+    stdout: runner.options.stdout,
+    stderr: runner.options.stderr,
+  });
   runner._pid = runner._child?.pid; // recorded before _cleanup() drops `child`
 
   if (runner._child) {
@@ -1208,36 +1215,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
     }
   };
 
-  ProcessRunner.prototype._pumpStdinTo = async function (child, captureChunks) {
-    trace('ProcessRunner', () => `_pumpStdinTo ENTER`);
-    if (!child.stdin) {
-      return;
-    }
-
-    const bunWriter =
-      isBun && child.stdin && typeof child.stdin.getWriter === 'function'
-        ? child.stdin.getWriter()
-        : null;
-
-    for await (const chunk of process.stdin) {
-      const buf = asBuffer(chunk);
-      captureChunks && captureChunks.push(buf);
-      if (bunWriter) {
-        await bunWriter.write(buf);
-      } else if (typeof child.stdin.write === 'function') {
-        StreamUtils.addStdinErrorHandler(child.stdin, 'child stdin buffer');
-        StreamUtils.safeStreamWrite(child.stdin, buf, 'child stdin buffer');
-      } else if (isBun && typeof Bun.write === 'function') {
-        await Bun.write(child.stdin, buf);
-      }
-    }
-
-    if (bunWriter) {
-      await bunWriter.close();
-    } else if (typeof child.stdin.end === 'function') {
-      child.stdin.end();
-    }
-  };
+  ProcessRunner.prototype._pumpStdinTo = pumpInheritedStdin;
 
   ProcessRunner.prototype._writeToStdin = async function (buf) {
     trace('ProcessRunner', () => `_writeToStdin | len=${buf?.length || 0}`);

@@ -1,0 +1,16 @@
+{
+  "name": "@command-stream-example/deploy",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": "./index.mjs",
+  "files": [
+    "index.mjs"
+  ],
+  "license": "Unlicense",
+  "keywords": [
+    "command-stream-command"
+  ],
+  "peerDependencies": {
+    "command-stream": ">=2.1.0"
+  }
+}

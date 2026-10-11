@@ -65,7 +65,8 @@ describe('npm artifact', () => {
         const files = listFiles(pkgDir);
 
         assert.equal(pkgJson.name, 'command-stream');
-        assert.equal(pkgJson.bin['command-stream'], './src/zx/cli.mjs');
+        assert.equal(pkgJson.bin['command-stream'], './src/cli.mjs');
+        assert.equal(pkgJson.bin['$fy'], './src/fy-cli.mjs');
         for (const file of listFiles(path.join(ROOT, 'src/zx'))) {
           assert.ok(files.includes(`src/zx/${file}`), `missing src/zx/${file}`);
         }

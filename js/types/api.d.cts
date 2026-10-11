@@ -54,6 +54,8 @@ export type KillSignal = NodeJS.Signals;
 
 /** Options shared by `$`, `create`, `sh`, `exec`, `run` and `ProcessRunner`. */
 export interface ProcessOptions {
+  stdout?: 'pipe' | 'inherit' | 'ignore';
+  stderr?: 'pipe' | 'inherit' | 'ignore';
   /** Write output live to the parent's stdout/stderr. Default: `true`. */
   mirror?: boolean;
   /** Collect output into the result. Default: `true`. */
@@ -88,8 +90,8 @@ export interface ProcessOptions {
 export interface StartOptions extends ProcessOptions {
   /** Run asynchronously (default) or synchronously. */
   mode?: 'async' | 'sync';
-  stdout?: 'pipe';
-  stderr?: 'pipe';
+  stdout?: 'pipe' | 'inherit' | 'ignore';
+  stderr?: 'pipe' | 'inherit' | 'ignore';
 }
 
 /** `start()`/`run()` options that select synchronous execution. */
@@ -396,7 +398,9 @@ export declare class ProcessRunner
   /** Pipe this command's stdout into `destination`; returns a new runner. */
   pipe(destination: PipeDestination): ProcessRunner;
   /** Iterate output chunks, ending with an `exit` chunk. */
-  stream(): AsyncGenerator<StreamChunk, void, unknown>;
+  stream(
+    options?: import('./advanced.cjs').StreamOptions
+  ): import('./advanced.cjs').CommandStream;
   [Symbol.asyncIterator](): AsyncGenerator<StreamChunk, void, unknown>;
   /** Kill the command (defaults to the `killSignal` option). */
   kill(signal?: KillSignal): void;
@@ -461,6 +465,24 @@ export interface CrossSpawn {
 
 /** The `$` export: a tagged template, or `$(options)` returning one. */
 export interface Dollar extends CommandTag {
+  command: import('./advanced.cjs').CommandFactory;
+  fy: typeof import('./advanced.cjs').fy;
+  stream: typeof import('./advanced.cjs').stream;
+  merge: typeof import('./advanced.cjs').merge;
+  TerminalBuffer: typeof import('./advanced.cjs').TerminalBuffer;
+  create: typeof create;
+  register: typeof register;
+  unregister: typeof unregister;
+  listCommands: typeof listCommands;
+  extend: typeof import('./advanced.cjs').extend;
+  inherit: typeof import('./advanced.cjs').inherit;
+  compose: typeof import('./advanced.cjs').compose;
+  install: typeof import('./advanced.cjs').install;
+  marketplace: typeof import('./advanced.cjs').marketplace;
+  dev: typeof import('./advanced.cjs').dev;
+  startRepl: typeof import('./advanced.cjs').startRepl;
+  PipelineDebugger: typeof import('./advanced.cjs').PipelineDebugger;
+  testing: typeof import('./advanced.cjs').testing;
   readonly shelljs: typeof shelljs;
   /** The isolated, lazy-loaded Execa method. */
   readonly execa: ExecaExports['execa'];
@@ -500,6 +522,11 @@ export declare function run(
 
 /** Create a tagged template with default options. */
 export declare function create(defaultOptions?: ProcessOptions): CommandTag;
+export declare function create(
+  name: string,
+  handler: import('./advanced.cjs').CommandHandler,
+  metadata?: Record<string, unknown>
+): import('./advanced.cjs').CommandHandler;
 
 export declare const spawn: CrossSpawn;
 
@@ -629,8 +656,7 @@ export type VirtualCommandGenerator = (
 ) => AsyncGenerator<VirtualCommandChunk, unknown, unknown>;
 
 /** Handler accepted by `register()`. */
-export type VirtualCommandHandler =
-  VirtualCommandFunction | VirtualCommandGenerator;
+export type VirtualCommandHandler = import('./advanced.cjs').CommandHandler;
 
 /** Register (or replace) a virtual command; returns the command registry. */
 export declare function register(
@@ -907,3 +933,36 @@ export declare function unrollTerminalFrames(
 ): string;
 
 export type { StreamEmitter };
+
+export {
+  CommandBuilder,
+  command,
+  fy,
+  StreamPipeline,
+  stream,
+  merge,
+  TerminalBuffer,
+  extend,
+  inherit,
+  compose,
+  install,
+  marketplace,
+  dev,
+  startRepl,
+  PipelineDebugger,
+  testing,
+} from './advanced.cjs';
+export type {
+  CommandFactory,
+  CommandStream,
+  CommandHandler,
+  CommandMiddleware,
+  CommandPackage,
+  InstalledPackage,
+  DevOptions,
+  DevController,
+  StreamStats,
+  StreamOptions,
+  AnalyzeOptions,
+  DebugEvent,
+} from './advanced.cjs';

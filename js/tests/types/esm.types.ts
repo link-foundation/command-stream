@@ -8,6 +8,22 @@
 import $, {
   $ as named$,
   AnsiUtils,
+  CommandBuilder,
+  command,
+  fy,
+  StreamPipeline,
+  stream,
+  merge,
+  TerminalBuffer,
+  extend,
+  inherit,
+  compose,
+  install,
+  marketplace,
+  dev,
+  startRepl,
+  PipelineDebugger,
+  testing,
   ProcessRunner,
   captureTerminal,
   configureAnsi,
@@ -372,3 +388,54 @@ export function errors(error: unknown): void {
 
 const shelljsOutput: string = shelljs.echo('typed').stdout;
 void shelljsOutput;
+
+export async function advancedFeatures(): Promise<void> {
+  const result = await $.command('printf', '%s', 'literal ; text');
+  const status: number = await $.command('false')
+    .pipe(command.stdout('inherit'), command.exitCode)
+    .run();
+  const data: number[] = await $.command('printf', '1\\n2\\n')
+    .stream()
+    .map(Number)
+    .toArray();
+  const stats = await stream(data).analyze({
+    responseTime: (x) => x,
+    errorRate: (x) => x > 1,
+  });
+  const generator = $.create('typed', async function* () {
+    yield 'hello';
+  });
+  extend('typed', (context, next) => next(context));
+  const installed = await install('./package.mjs');
+  await installed.reload();
+  installed.uninstall();
+  const controller = dev({ entry: null, packages: [installed] });
+  await controller.ready;
+  await controller.close();
+  const terminal = new TerminalBuffer();
+  await terminal.write('hello');
+  terminal.dispose();
+  const debug = new PipelineDebugger();
+  debug.stage('source', data);
+  debug.profile();
+  use(
+    result,
+    status,
+    data,
+    stats,
+    generator,
+    CommandBuilder,
+    StreamPipeline,
+    fy('echo hello'),
+    merge(data),
+    inherit,
+    compose,
+    marketplace,
+    startRepl,
+    testing
+  );
+  // @ts-expect-error arguments cannot be objects
+  command('echo', {});
+  // @ts-expect-error stdio modes are checked
+  command.stdout('typo');
+}

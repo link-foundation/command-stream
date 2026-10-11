@@ -622,6 +622,15 @@ class ProcessRunner extends StreamEmitter {
     return result;
   }
 
+  _waitForStreamCapacity() {
+    this._streamPressureCount = (this._streamPressureCount ?? 0) + 1;
+    return Promise.all(
+      [...(this._streamConsumers ?? [])].map((wait) => wait())
+    ).finally(() => {
+      this._streamPressureCount--;
+    });
+  }
+
   _emitProcessedData(type, buf) {
     if (this._cancelled) {
       trace(

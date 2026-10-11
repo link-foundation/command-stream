@@ -4,6 +4,7 @@
 import { spawnSync } from 'node:child_process';
 import { trace } from './$.trace.mjs';
 import { createResult, getSignalExitCode } from './$.result.mjs';
+import { StreamPipeline } from './stream-processing.mjs';
 
 const isBun = typeof globalThis.Bun !== 'undefined';
 
@@ -362,7 +363,21 @@ export function attachStreamKillMethods(ProcessRunner) {
     yield* this.stream();
   };
 
-  ProcessRunner.prototype.stream = async function* () {
+  ProcessRunner.prototype.stream = function (options = {}) {
+    const runner = this;
+    return new StreamPipeline(
+      () => runner._iterateStream(options),
+      true,
+      () => {
+        if (runner.started && !runner.finished) {
+          runner.kill();
+        }
+      }
+    );
+  };
+
+  ProcessRunner.prototype._iterateStream = async function* (options = {}) {
+    const { highWaterMark, highWaterBytes } = streamLimits(options);
     trace('ProcessRunner', () => `stream ENTER | started=${this.started}`);
     this._isStreaming = true;
     this._awaited = true;
@@ -371,10 +386,23 @@ export function attachStreamKillMethods(ProcessRunner) {
     let resolve, _reject;
     let ended = false;
     let killed = false;
+    const capacityWaiters = new Set();
+    let bufferedBytes = 0;
+    const pressure = () =>
+      (buffer.length < highWaterMark && bufferedBytes < highWaterBytes) ||
+      ended ||
+      killed
+        ? Promise.resolve()
+        : new Promise((res) => {
+            capacityWaiters.add(res);
+          });
+    this._streamConsumers ??= new Set();
+    this._streamConsumers.add(pressure);
 
     const onData = (chunk) => {
       if (!killed) {
         buffer.push(chunk);
+        bufferedBytes += chunkBytes(chunk);
         if (resolve) {
           resolve();
           resolve = _reject = null;
@@ -398,6 +426,8 @@ export function attachStreamKillMethods(ProcessRunner) {
 
     const onEnd = () => {
       ended = true;
+      capacityWaiters.forEach((resolve) => resolve());
+      capacityWaiters.clear();
       if (resolve) {
         resolve();
         resolve = _reject = null;
@@ -429,6 +459,9 @@ export function attachStreamKillMethods(ProcessRunner) {
         }
         if (buffer.length > 0) {
           const chunk = buffer.shift();
+          bufferedBytes -= chunkBytes(chunk);
+          capacityWaiters.forEach((resolve) => resolve());
+          capacityWaiters.clear();
           this._streamYielding = true;
           yield chunk;
           this._streamYielding = false;
@@ -440,6 +473,9 @@ export function attachStreamKillMethods(ProcessRunner) {
         }
       }
     } finally {
+      this._streamConsumers.delete(pressure);
+      capacityWaiters.forEach((resolve) => resolve());
+      capacityWaiters.clear();
       this.off('data', onData);
       this.off('exit', onExit);
       this.off('end', onEnd);
@@ -465,4 +501,18 @@ export function attachStreamKillMethods(ProcessRunner) {
     }
     killRunner(this, effectiveSignal);
   };
+}
+
+function chunkBytes(chunk) {
+  return chunk.data?.byteLength ?? 0;
+}
+function streamLimits({ highWaterMark = 32, highWaterBytes = 1024 * 1024 }) {
+  if (
+    ![highWaterMark, highWaterBytes].every(
+      (value) => Number.isSafeInteger(value) && value > 0
+    )
+  ) {
+    throw new RangeError('Stream high water marks must be positive integers');
+  }
+  return { highWaterMark, highWaterBytes };
 }

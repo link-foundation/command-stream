@@ -7,9 +7,9 @@
 use command_stream::commands::{CommandContext, VirtualCommandRegistry};
 use command_stream::zx;
 use command_stream::{
-    cmd, create, exec, run, run_sync, set_shell_option, unset_shell_option, AnsiUtils,
-    CommandResult, EventData, EventType, OutputChunk, Pipeline, ProcessRunner, RunOptions,
-    StdinOption, StreamEmitter, StreamingRunner,
+    cmd, create, exec, fy, run, run_sync, set_shell_option, unset_shell_option, AnsiUtils,
+    CommandBuilder, CommandEnvironment, CommandResult, DataStream, EventData, EventType,
+    OutputChunk, Pipeline, ProcessRunner, RunOptions, StdinOption, StreamEmitter, StreamingRunner,
 };
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -574,8 +574,101 @@ async fn native_text() -> ExampleResult {
 }
 // endfeature:native-text
 
+// feature:command-builder
+async fn command_builder() -> ExampleResult {
+    let result = CommandBuilder::new("printf")
+        .args(["%s", "hello ; $HOME"])
+        .run()
+        .await?;
+    Ok(vec![
+        observation("literal argument", result.stdout),
+        observation(
+            "exit code",
+            CommandBuilder::new("sh")
+                .args(["-c", "exit 7"])
+                .exit_code()
+                .await?,
+        ),
+    ])
+}
+// endfeature:command-builder
+
+// feature:stream-processing
+async fn stream_processing() -> ExampleResult {
+    let batches = DataStream::from_values([1, 2, 3, 4, 5])
+        .filter(|value| value % 2 == 1)
+        .map(|value| value * 2)
+        .batch(2)
+        .collect()
+        .await;
+    let stats = DataStream::from_values([10, 30])
+        .analyze(|value| *value > 20, |value| Some(f64::from(*value)), |_| {})
+        .await;
+    Ok(vec![
+        observation("batches", batches),
+        observation("error rate", stats.error_rate),
+        observation("mean response time", stats.response_mean),
+    ])
+}
+// endfeature:stream-processing
+
+// feature:terminal-buffer
+async fn terminal_buffer() -> ExampleResult {
+    let mut terminal = command_stream::terminal::TerminalBuffer::new(2, 20);
+    terminal.write(b"old\r\x1b[2K\x1b[31mred\x1b[0m");
+    Ok(vec![
+        observation("visible text", terminal.text(false).trim_end()),
+        observation("colored", terminal.text(true).contains('\x1b')),
+    ])
+}
+// endfeature:terminal-buffer
+
+// feature:command-packages
+async fn command_packages() -> ExampleResult {
+    let mut environment = CommandEnvironment::new();
+    environment.create("package-hello", |context| async move {
+        CommandResult::success(context.args.join(" "))
+    })?;
+    environment.inherit("package-greet", "package-hello", vec!["hello".into()])?;
+    environment.extend("package-greet", |context, next| {
+        Box::pin(async move {
+            let result = next(context).await;
+            CommandResult::success(format!("{}!", result.stdout))
+        })
+    })?;
+    Ok(vec![observation(
+        "inherited middleware",
+        environment
+            .run("package-greet", CommandContext::new(vec!["world".into()]))
+            .await
+            .stdout,
+    )])
+}
+// endfeature:command-packages
+
+// feature:fy
+async fn fy_module() -> ExampleResult {
+    let module = fy("echo \"$1\"; exit 7");
+    Ok(vec![
+        observation(
+            "source preserved",
+            module.contains(&serde_json::to_string("echo \"$1\"; exit 7")?),
+        ),
+        observation(
+            "executable module",
+            module.starts_with("#!/usr/bin/env node\n"),
+        ),
+    ])
+}
+// endfeature:fy
+
 async fn execute(id: &str) -> ExampleResult {
     match id {
+        "command-builder" => command_builder().await,
+        "stream-processing" => stream_processing().await,
+        "terminal-buffer" => terminal_buffer().await,
+        "command-packages" => command_packages().await,
+        "fy" => fy_module().await,
         "await-result" => await_result().await,
         "result-text" => result_text().await,
         "sync-execution" => sync_execution().await,

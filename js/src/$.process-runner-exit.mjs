@@ -35,7 +35,7 @@ export async function drainPumpsAfterExit(runner, pumps, pumpAbort) {
       ? runner.options.exitPumpGrace
       : EXIT_PUMP_GRACE_MS;
 
-  if (graceMs > 0) {
+  while (graceMs > 0) {
     let timer;
     const grace = new Promise((resolve) => {
       timer = setTimeout(resolve, graceMs);
@@ -52,11 +52,19 @@ export async function drainPumpsAfterExit(runner, pumps, pumpAbort) {
       return;
     }
 
+    // A slow consumer intentionally pauses the pump. It is not an idle pipe
+    // held open by a descendant, and must not lose output after child exit.
+    if (runner._streamPressureCount > 0 && !runner._cancelled) {
+      await runner._waitForStreamCapacity();
+      continue;
+    }
+
     trace(
       'ProcessRunner',
       () =>
         `Pumps still pending ${graceMs}ms after exit; aborting stdio reads (pipes likely held open by a grandchild)`
     );
+    break;
   }
 
   pumpAbort?.abort();

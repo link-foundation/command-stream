@@ -1,3 +1,4 @@
+import { commandIterator, isCommandIterable } from './$.command-output.mjs';
 // ProcessRunner virtual command methods - virtual command execution
 // Part of the modular ProcessRunner architecture
 
@@ -122,21 +123,9 @@ function handleVirtualError(runner, error, shellSettings, shouldFinish) {
  * @param {string} stdinData - Stdin data
  * @returns {Promise<object>} Result object
  */
-async function runGeneratorHandler(runner, handler, argValues, stdinData) {
+async function runGeneratorHandler(runner, stdinData, output) {
   const chunks = [];
-  const commandOptions = {
-    cwd: effectiveCwd(runner),
-    env: effectiveEnv(runner) ?? process.env,
-    options: runner.options,
-    isCancelled: () => runner._cancelled,
-  };
-
-  const generator = handler({
-    args: argValues,
-    stdin: stdinData,
-    abortSignal: runner._abortController?.signal,
-    ...commandOptions,
-  });
+  const generator = output;
   runner._virtualGenerator = generator;
 
   const cancelPromise = new Promise((resolve) => {
@@ -144,7 +133,7 @@ async function runGeneratorHandler(runner, handler, argValues, stdinData) {
   });
 
   try {
-    const iterator = generator[Symbol.asyncIterator]();
+    const iterator = commandIterator(generator);
     let done = false;
 
     while (!done && !runner._cancelled) {
@@ -169,6 +158,7 @@ async function runGeneratorHandler(runner, handler, argValues, stdinData) {
         }
 
         emitOutput(runner, 'stdout', buf);
+        await runner._waitForStreamCapacity();
       }
     }
   } finally {
@@ -223,6 +213,14 @@ async function runRegularHandler(runner, handler, argValues, stdinData) {
     }
   }
 
+  if (isCommandIterable(result)) {
+    return runGeneratorHandler(runner, stdinData, result);
+  }
+
+  emitOutput(runner, 'stdout', result.stdout);
+  emitOutput(runner, 'stderr', result.stderr);
+  await runner._waitForStreamCapacity();
+
   result = {
     ...result,
     code: result.code ?? 0,
@@ -230,9 +228,6 @@ async function runRegularHandler(runner, handler, argValues, stdinData) {
     stderr: runner.options.capture ? (result.stderr ?? '') : undefined,
     stdin: runner.options.capture ? stdinData : undefined,
   };
-
-  emitOutput(runner, 'stdout', result.stdout);
-  emitOutput(runner, 'stderr', result.stderr);
 
   return result;
 }
@@ -288,10 +283,12 @@ export function attachVirtualCommandMethods(ProcessRunner, deps) {
         console.log(`${originalCommand || `${cmd} ${argValues.join(' ')}`}`);
       }
 
-      const isGenerator = handler.constructor.name === 'AsyncGeneratorFunction';
-      const result = isGenerator
-        ? await runGeneratorHandler(this, handler, argValues, stdinData)
-        : await runRegularHandler(this, handler, argValues, stdinData);
+      const result = await runRegularHandler(
+        this,
+        handler,
+        argValues,
+        stdinData
+      );
 
       applyVirtualProcessContext(this, result);
 
