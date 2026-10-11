@@ -12,7 +12,7 @@ node experiments/issue-221/consumer-audit.mjs command-stream@2.0.0
 cd js
 npm pack --ignore-scripts --pack-destination /tmp
 cd ..
-node experiments/issue-221/consumer-audit.mjs /tmp/command-stream-2.0.0.tgz
+node experiments/issue-221/consumer-audit.mjs /tmp/command-stream-2.0.1.tgz
 ```
 
 The control reports all five packages and six high severity audit findings.
@@ -31,7 +31,7 @@ The scripts here also preserve the compatibility and bounded input probes:
 node experiments/issue-221/glob-parity.mjs
 node --max-old-space-size=64 --stack-size=256 experiments/issue-221/brace-budget.cjs
 node --no-experimental-require-module experiments/issue-221/esm-consumer.mjs
-bash experiments/issue-221/production-install.sh /tmp/command-stream-2.0.0.tgz /path/to/node/bin omit-optional
+bash experiments/issue-221/production-install.sh /tmp/command-stream-2.0.1.tgz /path/to/node/bin omit-optional
 ```
 
 The local install wrapper hides compilers and Python from the installation PATH

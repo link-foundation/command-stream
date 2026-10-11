@@ -43,3 +43,7 @@ unicorn-magic export without the filesystem helpers needed by current Execa.
 The CDN harness now deduplicates import bindings and requests the Node export
 condition. `deno-cdn-local-after.log.gz` records successful Deno HTTP import,
 core and ShellJS command execution, ordinary globs and input-depth protection.
+`bun-suite-merged.log.gz` records the complete post-merge regression suite:
+2,635 passes, ten skips and zero failures. The subsequent main release commit
+only updates version metadata and removes consumed changesets; documentation,
+repository layout and production dependency tests were rerun after that merge.
