@@ -183,6 +183,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [1.6.0] - 2026-10-11
+
+Add exact-argv CommandBuilder and fy module generation, bounded DataStream
+operators and analytics, virtual terminal buffers, and typed command environments
+with middleware, composition, inheritance, and reloadable command manifests.
+
 ## [1.5.5] - 2026-10-11
 
 ### Changed
