@@ -88,9 +88,23 @@ export class StreamPipeline {
     return values;
   }
 
-  batch(size) {
+  /** Flush at size or timeWindow milliseconds after the first item arrives. */
+  batch(size, timeWindow) {
     positive(size);
+    if (
+      timeWindow !== undefined &&
+      (!Number.isFinite(timeWindow) ||
+        timeWindow <= 0 ||
+        timeWindow > 2147483647)
+    ) {
+      throw new RangeError(
+        'Time window must be positive and at most 2147483647 ms'
+      );
+    }
     const source = this.values();
+    if (timeWindow !== undefined) {
+      return derived(source, timedBatches(source, size, timeWindow));
+    }
     return derived(
       source,
       (async function* () {
@@ -129,6 +143,9 @@ export class StreamPipeline {
         }
       })()
     );
+  }
+  slidingWindow(size, step = 1) {
+    return this.window(size, step);
   }
   take(count) {
     if (!Number.isSafeInteger(count) || count < 0) {
@@ -310,6 +327,60 @@ function derived(source, iterator) {
     false,
     () => source.return()
   );
+}
+
+async function* timedBatches(source, size, timeWindow) {
+  const timeout = Symbol('batch deadline');
+  let batch = [];
+  let pending;
+  let deadline;
+  let expires;
+  let timer;
+  try {
+    while (true) {
+      let item;
+      // Continuously ready iterators can keep the microtask queue busy and
+      // delay timer callbacks. Check the monotonic deadline between reads too.
+      if (batch.length && performance.now() >= expires) {
+        item = timeout;
+      } else {
+        pending ??= source.next();
+        item = batch.length
+          ? await Promise.race([pending, deadline])
+          : await pending;
+      }
+      if (item === timeout) {
+        clearTimeout(timer);
+        // Keep the single outstanding read for the next batch. Issuing another
+        // next() here would lose an item and bypass source backpressure.
+        yield batch;
+        batch = [];
+        continue;
+      }
+      pending = undefined;
+      if (item.done) {
+        break;
+      }
+      batch.push(item.value);
+      if (batch.length === 1) {
+        expires = performance.now() + timeWindow;
+        deadline = new Promise((resolve) => {
+          timer = setTimeout(() => resolve(timeout), timeWindow);
+        });
+      }
+      if (batch.length === size) {
+        clearTimeout(timer);
+        yield batch;
+        batch = [];
+      }
+    }
+    if (batch.length) {
+      yield batch;
+    }
+  } finally {
+    clearTimeout(timer);
+    await source.return();
+  }
 }
 
 class BoundedQueue {

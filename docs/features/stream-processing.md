@@ -1,6 +1,6 @@
 # Process streams incrementally
 
-Pull-driven operators provide batching, windows, split, merge, backpressure and online statistics.
+Pull-driven operators provide size/deadline batching, sliding windows, split, merge, backpressure and online statistics.
 
 **Category:** Streaming
 
@@ -34,6 +34,11 @@ await example(
       errorRate: (value) => value > 20,
       responseTime: (value) => value,
     });
+    record('timed batches', await stream([1, 2, 3]).batch(2, 500).toArray());
+    record(
+      'sliding windows',
+      await stream([1, 2, 3]).slidingWindow(2).toArray()
+    );
     record('error rate', stats.errorRate);
     record('mean response time', stats.responseTime.mean);
   }
@@ -47,6 +52,8 @@ Identical in Node.js and Bun:
 ```
 # stream-processing — Process streams incrementally
 batches: [[2,6],[10]]
+timed batches: [[1,2],[3]]
+sliding windows: [[1,2],[2,3]]
 error rate: 0.5
 mean response time: 20
 ```
@@ -70,8 +77,18 @@ async fn stream_processing() -> ExampleResult {
     let stats = DataStream::from_values([10, 30])
         .analyze(|value| *value > 20, |value| Some(f64::from(*value)), |_| {})
         .await;
+    let timed = DataStream::from_values([1, 2, 3])
+        .batch_with_timeout(2, std::time::Duration::from_millis(500))
+        .collect()
+        .await;
+    let windows = DataStream::from_values([1, 2, 3])
+        .sliding_window(2)
+        .collect()
+        .await;
     Ok(vec![
         observation("batches", batches),
+        observation("timed batches", timed),
+        observation("sliding windows", windows),
         observation("error rate", stats.error_rate),
         observation("mean response time", stats.response_mean),
     ])
@@ -83,6 +100,8 @@ async fn stream_processing() -> ExampleResult {
 ```
 # stream-processing — Rust
 batches: [[2,6],[10]]
+timed batches: [[1,2],[3]]
+sliding windows: [[1,2],[2,3]]
 error rate: 0.5
 mean response time: 20.0
 ```
@@ -91,26 +110,44 @@ mean response time: 20.0
 
 ### [Bun.$](https://bun.com/docs/runtime/shell)
 
-Not supported — No built-in window, split, merge, or command analytics operators; use runtime stream primitives.
+```js
+for await (const line of $`node server.mjs`.lines()) {
+  if (line.includes('ERROR')) await consume(line);
+} // compose windows, split/merge, batching and analytics separately
+```
 
 ### [zx](https://github.com/google/zx)
 
-Not supported — No built-in window, split, merge, or command analytics operators; use runtime stream primitives.
+```js
+for await (const line of $`node server.mjs`) {
+  if (line.includes('ERROR')) await consume(line);
+} // Node transforms are also supported; compose batching/analytics separately
+```
 
 ### [execa](https://github.com/sindresorhus/execa)
 
-Not supported — No built-in window, split, merge, or command analytics operators; use runtime stream primitives.
+```js
+const transform = function* (line) {
+  if (line.includes('ERROR')) yield line.toUpperCase();
+};
+await execa({ stdout: transform })`node server.mjs`; // compose batching/analytics separately
+```
 
 ### [ShellJS](https://github.com/shelljs/shelljs)
 
-Not supported — No built-in window, split, merge, or command analytics operators; use runtime stream primitives.
+```js
+const child = exec('node server.mjs', { async: true });
+for await (const line of createInterface({ input: child.stdout })) {
+  await consume(line);
+} // compose filtering, windows, batching and analytics separately
+```
 
 ### [node:child_process](https://nodejs.org/api/child_process.html)
 
 ```js
-for await (const chunk of spawn('node', ['server.mjs']).stdout) {
-  await consume(chunk);
-}
+const processed = spawn('node', ['server.mjs'])
+  .stdout.map(transform)
+  .filter(predicate); // frame lines and compose batching/analytics separately
 ```
 
 ---

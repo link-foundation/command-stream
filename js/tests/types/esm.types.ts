@@ -399,6 +399,13 @@ export async function advancedFeatures(): Promise<void> {
     .stream()
     .map(Number)
     .toArray();
+  const timed: number[][] = await stream(data).batch(10, 500).toArray();
+  const windows: string[][] = await $.command('echo', 'typed')
+    .stream()
+    .slidingWindow(2)
+    .toArray();
+  void timed;
+  void windows;
   const stats = await stream(data).analyze({
     responseTime: (x) => x,
     errorRate: (x) => x > 1,

@@ -83,7 +83,7 @@ All 34 examples were executed in JavaScript and Rust. JavaScript was checked in 
 | [ShellJS compatibility mode](features/shelljs-compat.md)             | ✓              | —     | —   | —     | ✓       | —                  |
 | [Native head, tail, sort and uniq](features/native-text.md)          | ✓              | —     | ✓   | ✓     | ✓       | ✓                  |
 | [Build commands with literal arguments](features/command-builder.md) | ✓              | —     | —   | ✓     | —       | ✓                  |
-| [Process streams incrementally](features/stream-processing.md)       | ✓              | —     | —   | —     | —       | ✓                  |
+| [Process streams incrementally](features/stream-processing.md)       | ✓              | ✓     | ✓   | ✓     | ✓       | ✓                  |
 | [Track virtual terminal frames](features/terminal-buffer.md)         | ✓              | —     | —   | —     | —       | —                  |
 | [Compose and extend virtual commands](features/command-packages.md)  | ✓              | —     | —   | —     | —       | —                  |
 | [Translate shell programs into modules](features/fy.md)              | ✓              | —     | —   | —     | —       | —                  |
@@ -114,7 +114,7 @@ All 34 examples were executed in JavaScript and Rust. JavaScript was checked in 
 - [Async iteration over output](features/async-iteration.md) — A command is an async iterable of chunks, so output can be handled as it arrives.
 - [Event-driven output](features/events.md) — Event APIs report output and lifecycle signals as work progresses.
 - [Writing to stdin while a command runs](features/stdin-streaming.md) — Input can be supplied up front or written to a running command.
-- [Process streams incrementally](features/stream-processing.md) — Pull-driven operators provide batching, windows, split, merge, backpressure and online statistics.
+- [Process streams incrementally](features/stream-processing.md) — Pull-driven operators provide size/deadline batching, sliding windows, split, merge, backpressure and online statistics.
 - [Track virtual terminal frames](features/terminal-buffer.md) — Independent terminal emulators expose visible text, colors and changed-frame subscriptions.
 
 ### Built-in commands

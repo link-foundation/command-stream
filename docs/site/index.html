@@ -1042,32 +1042,24 @@
             "id": "stream-processing",
             "title": "Process streams incrementally",
             "category": "Streaming",
-            "summary": "Pull-driven operators provide batching, windows, split, merge, backpressure and online statistics.",
+            "summary": "Pull-driven operators provide size/deadline batching, sliding windows, split, merge, backpressure and online statistics.",
             "file": "js/examples/features/stream-processing.mjs",
             "api": ["stream", "StreamPipeline"],
             "alternatives": {
-              "bun-shell": {
-                "unsupported": "No built-in window, split, merge, or command analytics operators; use runtime stream primitives"
-              },
-              "zx": {
-                "unsupported": "No built-in window, split, merge, or command analytics operators; use runtime stream primitives"
-              },
-              "execa": {
-                "unsupported": "No built-in window, split, merge, or command analytics operators; use runtime stream primitives"
-              },
-              "shelljs": {
-                "unsupported": "No built-in window, split, merge, or command analytics operators; use runtime stream primitives"
-              },
-              "child_process": "for await (const chunk of spawn('node', ['server.mjs']).stdout) { await consume(chunk); }"
+              "bun-shell": "for await (const line of $`node server.mjs`.lines()) { if (line.includes(\"ERROR\")) await consume(line); } // compose windows, split/merge, batching and analytics separately",
+              "zx": "for await (const line of $`node server.mjs`) { if (line.includes(\"ERROR\")) await consume(line); } // Node transforms are also supported; compose batching/analytics separately",
+              "execa": "const transform = function* (line) { if (line.includes(\"ERROR\")) yield line.toUpperCase(); }; await execa({ stdout: transform })`node server.mjs`; // compose batching/analytics separately",
+              "shelljs": "const child = exec(\"node server.mjs\", { async: true }); for await (const line of createInterface({ input: child.stdout })) { await consume(line); } // compose filtering, windows, batching and analytics separately",
+              "child_process": "const processed = spawn('node', ['server.mjs']).stdout.map(transform).filter(predicate); // frame lines and compose batching/analytics separately"
             },
-            "source": "import { stream } from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\nawait example(\n  { id: 'stream-processing', title: 'Process streams incrementally' },\n  async ({ record }) => {\n    record(\n      'batches',\n      await stream([1, 2, 3, 4, 5])\n        .filter((value) => value % 2 === 1)\n        .map((value) => value * 2)\n        .batch(2)\n        .toArray()\n    );\n    const stats = await stream([10, 30]).analyze({\n      errorRate: (value) => value > 20,\n      responseTime: (value) => value,\n    });\n    record('error rate', stats.errorRate);\n    record('mean response time', stats.responseTime.mean);\n  }\n);",
+            "source": "import { stream } from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\nawait example(\n  { id: 'stream-processing', title: 'Process streams incrementally' },\n  async ({ record }) => {\n    record(\n      'batches',\n      await stream([1, 2, 3, 4, 5])\n        .filter((value) => value % 2 === 1)\n        .map((value) => value * 2)\n        .batch(2)\n        .toArray()\n    );\n    const stats = await stream([10, 30]).analyze({\n      errorRate: (value) => value > 20,\n      responseTime: (value) => value,\n    });\n    record('timed batches', await stream([1, 2, 3]).batch(2, 500).toArray());\n    record(\n      'sliding windows',\n      await stream([1, 2, 3]).slidingWindow(2).toArray()\n    );\n    record('error rate', stats.errorRate);\n    record('mean response time', stats.responseTime.mean);\n  }\n);",
             "rustApi": ["DataStream", "StreamStats"],
-            "rustSource": "async fn stream_processing() -> ExampleResult {\n    let batches = DataStream::from_values([1, 2, 3, 4, 5])\n        .filter(|value| value % 2 == 1)\n        .map(|value| value * 2)\n        .batch(2)\n        .collect()\n        .await;\n    let stats = DataStream::from_values([10, 30])\n        .analyze(|value| *value > 20, |value| Some(f64::from(*value)), |_| {})\n        .await;\n    Ok(vec![\n        observation(\"batches\", batches),\n        observation(\"error rate\", stats.error_rate),\n        observation(\"mean response time\", stats.response_mean),\n    ])\n}",
-            "rustOutput": "# stream-processing — Rust\nbatches: [[2,6],[10]]\nerror rate: 0.5\nmean response time: 20.0",
+            "rustSource": "async fn stream_processing() -> ExampleResult {\n    let batches = DataStream::from_values([1, 2, 3, 4, 5])\n        .filter(|value| value % 2 == 1)\n        .map(|value| value * 2)\n        .batch(2)\n        .collect()\n        .await;\n    let stats = DataStream::from_values([10, 30])\n        .analyze(|value| *value > 20, |value| Some(f64::from(*value)), |_| {})\n        .await;\n    let timed = DataStream::from_values([1, 2, 3])\n        .batch_with_timeout(2, std::time::Duration::from_millis(500))\n        .collect()\n        .await;\n    let windows = DataStream::from_values([1, 2, 3])\n        .sliding_window(2)\n        .collect()\n        .await;\n    Ok(vec![\n        observation(\"batches\", batches),\n        observation(\"timed batches\", timed),\n        observation(\"sliding windows\", windows),\n        observation(\"error rate\", stats.error_rate),\n        observation(\"mean response time\", stats.response_mean),\n    ])\n}",
+            "rustOutput": "# stream-processing — Rust\nbatches: [[2,6],[10]]\ntimed batches: [[1,2],[3]]\nsliding windows: [[1,2],[2,3]]\nerror rate: 0.5\nmean response time: 20.0",
             "identicalOutput": true,
             "output": {
-              "node": "# stream-processing — Process streams incrementally\nbatches: [[2,6],[10]]\nerror rate: 0.5\nmean response time: 20",
-              "bun": "# stream-processing — Process streams incrementally\nbatches: [[2,6],[10]]\nerror rate: 0.5\nmean response time: 20"
+              "node": "# stream-processing — Process streams incrementally\nbatches: [[2,6],[10]]\ntimed batches: [[1,2],[3]]\nsliding windows: [[1,2],[2,3]]\nerror rate: 0.5\nmean response time: 20",
+              "bun": "# stream-processing — Process streams incrementally\nbatches: [[2,6],[10]]\ntimed batches: [[1,2],[3]]\nsliding windows: [[1,2],[2,3]]\nerror rate: 0.5\nmean response time: 20"
             }
           },
           {

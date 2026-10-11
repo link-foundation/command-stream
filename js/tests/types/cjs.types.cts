@@ -62,6 +62,12 @@ export async function commonJsAdvanced(): Promise<void> {
   const values: number[] = await $.stream([1, 2])
     .map((value) => value * 2)
     .toArray();
+  const timed: number[][] = await $.stream(values).batch(10, 500).toArray();
+  const windows: string[][] = await $.command('echo', 'typed')
+    .stream()
+    .slidingWindow(2)
+    .toArray();
+  use(timed, windows);
   const terminal = new $.TerminalBuffer({ cols: 20, rows: 4 });
   terminal.dispose();
   const debugger_ = new $.PipelineDebugger();

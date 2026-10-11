@@ -15,6 +15,11 @@ await example(
       errorRate: (value) => value > 20,
       responseTime: (value) => value,
     });
+    record('timed batches', await stream([1, 2, 3]).batch(2, 500).toArray());
+    record(
+      'sliding windows',
+      await stream([1, 2, 3]).slidingWindow(2).toArray()
+    );
     record('error rate', stats.errorRate);
     record('mean response time', stats.responseTime.mean);
   }

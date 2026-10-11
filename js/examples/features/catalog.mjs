@@ -654,28 +654,19 @@ export const features = [
     title: 'Process streams incrementally',
     category: 'Streaming',
     summary:
-      'Pull-driven operators provide batching, windows, split, merge, backpressure and online statistics.',
+      'Pull-driven operators provide size/deadline batching, sliding windows, split, merge, backpressure and online statistics.',
     file: 'js/examples/features/stream-processing.mjs',
     api: ['stream', 'StreamPipeline'],
     alternatives: {
-      'bun-shell': {
-        unsupported:
-          'No built-in window, split, merge, or command analytics operators; use runtime stream primitives',
-      },
-      zx: {
-        unsupported:
-          'No built-in window, split, merge, or command analytics operators; use runtime stream primitives',
-      },
-      execa: {
-        unsupported:
-          'No built-in window, split, merge, or command analytics operators; use runtime stream primitives',
-      },
-      shelljs: {
-        unsupported:
-          'No built-in window, split, merge, or command analytics operators; use runtime stream primitives',
-      },
+      'bun-shell':
+        'for await (const line of $`node server.mjs`.lines()) { if (line.includes("ERROR")) await consume(line); } // compose windows, split/merge, batching and analytics separately',
+      zx: 'for await (const line of $`node server.mjs`) { if (line.includes("ERROR")) await consume(line); } // Node transforms are also supported; compose batching/analytics separately',
+      execa:
+        'const transform = function* (line) { if (line.includes("ERROR")) yield line.toUpperCase(); }; await execa({ stdout: transform })`node server.mjs`; // compose batching/analytics separately',
+      shelljs:
+        'const child = exec("node server.mjs", { async: true }); for await (const line of createInterface({ input: child.stdout })) { await consume(line); } // compose filtering, windows, batching and analytics separately',
       child_process:
-        "for await (const chunk of spawn('node', ['server.mjs']).stdout) { await consume(chunk); }",
+        "const processed = spawn('node', ['server.mjs']).stdout.map(transform).filter(predicate); // frame lines and compose batching/analytics separately",
     },
   },
   {

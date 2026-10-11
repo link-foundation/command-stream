@@ -3,7 +3,7 @@ use crate::{OutputChunk, OutputStream};
 use std::collections::VecDeque;
 use std::future::Future;
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 
@@ -92,19 +92,58 @@ impl<T: Send + 'static> DataStream<T> {
             }
         })
     }
-    pub fn batch(mut self, size: usize) -> DataStream<Vec<T>> {
+    pub fn batch(self, size: usize) -> DataStream<Vec<T>> {
+        self.batch_inner(size, None)
+    }
+    /// Flush at size or a deadline measured from the first value in each batch.
+    /// An idle source still flushes; a slow consumer applies channel backpressure.
+    pub fn batch_with_timeout(self, size: usize, time_window: Duration) -> DataStream<Vec<T>> {
+        assert!(!time_window.is_zero(), "time window must be positive");
+        assert!(
+            tokio::time::Instant::now()
+                .checked_add(time_window)
+                .is_some(),
+            "time window must fit the clock"
+        );
+        self.batch_inner(size, Some(time_window))
+    }
+    fn batch_inner(mut self, size: usize, time_window: Option<Duration>) -> DataStream<Vec<T>> {
         assert!(size > 0);
         DataStream::spawn(|tx| async move {
             let mut values = Vec::with_capacity(size);
-            while let Some(value) = self.next().await {
+            let mut deadline = None;
+            loop {
+                let value = if let Some(end) = deadline {
+                    // mpsc::Receiver::recv is cancellation-safe: timing out a
+                    // read cannot remove a value from the source channel.
+                    let read = if tokio::time::Instant::now() >= end {
+                        None
+                    } else {
+                        tokio::time::timeout_at(end, self.next()).await.ok()
+                    };
+                    match read {
+                        Some(value) => value,
+                        None => {
+                            if tx.send(std::mem::take(&mut values)).await.is_err() {
+                                return;
+                            }
+                            deadline = None;
+                            continue;
+                        }
+                    }
+                } else {
+                    self.next().await
+                };
+                let Some(value) = value else { break };
+                if values.is_empty() {
+                    deadline = time_window.map(|duration| tokio::time::Instant::now() + duration);
+                }
                 values.push(value);
-                if values.len() == size
-                    && tx
-                        .send(std::mem::replace(&mut values, Vec::with_capacity(size)))
-                        .await
-                        .is_err()
-                {
-                    return;
+                if values.len() == size {
+                    if tx.send(std::mem::take(&mut values)).await.is_err() {
+                        return;
+                    }
+                    deadline = None;
                 }
             }
             if !values.is_empty() {
@@ -130,6 +169,13 @@ impl<T: Send + 'static> DataStream<T> {
                 }
             }
         })
+    }
+    /// Alias for a sliding window advancing by one value.
+    pub fn sliding_window(self, size: usize) -> DataStream<Vec<T>>
+    where
+        T: Clone,
+    {
+        self.window(size)
     }
     pub fn split<F>(mut self, mut predicate: F) -> (Self, Self)
     where

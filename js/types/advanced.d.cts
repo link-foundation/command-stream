@@ -101,8 +101,9 @@ export class StreamPipeline<T> implements AsyncIterableIterator<T> {
   ): Promise<U>;
   forEach(fn: (value: T, index: number) => void | Promise<void>): Promise<void>;
   toArray(): Promise<T[]>;
-  batch(size: number): StreamPipeline<T[]>;
+  batch(size: number, timeWindow?: number): StreamPipeline<T[]>;
   window(size: number, step?: number): StreamPipeline<T[]>;
+  slidingWindow(size: number, step?: number): StreamPipeline<T[]>;
   take(count: number): StreamPipeline<T>;
   lines(options?: { stderr?: boolean }): StreamPipeline<string>;
   split(
@@ -118,6 +119,7 @@ export type CommandStream = Omit<
   | 'filter'
   | 'batch'
   | 'window'
+  | 'slidingWindow'
   | 'reduce'
   | 'forEach'
   | 'analyze'
@@ -129,6 +131,7 @@ export type CommandStream = Omit<
     | 'filter'
     | 'batch'
     | 'window'
+    | 'slidingWindow'
     | 'reduce'
     | 'forEach'
     | 'analyze'

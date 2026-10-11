@@ -604,8 +604,18 @@ async fn stream_processing() -> ExampleResult {
     let stats = DataStream::from_values([10, 30])
         .analyze(|value| *value > 20, |value| Some(f64::from(*value)), |_| {})
         .await;
+    let timed = DataStream::from_values([1, 2, 3])
+        .batch_with_timeout(2, std::time::Duration::from_millis(500))
+        .collect()
+        .await;
+    let windows = DataStream::from_values([1, 2, 3])
+        .sliding_window(2)
+        .collect()
+        .await;
     Ok(vec![
         observation("batches", batches),
+        observation("timed batches", timed),
+        observation("sliding windows", windows),
         observation("error rate", stats.error_rate),
         observation("mean response time", stats.response_mean),
     ])

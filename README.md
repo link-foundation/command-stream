@@ -34,6 +34,10 @@ also compared across Node.js and Bun. The same catalog powers the searchable
 [feature website](https://link-foundation.github.io/command-stream/), which is
 verified and deployed by GitHub Actions.
 
+The [stream processing guide](./docs/stream-processing-guide.md) covers both
+languages, deadline batching, backpressure, live analytics, and comparisons
+with existing streaming APIs.
+
 ## Repository Layout
 
 | Path       | Purpose                                                    |
