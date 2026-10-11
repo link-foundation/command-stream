@@ -49,7 +49,7 @@ repository's existing release workflows publish the updated library on merge.
   model; adding it would still require adapting process backpressure. Native
   pull operators fit the current API and await slow downstream callbacks.
 - [npm registry API](https://github.com/npm/registry/blob/main/docs/REGISTRY-API.md)
-  provides package metadata/search. Use npm package resolution/install and its
+  provides package metadata/search. Use npm package resolution/install (the existing Execa runtime handles npm shims on Windows) and its
   search endpoint rather than invent a hosted marketplace service.
 - [Node REPL](https://nodejs.org/api/repl.html) supplies persistent context,
   editing and completion. [Node fs](https://nodejs.org/api/fs.html) supplies
@@ -78,3 +78,15 @@ in chunks no larger than 1500 lines. Rust builds use one job, no debug info and
 finite test inputs within the 2.92 GiB container budget. Commit atomic features
 after local checks, and perform the full CI timestamp/SHA/log protocol at the
 end. Prepare minor releases with a JS changeset and Rust changelog fragment.
+
+## Related implementation review
+
+Recent merged PRs [223](https://github.com/link-foundation/command-stream/pull/223),
+[220](https://github.com/link-foundation/command-stream/pull/220), and
+[211](https://github.com/link-foundation/command-stream/pull/211) establish the
+packaging, optional PTY, and stream-cancellation compatibility boundaries.
+This change keeps the bundled ShellJS and shared CJS/ESM state, leaves PTY optional,
+keeps lightweight imports independent of terminal assets, and retains subscribing
+before startup plus exactly one exit chunk for pre-aborted commands. The raw
+stream iterator regression suite covers those earlier fixes. Native pipelines
+now share a pull-driven pump instead of eager tees or Node intermediate captures.

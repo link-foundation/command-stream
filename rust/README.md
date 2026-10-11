@@ -13,6 +13,13 @@ examples and the differences from JavaScript Execa.
 Rust implementation of command-stream: a shell command execution library with
 streaming, events, shell parsing, virtual commands, and built-in command support.
 
+The shared advanced APIs include `CommandBuilder`, `DataStream`,
+`terminal::TerminalBuffer`, and `CommandEnvironment`. See the
+[advanced workflows guide](../js/docs/ADVANCED-WORKFLOWS.md#rust-equivalents) and
+`examples/language_features.rs` for executable examples.
+`command-stream fy input.sh output.mjs` generates an interpreter-backed Node module
+using `sh` and refuses to overwrite existing output.
+
 ## ShellJS compatibility
 
 `command_stream::shelljs::ShellJs` provides asynchronous command calls with

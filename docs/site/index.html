@@ -1007,6 +1007,170 @@
               "node": "# native-text — Native text commands\nhead: \"b\\nb\\n\"\ntail: \"a\\n\"\nsort: \"a\\nb\\n\"\nuniq: \"      2 b\\n\"\nzero lines: \"\"",
               "bun": "# native-text — Native text commands\nhead: \"b\\nb\\n\"\ntail: \"a\\n\"\nsort: \"a\\nb\\n\"\nuniq: \"      2 b\\n\"\nzero lines: \"\""
             }
+          },
+          {
+            "id": "command-builder",
+            "title": "Build commands with literal arguments",
+            "category": "Running commands",
+            "summary": "Immutable command descriptions execute exact argv and support fluent option transforms.",
+            "file": "js/examples/features/command-builder.mjs",
+            "api": ["command", "CommandBuilder"],
+            "alternatives": {
+              "bun-shell": {
+                "unsupported": "No command-stream transform API; invoke the executable with separate arguments"
+              },
+              "zx": {
+                "unsupported": "No command-stream transform API; invoke the executable with separate arguments"
+              },
+              "execa": "await execa('printf', ['%s', 'literal ; text']);",
+              "shelljs": {
+                "unsupported": "No command-stream transform API; invoke the executable with separate arguments"
+              },
+              "child_process": "spawn('printf', ['%s', 'literal ; text']);"
+            },
+            "source": "import { command } from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\nawait example(\n  { id: 'command-builder', title: 'Build commands with literal arguments' },\n  async ({ record }) => {\n    const builder = command(\n      process.execPath,\n      '-e',\n      'console.log(process.argv[1])',\n      'hello ; $HOME'\n    );\n    record('literal argument', (await (await builder).text()).trim());\n    record(\n      'exit code',\n      await command(process.execPath, '-e', 'process.exit(7)')\n        .pipe(command.exitCode)\n        .run()\n    );\n  }\n);",
+            "rustApi": ["CommandBuilder"],
+            "rustSource": "async fn command_builder() -> ExampleResult {\n    let result = CommandBuilder::new(\"printf\")\n        .args([\"%s\", \"hello ; $HOME\"])\n        .run()\n        .await?;\n    Ok(vec![\n        observation(\"literal argument\", result.stdout),\n        observation(\n            \"exit code\",\n            CommandBuilder::new(\"sh\")\n                .args([\"-c\", \"exit 7\"])\n                .exit_code()\n                .await?,\n        ),\n    ])\n}",
+            "rustOutput": "# command-builder — Rust\nliteral argument: \"hello ; $HOME\"\nexit code: 7",
+            "identicalOutput": true,
+            "output": {
+              "node": "# command-builder — Build commands with literal arguments\nliteral argument: \"hello ; $HOME\"\nexit code: 7",
+              "bun": "# command-builder — Build commands with literal arguments\nliteral argument: \"hello ; $HOME\"\nexit code: 7"
+            }
+          },
+          {
+            "id": "stream-processing",
+            "title": "Process streams incrementally",
+            "category": "Streaming",
+            "summary": "Pull-driven operators provide batching, windows, split, merge, backpressure and online statistics.",
+            "file": "js/examples/features/stream-processing.mjs",
+            "api": ["stream", "StreamPipeline"],
+            "alternatives": {
+              "bun-shell": {
+                "unsupported": "No built-in window, split, merge, or command analytics operators; use runtime stream primitives"
+              },
+              "zx": {
+                "unsupported": "No built-in window, split, merge, or command analytics operators; use runtime stream primitives"
+              },
+              "execa": {
+                "unsupported": "No built-in window, split, merge, or command analytics operators; use runtime stream primitives"
+              },
+              "shelljs": {
+                "unsupported": "No built-in window, split, merge, or command analytics operators; use runtime stream primitives"
+              },
+              "child_process": "for await (const chunk of spawn('node', ['server.mjs']).stdout) { await consume(chunk); }"
+            },
+            "source": "import { stream } from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\nawait example(\n  { id: 'stream-processing', title: 'Process streams incrementally' },\n  async ({ record }) => {\n    record(\n      'batches',\n      await stream([1, 2, 3, 4, 5])\n        .filter((value) => value % 2 === 1)\n        .map((value) => value * 2)\n        .batch(2)\n        .toArray()\n    );\n    const stats = await stream([10, 30]).analyze({\n      errorRate: (value) => value > 20,\n      responseTime: (value) => value,\n    });\n    record('error rate', stats.errorRate);\n    record('mean response time', stats.responseTime.mean);\n  }\n);",
+            "rustApi": ["DataStream", "StreamStats"],
+            "rustSource": "async fn stream_processing() -> ExampleResult {\n    let batches = DataStream::from_values([1, 2, 3, 4, 5])\n        .filter(|value| value % 2 == 1)\n        .map(|value| value * 2)\n        .batch(2)\n        .collect()\n        .await;\n    let stats = DataStream::from_values([10, 30])\n        .analyze(|value| *value > 20, |value| Some(f64::from(*value)), |_| {})\n        .await;\n    Ok(vec![\n        observation(\"batches\", batches),\n        observation(\"error rate\", stats.error_rate),\n        observation(\"mean response time\", stats.response_mean),\n    ])\n}",
+            "rustOutput": "# stream-processing — Rust\nbatches: [[2,6],[10]]\nerror rate: 0.5\nmean response time: 20.0",
+            "identicalOutput": true,
+            "output": {
+              "node": "# stream-processing — Process streams incrementally\nbatches: [[2,6],[10]]\nerror rate: 0.5\nmean response time: 20",
+              "bun": "# stream-processing — Process streams incrementally\nbatches: [[2,6],[10]]\nerror rate: 0.5\nmean response time: 20"
+            }
+          },
+          {
+            "id": "terminal-buffer",
+            "title": "Track virtual terminal frames",
+            "category": "Streaming",
+            "summary": "Independent terminal emulators expose visible text, colors and changed-frame subscriptions.",
+            "file": "js/examples/features/terminal-buffer.mjs",
+            "api": ["TerminalBuffer"],
+            "alternatives": {
+              "bun-shell": {
+                "unsupported": "No virtual terminal emulator or frame API; combine with xterm/headless"
+              },
+              "zx": {
+                "unsupported": "No virtual terminal emulator or frame API; combine with xterm/headless"
+              },
+              "execa": {
+                "unsupported": "No virtual terminal emulator or frame API; combine with xterm/headless"
+              },
+              "shelljs": {
+                "unsupported": "No virtual terminal emulator or frame API; combine with xterm/headless"
+              },
+              "child_process": {
+                "unsupported": "No virtual terminal emulator or frame API; combine with xterm/headless"
+              }
+            },
+            "source": "import { TerminalBuffer } from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\nawait example(\n  { id: 'terminal-buffer', title: 'Track virtual terminal frames' },\n  async ({ record }) => {\n    const terminal = new TerminalBuffer({ rows: 2, cols: 20 });\n    try {\n      await terminal.write('old\\r\\x1b[2K\\x1b[31mred\\x1b[0m');\n      await terminal.flush();\n      record('visible text', terminal.text().trimEnd());\n      record('colored', terminal.text({ color: true }).includes('\\x1b['));\n    } finally {\n      terminal.dispose();\n    }\n  }\n);",
+            "rustApi": ["terminal::TerminalBuffer"],
+            "rustSource": "async fn terminal_buffer() -> ExampleResult {\n    let mut terminal = command_stream::terminal::TerminalBuffer::new(2, 20);\n    terminal.write(b\"old\\r\\x1b[2K\\x1b[31mred\\x1b[0m\");\n    Ok(vec![\n        observation(\"visible text\", terminal.text(false).trim_end()),\n        observation(\"colored\", terminal.text(true).contains('\\x1b')),\n    ])\n}",
+            "rustOutput": "# terminal-buffer — Rust\nvisible text: \"red\"\ncolored: true",
+            "identicalOutput": true,
+            "output": {
+              "node": "# terminal-buffer — Track virtual terminal frames\nvisible text: \"red\"\ncolored: true",
+              "bun": "# terminal-buffer — Track virtual terminal frames\nvisible text: \"red\"\ncolored: true"
+            }
+          },
+          {
+            "id": "command-packages",
+            "title": "Compose and extend virtual commands",
+            "category": "Your own commands",
+            "summary": "Typed command packages support registration, composition, middleware, inheritance and atomic reload.",
+            "file": "js/examples/features/command-packages.mjs",
+            "api": ["create", "install", "compose", "extend", "inherit"],
+            "alternatives": {
+              "bun-shell": {
+                "unsupported": "No validated command package, inheritance, middleware, or registry search API"
+              },
+              "zx": {
+                "unsupported": "No validated command package, inheritance, middleware, or registry search API"
+              },
+              "execa": {
+                "unsupported": "No validated command package, inheritance, middleware, or registry search API"
+              },
+              "shelljs": {
+                "unsupported": "No validated command package, inheritance, middleware, or registry search API"
+              },
+              "child_process": {
+                "unsupported": "No validated command package, inheritance, middleware, or registry search API"
+              }
+            },
+            "source": "import $ from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\nawait example(\n  { id: 'command-packages', title: 'Compose and extend virtual commands' },\n  async ({ record }) => {\n    $.create('package-hello', ({ args }) => ({\n      code: 0,\n      stdout: args.join(' '),\n    }));\n    try {\n      $.inherit('package-greet', 'package-hello', { args: ['hello'] });\n      $.extend('package-greet', async (context, next) => {\n        const result = await next(context);\n        return { ...result, stdout: `${result.stdout}!` };\n      });\n      record(\n        'inherited middleware',\n        await (await $({ mirror: false })`package-greet world`).text()\n      );\n    } finally {\n      $.unregister('package-hello');\n      $.unregister('package-greet');\n    }\n  }\n);",
+            "rustApi": ["CommandEnvironment", "CommandPackage"],
+            "rustSource": "async fn command_packages() -> ExampleResult {\n    let mut environment = CommandEnvironment::new();\n    environment.create(\"package-hello\", |context| async move {\n        CommandResult::success(context.args.join(\" \"))\n    })?;\n    environment.inherit(\"package-greet\", \"package-hello\", vec![\"hello\".into()])?;\n    environment.extend(\"package-greet\", |context, next| {\n        Box::pin(async move {\n            let result = next(context).await;\n            CommandResult::success(format!(\"{}!\", result.stdout))\n        })\n    })?;\n    Ok(vec![observation(\n        \"inherited middleware\",\n        environment\n            .run(\"package-greet\", CommandContext::new(vec![\"world\".into()]))\n            .await\n            .stdout,\n    )])\n}",
+            "rustOutput": "# command-packages — Rust\ninherited middleware: \"hello world!\"",
+            "identicalOutput": true,
+            "output": {
+              "node": "# command-packages — Compose and extend virtual commands\ninherited middleware: \"hello world!\"",
+              "bun": "# command-packages — Compose and extend virtual commands\ninherited middleware: \"hello world!\""
+            }
+          },
+          {
+            "id": "fy",
+            "title": "Translate shell programs into modules",
+            "category": "Utilities",
+            "summary": "Generate executable ES modules that preserve shell semantics and literal process arguments.",
+            "file": "js/examples/features/fy.mjs",
+            "api": ["fy"],
+            "alternatives": {
+              "bun-shell": {
+                "unsupported": "No shell-to-module translator; execute the source with its interpreter"
+              },
+              "zx": {
+                "unsupported": "No shell-to-module translator; execute the source with its interpreter"
+              },
+              "execa": {
+                "unsupported": "No shell-to-module translator; execute the source with its interpreter"
+              },
+              "shelljs": {
+                "unsupported": "No shell-to-module translator; execute the source with its interpreter"
+              },
+              "child_process": {
+                "unsupported": "No shell-to-module translator; execute the source with its interpreter"
+              }
+            },
+            "source": "import { fy } from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\nawait example(\n  { id: 'fy', title: 'Translate shell programs into modules' },\n  async ({ record }) => {\n    const module = fy('echo \"$1\"; exit 7');\n    record(\n      'source preserved',\n      module.includes(JSON.stringify('echo \"$1\"; exit 7'))\n    );\n    record('executable module', module.startsWith('#!/usr/bin/env node\\n'));\n  }\n);",
+            "rustApi": ["fy"],
+            "rustSource": "async fn fy_module() -> ExampleResult {\n    let module = fy(\"echo \\\"$1\\\"; exit 7\");\n    Ok(vec![\n        observation(\n            \"source preserved\",\n            module.contains(&serde_json::to_string(\"echo \\\"$1\\\"; exit 7\")?),\n        ),\n        observation(\n            \"executable module\",\n            module.starts_with(\"#!/usr/bin/env node\\n\"),\n        ),\n    ])\n}",
+            "rustOutput": "# fy — Rust\nsource preserved: true\nexecutable module: true",
+            "identicalOutput": true,
+            "output": {
+              "node": "# fy — Translate shell programs into modules\nsource preserved: true\nexecutable module: true",
+              "bun": "# fy — Translate shell programs into modules\nsource preserved: true\nexecutable module: true"
+            }
           }
         ]
       }
