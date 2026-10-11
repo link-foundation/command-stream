@@ -26,3 +26,9 @@ The regression tests are in `js/tests/advanced-*.test.mjs`,
 the existing compatibility/type/artifact suites.
 
 Final test counts and CI status are recorded in the pull request description.
+
+Local verification: 2,685 Bun tests and 838 Rust tests passed; 87 Node core
+checks and 524 Node zx/Execa tests passed. All 34 feature examples passed
+Node/Bun/Rust execution checks, and all 211 documentation checks passed.
+Lint, formatting, declarations, duplication, Rust Clippy/rustdoc, npm artifacts
+and VSIX packaging passed. Existing skip/ignore counts are documented in the PR.
