@@ -53,3 +53,10 @@ only reports an exit code of 1; the original underlying error cannot be establis
 from that annotation. Fresh checks on the updated head provide current evidence.
 The merge preserves the newer implementations from main rather than retaining
 duplicate obsolete source trees from the original branch.
+
+The first fresh run, 38142386838, exposed fixture path comparisons on macOS and
+Windows. The watcher reports canonical paths. macOS resolves `/var` to
+`/private/var` (job log lines 1286–1297); Windows expands the short user directory
+and adds the extended path prefix (lines 1429–1440). The fixtures now build
+expected paths from their canonical roots, matching the watcher's documented
+identity without changing its behavior.

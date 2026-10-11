@@ -12,10 +12,11 @@ fn watched_child() {
 async fn watcher_restarts_for_create_edit_and_delete_and_closes() {
     tokio::time::timeout(Duration::from_secs(10), async {
         let root = tempfile::tempdir().unwrap();
-        let file = root.path().join("scripts");
+        let cwd = root.path().canonicalize().unwrap();
+        let file = cwd.join("scripts");
         std::fs::create_dir(&file).unwrap();
         let mut controller = dev(DevOptions {
-            cwd: root.path().into(),
+            cwd: cwd.clone(),
             watch: vec!["./scripts/*.rs".into()],
             command: vec![
                 std::env::current_exe()
@@ -96,9 +97,10 @@ async fn invalid_watcher_options_fail_immediately() {
 async fn default_patterns_match_root_sources_and_ignore_build_output() {
     tokio::time::timeout(Duration::from_secs(5), async {
         let root = tempfile::tempdir().unwrap();
-        std::fs::create_dir(root.path().join("target")).unwrap();
+        let cwd = root.path().canonicalize().unwrap();
+        std::fs::create_dir(cwd.join("target")).unwrap();
         let mut controller = dev(DevOptions {
-            cwd: root.path().into(),
+            cwd: cwd.clone(),
             command: vec![
                 std::env::current_exe()
                     .unwrap()
@@ -114,13 +116,13 @@ async fn default_patterns_match_root_sources_and_ignore_build_output() {
         })
         .await
         .unwrap();
-        std::fs::write(root.path().join("target/generated.rs"), "ignored").unwrap();
+        std::fs::write(cwd.join("target/generated.rs"), "ignored").unwrap();
         assert!(
             tokio::time::timeout(Duration::from_millis(50), controller.next_event())
                 .await
                 .is_err()
         );
-        let source = root.path().join("main.rs");
+        let source = cwd.join("main.rs");
         std::fs::write(&source, "watched").unwrap();
         let pid = match controller.next_event().await.unwrap() {
             DevEvent::Restarted { files, pid } => {

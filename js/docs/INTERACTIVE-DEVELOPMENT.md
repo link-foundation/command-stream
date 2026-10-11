@@ -93,7 +93,8 @@ The JavaScript API accepts `dev({language:'rust', entry:'Cargo.toml', cwd})` and
 `startRustRepl({cratePath})`. Await `controller.ready` and `controller.close()` for
 watchers; await `repl.done` or call `repl.close()` for the Rust evaluator.
 The native crate exports `dev(DevOptions)`, `DevEvent`, `start_repl(ReplOptions)`,
-and `RustRepl`. Consume `next_event()` to observe restarts/errors, then await
+and `RustRepl`. Consume `next_event()` to observe restarts/errors with canonical
+absolute file paths, then await
 `close()`. Dropping a native controller requests shutdown; explicit close waits
 for it. [Native watcher example](../../rust/examples/development.rs).
 

@@ -42,6 +42,7 @@ impl Default for DevOptions {
 #[derive(Debug, Clone)]
 pub enum DevEvent {
     Restarted {
+        /// Absolute paths under the canonical watch root; empty for the initial run.
         files: Vec<PathBuf>,
         pid: Option<u32>,
     },
