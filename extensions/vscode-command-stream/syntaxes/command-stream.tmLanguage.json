@@ -1,0 +1,27 @@
+{
+  "scopeName": "command-stream.injection",
+  "injectionSelector": "L:source.js -comment, L:source.ts -comment",
+  "patterns": [
+    {
+      "begin": "(\\$|\\bsh|\\bshell)\\s*(`)",
+      "beginCaptures": {
+        "1": { "name": "entity.name.function.command-stream" },
+        "2": { "name": "punctuation.definition.string.begin.js" }
+      },
+      "end": "`",
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.string.end.js" }
+      },
+      "contentName": "source.shell",
+      "patterns": [
+        {
+          "begin": "\\$\\{",
+          "end": "\\}",
+          "name": "meta.template.expression.js",
+          "patterns": [{ "include": "source.js" }]
+        },
+        { "include": "source.shell" }
+      ]
+    }
+  ]
+}

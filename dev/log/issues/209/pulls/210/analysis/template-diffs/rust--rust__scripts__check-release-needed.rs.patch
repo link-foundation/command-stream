@@ -1,0 +1,66 @@
+--- rust-template/scripts/check-release-needed.rs
++++ rust/scripts/check-release-needed.rs
+@@ -48,8 +48,6 @@
+ 
+ #[path = "rust-paths.rs"]
+ mod rust_paths;
+-#[path = "release-naming.rs"]
+-mod release_naming;
+ 
+ fn get_arg(name: &str) -> Option<String> {
+     let args: Vec<String> = env::args().collect();
+@@ -117,12 +115,13 @@
+                     }
+                 }
+             }
+-            false
++            eprintln!("::error::Invalid crates.io version metadata");
++            exit(1)
+         }
+         Err(ureq::Error::Status(404, _)) => false,
+         Err(e) => {
+-            eprintln!("Warning: Could not check crates.io: {}", e);
+-            false
++            eprintln!("::error::crates.io availability is unknown: {}", e);
++            exit(1)
+         }
+     }
+ }
+@@ -262,12 +261,13 @@
+                     }
+                 }
+             }
+-            None
++            eprintln!("::error::Invalid crates.io package metadata");
++            exit(1)
+         }
+         Err(ureq::Error::Status(404, _)) => None,
+         Err(e) => {
+-            eprintln!("Warning: Could not query crates.io for versions: {}", e);
+-            None
++            eprintln!("::error::crates.io versions are unknown: {}", e);
++            exit(1)
+         }
+     }
+ }
+@@ -314,8 +314,7 @@
+ 
+     if !has_fragments {
+         let crate_published = check_version_on_crates_io(&crate_name, &current_version);
+-        let tag_prefix = get_arg("tag-prefix")
+-            .unwrap_or_else(|| release_naming::tag_prefix_for_rust_root(&rust_root).to_string());
++        let tag_prefix = get_arg("tag-prefix").unwrap_or_else(|| "v".to_string());
+         let dockerhub_image = docker_hub_image_to_check();
+         let dockerhub_required = dockerhub_image.is_some();
+         let dockerhub_published = dockerhub_image
+@@ -364,7 +363,9 @@
+                 image, dockerhub_published
+             );
+         } else {
+-            println!("Docker Hub artifact check skipped: DOCKERHUB_IMAGE or Dockerfile is not configured");
++            println!(
++                "Docker Hub artifact check skipped: DOCKERHUB_IMAGE or Dockerfile is not configured"
++            );
+         }
+         println!(
+             "GitHub release {}{} published: {}",

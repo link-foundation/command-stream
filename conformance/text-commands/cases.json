@@ -1,0 +1,436 @@
+[
+  {
+    "command": "head",
+    "args": [],
+    "stdin": "",
+    "stdout": "",
+    "error": false
+  },
+  {
+    "command": "head",
+    "args": [],
+    "stdin": "\n",
+    "stdout": "\n",
+    "error": false
+  },
+  {
+    "command": "head",
+    "args": ["-"],
+    "stdin": "a\nb",
+    "stdout": "a\nb",
+    "error": false
+  },
+  {
+    "command": "head",
+    "args": ["--", "-"],
+    "stdin": "a\nb\n",
+    "stdout": "a\nb\n",
+    "error": false
+  },
+  {
+    "command": "head",
+    "args": ["--unknown"],
+    "stdin": "a\n",
+    "stdout": "",
+    "error": true
+  },
+  {
+    "command": "tail",
+    "args": [],
+    "stdin": "",
+    "stdout": "",
+    "error": false
+  },
+  {
+    "command": "tail",
+    "args": [],
+    "stdin": "\n",
+    "stdout": "\n",
+    "error": false
+  },
+  {
+    "command": "tail",
+    "args": ["-"],
+    "stdin": "a\nb",
+    "stdout": "a\nb",
+    "error": false
+  },
+  {
+    "command": "tail",
+    "args": ["--", "-"],
+    "stdin": "a\nb\n",
+    "stdout": "a\nb\n",
+    "error": false
+  },
+  {
+    "command": "tail",
+    "args": ["--unknown"],
+    "stdin": "a\n",
+    "stdout": "",
+    "error": true
+  },
+  {
+    "command": "sort",
+    "args": [],
+    "stdin": "",
+    "stdout": "",
+    "error": false
+  },
+  {
+    "command": "sort",
+    "args": [],
+    "stdin": "\n",
+    "stdout": "\n",
+    "error": false
+  },
+  {
+    "command": "sort",
+    "args": ["-"],
+    "stdin": "a\nb",
+    "stdout": "a\nb\n",
+    "error": false
+  },
+  {
+    "command": "sort",
+    "args": ["--", "-"],
+    "stdin": "a\nb\n",
+    "stdout": "a\nb\n",
+    "error": false
+  },
+  {
+    "command": "sort",
+    "args": ["--unknown"],
+    "stdin": "a\n",
+    "stdout": "",
+    "error": true
+  },
+  {
+    "command": "uniq",
+    "args": [],
+    "stdin": "",
+    "stdout": "",
+    "error": false
+  },
+  {
+    "command": "uniq",
+    "args": [],
+    "stdin": "\n",
+    "stdout": "\n",
+    "error": false
+  },
+  {
+    "command": "uniq",
+    "args": ["-"],
+    "stdin": "a\nb",
+    "stdout": "a\nb",
+    "error": false
+  },
+  {
+    "command": "uniq",
+    "args": ["--", "-"],
+    "stdin": "a\nb\n",
+    "stdout": "a\nb\n",
+    "error": false
+  },
+  {
+    "command": "uniq",
+    "args": ["--unknown"],
+    "stdin": "a\n",
+    "stdout": "",
+    "error": true
+  },
+  {
+    "command": "head",
+    "args": ["-n", "0"],
+    "stdin": "a\nb\n",
+    "stdout": "",
+    "error": false
+  },
+  {
+    "command": "head",
+    "args": ["-n0"],
+    "stdin": "a\nb\n",
+    "stdout": "",
+    "error": false
+  },
+  {
+    "command": "head",
+    "args": ["-0"],
+    "stdin": "a\nb\n",
+    "stdout": "",
+    "error": false
+  },
+  {
+    "command": "head",
+    "args": ["--lines=0"],
+    "stdin": "a\nb\n",
+    "stdout": "",
+    "error": false
+  },
+  {
+    "command": "head",
+    "args": ["-n"],
+    "stdin": "a\nb\n",
+    "stdout": "",
+    "error": true
+  },
+  {
+    "command": "head",
+    "args": ["-n", "2junk"],
+    "stdin": "a\nb\n",
+    "stdout": "",
+    "error": true
+  },
+  {
+    "command": "head",
+    "args": ["-n", "1.5"],
+    "stdin": "a\nb\n",
+    "stdout": "",
+    "error": true
+  },
+  {
+    "command": "head",
+    "args": ["-n", "-1"],
+    "stdin": "a\nb\n",
+    "stdout": "",
+    "error": true
+  },
+  {
+    "command": "head",
+    "args": ["-n", "9007199254740992"],
+    "stdin": "a\nb\n",
+    "stdout": "",
+    "error": true
+  },
+  {
+    "command": "head",
+    "args": ["-n", "1"],
+    "stdin": "a\nb",
+    "stdout": "a\n",
+    "error": false
+  },
+  {
+    "command": "head",
+    "args": ["-n", "8"],
+    "stdin": "a\nb",
+    "stdout": "a\nb",
+    "error": false
+  },
+  {
+    "command": "head",
+    "args": ["-n", "1"],
+    "stdin": "猫\r\n犬\n",
+    "stdout": "猫\r\n",
+    "error": false
+  },
+  {
+    "command": "head",
+    "args": [],
+    "stdin": "0\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n",
+    "stdout": "0\n1\n2\n3\n4\n5\n6\n7\n8\n9\n",
+    "error": false
+  },
+  {
+    "command": "head",
+    "args": ["--lines", "1"],
+    "stdin": "a\nb\n",
+    "stdout": "a\n",
+    "error": false
+  },
+  {
+    "command": "tail",
+    "args": ["-n", "0"],
+    "stdin": "a\nb\n",
+    "stdout": "",
+    "error": false
+  },
+  {
+    "command": "tail",
+    "args": ["-n0"],
+    "stdin": "a\nb\n",
+    "stdout": "",
+    "error": false
+  },
+  {
+    "command": "tail",
+    "args": ["-0"],
+    "stdin": "a\nb\n",
+    "stdout": "",
+    "error": false
+  },
+  {
+    "command": "tail",
+    "args": ["--lines=0"],
+    "stdin": "a\nb\n",
+    "stdout": "",
+    "error": false
+  },
+  {
+    "command": "tail",
+    "args": ["-n"],
+    "stdin": "a\nb\n",
+    "stdout": "",
+    "error": true
+  },
+  {
+    "command": "tail",
+    "args": ["-n", "2junk"],
+    "stdin": "a\nb\n",
+    "stdout": "",
+    "error": true
+  },
+  {
+    "command": "tail",
+    "args": ["-n", "1.5"],
+    "stdin": "a\nb\n",
+    "stdout": "",
+    "error": true
+  },
+  {
+    "command": "tail",
+    "args": ["-n", "-1"],
+    "stdin": "a\nb\n",
+    "stdout": "",
+    "error": true
+  },
+  {
+    "command": "tail",
+    "args": ["-n", "9007199254740992"],
+    "stdin": "a\nb\n",
+    "stdout": "",
+    "error": true
+  },
+  {
+    "command": "tail",
+    "args": ["-n", "1"],
+    "stdin": "a\nb",
+    "stdout": "b",
+    "error": false
+  },
+  {
+    "command": "tail",
+    "args": ["-n", "8"],
+    "stdin": "a\nb",
+    "stdout": "a\nb",
+    "error": false
+  },
+  {
+    "command": "tail",
+    "args": ["-n", "1"],
+    "stdin": "猫\r\n犬\n",
+    "stdout": "犬\n",
+    "error": false
+  },
+  {
+    "command": "tail",
+    "args": [],
+    "stdin": "0\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n",
+    "stdout": "2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n",
+    "error": false
+  },
+  {
+    "command": "tail",
+    "args": ["--lines", "1"],
+    "stdin": "a\nb\n",
+    "stdout": "b\n",
+    "error": false
+  },
+  {
+    "command": "sort",
+    "args": [],
+    "stdin": "z\na\na",
+    "stdout": "a\na\nz\n",
+    "error": false
+  },
+  {
+    "command": "sort",
+    "args": ["-ru"],
+    "stdin": "z\na\na",
+    "stdout": "z\na\n",
+    "error": false
+  },
+  {
+    "command": "sort",
+    "args": ["-n"],
+    "stdin": "10\n-2\n2.5\ntext\n",
+    "stdout": "-2\ntext\n2.5\n10\n",
+    "error": false
+  },
+  {
+    "command": "sort",
+    "args": ["-n"],
+    "stdin": "2b\n2a\n",
+    "stdout": "2a\n2b\n",
+    "error": false
+  },
+  {
+    "command": "sort",
+    "args": ["-n"],
+    "stdin": "0z\n-0z\n0a\n-0a\n",
+    "stdout": "-0a\n-0z\n0a\n0z\n",
+    "error": false
+  },
+  {
+    "command": "sort",
+    "args": ["-nu"],
+    "stdin": "2b\n2a\n1\n",
+    "stdout": "1\n2a\n",
+    "error": false
+  },
+  {
+    "command": "sort",
+    "args": ["--reverse", "--unique"],
+    "stdin": "b\na\nb\n",
+    "stdout": "b\na\n",
+    "error": false
+  },
+  {
+    "command": "uniq",
+    "args": [],
+    "stdin": "a\na\nb\na",
+    "stdout": "a\nb\na",
+    "error": false
+  },
+  {
+    "command": "uniq",
+    "args": ["-cd"],
+    "stdin": "a\na\nb\nb\nc\n",
+    "stdout": "      2 a\n      2 b\n",
+    "error": false
+  },
+  {
+    "command": "uniq",
+    "args": ["-cu"],
+    "stdin": "a\na\nb\nc\nc\n",
+    "stdout": "      1 b\n",
+    "error": false
+  },
+  {
+    "command": "uniq",
+    "args": ["-i"],
+    "stdin": "A\na\nB\n",
+    "stdout": "A\nB\n",
+    "error": false
+  },
+  {
+    "command": "uniq",
+    "args": ["--count", "--repeated", "--ignore-case"],
+    "stdin": "A\na\nB\n",
+    "stdout": "      2 A\n",
+    "error": false
+  },
+  {
+    "command": "uniq",
+    "args": ["-du"],
+    "stdin": "a\na\nb\n",
+    "stdout": "",
+    "error": true
+  },
+  {
+    "command": "uniq",
+    "args": ["a", "b", "c"],
+    "stdin": "",
+    "stdout": "",
+    "error": true
+  }
+]

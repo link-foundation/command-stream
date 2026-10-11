@@ -1,0 +1,57 @@
+{
+  "source": "test/js/bun/shell/bunshell-default.test.ts",
+  "units": [
+    {
+      "line": 5,
+      "upstream": "default throw on command failure",
+      "disposition": "case",
+      "note": "upstream writes a bun:test file into a temp dir and runs `bun test` on it so the default (never-toggled) $ mode is used; that file asserts e instanceof Error, e.exitCode === 1, e.message === \"Failed with exit code 1\", e.stdout \"hi\\n\", e.stderr \"ls: oogabooga: No such file or directory\\n\". Reproduced with throws:true (the default mode); implementers should also assert the error is an Error/ShellError instance.",
+      "cases": [
+        {
+          "id": "bunshell-default/default-throws-with-output",
+          "template": ["echo hi; ls oogabooga"],
+          "throws": true,
+          "quiet": true,
+          "expect": {
+            "error": {
+              "regex": "^Failed with exit code 1$"
+            },
+            "exitCode": 1,
+            "stdout": "hi\n",
+            "stderr": "ls: oogabooga: No such file or directory\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 32,
+      "upstream": "ShellError has .text()",
+      "disposition": "case",
+      "note": "upstream runs a nested `bun test` file asserting e instanceof Error, e.exitCode === 1 and e.stderr \"ls: oogabooga: No such file or directory\\n\" for `await $`ls oogabooga`.quiet()` in default (throwing) mode",
+      "cases": [
+        {
+          "id": "bunshell-default/default-throws-ls-missing",
+          "template": ["ls oogabooga"],
+          "throws": true,
+          "quiet": true,
+          "expect": {
+            "error": "Failed with exit code 1",
+            "exitCode": 1,
+            "stdout": "",
+            "stderr": "ls: oogabooga: No such file or directory\n"
+          }
+        }
+      ]
+    }
+  ],
+  "nonUnitSites": [
+    {
+      "line": 10,
+      "reason": "test('test', ...) inside the template string of a generated bun:test file (covered by the unit at line 5)"
+    },
+    {
+      "line": 37,
+      "reason": "test('test', ...) inside the template string of a generated bun:test file (covered by the unit at line 32)"
+    }
+  ]
+}

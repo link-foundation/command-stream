@@ -1,0 +1,41 @@
+[
+  {
+    "at": "2026-10-05T18:04:30.747Z",
+    "suffix": "",
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=300",
+      "cf-cache-status": "HIT",
+      "age": "139",
+      "last-modified": "Mon, 05 Oct 2026 12:45:15 GMT"
+    },
+    "published": "2026-10-05T12:45:13.783Z",
+    "visible": true
+  },
+  {
+    "at": "2026-10-05T18:04:30.980Z",
+    "suffix": "/1.4.0",
+    "status": 200,
+    "headers": {
+      "cache-control": "max-age=300",
+      "cf-cache-status": "DYNAMIC",
+      "age": null,
+      "last-modified": null
+    },
+    "version": "1.4.0",
+    "visible": true
+  },
+  {
+    "at": "2026-10-05T18:04:31.222Z",
+    "suffix": "/1.4.0?cache-bust=1791223470549",
+    "status": 200,
+    "headers": {
+      "cache-control": "max-age=300",
+      "cf-cache-status": "DYNAMIC",
+      "age": null,
+      "last-modified": null
+    },
+    "version": "1.4.0",
+    "visible": true
+  }
+]

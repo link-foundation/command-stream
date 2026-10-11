@@ -1,0 +1,20 @@
+PASS * {}
+PASS **/*.txt {}
+PASS **/*.txt {"globstar":false}
+PASS dir/**/*.txt {"globstar":false}
+PASS **/*.txt {"globstar":false,"ignore":["**/a.txt"]}
+PASS [ '**/*.txt', '!**/a.txt' ] {"globstar":false}
+PASS * {"onlyFiles":false}
+PASS dir {"onlyFiles":false}
+PASS {a,b}.txt {}
+PASS {a,b}.txt {"braceExpansion":false}
+PASS @(a|b).txt {}
+PASS @(a|b).txt {"extglob":false}
+PASS *.TXT {"caseSensitiveMatch":false}
+PASS ** {"dot":true,"onlyDirectories":true,"markDirectories":true}
+PASS ** {"ignore":["dir/**"],"onlyFiles":false}
+PASS *.txt {"baseNameMatch":true}
+PASS "{a,b}".txt {}
+PASS a'quote.txt {}
+PASS a"quote.txt {}
+PASS [{a,b}]* {}

@@ -1,0 +1,1421 @@
+{
+  "total_count": 12,
+  "jobs": [
+    {
+      "id": 111940294477,
+      "run_id": 37362523938,
+      "workflow_name": "Bun Shell conformance",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523938",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEClXTQ",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111940294477",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523938/job/111940294477",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-05T19:18:59Z",
+      "started_at": "2026-10-05T19:21:19Z",
+      "completed_at": "2026-10-05T19:21:50Z",
+      "name": "port on Node.js on windows-2025",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-05T19:21:20Z",
+          "completed_at": "2026-10-05T19:21:21Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-05T19:21:21Z",
+          "completed_at": "2026-10-05T19:21:31Z"
+        },
+        {
+          "name": "Simulate a fresh merge with the base branch",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-05T19:21:31Z",
+          "completed_at": "2026-10-05T19:21:32Z"
+        },
+        {
+          "name": "Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-05T19:21:32Z",
+          "completed_at": "2026-10-05T19:21:34Z"
+        },
+        {
+          "name": "Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-05T19:21:34Z",
+          "completed_at": "2026-10-05T19:21:39Z"
+        },
+        {
+          "name": "Setup Deno",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 6,
+          "started_at": "2026-10-05T19:21:39Z",
+          "completed_at": "2026-10-05T19:21:39Z"
+        },
+        {
+          "name": "Run the corpus",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-05T19:21:39Z",
+          "completed_at": "2026-10-05T19:21:46Z"
+        },
+        {
+          "name": "Post Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-10-05T19:21:46Z",
+          "completed_at": "2026-10-05T19:21:46Z"
+        },
+        {
+          "name": "Post Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-10-05T19:21:46Z",
+          "completed_at": "2026-10-05T19:21:47Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14,
+          "started_at": "2026-10-05T19:21:47Z",
+          "completed_at": "2026-10-05T19:21:49Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15,
+          "started_at": "2026-10-05T19:21:49Z",
+          "completed_at": "2026-10-05T19:21:49Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111940294477",
+      "labels": [
+        "windows-2025"
+      ],
+      "runner_id": 1000084105,
+      "runner_name": "GitHub Actions 1000084105",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 111940294478,
+      "run_id": 37362523938,
+      "workflow_name": "Bun Shell conformance",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523938",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEClXTg",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111940294478",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523938/job/111940294478",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-05T19:18:59Z",
+      "started_at": "2026-10-05T19:22:58Z",
+      "completed_at": "2026-10-05T19:23:19Z",
+      "name": "port on Node.js on macos-15",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-05T19:22:59Z",
+          "completed_at": "2026-10-05T19:23:01Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-05T19:23:01Z",
+          "completed_at": "2026-10-05T19:23:05Z"
+        },
+        {
+          "name": "Simulate a fresh merge with the base branch",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-05T19:23:05Z",
+          "completed_at": "2026-10-05T19:23:05Z"
+        },
+        {
+          "name": "Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-05T19:23:05Z",
+          "completed_at": "2026-10-05T19:23:07Z"
+        },
+        {
+          "name": "Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-05T19:23:07Z",
+          "completed_at": "2026-10-05T19:23:08Z"
+        },
+        {
+          "name": "Setup Deno",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 6,
+          "started_at": "2026-10-05T19:23:08Z",
+          "completed_at": "2026-10-05T19:23:08Z"
+        },
+        {
+          "name": "Run the corpus",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-05T19:23:08Z",
+          "completed_at": "2026-10-05T19:23:14Z"
+        },
+        {
+          "name": "Post Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-10-05T19:23:14Z",
+          "completed_at": "2026-10-05T19:23:14Z"
+        },
+        {
+          "name": "Post Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-10-05T19:23:14Z",
+          "completed_at": "2026-10-05T19:23:14Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14,
+          "started_at": "2026-10-05T19:23:14Z",
+          "completed_at": "2026-10-05T19:23:14Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15,
+          "started_at": "2026-10-05T19:23:14Z",
+          "completed_at": "2026-10-05T19:23:15Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111940294478",
+      "labels": [
+        "macos-15"
+      ],
+      "runner_id": 1000084111,
+      "runner_name": "GitHub Actions 1000084111",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 111940294510,
+      "run_id": 37362523938,
+      "workflow_name": "Bun Shell conformance",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523938",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEClXbg",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111940294510",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523938/job/111940294510",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-05T19:18:59Z",
+      "started_at": "2026-10-05T19:20:28Z",
+      "completed_at": "2026-10-05T19:20:49Z",
+      "name": "port on Bun on macos-15",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-05T19:20:29Z",
+          "completed_at": "2026-10-05T19:20:31Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-05T19:20:31Z",
+          "completed_at": "2026-10-05T19:20:35Z"
+        },
+        {
+          "name": "Simulate a fresh merge with the base branch",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-05T19:20:35Z",
+          "completed_at": "2026-10-05T19:20:36Z"
+        },
+        {
+          "name": "Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-05T19:20:36Z",
+          "completed_at": "2026-10-05T19:20:37Z"
+        },
+        {
+          "name": "Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-05T19:20:37Z",
+          "completed_at": "2026-10-05T19:20:39Z"
+        },
+        {
+          "name": "Setup Deno",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 6,
+          "started_at": "2026-10-05T19:20:39Z",
+          "completed_at": "2026-10-05T19:20:39Z"
+        },
+        {
+          "name": "Run the corpus",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-05T19:20:39Z",
+          "completed_at": "2026-10-05T19:20:45Z"
+        },
+        {
+          "name": "Post Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-10-05T19:20:45Z",
+          "completed_at": "2026-10-05T19:20:45Z"
+        },
+        {
+          "name": "Post Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-10-05T19:20:45Z",
+          "completed_at": "2026-10-05T19:20:45Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14,
+          "started_at": "2026-10-05T19:20:45Z",
+          "completed_at": "2026-10-05T19:20:46Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15,
+          "started_at": "2026-10-05T19:20:46Z",
+          "completed_at": "2026-10-05T19:20:46Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111940294510",
+      "labels": [
+        "macos-15"
+      ],
+      "runner_id": 1000084100,
+      "runner_name": "GitHub Actions 1000084100",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 111940294513,
+      "run_id": 37362523938,
+      "workflow_name": "Bun Shell conformance",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523938",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEClXcQ",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111940294513",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523938/job/111940294513",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-05T19:18:59Z",
+      "started_at": "2026-10-05T19:19:09Z",
+      "completed_at": "2026-10-05T19:19:34Z",
+      "name": "Bun.$ reference on ubuntu-24.04",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-05T19:19:10Z",
+          "completed_at": "2026-10-05T19:19:12Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-05T19:19:12Z",
+          "completed_at": "2026-10-05T19:19:15Z"
+        },
+        {
+          "name": "Simulate a fresh merge with the base branch",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-05T19:19:15Z",
+          "completed_at": "2026-10-05T19:19:16Z"
+        },
+        {
+          "name": "Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-05T19:19:16Z",
+          "completed_at": "2026-10-05T19:19:18Z"
+        },
+        {
+          "name": "Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-05T19:19:18Z",
+          "completed_at": "2026-10-05T19:19:20Z"
+        },
+        {
+          "name": "Setup Deno",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 6,
+          "started_at": "2026-10-05T19:19:20Z",
+          "completed_at": "2026-10-05T19:19:20Z"
+        },
+        {
+          "name": "Run the corpus",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-05T19:19:20Z",
+          "completed_at": "2026-10-05T19:19:31Z"
+        },
+        {
+          "name": "Post Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-10-05T19:19:31Z",
+          "completed_at": "2026-10-05T19:19:31Z"
+        },
+        {
+          "name": "Post Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-10-05T19:19:31Z",
+          "completed_at": "2026-10-05T19:19:32Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14,
+          "started_at": "2026-10-05T19:19:32Z",
+          "completed_at": "2026-10-05T19:19:32Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15,
+          "started_at": "2026-10-05T19:19:32Z",
+          "completed_at": "2026-10-05T19:19:32Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111940294513",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "runner_id": 1000084091,
+      "runner_name": "GitHub Actions 1000084091",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 111940294525,
+      "run_id": 37362523938,
+      "workflow_name": "Bun Shell conformance",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523938",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEClXfQ",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111940294525",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523938/job/111940294525",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-05T19:18:59Z",
+      "started_at": "2026-10-05T19:22:06Z",
+      "completed_at": "2026-10-05T19:22:44Z",
+      "name": "port on Deno on windows-2025",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-05T19:22:07Z",
+          "completed_at": "2026-10-05T19:22:08Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-05T19:22:08Z",
+          "completed_at": "2026-10-05T19:22:18Z"
+        },
+        {
+          "name": "Simulate a fresh merge with the base branch",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-05T19:22:18Z",
+          "completed_at": "2026-10-05T19:22:19Z"
+        },
+        {
+          "name": "Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-05T19:22:19Z",
+          "completed_at": "2026-10-05T19:22:21Z"
+        },
+        {
+          "name": "Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-05T19:22:21Z",
+          "completed_at": "2026-10-05T19:22:27Z"
+        },
+        {
+          "name": "Setup Deno",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-05T19:22:27Z",
+          "completed_at": "2026-10-05T19:22:28Z"
+        },
+        {
+          "name": "Run the corpus",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-05T19:22:28Z",
+          "completed_at": "2026-10-05T19:22:40Z"
+        },
+        {
+          "name": "Post Setup Deno",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-10-05T19:22:40Z",
+          "completed_at": "2026-10-05T19:22:40Z"
+        },
+        {
+          "name": "Post Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-10-05T19:22:40Z",
+          "completed_at": "2026-10-05T19:22:40Z"
+        },
+        {
+          "name": "Post Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-10-05T19:22:40Z",
+          "completed_at": "2026-10-05T19:22:40Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14,
+          "started_at": "2026-10-05T19:22:40Z",
+          "completed_at": "2026-10-05T19:22:43Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15,
+          "started_at": "2026-10-05T19:22:43Z",
+          "completed_at": "2026-10-05T19:22:43Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111940294525",
+      "labels": [
+        "windows-2025"
+      ],
+      "runner_id": 1000084110,
+      "runner_name": "GitHub Actions 1000084110",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 111940294546,
+      "run_id": 37362523938,
+      "workflow_name": "Bun Shell conformance",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523938",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEClXkg",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111940294546",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523938/job/111940294546",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-05T19:18:59Z",
+      "started_at": "2026-10-05T19:27:41Z",
+      "completed_at": "2026-10-05T19:28:04Z",
+      "name": "port on Bun on windows-2025",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-05T19:27:41Z",
+          "completed_at": "2026-10-05T19:27:43Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-05T19:27:43Z",
+          "completed_at": "2026-10-05T19:27:50Z"
+        },
+        {
+          "name": "Simulate a fresh merge with the base branch",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-05T19:27:50Z",
+          "completed_at": "2026-10-05T19:27:50Z"
+        },
+        {
+          "name": "Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-05T19:27:50Z",
+          "completed_at": "2026-10-05T19:27:52Z"
+        },
+        {
+          "name": "Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-05T19:27:52Z",
+          "completed_at": "2026-10-05T19:27:57Z"
+        },
+        {
+          "name": "Setup Deno",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 6,
+          "started_at": "2026-10-05T19:27:57Z",
+          "completed_at": "2026-10-05T19:27:57Z"
+        },
+        {
+          "name": "Run the corpus",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-05T19:27:57Z",
+          "completed_at": "2026-10-05T19:28:00Z"
+        },
+        {
+          "name": "Post Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-10-05T19:28:00Z",
+          "completed_at": "2026-10-05T19:28:00Z"
+        },
+        {
+          "name": "Post Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-10-05T19:28:00Z",
+          "completed_at": "2026-10-05T19:28:01Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14,
+          "started_at": "2026-10-05T19:28:01Z",
+          "completed_at": "2026-10-05T19:28:02Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15,
+          "started_at": "2026-10-05T19:28:02Z",
+          "completed_at": "2026-10-05T19:28:02Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111940294546",
+      "labels": [
+        "windows-2025"
+      ],
+      "runner_id": 1000084140,
+      "runner_name": "GitHub Actions 1000084140",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 111940294585,
+      "run_id": 37362523938,
+      "workflow_name": "Bun Shell conformance",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523938",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEClXuQ",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111940294585",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523938/job/111940294585",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-05T19:18:59Z",
+      "started_at": "2026-10-05T19:27:25Z",
+      "completed_at": "2026-10-05T19:27:40Z",
+      "name": "port on Bun on ubuntu-24.04",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-05T19:27:26Z",
+          "completed_at": "2026-10-05T19:27:28Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-05T19:27:28Z",
+          "completed_at": "2026-10-05T19:27:31Z"
+        },
+        {
+          "name": "Simulate a fresh merge with the base branch",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-05T19:27:31Z",
+          "completed_at": "2026-10-05T19:27:31Z"
+        },
+        {
+          "name": "Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-05T19:27:31Z",
+          "completed_at": "2026-10-05T19:27:33Z"
+        },
+        {
+          "name": "Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-05T19:27:33Z",
+          "completed_at": "2026-10-05T19:27:33Z"
+        },
+        {
+          "name": "Setup Deno",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 6,
+          "started_at": "2026-10-05T19:27:33Z",
+          "completed_at": "2026-10-05T19:27:33Z"
+        },
+        {
+          "name": "Run the corpus",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-05T19:27:33Z",
+          "completed_at": "2026-10-05T19:27:37Z"
+        },
+        {
+          "name": "Post Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-10-05T19:27:37Z",
+          "completed_at": "2026-10-05T19:27:37Z"
+        },
+        {
+          "name": "Post Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-10-05T19:27:37Z",
+          "completed_at": "2026-10-05T19:27:37Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14,
+          "started_at": "2026-10-05T19:27:37Z",
+          "completed_at": "2026-10-05T19:27:38Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15,
+          "started_at": "2026-10-05T19:27:38Z",
+          "completed_at": "2026-10-05T19:27:38Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111940294585",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "runner_id": 1000084139,
+      "runner_name": "GitHub Actions 1000084139",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 111940294605,
+      "run_id": 37362523938,
+      "workflow_name": "Bun Shell conformance",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523938",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEClXzQ",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111940294605",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523938/job/111940294605",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-05T19:18:59Z",
+      "started_at": "2026-10-05T19:22:31Z",
+      "completed_at": "2026-10-05T19:22:44Z",
+      "name": "Bun.$ reference on macos-15",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-05T19:22:32Z",
+          "completed_at": "2026-10-05T19:22:34Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-05T19:22:34Z",
+          "completed_at": "2026-10-05T19:22:37Z"
+        },
+        {
+          "name": "Simulate a fresh merge with the base branch",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-05T19:22:37Z",
+          "completed_at": "2026-10-05T19:22:38Z"
+        },
+        {
+          "name": "Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-05T19:22:38Z",
+          "completed_at": "2026-10-05T19:22:39Z"
+        },
+        {
+          "name": "Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-05T19:22:39Z",
+          "completed_at": "2026-10-05T19:22:40Z"
+        },
+        {
+          "name": "Setup Deno",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 6,
+          "started_at": "2026-10-05T19:22:40Z",
+          "completed_at": "2026-10-05T19:22:40Z"
+        },
+        {
+          "name": "Run the corpus",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-05T19:22:40Z",
+          "completed_at": "2026-10-05T19:22:42Z"
+        },
+        {
+          "name": "Post Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-10-05T19:22:42Z",
+          "completed_at": "2026-10-05T19:22:42Z"
+        },
+        {
+          "name": "Post Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-10-05T19:22:42Z",
+          "completed_at": "2026-10-05T19:22:42Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14,
+          "started_at": "2026-10-05T19:22:42Z",
+          "completed_at": "2026-10-05T19:22:43Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15,
+          "started_at": "2026-10-05T19:22:43Z",
+          "completed_at": "2026-10-05T19:22:43Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111940294605",
+      "labels": [
+        "macos-15"
+      ],
+      "runner_id": 1000084114,
+      "runner_name": "GitHub Actions 1000084114",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 111940294615,
+      "run_id": 37362523938,
+      "workflow_name": "Bun Shell conformance",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523938",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEClX1w",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111940294615",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523938/job/111940294615",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-05T19:18:59Z",
+      "started_at": "2026-10-05T19:20:51Z",
+      "completed_at": "2026-10-05T19:21:14Z",
+      "name": "port on Deno on macos-15",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-05T19:20:52Z",
+          "completed_at": "2026-10-05T19:20:54Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-05T19:20:54Z",
+          "completed_at": "2026-10-05T19:20:58Z"
+        },
+        {
+          "name": "Simulate a fresh merge with the base branch",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-05T19:20:58Z",
+          "completed_at": "2026-10-05T19:20:59Z"
+        },
+        {
+          "name": "Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-05T19:20:59Z",
+          "completed_at": "2026-10-05T19:21:00Z"
+        },
+        {
+          "name": "Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-05T19:21:00Z",
+          "completed_at": "2026-10-05T19:21:01Z"
+        },
+        {
+          "name": "Setup Deno",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-05T19:21:01Z",
+          "completed_at": "2026-10-05T19:21:03Z"
+        },
+        {
+          "name": "Run the corpus",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-05T19:21:03Z",
+          "completed_at": "2026-10-05T19:21:09Z"
+        },
+        {
+          "name": "Post Setup Deno",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-10-05T19:21:09Z",
+          "completed_at": "2026-10-05T19:21:09Z"
+        },
+        {
+          "name": "Post Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-10-05T19:21:09Z",
+          "completed_at": "2026-10-05T19:21:09Z"
+        },
+        {
+          "name": "Post Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-10-05T19:21:09Z",
+          "completed_at": "2026-10-05T19:21:09Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14,
+          "started_at": "2026-10-05T19:21:09Z",
+          "completed_at": "2026-10-05T19:21:10Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15,
+          "started_at": "2026-10-05T19:21:10Z",
+          "completed_at": "2026-10-05T19:21:10Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111940294615",
+      "labels": [
+        "macos-15"
+      ],
+      "runner_id": 1000084101,
+      "runner_name": "GitHub Actions 1000084101",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 111940294831,
+      "run_id": 37362523938,
+      "workflow_name": "Bun Shell conformance",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523938",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEClYrw",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111940294831",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523938/job/111940294831",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-05T19:18:59Z",
+      "started_at": "2026-10-05T19:22:40Z",
+      "completed_at": "2026-10-05T19:23:19Z",
+      "name": "Bun.$ reference on windows-2025",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-05T19:22:42Z",
+          "completed_at": "2026-10-05T19:22:43Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-05T19:22:43Z",
+          "completed_at": "2026-10-05T19:22:55Z"
+        },
+        {
+          "name": "Simulate a fresh merge with the base branch",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-05T19:22:55Z",
+          "completed_at": "2026-10-05T19:22:56Z"
+        },
+        {
+          "name": "Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-05T19:22:56Z",
+          "completed_at": "2026-10-05T19:22:58Z"
+        },
+        {
+          "name": "Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-05T19:22:58Z",
+          "completed_at": "2026-10-05T19:23:03Z"
+        },
+        {
+          "name": "Setup Deno",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 6,
+          "started_at": "2026-10-05T19:23:03Z",
+          "completed_at": "2026-10-05T19:23:03Z"
+        },
+        {
+          "name": "Run the corpus",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-05T19:23:03Z",
+          "completed_at": "2026-10-05T19:23:14Z"
+        },
+        {
+          "name": "Post Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-10-05T19:23:14Z",
+          "completed_at": "2026-10-05T19:23:14Z"
+        },
+        {
+          "name": "Post Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-10-05T19:23:14Z",
+          "completed_at": "2026-10-05T19:23:14Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14,
+          "started_at": "2026-10-05T19:23:14Z",
+          "completed_at": "2026-10-05T19:23:16Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15,
+          "started_at": "2026-10-05T19:23:16Z",
+          "completed_at": "2026-10-05T19:23:16Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111940294831",
+      "labels": [
+        "windows-2025"
+      ],
+      "runner_id": 1000084113,
+      "runner_name": "GitHub Actions 1000084113",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 111940294936,
+      "run_id": 37362523938,
+      "workflow_name": "Bun Shell conformance",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523938",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEClZGA",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111940294936",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523938/job/111940294936",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-05T19:18:59Z",
+      "started_at": "2026-10-05T19:21:26Z",
+      "completed_at": "2026-10-05T19:21:45Z",
+      "name": "port on Deno on ubuntu-24.04",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-05T19:21:27Z",
+          "completed_at": "2026-10-05T19:21:28Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-05T19:21:28Z",
+          "completed_at": "2026-10-05T19:21:32Z"
+        },
+        {
+          "name": "Simulate a fresh merge with the base branch",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-05T19:21:32Z",
+          "completed_at": "2026-10-05T19:21:33Z"
+        },
+        {
+          "name": "Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-05T19:21:33Z",
+          "completed_at": "2026-10-05T19:21:34Z"
+        },
+        {
+          "name": "Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-05T19:21:34Z",
+          "completed_at": "2026-10-05T19:21:35Z"
+        },
+        {
+          "name": "Setup Deno",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-05T19:21:35Z",
+          "completed_at": "2026-10-05T19:21:37Z"
+        },
+        {
+          "name": "Run the corpus",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-05T19:21:37Z",
+          "completed_at": "2026-10-05T19:21:42Z"
+        },
+        {
+          "name": "Post Setup Deno",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-10-05T19:21:42Z",
+          "completed_at": "2026-10-05T19:21:42Z"
+        },
+        {
+          "name": "Post Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-10-05T19:21:42Z",
+          "completed_at": "2026-10-05T19:21:42Z"
+        },
+        {
+          "name": "Post Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-10-05T19:21:42Z",
+          "completed_at": "2026-10-05T19:21:43Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14,
+          "started_at": "2026-10-05T19:21:43Z",
+          "completed_at": "2026-10-05T19:21:43Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15,
+          "started_at": "2026-10-05T19:21:43Z",
+          "completed_at": "2026-10-05T19:21:43Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111940294936",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "runner_id": 1000084106,
+      "runner_name": "GitHub Actions 1000084106",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 111940295050,
+      "run_id": 37362523938,
+      "workflow_name": "Bun Shell conformance",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523938",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEClZig",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111940295050",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523938/job/111940295050",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-05T19:18:59Z",
+      "started_at": "2026-10-05T19:19:56Z",
+      "completed_at": "2026-10-05T19:20:10Z",
+      "name": "port on Node.js on ubuntu-24.04",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-05T19:19:57Z",
+          "completed_at": "2026-10-05T19:19:58Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-05T19:19:58Z",
+          "completed_at": "2026-10-05T19:20:00Z"
+        },
+        {
+          "name": "Simulate a fresh merge with the base branch",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-05T19:20:00Z",
+          "completed_at": "2026-10-05T19:20:00Z"
+        },
+        {
+          "name": "Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-05T19:20:00Z",
+          "completed_at": "2026-10-05T19:20:02Z"
+        },
+        {
+          "name": "Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-05T19:20:02Z",
+          "completed_at": "2026-10-05T19:20:02Z"
+        },
+        {
+          "name": "Setup Deno",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 6,
+          "started_at": "2026-10-05T19:20:02Z",
+          "completed_at": "2026-10-05T19:20:02Z"
+        },
+        {
+          "name": "Run the corpus",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-05T19:20:02Z",
+          "completed_at": "2026-10-05T19:20:08Z"
+        },
+        {
+          "name": "Post Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-10-05T19:20:08Z",
+          "completed_at": "2026-10-05T19:20:08Z"
+        },
+        {
+          "name": "Post Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-10-05T19:20:08Z",
+          "completed_at": "2026-10-05T19:20:08Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14,
+          "started_at": "2026-10-05T19:20:08Z",
+          "completed_at": "2026-10-05T19:20:09Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15,
+          "started_at": "2026-10-05T19:20:09Z",
+          "completed_at": "2026-10-05T19:20:09Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111940295050",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "runner_id": 1000084099,
+      "runner_name": "GitHub Actions 1000084099",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    }
+  ]
+}

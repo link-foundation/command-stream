@@ -1,0 +1,1164 @@
+{
+  "total_count": 11,
+  "jobs": [
+    {
+      "id": 111940293037,
+      "run_id": 37362523666,
+      "workflow_name": "JavaScript checks and release",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523666",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEClRrQ",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111940293037",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523666/job/111940293037",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-05T19:18:59Z",
+      "started_at": "2026-10-05T19:19:34Z",
+      "completed_at": "2026-10-05T19:19:45Z",
+      "name": "Check for JavaScript changesets",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-05T19:19:35Z",
+          "completed_at": "2026-10-05T19:19:36Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-05T19:19:36Z",
+          "completed_at": "2026-10-05T19:19:39Z"
+        },
+        {
+          "name": "Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-05T19:19:39Z",
+          "completed_at": "2026-10-05T19:19:40Z"
+        },
+        {
+          "name": "Install dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-05T19:19:40Z",
+          "completed_at": "2026-10-05T19:19:41Z"
+        },
+        {
+          "name": "Check for changesets",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-05T19:19:41Z",
+          "completed_at": "2026-10-05T19:19:41Z"
+        },
+        {
+          "name": "Post Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-10-05T19:19:41Z",
+          "completed_at": "2026-10-05T19:19:42Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-10-05T19:19:42Z",
+          "completed_at": "2026-10-05T19:19:42Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-10-05T19:19:42Z",
+          "completed_at": "2026-10-05T19:19:42Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111940293037",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "runner_id": 1000084095,
+      "runner_name": "GitHub Actions 1000084095",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 111940294338,
+      "run_id": 37362523666,
+      "workflow_name": "JavaScript checks and release",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523666",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEClWwg",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111940294338",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523666/job/111940294338",
+      "status": "completed",
+      "conclusion": "skipped",
+      "created_at": "2026-10-05T19:18:59Z",
+      "started_at": "2026-10-05T19:18:59Z",
+      "completed_at": "2026-10-05T19:18:58Z",
+      "name": "Create JavaScript changeset PR",
+      "steps": [],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111940294338",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "runner_id": null,
+      "runner_name": null,
+      "runner_group_id": null,
+      "runner_group_name": null
+    },
+    {
+      "id": 111940583815,
+      "run_id": 37362523666,
+      "workflow_name": "JavaScript checks and release",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523666",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEC3Bhw",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111940583815",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523666/job/111940583815",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-05T19:19:45Z",
+      "started_at": "2026-10-05T19:23:06Z",
+      "completed_at": "2026-10-05T19:23:38Z",
+      "name": "Lint and format JavaScript",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-05T19:23:07Z",
+          "completed_at": "2026-10-05T19:23:08Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-05T19:23:08Z",
+          "completed_at": "2026-10-05T19:23:12Z"
+        },
+        {
+          "name": "Simulate a fresh merge with the base branch",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-05T19:23:12Z",
+          "completed_at": "2026-10-05T19:23:12Z"
+        },
+        {
+          "name": "Check registry publish credentials",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 4,
+          "started_at": "2026-10-05T19:23:12Z",
+          "completed_at": "2026-10-05T19:23:12Z"
+        },
+        {
+          "name": "Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-05T19:23:12Z",
+          "completed_at": "2026-10-05T19:23:14Z"
+        },
+        {
+          "name": "Install dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-05T19:23:14Z",
+          "completed_at": "2026-10-05T19:23:17Z"
+        },
+        {
+          "name": "Run ESLint",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-05T19:23:17Z",
+          "completed_at": "2026-10-05T19:23:26Z"
+        },
+        {
+          "name": "Check formatting",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-10-05T19:23:26Z",
+          "completed_at": "2026-10-05T19:23:34Z"
+        },
+        {
+          "name": "Check code duplication",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-10-05T19:23:34Z",
+          "completed_at": "2026-10-05T19:23:35Z"
+        },
+        {
+          "name": "Check TypeScript declarations",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-10-05T19:23:35Z",
+          "completed_at": "2026-10-05T19:23:36Z"
+        },
+        {
+          "name": "Post Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 19,
+          "started_at": "2026-10-05T19:23:36Z",
+          "completed_at": "2026-10-05T19:23:36Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 20,
+          "started_at": "2026-10-05T19:23:36Z",
+          "completed_at": "2026-10-05T19:23:36Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 21,
+          "started_at": "2026-10-05T19:23:36Z",
+          "completed_at": "2026-10-05T19:23:36Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111940583815",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "runner_id": 1000084121,
+      "runner_name": "GitHub Actions 1000084121",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 111942013399,
+      "run_id": 37362523666,
+      "workflow_name": "JavaScript checks and release",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523666",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEEOR1w",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111942013399",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523666/job/111942013399",
+      "status": "completed",
+      "conclusion": "cancelled",
+      "created_at": "2026-10-05T19:23:39Z",
+      "started_at": "2026-10-05T19:23:39Z",
+      "completed_at": "2026-10-05T19:42:25Z",
+      "name": "Test JavaScript (bun on macos-15)",
+      "steps": [],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111942013399",
+      "labels": [
+        "macos-15"
+      ],
+      "runner_id": 0,
+      "runner_name": "",
+      "runner_group_id": 0,
+      "runner_group_name": ""
+    },
+    {
+      "id": 111942013405,
+      "run_id": 37362523666,
+      "workflow_name": "JavaScript checks and release",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523666",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEEOR3Q",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111942013405",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523666/job/111942013405",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-05T19:23:39Z",
+      "started_at": "2026-10-05T19:24:23Z",
+      "completed_at": "2026-10-05T19:25:30Z",
+      "name": "Test JavaScript (node 24 on ubuntu-24.04)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-05T19:24:24Z",
+          "completed_at": "2026-10-05T19:24:26Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-05T19:24:26Z",
+          "completed_at": "2026-10-05T19:24:28Z"
+        },
+        {
+          "name": "Simulate a fresh merge with the base branch",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-05T19:24:28Z",
+          "completed_at": "2026-10-05T19:24:29Z"
+        },
+        {
+          "name": "Setup Bun",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 4,
+          "started_at": "2026-10-05T19:24:29Z",
+          "completed_at": "2026-10-05T19:24:29Z"
+        },
+        {
+          "name": "Setup Node.js PTY host",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 5,
+          "started_at": "2026-10-05T19:24:29Z",
+          "completed_at": "2026-10-05T19:24:29Z"
+        },
+        {
+          "name": "Install system dependencies (Ubuntu)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-05T19:24:29Z",
+          "completed_at": "2026-10-05T19:24:38Z"
+        },
+        {
+          "name": "Install system dependencies (macOS)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 7,
+          "started_at": "2026-10-05T19:24:38Z",
+          "completed_at": "2026-10-05T19:24:38Z"
+        },
+        {
+          "name": "Install system dependencies (Windows)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 8,
+          "started_at": "2026-10-05T19:24:38Z",
+          "completed_at": "2026-10-05T19:24:38Z"
+        },
+        {
+          "name": "Setup Deno",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-10-05T19:24:38Z",
+          "completed_at": "2026-10-05T19:24:39Z"
+        },
+        {
+          "name": "Install dependencies (Bun)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 10,
+          "started_at": "2026-10-05T19:24:39Z",
+          "completed_at": "2026-10-05T19:24:39Z"
+        },
+        {
+          "name": "Run tests (Bun)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 11,
+          "started_at": "2026-10-05T19:24:39Z",
+          "completed_at": "2026-10-05T19:24:39Z"
+        },
+        {
+          "name": "Preserve Bun test diagnostics",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 12,
+          "started_at": "2026-10-05T19:24:39Z",
+          "completed_at": "2026-10-05T19:24:39Z"
+        },
+        {
+          "name": "Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-10-05T19:24:39Z",
+          "completed_at": "2026-10-05T19:24:42Z"
+        },
+        {
+          "name": "Install dependencies (Node)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14,
+          "started_at": "2026-10-05T19:24:42Z",
+          "completed_at": "2026-10-05T19:24:49Z"
+        },
+        {
+          "name": "Test Node.js compatibility",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15,
+          "started_at": "2026-10-05T19:24:49Z",
+          "completed_at": "2026-10-05T19:24:51Z"
+        },
+        {
+          "name": "Run zx compatibility suite (Node)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16,
+          "started_at": "2026-10-05T19:24:51Z",
+          "completed_at": "2026-10-05T19:25:22Z"
+        },
+        {
+          "name": "Run Execa compatibility suite (Node)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17,
+          "started_at": "2026-10-05T19:25:22Z",
+          "completed_at": "2026-10-05T19:25:27Z"
+        },
+        {
+          "name": "Post Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 32,
+          "started_at": "2026-10-05T19:25:27Z",
+          "completed_at": "2026-10-05T19:25:27Z"
+        },
+        {
+          "name": "Post Setup Deno",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 33,
+          "started_at": "2026-10-05T19:25:27Z",
+          "completed_at": "2026-10-05T19:25:27Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 34,
+          "started_at": "2026-10-05T19:25:27Z",
+          "completed_at": "2026-10-05T19:25:28Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 35,
+          "started_at": "2026-10-05T19:25:28Z",
+          "completed_at": "2026-10-05T19:25:28Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111942013405",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "runner_id": 1000084128,
+      "runner_name": "GitHub Actions 1000084128",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 111942013498,
+      "run_id": 37362523666,
+      "workflow_name": "JavaScript checks and release",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523666",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEEOSOg",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111942013498",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523666/job/111942013498",
+      "status": "completed",
+      "conclusion": "cancelled",
+      "created_at": "2026-10-05T19:23:39Z",
+      "started_at": "2026-10-05T19:23:39Z",
+      "completed_at": "2026-10-05T19:43:28Z",
+      "name": "Test JavaScript (node 22 on ubuntu-24.04)",
+      "steps": [],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111942013498",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "runner_id": 0,
+      "runner_name": "",
+      "runner_group_id": 0,
+      "runner_group_name": ""
+    },
+    {
+      "id": 111942013637,
+      "run_id": 37362523666,
+      "workflow_name": "JavaScript checks and release",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523666",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEEOSxQ",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111942013637",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523666/job/111942013637",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-05T19:23:39Z",
+      "started_at": "2026-10-05T19:28:45Z",
+      "completed_at": "2026-10-05T19:29:52Z",
+      "name": "Test JavaScript (node 20 on ubuntu-24.04)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-05T19:28:46Z",
+          "completed_at": "2026-10-05T19:28:47Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-05T19:28:47Z",
+          "completed_at": "2026-10-05T19:28:49Z"
+        },
+        {
+          "name": "Simulate a fresh merge with the base branch",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-05T19:28:49Z",
+          "completed_at": "2026-10-05T19:28:50Z"
+        },
+        {
+          "name": "Setup Bun",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 4,
+          "started_at": "2026-10-05T19:28:50Z",
+          "completed_at": "2026-10-05T19:28:50Z"
+        },
+        {
+          "name": "Setup Node.js PTY host",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 5,
+          "started_at": "2026-10-05T19:28:50Z",
+          "completed_at": "2026-10-05T19:28:50Z"
+        },
+        {
+          "name": "Install system dependencies (Ubuntu)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-05T19:28:50Z",
+          "completed_at": "2026-10-05T19:28:59Z"
+        },
+        {
+          "name": "Install system dependencies (macOS)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 7,
+          "started_at": "2026-10-05T19:28:59Z",
+          "completed_at": "2026-10-05T19:28:59Z"
+        },
+        {
+          "name": "Install system dependencies (Windows)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 8,
+          "started_at": "2026-10-05T19:28:59Z",
+          "completed_at": "2026-10-05T19:28:59Z"
+        },
+        {
+          "name": "Setup Deno",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-10-05T19:28:59Z",
+          "completed_at": "2026-10-05T19:29:00Z"
+        },
+        {
+          "name": "Install dependencies (Bun)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 10,
+          "started_at": "2026-10-05T19:29:00Z",
+          "completed_at": "2026-10-05T19:29:00Z"
+        },
+        {
+          "name": "Run tests (Bun)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 11,
+          "started_at": "2026-10-05T19:29:00Z",
+          "completed_at": "2026-10-05T19:29:00Z"
+        },
+        {
+          "name": "Preserve Bun test diagnostics",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 12,
+          "started_at": "2026-10-05T19:29:00Z",
+          "completed_at": "2026-10-05T19:29:00Z"
+        },
+        {
+          "name": "Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-10-05T19:29:00Z",
+          "completed_at": "2026-10-05T19:29:04Z"
+        },
+        {
+          "name": "Install dependencies (Node)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14,
+          "started_at": "2026-10-05T19:29:04Z",
+          "completed_at": "2026-10-05T19:29:10Z"
+        },
+        {
+          "name": "Test Node.js compatibility",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15,
+          "started_at": "2026-10-05T19:29:10Z",
+          "completed_at": "2026-10-05T19:29:12Z"
+        },
+        {
+          "name": "Run zx compatibility suite (Node)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16,
+          "started_at": "2026-10-05T19:29:12Z",
+          "completed_at": "2026-10-05T19:29:44Z"
+        },
+        {
+          "name": "Run Execa compatibility suite (Node)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17,
+          "started_at": "2026-10-05T19:29:44Z",
+          "completed_at": "2026-10-05T19:29:50Z"
+        },
+        {
+          "name": "Post Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 32,
+          "started_at": "2026-10-05T19:29:50Z",
+          "completed_at": "2026-10-05T19:29:50Z"
+        },
+        {
+          "name": "Post Setup Deno",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 33,
+          "started_at": "2026-10-05T19:29:50Z",
+          "completed_at": "2026-10-05T19:29:50Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 34,
+          "started_at": "2026-10-05T19:29:50Z",
+          "completed_at": "2026-10-05T19:29:51Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 35,
+          "started_at": "2026-10-05T19:29:51Z",
+          "completed_at": "2026-10-05T19:29:51Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111942013637",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "runner_id": 1000084151,
+      "runner_name": "GitHub Actions 1000084151",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 111942013651,
+      "run_id": 37362523666,
+      "workflow_name": "JavaScript checks and release",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523666",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEEOS0w",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111942013651",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523666/job/111942013651",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-05T19:23:39Z",
+      "started_at": "2026-10-05T19:26:28Z",
+      "completed_at": "2026-10-05T19:29:38Z",
+      "name": "Test JavaScript (bun on windows-2025)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-05T19:26:29Z",
+          "completed_at": "2026-10-05T19:26:30Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-05T19:26:30Z",
+          "completed_at": "2026-10-05T19:26:40Z"
+        },
+        {
+          "name": "Simulate a fresh merge with the base branch",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-05T19:26:40Z",
+          "completed_at": "2026-10-05T19:26:40Z"
+        },
+        {
+          "name": "Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-05T19:26:40Z",
+          "completed_at": "2026-10-05T19:26:43Z"
+        },
+        {
+          "name": "Setup Node.js PTY host",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-05T19:26:43Z",
+          "completed_at": "2026-10-05T19:26:48Z"
+        },
+        {
+          "name": "Install system dependencies (Ubuntu)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 6,
+          "started_at": "2026-10-05T19:26:48Z",
+          "completed_at": "2026-10-05T19:26:48Z"
+        },
+        {
+          "name": "Install system dependencies (macOS)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 7,
+          "started_at": "2026-10-05T19:26:48Z",
+          "completed_at": "2026-10-05T19:26:48Z"
+        },
+        {
+          "name": "Install system dependencies (Windows)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-10-05T19:26:48Z",
+          "completed_at": "2026-10-05T19:26:55Z"
+        },
+        {
+          "name": "Setup Deno",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-10-05T19:26:55Z",
+          "completed_at": "2026-10-05T19:26:56Z"
+        },
+        {
+          "name": "Install dependencies (Bun)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-10-05T19:26:56Z",
+          "completed_at": "2026-10-05T19:27:10Z"
+        },
+        {
+          "name": "Run tests (Bun)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-10-05T19:27:10Z",
+          "completed_at": "2026-10-05T19:29:34Z"
+        },
+        {
+          "name": "Preserve Bun test diagnostics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-10-05T19:29:34Z",
+          "completed_at": "2026-10-05T19:29:35Z"
+        },
+        {
+          "name": "Setup Node.js",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 13,
+          "started_at": "2026-10-05T19:29:35Z",
+          "completed_at": "2026-10-05T19:29:35Z"
+        },
+        {
+          "name": "Install dependencies (Node)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 14,
+          "started_at": "2026-10-05T19:29:35Z",
+          "completed_at": "2026-10-05T19:29:35Z"
+        },
+        {
+          "name": "Test Node.js compatibility",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 15,
+          "started_at": "2026-10-05T19:29:35Z",
+          "completed_at": "2026-10-05T19:29:35Z"
+        },
+        {
+          "name": "Run zx compatibility suite (Node)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 16,
+          "started_at": "2026-10-05T19:29:35Z",
+          "completed_at": "2026-10-05T19:29:35Z"
+        },
+        {
+          "name": "Run Execa compatibility suite (Node)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 17,
+          "started_at": "2026-10-05T19:29:35Z",
+          "completed_at": "2026-10-05T19:29:35Z"
+        },
+        {
+          "name": "Post Setup Deno",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 31,
+          "started_at": "2026-10-05T19:29:35Z",
+          "completed_at": "2026-10-05T19:29:35Z"
+        },
+        {
+          "name": "Post Setup Node.js PTY host",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 32,
+          "started_at": "2026-10-05T19:29:35Z",
+          "completed_at": "2026-10-05T19:29:35Z"
+        },
+        {
+          "name": "Post Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 33,
+          "started_at": "2026-10-05T19:29:35Z",
+          "completed_at": "2026-10-05T19:29:35Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 34,
+          "started_at": "2026-10-05T19:29:35Z",
+          "completed_at": "2026-10-05T19:29:38Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 35,
+          "started_at": "2026-10-05T19:29:38Z",
+          "completed_at": "2026-10-05T19:29:38Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111942013651",
+      "labels": [
+        "windows-2025"
+      ],
+      "runner_id": 1000084136,
+      "runner_name": "GitHub Actions 1000084136",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 111942013849,
+      "run_id": 37362523666,
+      "workflow_name": "JavaScript checks and release",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523666",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEEOTmQ",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111942013849",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523666/job/111942013849",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-05T19:23:39Z",
+      "started_at": "2026-10-05T19:30:25Z",
+      "completed_at": "2026-10-05T19:32:25Z",
+      "name": "Test JavaScript (bun on ubuntu-24.04)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-05T19:30:26Z",
+          "completed_at": "2026-10-05T19:30:27Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-05T19:30:27Z",
+          "completed_at": "2026-10-05T19:30:30Z"
+        },
+        {
+          "name": "Simulate a fresh merge with the base branch",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-05T19:30:30Z",
+          "completed_at": "2026-10-05T19:30:30Z"
+        },
+        {
+          "name": "Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-05T19:30:30Z",
+          "completed_at": "2026-10-05T19:30:31Z"
+        },
+        {
+          "name": "Setup Node.js PTY host",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-05T19:30:31Z",
+          "completed_at": "2026-10-05T19:30:34Z"
+        },
+        {
+          "name": "Install system dependencies (Ubuntu)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-05T19:30:34Z",
+          "completed_at": "2026-10-05T19:30:40Z"
+        },
+        {
+          "name": "Install system dependencies (macOS)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 7,
+          "started_at": "2026-10-05T19:30:40Z",
+          "completed_at": "2026-10-05T19:30:40Z"
+        },
+        {
+          "name": "Install system dependencies (Windows)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 8,
+          "started_at": "2026-10-05T19:30:40Z",
+          "completed_at": "2026-10-05T19:30:40Z"
+        },
+        {
+          "name": "Setup Deno",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-10-05T19:30:40Z",
+          "completed_at": "2026-10-05T19:30:42Z"
+        },
+        {
+          "name": "Install dependencies (Bun)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-10-05T19:30:42Z",
+          "completed_at": "2026-10-05T19:30:42Z"
+        },
+        {
+          "name": "Run tests (Bun)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-10-05T19:30:42Z",
+          "completed_at": "2026-10-05T19:32:22Z"
+        },
+        {
+          "name": "Preserve Bun test diagnostics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-10-05T19:32:22Z",
+          "completed_at": "2026-10-05T19:32:23Z"
+        },
+        {
+          "name": "Setup Node.js",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 13,
+          "started_at": "2026-10-05T19:32:23Z",
+          "completed_at": "2026-10-05T19:32:23Z"
+        },
+        {
+          "name": "Install dependencies (Node)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 14,
+          "started_at": "2026-10-05T19:32:23Z",
+          "completed_at": "2026-10-05T19:32:23Z"
+        },
+        {
+          "name": "Test Node.js compatibility",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 15,
+          "started_at": "2026-10-05T19:32:23Z",
+          "completed_at": "2026-10-05T19:32:23Z"
+        },
+        {
+          "name": "Run zx compatibility suite (Node)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 16,
+          "started_at": "2026-10-05T19:32:23Z",
+          "completed_at": "2026-10-05T19:32:23Z"
+        },
+        {
+          "name": "Run Execa compatibility suite (Node)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 17,
+          "started_at": "2026-10-05T19:32:23Z",
+          "completed_at": "2026-10-05T19:32:23Z"
+        },
+        {
+          "name": "Post Setup Deno",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 31,
+          "started_at": "2026-10-05T19:32:23Z",
+          "completed_at": "2026-10-05T19:32:23Z"
+        },
+        {
+          "name": "Post Setup Node.js PTY host",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 32,
+          "started_at": "2026-10-05T19:32:23Z",
+          "completed_at": "2026-10-05T19:32:23Z"
+        },
+        {
+          "name": "Post Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 33,
+          "started_at": "2026-10-05T19:32:23Z",
+          "completed_at": "2026-10-05T19:32:23Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 34,
+          "started_at": "2026-10-05T19:32:23Z",
+          "completed_at": "2026-10-05T19:32:23Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 35,
+          "started_at": "2026-10-05T19:32:23Z",
+          "completed_at": "2026-10-05T19:32:23Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111942013849",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "runner_id": 1000084160,
+      "runner_name": "GitHub Actions 1000084160",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 111948672227,
+      "run_id": 37362523666,
+      "workflow_name": "JavaScript checks and release",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523666",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEKks4w",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111948672227",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523666/job/111948672227",
+      "status": "completed",
+      "conclusion": "skipped",
+      "created_at": "2026-10-05T19:43:29Z",
+      "started_at": "2026-10-05T19:43:29Z",
+      "completed_at": "2026-10-05T19:43:29Z",
+      "name": "Release JavaScript package",
+      "steps": [],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111948672227",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "runner_id": null,
+      "runner_name": null,
+      "runner_group_id": null,
+      "runner_group_name": null
+    },
+    {
+      "id": 111948672269,
+      "run_id": 37362523666,
+      "workflow_name": "JavaScript checks and release",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523666",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEKktDQ",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111948672269",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523666/job/111948672269",
+      "status": "completed",
+      "conclusion": "skipped",
+      "created_at": "2026-10-05T19:43:29Z",
+      "started_at": "2026-10-05T19:43:29Z",
+      "completed_at": "2026-10-05T19:43:29Z",
+      "name": "Instant JavaScript release",
+      "steps": [],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111948672269",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "runner_id": null,
+      "runner_name": null,
+      "runner_group_id": null,
+      "runner_group_name": null
+    }
+  ]
+}

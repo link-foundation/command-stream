@@ -1,0 +1,794 @@
+########## check-crate-size.rs ##########
+--- rust/scripts/check-crate-size.rs	2026-09-04 20:28:25.904207376 +0000
++++ /tmp/tmpl/rust-tmpl/scripts/check-crate-size.rs	2026-09-04 20:31:17.683463071 +0000
+@@ -42,6 +42,11 @@
+ /// Warn once the archive grows past 80% of the limit so projects can react
+ /// before a release is actually blocked.
+ const WARN_CRATE_BYTES: u64 = MAX_CRATE_BYTES * 8 / 10;
++/// `cargo package` may contact the registry index while resolving package
++/// metadata, so retry it before treating a transient network failure as final.
++const CARGO_PACKAGE_MAX_ATTEMPTS: u8 = 3;
++#[cfg(not(test))]
++const CARGO_PACKAGE_RETRY_DELAY_SECONDS: u64 = 5;
+ 
+ #[derive(Debug, PartialEq, Eq)]
+ enum SizeStatus {
+@@ -66,6 +71,33 @@
+     format!("{mib:.2} MiB ({size_bytes} bytes)")
+ }
+ 
++fn run_cargo_package_with_retries<F, S>(
++    mut run_package: F,
++    max_attempts: u8,
++    mut wait_before_retry: S,
++) -> std::io::Result<bool>
++where
++    F: FnMut() -> std::io::Result<bool>,
++    S: FnMut(u8),
++{
++    let max_attempts = max_attempts.max(1);
++
++    for attempt in 1..=max_attempts {
++        if run_package()? {
++            return Ok(true);
++        }
++
++        if attempt < max_attempts {
++            eprintln!(
++                "::warning::cargo package failed on attempt {attempt}/{max_attempts}; retrying"
++            );
++            wait_before_retry(attempt);
++        }
++    }
++
++    Ok(false)
++}
++
+ #[cfg(not(test))]
+ fn set_output(key: &str, value: &str) {
+     if let Ok(output_file) = env::var("GITHUB_OUTPUT") {
+@@ -139,8 +171,22 @@
+         cmd.current_dir(&rust_root);
+     }
+ 
+-    let status = cmd.status().expect("Failed to execute cargo package");
+-    if !status.success() {
++    let package_succeeded = match run_cargo_package_with_retries(
++        || cmd.status().map(|status| status.success()),
++        CARGO_PACKAGE_MAX_ATTEMPTS,
++        |_| {
++            std::thread::sleep(std::time::Duration::from_secs(
++                CARGO_PACKAGE_RETRY_DELAY_SECONDS,
++            ))
++        },
++    ) {
++        Ok(success) => success,
++        Err(e) => {
++            eprintln!("::error::Failed to execute cargo package: {e}");
++            exit(1);
++        }
++    };
++    if !package_succeeded {
+         eprintln!("::error::cargo package failed; cannot determine crate archive size");
+         exit(1);
+     }
+@@ -233,6 +279,44 @@
+     }
+ 
+     #[test]
++    fn cargo_package_is_retried_after_transient_failure() {
++        let mut attempts = 0;
++        let package_succeeded = run_cargo_package_with_retries(
++            || {
++                attempts += 1;
++                Ok(attempts == 2)
++            },
++            CARGO_PACKAGE_MAX_ATTEMPTS,
++            |_| {},
++        )
++        .unwrap();
++
++        assert!(package_succeeded);
++        assert_eq!(attempts, 2);
++    }
++
++    #[test]
++    fn cargo_package_failure_is_reported_after_all_retries() {
++        let mut attempts = 0;
++        let mut waits = 0;
++        let package_succeeded = run_cargo_package_with_retries(
++            || {
++                attempts += 1;
++                Ok(false)
++            },
++            CARGO_PACKAGE_MAX_ATTEMPTS,
++            |_| {
++                waits += 1;
++            },
++        )
++        .unwrap();
++
++        assert!(!package_succeeded);
++        assert_eq!(attempts, usize::from(CARGO_PACKAGE_MAX_ATTEMPTS));
++        assert_eq!(waits, usize::from(CARGO_PACKAGE_MAX_ATTEMPTS - 1));
++    }
++
++    #[test]
+     fn find_crate_archive_returns_none_when_missing() {
+         let nanos = std::time::SystemTime::now()
+             .duration_since(std::time::UNIX_EPOCH)
+########## check-file-size.rs ##########
+--- rust/scripts/check-file-size.rs	2026-09-04 20:28:25.904207376 +0000
++++ /tmp/tmpl/rust-tmpl/scripts/check-file-size.rs	2026-09-04 20:31:17.683463071 +0000
+@@ -9,6 +9,7 @@
+ //! walkdir = "2"
+ //! ```
+ 
++use std::collections::BTreeSet;
+ use std::fs;
+ use std::path::Path;
+ #[cfg(not(test))]
+@@ -153,15 +154,43 @@
+     )
+ }
+ 
++/// Parses the changed-file list provided by CI (newline or space separated).
++///
++/// Returns `None` when no list is configured, which means every warning is
++/// annotated (the behaviour used for local runs and pushes to the default
++/// branch).
++fn changed_files(raw: Option<&str>) -> Option<BTreeSet<String>> {
++    let raw = raw?;
++    if raw.trim().is_empty() {
++        return Some(BTreeSet::new());
++    }
++
++    Some(
++        raw.split(['\n', '\r', ' ', '\t'])
++            .map(str::trim)
++            .filter(|entry| !entry.is_empty())
++            .map(|entry| entry.replace('\\', "/"))
++            .collect(),
++    )
++}
++
++/// Warning-band findings only produce GitHub annotations when the file was
++/// changed by the current pull request, so unchanged files stop repeating the
++/// same warning on every run. The hard limit stays repository-wide.
++fn should_annotate(finding: &Finding, changed: Option<&BTreeSet<String>>) -> bool {
++    changed.map_or(true, |changed| changed.contains(&finding.file))
++}
++
+ #[cfg(not(test))]
+-fn print_warnings(warnings: &[Finding]) {
++fn print_warnings(warnings: &[Finding], changed: Option<&BTreeSet<String>>) {
+     if warnings.is_empty() {
+         return;
+     }
+ 
+     for warning in warnings {
+-        let annotation = warning_annotation(warning);
+-        println!("{annotation}");
++        if should_annotate(warning, changed) {
++            println!("{}", warning_annotation(warning));
++        }
+         println!(
+             "WARNING: {} has {} lines (approaching limit of {MAX_LINES}, warning threshold: {WARN_LINES})",
+             warning.file, warning.lines
+@@ -203,7 +232,9 @@
+     let cwd = std::env::current_dir().expect("Failed to get current directory");
+     let result = check_directory(&cwd);
+ 
+-    print_warnings(&result.warnings);
++    let raw_changed = std::env::var("CHANGED_FILES").ok();
++    let changed = changed_files(raw_changed.as_deref());
++    print_warnings(&result.warnings, changed.as_ref());
+ 
+     if result.violations.is_empty() {
+         println!("All files are within the line limit\n");
+@@ -278,6 +309,74 @@
+         );
+     }
+ 
++    #[test]
++    fn only_changed_files_in_the_warning_band_are_annotated() {
++        let repo = temp_dir("changed-only");
++        let src_dir = repo.join("src");
++        fs::create_dir_all(&src_dir).unwrap();
++        write_rust_file_with_lines(&src_dir.join("changed.rs"), WARN_LINES + 1);
++        write_rust_file_with_lines(&src_dir.join("unchanged.rs"), WARN_LINES + 1);
++        write_rust_file_with_lines(&src_dir.join("over_limit.rs"), MAX_LINES + 1);
++
++        let result = check_directory(&repo);
++        let changed = changed_files(Some("src/changed.rs\n")).unwrap();
++
++        let annotated: Vec<&str> = result
++            .warnings
++            .iter()
++            .filter(|finding| should_annotate(finding, Some(&changed)))
++            .map(|finding| finding.file.as_str())
++            .collect();
++        assert_eq!(annotated, vec!["src/changed.rs"]);
++
++        // The hard limit stays repository-wide regardless of what changed.
++        assert_eq!(
++            result.violations,
++            vec![Finding {
++                file: "src/over_limit.rs".to_string(),
++                lines: MAX_LINES + 1,
++            }]
++        );
++        // Both warning-band files remain in the baseline report.
++        assert_eq!(result.warnings.len(), 2);
++    }
++
++    #[test]
++    fn missing_changed_file_list_annotates_every_warning() {
++        let finding = Finding {
++            file: "src/near_limit.rs".to_string(),
++            lines: WARN_LINES + 1,
++        };
++
++        assert_eq!(changed_files(None), None);
++        assert!(should_annotate(&finding, None));
++    }
++
++    #[test]
++    fn empty_changed_file_list_annotates_nothing() {
++        let finding = Finding {
++            file: "src/near_limit.rs".to_string(),
++            lines: WARN_LINES + 1,
++        };
++        let changed = changed_files(Some("  \n")).unwrap();
++
++        assert!(changed.is_empty());
++        assert!(!should_annotate(&finding, Some(&changed)));
++    }
++
++    #[test]
++    fn changed_file_list_accepts_space_and_newline_separators() {
++        let changed = changed_files(Some("src/a.rs src/b.rs\nsrc\\c.rs\n")).unwrap();
++
++        assert_eq!(
++            changed,
++            ["src/a.rs", "src/b.rs", "src/c.rs"]
++                .into_iter()
++                .map(String::from)
++                .collect::<BTreeSet<String>>()
++        );
++    }
++
+     #[test]
+     fn warning_annotation_uses_github_actions_format() {
+         let finding = Finding {
+########## check-release-needed.rs ##########
+--- rust/scripts/check-release-needed.rs	2026-09-04 20:28:25.904207376 +0000
++++ /tmp/tmpl/rust-tmpl/scripts/check-release-needed.rs	2026-09-04 20:31:17.683463071 +0000
+@@ -48,6 +48,8 @@
+ 
+ #[path = "rust-paths.rs"]
+ mod rust_paths;
++#[path = "release-naming.rs"]
++mod release_naming;
+ 
+ fn get_arg(name: &str) -> Option<String> {
+     let args: Vec<String> = env::args().collect();
+@@ -312,7 +314,8 @@
+ 
+     if !has_fragments {
+         let crate_published = check_version_on_crates_io(&crate_name, &current_version);
+-        let tag_prefix = get_arg("tag-prefix").unwrap_or_else(|| "v".to_string());
++        let tag_prefix = get_arg("tag-prefix")
++            .unwrap_or_else(|| release_naming::tag_prefix_for_rust_root(&rust_root).to_string());
+         let dockerhub_image = docker_hub_image_to_check();
+         let dockerhub_required = dockerhub_image.is_some();
+         let dockerhub_published = dockerhub_image
+########## publish-crate.rs ##########
+--- rust/scripts/publish-crate.rs	2026-09-04 20:28:25.907207345 +0000
++++ /tmp/tmpl/rust-tmpl/scripts/publish-crate.rs	2026-09-04 20:31:17.685463051 +0000
+@@ -50,6 +50,10 @@
+     None
+ }
+ 
++fn needs_cd(rust_root: &str) -> bool {
++    rust_root != "."
++}
++
+ fn set_output(key: &str, value: &str) {
+     if let Ok(output_file) = env::var("GITHUB_OUTPUT") {
+         if let Ok(mut file) = fs::OpenOptions::new().create(true).append(true).open(&output_file) {
+@@ -179,18 +183,19 @@
+         println!("Using provided authentication token");
+     }
+ 
+-    // Build the cargo publish command. Use the manifest path so this works for
+-    // both a standalone crate and a crate nested under rust/.
++    // Build the cargo publish command
+     let mut cmd = Command::new("cargo");
+-    cmd.arg("publish")
+-        .arg("--allow-dirty")
+-        .arg("--manifest-path")
+-        .arg(&package_manifest);
++    cmd.arg("publish").arg("--allow-dirty").arg("-p").arg(&name);
+ 
+     if let Some(t) = &token {
+         cmd.arg("--token").arg(t);
+     }
+ 
++    // For multi-language repos, change to the rust directory
++    if needs_cd(&rust_root) {
++        cmd.current_dir(&rust_root);
++    }
++
+     let output = cmd.output().expect("Failed to execute cargo publish");
+ 
+     if output.status.success() {
+@@ -259,7 +264,7 @@
+         // A rate-limit is a deferred, automatically-recoverable outcome: exit
+         // successfully so the release job does not go red over a transient
+         // crates.io throttle. Downstream release-artifact steps are gated on a
+-        // successful publish (see .github/workflows/rust.yml), so a deferred
++        // successful publish (see .github/workflows/release.yml), so a deferred
+         // upload never produces partial Docker/GitHub release artifacts.
+         if kind.is_deferred() {
+             return;
+########## wait-for-crate.rs ##########
+--- rust/scripts/wait-for-crate.rs	2026-09-04 20:28:25.908207335 +0000
++++ /tmp/tmpl/rust-tmpl/scripts/wait-for-crate.rs	2026-09-04 20:31:17.686463041 +0000
+@@ -5,6 +5,13 @@
+ //! lag briefly. Waiting here makes Docker Hub tags and GitHub releases point at a
+ //! crate version that users can already resolve.
+ //!
++//! Visibility is probed against the sparse index (`https://index.crates.io`),
++//! which is what `cargo` resolves dependencies against and which is not rate
++//! limited, with the JSON API as a fallback. A probe that fails for a reason
++//! other than "this version does not exist" (403, 429, 5xx, DNS, TLS) is
++//! reported as *unknown*, never as "not published": a failed probe says nothing
++//! about whether `cargo publish` succeeded. See issue #143.
++//!
+ //! Usage:
+ //!   rust-script scripts/wait-for-crate.rs --release-version <version>
+ //!
+@@ -32,6 +39,25 @@
+ #[path = "rust-paths.rs"]
+ mod rust_paths;
+ 
++/// crates.io answers 403 to clients that do not identify themselves, and asks
++/// that the contact address in the `User-Agent` be reachable.
++const USER_AGENT: &str = "rust-script-wait-for-crate (+https://github.com/link-foundation/rust-ai-driven-development-pipeline-template)";
++
++/// What a crates.io probe actually established.
++///
++/// A bare `bool` cannot carry the difference between "crates.io said this
++/// version does not exist" and "crates.io did not answer", which is why a
++/// throttled probe used to be reported as a failed release.
++#[derive(Debug, Clone, PartialEq, Eq)]
++enum Visibility {
++    /// The version is resolvable by `cargo`.
++    Published,
++    /// crates.io answered, and the version is not there (yet).
++    NotPublishedYet,
++    /// crates.io could not be consulted; this says nothing about the release.
++    Unknown(String),
++}
++
+ fn get_arg(name: &str) -> Option<String> {
+     let args: Vec<String> = env::args().collect();
+     let flag = format!("--{}", name);
+@@ -78,26 +104,152 @@
+         .unwrap_or(default)
+ }
+ 
+-fn crate_version_exists(crate_name: &str, version: &str) -> bool {
+-    let url = format!("https://crates.io/api/v1/crates/{}/{}", crate_name, version);
++/// Sparse index path for a crate, following the `1/x`, `2/xy`, `3/x/xyz`,
++/// `ab/cd/name` layout documented by the registry index specification.
++fn index_path(crate_name: &str) -> String {
++    let name = crate_name.to_lowercase();
++    let chars: Vec<char> = name.chars().collect();
++
++    match chars.len() {
++        0 => name,
++        1 => format!("1/{}", name),
++        2 => format!("2/{}", name),
++        3 => format!("3/{}/{}", chars[0], name),
++        _ => format!("{}{}/{}{}/{}", chars[0], chars[1], chars[2], chars[3], name),
++    }
++}
++
++fn index_url(crate_name: &str) -> String {
++    format!("https://index.crates.io/{}", index_path(crate_name))
++}
+ 
+-    match ureq::get(&url)
+-        .set("User-Agent", "rust-script-wait-for-crate")
++fn api_url(crate_name: &str, version: &str) -> String {
++    format!("https://crates.io/api/v1/crates/{}/{}", crate_name, version)
++}
++
++/// The sparse index returns 200 for any existing crate, so the version has to be
++/// matched inside the newline-delimited JSON body rather than inferred from the
++/// status code.
++fn index_body_has_version(body: &str, version: &str) -> bool {
++    body.lines().any(|line| {
++        line.split("\"vers\"").skip(1).any(|rest| {
++            let rest = rest.trim_start();
++            let Some(rest) = rest.strip_prefix(':') else {
++                return false;
++            };
++            let rest = rest.trim_start();
++            rest.strip_prefix('"')
++                .and_then(|rest| rest.split('"').next())
++                .is_some_and(|found| found == version)
++        })
++    })
++}
++
++/// Classify a sparse index response. A 404 there means the crate has never been
++/// published under that name; any other non-200 is an unusable answer.
++fn classify_index_response(status: u16, body: &str, version: &str) -> Visibility {
++    match status {
++        200 => {
++            if index_body_has_version(body, version) {
++                Visibility::Published
++            } else {
++                Visibility::NotPublishedYet
++            }
++        }
++        404 => Visibility::NotPublishedYet,
++        other => Visibility::Unknown(format!("index.crates.io responded HTTP {}", other)),
++    }
++}
++
++/// Classify a JSON API response for a specific version.
++fn classify_api_status(status: u16) -> Visibility {
++    match status {
++        200 => Visibility::Published,
++        404 => Visibility::NotPublishedYet,
++        other => Visibility::Unknown(format!("crates.io API responded HTTP {}", other)),
++    }
++}
++
++/// Prefer a definitive answer from either source; only report `Unknown` when
++/// neither source could be consulted.
++fn combine(index: Visibility, api: Visibility) -> Visibility {
++    match (index, api) {
++        (Visibility::Published, _) | (_, Visibility::Published) => Visibility::Published,
++        (Visibility::NotPublishedYet, _) | (_, Visibility::NotPublishedYet) => {
++            Visibility::NotPublishedYet
++        }
++        (Visibility::Unknown(index_reason), Visibility::Unknown(api_reason)) => {
++            Visibility::Unknown(format!("{}; {}", index_reason, api_reason))
++        }
++    }
++}
++
++/// The message printed when the wait runs out of attempts. `last_unknown` is
++/// `Some(..)` when no attempt ever got a definitive answer, which means the
++/// release status is unknown rather than broken.
++fn failure_message(
++    crate_name: &str,
++    version: &str,
++    max_attempts: u64,
++    last_unknown: Option<&str>,
++) -> String {
++    match last_unknown {
++        Some(reason) => format!(
++            "Error: could not determine whether {}@{} is on crates.io; \
++             all {} attempts failed to get an answer, the last one with: {}. \
++             This does NOT mean the publish failed. Check the sparse index before \
++             treating the release as broken: curl -s -A 'ci (+https://example.com)' {} | grep '\"vers\":\"{}\"'",
++            crate_name, version, max_attempts, reason, index_url(crate_name), version
++        ),
++        None => format!(
++            "Error: {}@{} was not visible on crates.io after {} attempts",
++            crate_name, version, max_attempts
++        ),
++    }
++}
++
++#[cfg(not(test))]
++fn check_index(crate_name: &str, version: &str) -> Visibility {
++    match ureq::get(&index_url(crate_name))
++        .set("User-Agent", USER_AGENT)
+         .call()
+     {
+-        Ok(response) => response.status() == 200,
+-        Err(ureq::Error::Status(404, _)) => false,
+-        Err(e) => {
+-            eprintln!("Warning: Could not check crates.io: {}", e);
+-            false
++        Ok(response) => {
++            let status = response.status();
++            let body = response.into_string().unwrap_or_default();
++            classify_index_response(status, &body, version)
+         }
++        Err(ureq::Error::Status(status, _)) => classify_index_response(status, "", version),
++        Err(e) => Visibility::Unknown(format!("index.crates.io request failed: {}", e)),
++    }
++}
++
++#[cfg(not(test))]
++fn check_api(crate_name: &str, version: &str) -> Visibility {
++    match ureq::get(&api_url(crate_name, version))
++        .set("User-Agent", USER_AGENT)
++        .call()
++    {
++        Ok(response) => classify_api_status(response.status()),
++        Err(ureq::Error::Status(status, _)) => classify_api_status(status),
++        Err(e) => Visibility::Unknown(format!("crates.io API request failed: {}", e)),
++    }
++}
++
++#[cfg(not(test))]
++fn crate_version_visibility(crate_name: &str, version: &str) -> Visibility {
++    let index = check_index(crate_name, version);
++    if index == Visibility::Published {
++        return index;
+     }
++    combine(index, check_api(crate_name, version))
+ }
+ 
+ fn should_skip_crate_wait(crate_name: &str) -> bool {
+     crate_name == "example-sum-package-name"
+ }
+ 
++#[cfg(not(test))]
+ fn main() {
+     let rust_root = match rust_paths::get_rust_root(None, true) {
+         Ok(root) => root,
+@@ -136,35 +288,68 @@
+         return;
+     }
+ 
++    let mut last_unknown: Option<String> = None;
++    let mut saw_definitive_answer = false;
++
+     for attempt in 1..=max_attempts {
+-        if crate_version_exists(&crate_name, &version) {
+-            println!(
+-                "{}@{} is visible on crates.io after attempt {}",
+-                crate_name, version, attempt
+-            );
+-            set_output("crate_available", "true");
+-            return;
++        match crate_version_visibility(&crate_name, &version) {
++            Visibility::Published => {
++                println!(
++                    "{}@{} is visible on crates.io after attempt {}",
++                    crate_name, version, attempt
++                );
++                set_output("crate_available", "true");
++                return;
++            }
++            Visibility::NotPublishedYet => {
++                saw_definitive_answer = true;
++                if attempt < max_attempts {
++                    println!(
++                        "{}@{} is not visible on crates.io yet (attempt {}/{}); waiting {}s",
++                        crate_name, version, attempt, max_attempts, sleep_seconds
++                    );
++                }
++            }
++            Visibility::Unknown(reason) => {
++                eprintln!(
++                    "Warning: could not check crates.io on attempt {}/{}: {}",
++                    attempt, max_attempts, reason
++                );
++                last_unknown = Some(reason);
++                if attempt < max_attempts {
++                    println!("Retrying in {}s", sleep_seconds);
++                }
++            }
+         }
+ 
+         if attempt < max_attempts {
+-            println!(
+-                "{}@{} is not visible on crates.io yet (attempt {}/{}); waiting {}s",
+-                crate_name, version, attempt, max_attempts, sleep_seconds
+-            );
+             thread::sleep(Duration::from_secs(sleep_seconds));
+         }
+     }
+ 
+     eprintln!(
+-        "Error: {}@{} was not visible on crates.io after {} attempts",
+-        crate_name, version, max_attempts
++        "{}",
++        failure_message(
++            &crate_name,
++            &version,
++            max_attempts,
++            if saw_definitive_answer {
++                None
++            } else {
++                last_unknown.as_deref()
++            },
++        )
+     );
+     exit(1);
+ }
+ 
+ #[cfg(test)]
+ mod tests {
+-    use super::should_skip_crate_wait;
++    use super::{
++        api_url, classify_api_status, classify_index_response, combine, failure_message,
++        index_body_has_version, index_path, index_url, should_skip_crate_wait, Visibility,
++        USER_AGENT,
++    };
+ 
+     #[test]
+     fn skips_template_default_package_name() {
+@@ -175,4 +360,171 @@
+     fn waits_for_real_package_names() {
+         assert!(!should_skip_crate_wait("real-package-name"));
+     }
++
++    #[test]
++    fn index_paths_follow_the_registry_layout() {
++        assert_eq!(index_path("a"), "1/a");
++        assert_eq!(index_path("ab"), "2/ab");
++        assert_eq!(index_path("abc"), "3/a/abc");
++        assert_eq!(index_path("serde"), "se/rd/serde");
++        assert_eq!(
++            index_path("links-notation"),
++            "li/nk/links-notation",
++            "the layout used by the crate from issue #143"
++        );
++        assert_eq!(index_path("Serde"), "se/rd/serde", "names are lowercased");
++    }
++
++    #[test]
++    fn index_url_points_at_the_sparse_index() {
++        assert_eq!(index_url("serde"), "https://index.crates.io/se/rd/serde");
++    }
++
++    #[test]
++    fn api_url_points_at_the_version_endpoint() {
++        assert_eq!(
++            api_url("serde", "1.0.228"),
++            "https://crates.io/api/v1/crates/serde/1.0.228"
++        );
++    }
++
++    #[test]
++    fn user_agent_carries_contact_information() {
++        assert!(
++            USER_AGENT.contains("+https://"),
++            "crates.io asks that clients be reachable"
++        );
++    }
++
++    #[test]
++    fn index_body_matches_the_published_version_only() {
++        let body = concat!(
++            r#"{"name":"links-notation","vers":"0.15.0","deps":[]}"#,
++            "\n",
++            r#"{"name":"links-notation","vers":"0.16.0","deps":[]}"#,
++            "\n"
++        );
++
++        assert!(index_body_has_version(body, "0.16.0"));
++        assert!(index_body_has_version(body, "0.15.0"));
++        assert!(!index_body_has_version(body, "0.17.0"));
++        assert!(
++            !index_body_has_version(body, "0.16"),
++            "a prefix of a published version is not that version"
++        );
++    }
++
++    #[test]
++    fn index_body_tolerates_whitespace_around_the_version_field() {
++        let body = r#"{"name":"demo", "vers" : "1.2.3" }"#;
++        assert!(index_body_has_version(body, "1.2.3"));
++    }
++
++    /// The regression from issue #143: a throttled or forbidden probe must not
++    /// be classified as "not published".
++    #[test]
++    fn throttled_and_forbidden_probes_are_unknown_not_missing() {
++        for status in [403_u16, 429, 500, 502, 503] {
++            assert!(
++                matches!(
++                    classify_index_response(status, "", "1.0.0"),
++                    Visibility::Unknown(_)
++                ),
++                "index HTTP {} must not be reported as a missing version",
++                status
++            );
++            assert!(
++                matches!(classify_api_status(status), Visibility::Unknown(_)),
++                "API HTTP {} must not be reported as a missing version",
++                status
++            );
++        }
++    }
++
++    #[test]
++    fn definitive_answers_are_classified_as_such() {
++        assert_eq!(
++            classify_index_response(200, r#"{"vers":"1.0.0"}"#, "1.0.0"),
++            Visibility::Published
++        );
++        assert_eq!(
++            classify_index_response(200, r#"{"vers":"0.9.0"}"#, "1.0.0"),
++            Visibility::NotPublishedYet
++        );
++        assert_eq!(
++            classify_index_response(404, "", "1.0.0"),
++            Visibility::NotPublishedYet
++        );
++        assert_eq!(classify_api_status(200), Visibility::Published);
++        assert_eq!(classify_api_status(404), Visibility::NotPublishedYet);
++    }
++
++    #[test]
++    fn a_definitive_answer_from_either_source_wins() {
++        assert_eq!(
++            combine(
++                Visibility::Unknown("index.crates.io responded HTTP 429".into()),
++                Visibility::Published
++            ),
++            Visibility::Published
++        );
++        assert_eq!(
++            combine(
++                Visibility::NotPublishedYet,
++                Visibility::Unknown("crates.io API responded HTTP 403".into())
++            ),
++            Visibility::NotPublishedYet
++        );
++    }
++
++    #[test]
++    fn unknown_is_reported_only_when_neither_source_answered() {
++        let combined = combine(
++            Visibility::Unknown("index.crates.io responded HTTP 429".into()),
++            Visibility::Unknown("crates.io API responded HTTP 403".into()),
++        );
++
++        let Visibility::Unknown(reason) = combined else {
++            panic!("two unusable answers must combine into Unknown");
++        };
++        assert!(reason.contains("429") && reason.contains("403"));
++    }
++
++    /// The false negative from issue #143: the failure message must not claim
++    /// the release did not happen when nothing was ever established.
++    #[test]
++    fn failure_message_distinguishes_unknown_from_missing() {
++        let unknown = failure_message(
++            "links-notation",
++            "0.16.0",
++            30,
++            Some("crates.io API responded HTTP 403"),
++        );
++        assert!(
++            unknown.contains("could not determine"),
++            "unknown outcome must not be phrased as a missing version: {}",
++            unknown
++        );
++        assert!(
++            unknown.contains("does NOT mean the publish failed"),
++            "the message must point the reader away from the publish step: {}",
++            unknown
++        );
++        assert!(
++            unknown.contains("https://index.crates.io/li/nk/links-notation"),
++            "the message must show how to verify against the sparse index: {}",
++            unknown
++        );
++        assert!(
++            !unknown.contains("was not visible on crates.io after"),
++            "unknown outcome must not reuse the missing-version wording: {}",
++            unknown
++        );
++
++        let missing = failure_message("links-notation", "0.16.0", 30, None);
++        assert_eq!(
++            missing,
++            "Error: links-notation@0.16.0 was not visible on crates.io after 30 attempts"
++        );
++    }
+ }

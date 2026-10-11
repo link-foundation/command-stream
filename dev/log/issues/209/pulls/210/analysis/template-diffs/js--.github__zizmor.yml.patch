@@ -1,0 +1,36 @@
+--- js-template/.github/zizmor.yml
++++ .github/zizmor.yml
+@@ -1,10 +1,15 @@
+ # zizmor configuration — https://docs.zizmor.sh/configuration/
++#
++# Mirrors the policy used by the pipeline templates
++# (link-foundation/js-ai-driven-development-pipeline-template and
++# link-foundation/rust-ai-driven-development-pipeline-template) so that a
++# workflow copied from either side keeps passing here.
+ rules:
+   unpinned-uses:
+     config:
+       policies:
+         # These publishers are trusted at tag granularity: their release tags
+-        # are the reference this template is meant to read at a glance.
++        # are the reference this repository is meant to read at a glance.
+         # Everything else must be pinned to a full commit hash.
+         actions/*: ref-pin
+         github/*: ref-pin
+@@ -14,16 +19,3 @@
+         zizmorcore/*: ref-pin
+         changesets/*: ref-pin
+         '*': hash-pin
+-  # zizmor >= 1.30.0 asks for GitHub's `uses: $/...` self-repository syntax
+-  # (shipped 2026-07-30) instead of `uses: ./...`. actionlint does not parse
+-  # `$/` yet -- v1.7.12 is the newest release and support is still open
+-  # upstream (rhysd/actionlint#711, rhysd/actionlint#732) -- so the two jobs
+-  # in workflows.yml contradict each other: satisfying zizmor makes
+-  # actionlint fail with "invalid format because ref is missing".
+-  #
+-  # Drop this block once actionlint understands `$/`.
+-  self-repository:
+-    ignore:
+-      - release.yml
+-      - example-app.yml
+-      - action.yml

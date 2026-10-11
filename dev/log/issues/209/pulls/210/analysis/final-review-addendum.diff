@@ -1,0 +1,893 @@
+diff --git a/.github/scripts/publish-preflight.mjs b/.github/scripts/publish-preflight.mjs
+index 468a377..1e29e1c 100644
+--- a/.github/scripts/publish-preflight.mjs
++++ b/.github/scripts/publish-preflight.mjs
+@@ -33,7 +33,7 @@ export async function checkNpmPublisher({
+   if (!identity.value) {
+     throw new Error('GitHub returned no OIDC identity');
+   }
+-  const escapedName = packageName.replace('/', '%2f');
++  const escapedName = encodeURIComponent(packageName);
+   const result = await jsonRequest(
+     fetchFn,
+     `https://registry.npmjs.org/-/npm/v1/oidc/token/exchange/package/${escapedName}`,
+diff --git a/conformance/bun-shell/cases/bunshell.json b/conformance/bun-shell/cases/bunshell.json
+index 62b13ae..d857d17 100644
+--- a/conformance/bun-shell/cases/bunshell.json
++++ b/conformance/bun-shell/cases/bunshell.json
+@@ -6217,6 +6217,7 @@
+       "cases": [
+         {
+           "id": "bunshell/deno-broken-pipe-subproc",
++          "oracleFlaky": "Bun 1.4.2 intermittently captures grep's Connection reset by peer diagnostic when the downstream builtin exits early; reproduced once in 20 isolated runs and in Linux CI (https://github.com/oven-sh/bun/issues/44602)",
+           "template": ["grep hi src/js_parser/parser.rs | echo hi"],
+           "files": {
+             "src/js_parser/parser.rs": {
+diff --git a/conformance/bun-shell/runner.mjs b/conformance/bun-shell/runner.mjs
+index 5e9b023..611b37e 100644
+--- a/conformance/bun-shell/runner.mjs
++++ b/conformance/bun-shell/runner.mjs
+@@ -166,6 +166,11 @@ export async function runCorpus({
+         retryFlaky && r.status === 'FAIL' && cases[i].oracleFlaky && a < 3;
+         a++
+       ) {
++        if (trace || verbose) {
++          process.stderr.write(
++            `RETRY ${cases[i].id} (${a + 1}/3): ${r.details.join('; ')}; ${cases[i].oracleFlaky}\n`
++          );
++        }
+         r = await runOne(cases[i]);
+       }
+       results[i] = { ...r, ms: Date.now() - t0 };
+diff --git a/experiments/issue-209/bun-broken-pipe.mjs b/experiments/issue-209/bun-broken-pipe.mjs
+new file mode 100644
+index 0000000..e9925ae
+--- /dev/null
++++ b/experiments/issue-209/bun-broken-pipe.mjs
+@@ -0,0 +1,36 @@
++// Finite upstream reproduction: one 850 KB file, 50 sequential shell runs.
++import { $ } from 'bun';
++import fs from 'node:fs';
++import os from 'node:os';
++import path from 'node:path';
++
++const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bun-broken-pipe-'));
++let failures = 0;
++try {
++  const input = path.join(dir, 'input.txt');
++  fs.writeFileSync(input, 'this line says hi\n'.repeat(50_000));
++  for (let attempt = 1; attempt <= 50; attempt++) {
++    const result = await $`grep hi ${input} | echo hi`.quiet().nothrow();
++    if (
++      result.exitCode !== 0 ||
++      result.stdout.toString() !== 'hi\n' ||
++      result.stderr.length !== 0
++    ) {
++      failures++;
++      console.error(
++        JSON.stringify({
++          attempt,
++          exitCode: result.exitCode,
++          stdout: result.stdout.toString(),
++          stderr: result.stderr.toString(),
++        })
++      );
++    }
++  }
++} finally {
++  fs.rmSync(dir, { recursive: true, force: true });
++}
++console.log(
++  `Bun ${Bun.version} on ${process.platform}: ${failures}/50 failures`
++);
++process.exitCode = failures ? 1 : 0;
+diff --git a/experiments/issue-209/probe-bun-broken-pipe.py b/experiments/issue-209/probe-bun-broken-pipe.py
+new file mode 100644
+index 0000000..78f617d
+--- /dev/null
++++ b/experiments/issue-209/probe-bun-broken-pipe.py
+@@ -0,0 +1,27 @@
++"""Repeat one finite reference-shell case without weakening its assertions."""
++
++from pathlib import Path
++import subprocess
++
++ROOT = Path(__file__).resolve().parents[2]
++failures = 0
++for attempt in range(1, 21):
++    result = subprocess.run(
++        [
++            "bun",
++            "conformance/bun-shell/run-bun-reference.mjs",
++            "--filter",
++            "deno-broken-pipe-subproc",
++            "--concurrency",
++            "1",
++            "--verbose",
++        ],
++        cwd=ROOT,
++        capture_output=True,
++        text=True,
++    )
++    print(f"Attempt {attempt}/20: exit {result.returncode}", flush=True)
++    print(result.stdout, end="", flush=True)
++    print(result.stderr, end="", flush=True)
++    failures += result.returncode != 0
++print(f"Observed failures: {failures}/20", flush=True)
+diff --git a/js/.changeset/ci-release-validation.md b/js/.changeset/ci-release-validation.md
+index 729367e..cb70fe2 100644
+--- a/js/.changeset/ci-release-validation.md
++++ b/js/.changeset/ci-release-validation.md
+@@ -3,3 +3,7 @@
+ ---
+ 
+ Prevent false CI and release results by validating registry publication, release commands, pull request metadata, audit failures, and manual release gates.
++
++Encode publisher package names safely, recognize actual npm badge images in release notes, and commit version messages without manual shell escaping.
++
++Keep repeated metadata staging safe after consuming release fragments.
+diff --git a/js/scripts/format-release-notes.mjs b/js/scripts/format-release-notes.mjs
+index ab2e333..df45453 100644
+--- a/js/scripts/format-release-notes.mjs
++++ b/js/scripts/format-release-notes.mjs
+@@ -25,6 +25,7 @@
+ 
+ import { loadUseM } from './use-m-loader.mjs';
+ import { runChecked } from './run-checked.mjs';
++import { hasNpmBadge } from './release-note-badge.mjs';
+ 
+ const PACKAGE_NAME = 'command-stream';
+ 
+@@ -84,7 +85,7 @@ try {
+   const currentBody = releaseData.body || '';
+ 
+   // Skip if already formatted (has shields.io badge image)
+-  if (currentBody.includes('img.shields.io')) {
++  if (hasNpmBadge(currentBody)) {
+     console.log('ℹ️ Release notes already formatted');
+     process.exit(0);
+   }
+diff --git a/js/scripts/release-git.mjs b/js/scripts/release-git.mjs
+index f15cd5f..f34d6a8 100644
+--- a/js/scripts/release-git.mjs
++++ b/js/scripts/release-git.mjs
+@@ -2,6 +2,10 @@ import { execFileSync } from 'node:child_process';
+ 
+ const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
+ 
++export function commitReleaseVersion(version) {
++  execFileSync('git', ['commit', '-m', version], { stdio: 'inherit' });
++}
++
+ export function stageReleaseMetadata() {
+   const root = git('rev-parse', '--show-toplevel');
+   const prefix = git('rev-parse', '--show-prefix');
+@@ -9,16 +13,21 @@ export function stageReleaseMetadata() {
+     execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' })
+       .split('\0')
+       .filter(Boolean);
+-  const files = [
+-    ...new Set([
+-      ...readPaths(
++  const unstaged = [
++    ...new Set(
++      readPaths(
+         'ls-files',
+         '--modified',
+         '--deleted',
+         '--others',
+         '--exclude-standard',
+         '-z'
+-      ),
++      )
++    ),
++  ];
++  const files = [
++    ...new Set([
++      ...unstaged,
+       ...readPaths('diff', '--cached', '--name-only', '-z'),
+     ]),
+   ];
+@@ -34,8 +43,8 @@ export function stageReleaseMetadata() {
+       'Release generated changes outside the package metadata allowlist'
+     );
+   }
+-  if (files.length) {
+-    execFileSync('git', ['-C', root, 'add', '--', ...files]);
++  if (unstaged.length) {
++    execFileSync('git', ['-C', root, 'add', '--', ...unstaged]);
+   }
+ }
+ 
+diff --git a/js/scripts/release-note-badge.mjs b/js/scripts/release-note-badge.mjs
+new file mode 100644
+index 0000000..9deef48
+--- /dev/null
++++ b/js/scripts/release-note-badge.mjs
+@@ -0,0 +1,16 @@
++export function hasNpmBadge(body) {
++  return [...body.matchAll(/!\[[^\]]*\]\((https?:\/\/[^\s)]+)\)/g)].some(
++    ([, target]) => {
++      try {
++        const url = new URL(target);
++        return (
++          url.protocol === 'https:' &&
++          url.hostname === 'img.shields.io' &&
++          url.pathname.startsWith('/badge/npm-')
++        );
++      } catch {
++        return false;
++      }
++    }
++  );
++}
+diff --git a/js/scripts/version-and-commit.mjs b/js/scripts/version-and-commit.mjs
+index bd167da..bc1ff95 100644
+--- a/js/scripts/version-and-commit.mjs
++++ b/js/scripts/version-and-commit.mjs
+@@ -15,7 +15,11 @@
+ import { readFileSync, appendFileSync, readdirSync } from 'fs';
+ import { loadUseM } from './use-m-loader.mjs';
+ import { runChecked } from './run-checked.mjs';
+-import { stageReleaseMetadata, pushWithRetry } from './release-git.mjs';
++import {
++  stageReleaseMetadata,
++  pushWithRetry,
++  commitReleaseVersion,
++} from './release-git.mjs';
+ 
+ // Load use-m dynamically
+ const use = await loadUseM();
+@@ -218,9 +222,7 @@ async function main() {
+       stageReleaseMetadata();
+ 
+       // Commit with version number as message
+-      const commitMessage = newVersion;
+-      const escapedMessage = commitMessage.replace(/"/g, '\\"');
+-      await runChecked($`git commit -m "${escapedMessage}"`);
++      commitReleaseVersion(newVersion);
+ 
+       await pushWithRetry({
+         push: () => $`git push origin main`.run({ capture: true }),
+diff --git a/js/tests/bun-reference-retry.test.mjs b/js/tests/bun-reference-retry.test.mjs
+new file mode 100644
+index 0000000..1e6b5b7
+--- /dev/null
++++ b/js/tests/bun-reference-retry.test.mjs
+@@ -0,0 +1,81 @@
++import { expect, test } from 'bun:test';
++import { runCorpus } from '../../conformance/bun-shell/runner.mjs';
++
++async function probe(
++  retryFlaky,
++  failUntil,
++  filter = 'deno-broken-pipe-subproc'
++) {
++  let calls = 0;
++  const shell = () => {
++    const failed = ++calls <= failUntil;
++    const result = Promise.resolve({
++      exitCode: 0,
++      stdout: Buffer.from('hi\n'),
++      stderr: Buffer.from(
++        failed ? 'grep: write error: Connection reset by peer\n' : ''
++      ),
++    });
++    for (const name of ['cwd', 'env', 'quiet', 'nothrow']) {
++      result[name] = () => result;
++    }
++    return result;
++  };
++  const counts = await runCorpus({
++    $: shell,
++    label: 'mock reference',
++    which: () => true,
++    defaultNode: process.execPath,
++    retryFlaky,
++    argv: ['--filter', filter, '--concurrency', '1'],
++  });
++  return { calls, ...counts };
++}
++
++test.skipIf(process.platform === 'win32')(
++  'known reference failure can pass on a bounded retry',
++  async () => {
++    expect(await probe(true, 1)).toEqual({
++      calls: 2,
++      PASS: 1,
++      FAIL: 0,
++      SKIP: 0,
++    });
++  }
++);
++
++test.skipIf(process.platform === 'win32')(
++  'persistent reference failure still fails after four attempts',
++  async () => {
++    expect(await probe(true, Infinity)).toEqual({
++      calls: 4,
++      PASS: 0,
++      FAIL: 1,
++      SKIP: 0,
++    });
++  }
++);
++
++test.skipIf(process.platform === 'win32')(
++  'implementations must pass without retries',
++  async () => {
++    expect(await probe(false, 1)).toEqual({
++      calls: 1,
++      PASS: 0,
++      FAIL: 1,
++      SKIP: 0,
++    });
++  }
++);
++
++test.skipIf(process.platform === 'win32')(
++  'unmarked reference cases still fail on their first attempt',
++  async () => {
++    expect(await probe(true, 1, 'deno-broken-pipe-builtin')).toEqual({
++      calls: 1,
++      PASS: 0,
++      FAIL: 1,
++      SKIP: 0,
++    });
++  }
++);
+diff --git a/js/tests/publish-preflight.test.mjs b/js/tests/publish-preflight.test.mjs
+index 7efa253..b68f310 100644
+--- a/js/tests/publish-preflight.test.mjs
++++ b/js/tests/publish-preflight.test.mjs
+@@ -36,10 +36,29 @@ test('npm validates the package-specific token exchange', async () => {
+     },
+   });
+   expect(requests[0][0]).toContain('audience=npm%3Aregistry.npmjs.org');
+-  expect(requests[1][0]).toEndWith('/@scope%2fpackage');
++  expect(requests[1][0]).toEndWith('/%40scope%2Fpackage');
+   expect(requests[1][1].method).toBe('POST');
+   expect(requests[1][1].headers.Authorization).toBe('Bearer identity');
+ });
++test('npm package names cannot alter the exchange URL path or query', async () => {
++  let calls = 0;
++  await checkNpmPublisher({
++    packageName: '@scope/package?query=value#/extra',
++    env,
++    fetchFn: async (url) => {
++      if (++calls === 1) {
++        return response({ value: 'identity' });
++      }
++      const target = new URL(url);
++      expect(target.pathname).toEndWith(
++        '/%40scope%2Fpackage%3Fquery%3Dvalue%23%2Fextra'
++      );
++      expect(target.search).toBe('');
++      expect(target.hash).toBe('');
++      return response({ token: 'temporary' });
++    },
++  });
++});
+ test('crates rejects credentials denied by the publish endpoint', async () => {
+   await expect(
+     checkCratePublisher({
+diff --git a/js/tests/release-git.test.mjs b/js/tests/release-git.test.mjs
+index 8f2d658..0d8ea99 100644
+--- a/js/tests/release-git.test.mjs
++++ b/js/tests/release-git.test.mjs
+@@ -1,13 +1,40 @@
+ import { test, expect } from 'bun:test';
+ import { execFileSync } from 'node:child_process';
+-import { mkdtempSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
++import {
++  mkdtempSync,
++  mkdirSync,
++  writeFileSync,
++  rmSync,
++  readFileSync,
++} from 'node:fs';
+ import { tmpdir } from 'node:os';
+ import { join } from 'node:path';
+ import {
+   stageReleaseMetadata,
+   pushWithRetry,
++  commitReleaseVersion,
+ } from '../scripts/release-git.mjs';
+ 
++test('release commits preserve their message literally without shell parsing', async () => {
++  const cwd = mkdtempSync(join(tmpdir(), 'release-commit-'));
++  const original = process.cwd();
++  const git = (...args) => execFileSync('git', args, { cwd, encoding: 'utf8' });
++  try {
++    git('init', '-q');
++    git('config', 'user.name', 'Test');
++    git('config', 'user.email', 'test@example.com');
++    writeFileSync(join(cwd, 'package.json'), '{}');
++    git('add', 'package.json');
++    process.chdir(cwd);
++    const message = '1.4.1 "quoted" \\ literal $(echo unintended)';
++    await commitReleaseVersion(message);
++    expect(git('log', '-1', '--format=%B').trim()).toBe(message);
++  } finally {
++    process.chdir(original);
++    rmSync(cwd, { recursive: true, force: true });
++  }
++});
++
+ test('release staging refuses unrelated tracked and untracked files', () => {
+   const cwd = mkdtempSync(join(tmpdir(), 'release-metadata-'));
+   const original = process.cwd();
+@@ -36,6 +63,32 @@ test('release staging refuses unrelated tracked and untracked files', () => {
+   }
+ });
+ 
++test('release staging is safe to repeat after consuming a fragment', () => {
++  const cwd = mkdtempSync(join(tmpdir(), 'release-restaging-'));
++  const original = process.cwd();
++  const git = (...args) => execFileSync('git', args, { cwd, encoding: 'utf8' });
++  try {
++    git('init', '-q');
++    git('config', 'user.name', 'Test');
++    git('config', 'user.email', 'test@example.com');
++    mkdirSync(join(cwd, '.changeset'));
++    writeFileSync(join(cwd, 'package.json'), '{}');
++    writeFileSync(join(cwd, '.changeset/release.md'), 'patch');
++    git('add', '.');
++    git('commit', '-qm', 'base');
++    rmSync(join(cwd, '.changeset/release.md'));
++    process.chdir(cwd);
++    stageReleaseMetadata();
++    stageReleaseMetadata();
++    expect(git('diff', '--cached', '--name-only').trim()).toBe(
++      '.changeset/release.md'
++    );
++  } finally {
++    process.chdir(original);
++    rmSync(cwd, { recursive: true, force: true });
++  }
++});
++
+ test('only a lost push race is rebased and retried', async () => {
+   let pushes = 0;
+   let rebases = 0;
+diff --git a/js/tests/release-note-badge.test.mjs b/js/tests/release-note-badge.test.mjs
+new file mode 100644
+index 0000000..8f11c11
+--- /dev/null
++++ b/js/tests/release-note-badge.test.mjs
+@@ -0,0 +1,21 @@
++import { test, expect } from 'bun:test';
++import { hasNpmBadge } from '../scripts/release-note-badge.mjs';
++
++test('formatted notes contain an actual HTTPS npm badge image', () => {
++  expect(
++    hasNpmBadge(
++      '[![npm version](https://img.shields.io/badge/npm-1.4.1-blue.svg)](https://www.npmjs.com/package/command-stream)'
++    )
++  ).toBe(true);
++});
++
++test.each([
++  'Fix img.shields.io URL handling',
++  '![npm](https://img.shields.io.attacker.invalid/badge/npm-1-blue.svg)',
++  '![npm](https://attacker.invalid/img.shields.io/badge/npm-1-blue.svg)',
++  '![npm](https://img.shields.io@attacker.invalid/badge/npm-1-blue.svg)',
++  '![npm](http://img.shields.io/badge/npm-1-blue.svg)',
++  '![build](https://img.shields.io/badge/build-passing-green.svg)',
++])('unformatted release notes are not skipped: %s', (body) => {
++  expect(hasNpmBadge(body)).toBe(false);
++});
+diff --git a/rust/changelog.d/20261005_180000_ci_release_validation.md b/rust/changelog.d/20261005_180000_ci_release_validation.md
+index 5321c68..83c9edd 100644
+--- a/rust/changelog.d/20261005_180000_ci_release_validation.md
++++ b/rust/changelog.d/20261005_180000_ci_release_validation.md
+@@ -6,3 +6,4 @@ bump: patch
+ 
+ - Reject unknown Git and registry state during release checks, require new PR changelog fragments, and keep publish credentials out of command arguments.
+ - Split large source and script modules while preserving public exports and behavior.
++- Reject unrelated staged or untracked release changes and create release tags only after successful push/rebase retries.
+diff --git a/rust/scripts/release-git.rs b/rust/scripts/release-git.rs
+new file mode 100644
+index 0000000..0f68d60
+--- /dev/null
++++ b/rust/scripts/release-git.rs
+@@ -0,0 +1,113 @@
++use super::{PushFailure, classify_push_failure};
++use std::collections::BTreeSet;
++use std::path::Path;
++use std::process::Command;
++
++fn git(repo: &Path, args: &[&str]) -> Result<String, String> {
++    let output = Command::new("git")
++        .current_dir(repo)
++        .args(args)
++        .output()
++        .map_err(|e| e.to_string())?;
++    if !output.status.success() {
++        return Err(String::from_utf8_lossy(&output.stderr).into_owned());
++    }
++    String::from_utf8(output.stdout).map_err(|e| e.to_string())
++}
++
++pub fn stage_release_metadata(repo: &Path, rust_root: &str) -> Result<(), String> {
++    let root = git(repo, &["rev-parse", "--show-toplevel"])?;
++    let repository = Path::new(root.trim())
++        .canonicalize()
++        .map_err(|e| e.to_string())?;
++    let package = repo
++        .join(rust_root)
++        .canonicalize()
++        .map_err(|e| e.to_string())?;
++    let relative = package
++        .strip_prefix(&repository)
++        .map_err(|_| "Release package must be inside the Git repository")?;
++    let relative = relative
++        .to_str()
++        .ok_or("Release package path must be valid UTF-8")?
++        .replace(std::path::MAIN_SEPARATOR, "/");
++    let prefix = if relative.is_empty() {
++        String::new()
++    } else {
++        format!("{relative}/")
++    };
++    let modified = git(
++        repo,
++        &[
++            "-C",
++            root.trim(),
++            "ls-files",
++            "--modified",
++            "--deleted",
++            "--others",
++            "--exclude-standard",
++            "-z",
++        ],
++    )?;
++    let staged = git(
++        repo,
++        &["-C", root.trim(), "diff", "--cached", "--name-only", "-z"],
++    )?;
++    let unstaged: BTreeSet<&str> = modified
++        .split('\0')
++        .filter(|file| !file.is_empty())
++        .collect();
++    let files: BTreeSet<&str> = modified
++        .split('\0')
++        .chain(staged.split('\0'))
++        .filter(|file| !file.is_empty())
++        .collect();
++    for file in &files {
++        let Some(relative) = file.strip_prefix(&prefix) else {
++            return Err("Release generated changes outside the package metadata allowlist".into());
++        };
++        let fragment = relative
++            .strip_prefix("changelog.d/")
++            .is_some_and(|name| name.ends_with(".md") && !name.contains('/'));
++        if !fragment
++            && !matches!(
++                relative,
++                "Cargo.toml" | "Cargo.lock" | "CHANGELOG.md" | "benchmarks/Cargo.lock"
++            )
++        {
++            return Err("Release generated changes outside the package metadata allowlist".into());
++        }
++    }
++    if !unstaged.is_empty() {
++        let mut args = vec!["-C", root.trim(), "add", "--"];
++        args.extend(unstaged);
++        git(repo, &args)?;
++    }
++    Ok(())
++}
++
++pub fn push_release(repo: &Path, branch: &str, tag: &str, message: &str) -> Result<(), String> {
++    for attempt in 1..=3 {
++        match git(repo, &["push", "origin", branch]) {
++            Ok(_) => break,
++            Err(error) => {
++                if classify_push_failure(&error) != PushFailure::LostRace || attempt == 3 {
++                    return Err(error);
++                }
++                eprintln!(
++                    "Push lost a race (attempt {}/3); rebasing on origin/{}",
++                    attempt, branch
++                );
++                if let Err(rebase_error) = git(repo, &["pull", "--rebase", "origin", branch]) {
++                    let _ = git(repo, &["rebase", "--abort"]);
++                    return Err(rebase_error);
++                }
++            }
++        }
++    }
++    // A retry can replace HEAD. Create the tag only after that commit is pushed,
++    // matching the current Rust template, so the tag never names the old commit.
++    git(repo, &["tag", "-a", tag, "-m", message])?;
++    git(repo, &["push", "origin", tag])?;
++    Ok(())
++}
+diff --git a/rust/scripts/version-and-commit.rs b/rust/scripts/version-and-commit.rs
+index 3db8a2d..ce25ef3 100644
+--- a/rust/scripts/version-and-commit.rs
++++ b/rust/scripts/version-and-commit.rs
+@@ -39,13 +39,16 @@ use std::env;
+ use std::fs;
+ use std::io::Write;
+ use std::path::{Path, PathBuf};
++use std::process::Command;
+ #[cfg(not(test))]
+ use std::process::exit;
+-use std::process::Command;
+ 
+ #[path = "rust-paths.rs"]
+ mod rust_paths;
+ 
++#[path = "release-git.rs"]
++mod release_git;
++
+ const REPOSITORY_RULE_PATTERNS: &[&str] = &[
+     "gh006",
+     "gh013",
+@@ -55,12 +58,8 @@ const REPOSITORY_RULE_PATTERNS: &[&str] = &[
+     "push declined",
+ ];
+ 
+-const NON_FAST_FORWARD_PATTERNS: &[&str] = &[
+-    "[rejected]",
+-    "non-fast-forward",
+-    "fetch first",
+-    "updates were rejected",
+-];
++const NON_FAST_FORWARD_PATTERNS: &[&str] =
++    &["non-fast-forward", "fetch first", "updates were rejected"];
+ 
+ #[derive(Debug, PartialEq, Eq)]
+ enum PushFailure {
+@@ -679,12 +678,16 @@ fn main() {
+ 
+     let cargo_lock_path = rust_paths::get_cargo_lock_path(&rust_root);
+     let benchmarks_lock_path = get_benchmarks_cargo_lock_path(&rust_root);
+-    let updated_locks = match update_cargo_locks(
++    match update_cargo_locks(
+         &[cargo_lock_path.as_path(), benchmarks_lock_path.as_path()],
+         &crate_name,
+         &new_version,
+     ) {
+-        Ok(updated) => updated,
++        Ok(updated) => {
++            for path in updated {
++                println!("Updated lockfile {}", path);
++            }
++        }
+         Err(e) => {
+             eprintln!("Error updating Cargo.lock: {}", e);
+             exit(1);
+@@ -695,15 +698,12 @@ fn main() {
+     collect_changelog(&changelog_dir, &changelog_file, &new_version);
+ 
+     // Stage Cargo.toml, Cargo.lock files if changed, CHANGELOG.md, and consumed fragments
+-    let package_manifest_str = package_manifest.to_string_lossy().to_string();
+-    let mut add_args = vec!["add", &package_manifest_str, &changelog_file];
+-    add_args.extend(updated_locks.iter().map(String::as_str));
+-    exec("git", &add_args).unwrap_or_else(|e| {
+-        eprintln!("Staging failed: {}", e);
++    let release_repo = env::current_dir().unwrap_or_else(|e| {
++        eprintln!("Working directory lookup failed: {}", e);
+         exit(1)
+     });
+-    exec("git", &["add", "-A", &changelog_dir]).unwrap_or_else(|e| {
+-        eprintln!("Staging fragments failed: {}", e);
++    release_git::stage_release_metadata(&release_repo, &rust_root).unwrap_or_else(|e| {
++        eprintln!("Release staging failed: {}", e);
+         exit(1)
+     });
+ 
+@@ -737,49 +737,15 @@ fn main() {
+     }
+     println!("Committed version {}", new_version);
+ 
+-    // Create tag
++    // Prepare the tag; create it only after all push/rebase retries finish.
+     let tag_name = format!("{}{}", tag_prefix, new_version);
+     let tag_msg = match &description {
+         Some(desc) => format!("Release {}{}\n\n{}", tag_name, label_suffix, desc),
+         None => format!("Release {}{}", tag_name, label_suffix),
+     };
+ 
+-    if let Err(e) = exec("git", &["tag", "-a", &tag_name, "-m", &tag_msg]) {
+-        eprintln!("Error creating tag: {}", e);
+-        exit(1);
+-    }
+-    println!("Created tag {}", tag_name);
+-
+-    // Push changes and tag with retry (handles concurrent pushes in multi-workflow repos)
+-    let max_push_attempts = 3;
+-    for attempt in 1..=max_push_attempts {
+-        match exec("git", &["push"]) {
+-            Ok(_) => break,
+-            Err(e) => {
+-                if classify_push_failure(&e) == PushFailure::LostRace && attempt < max_push_attempts
+-                {
+-                    eprintln!(
+-                        "Push failed (attempt {}/{}): {}",
+-                        attempt, max_push_attempts, e
+-                    );
+-                    eprintln!("Pulling with rebase and retrying...");
+-                    if let Err(rebase_err) =
+-                        exec("git", &["pull", "--rebase", "origin", &current_branch])
+-                    {
+-                        eprintln!("Error during pull --rebase: {}", rebase_err);
+-                        let _ = exec("git", &["rebase", "--abort"]);
+-                        exit(1);
+-                    }
+-                } else {
+-                    eprintln!("Error pushing after {} attempts: {}", max_push_attempts, e);
+-                    exit(1);
+-                }
+-            }
+-        }
+-    }
+-
+-    if let Err(e) = exec("git", &["push", "origin", &tag_name]) {
+-        eprintln!("Error pushing tags: {}", e);
++    if let Err(e) = release_git::push_release(&release_repo, &current_branch, &tag_name, &tag_msg) {
++        eprintln!("Error pushing release: {}", e);
+         exit(1);
+     }
+     println!("Pushed changes and tags");
+diff --git a/rust/scripts/version-and-commit/tests.rs b/rust/scripts/version-and-commit/tests.rs
+index e3fd048..da06d8b 100644
+--- a/rust/scripts/version-and-commit/tests.rs
++++ b/rust/scripts/version-and-commit/tests.rs
+@@ -1,12 +1,126 @@
++use super::release_git::{push_release, stage_release_metadata};
+ use super::{
+-    classify_push_failure, get_benchmarks_cargo_lock_path, update_cargo_lock, update_cargo_locks,
+-    PushFailure,
++    PushFailure, classify_push_failure, get_benchmarks_cargo_lock_path, update_cargo_lock,
++    update_cargo_locks,
+ };
+ use std::fs;
+ use std::path::PathBuf;
+ use std::process::Command;
+ use std::time::{SystemTime, UNIX_EPOCH};
+ 
++fn fixture_git(repo: &std::path::Path, args: &[&str]) -> String {
++    let output = Command::new("git")
++        .current_dir(repo)
++        .args(args)
++        .output()
++        .unwrap();
++    assert!(
++        output.status.success(),
++        "{}",
++        String::from_utf8_lossy(&output.stderr)
++    );
++    String::from_utf8(output.stdout).unwrap().trim().to_owned()
++}
++
++fn init_release_repo(repo: &std::path::Path) {
++    fixture_git(repo, &["init", "-q", "--initial-branch=main"]);
++    fixture_git(repo, &["config", "user.name", "Test"]);
++    fixture_git(repo, &["config", "user.email", "test@example.com"]);
++    fs::write(repo.join("Cargo.toml"), "version = \"1.4.0\"\n").unwrap();
++    fixture_git(repo, &["add", "Cargo.toml"]);
++    fixture_git(repo, &["commit", "-qm", "base"]);
++}
++
++#[test]
++fn release_staging_rejects_already_staged_and_untracked_unrelated_files() {
++    let repo = temp_dir("staging-allowlist");
++    init_release_repo(&repo);
++    fs::write(repo.join("Cargo.toml"), "version = \"1.4.1\"\n").unwrap();
++    fs::write(repo.join("unrelated.txt"), "must never be released").unwrap();
++    fixture_git(&repo, &["add", "unrelated.txt"]);
++    assert!(stage_release_metadata(&repo, ".").is_err());
++    fixture_git(&repo, &["reset", "-q", "HEAD", "--", "unrelated.txt"]);
++    assert!(stage_release_metadata(&repo, ".").is_err());
++    fs::remove_file(repo.join("unrelated.txt")).unwrap();
++    stage_release_metadata(&repo, ".").unwrap();
++    assert_eq!(
++        fixture_git(&repo, &["diff", "--cached", "--name-only"]),
++        "Cargo.toml"
++    );
++    fs::remove_dir_all(repo).unwrap();
++}
++
++#[test]
++fn monorepo_release_stages_only_its_metadata_and_consumed_fragments() {
++    let repo = temp_dir("staging-monorepo");
++    init_release_repo(&repo);
++    let package = repo.join("rust");
++    fs::create_dir_all(package.join("changelog.d")).unwrap();
++    fs::create_dir_all(package.join("benchmarks")).unwrap();
++    fs::write(package.join("Cargo.toml"), "version = \"1.4.0\"\n").unwrap();
++    fs::write(package.join("changelog.d/release.md"), "patch").unwrap();
++    fixture_git(&repo, &["add", "rust"]);
++    fixture_git(&repo, &["commit", "-qm", "package"]);
++    fs::write(package.join("Cargo.toml"), "version = \"1.4.1\"\n").unwrap();
++    fs::write(package.join("benchmarks/Cargo.lock"), "lockfile").unwrap();
++    fs::remove_file(package.join("changelog.d/release.md")).unwrap();
++    stage_release_metadata(&repo, "rust").unwrap();
++    stage_release_metadata(&repo, "./rust/").unwrap();
++    stage_release_metadata(&repo, package.to_str().unwrap()).unwrap();
++    stage_release_metadata(&package, ".").unwrap();
++    assert_eq!(
++        fixture_git(&repo, &["diff", "--cached", "--name-only"]),
++        "rust/Cargo.toml\nrust/benchmarks/Cargo.lock\nrust/changelog.d/release.md"
++    );
++    fs::write(repo.join("Cargo.toml"), "an unrelated package change").unwrap();
++    assert!(stage_release_metadata(&repo, "rust").is_err());
++    assert!(stage_release_metadata(&package, ".").is_err());
++    fs::remove_dir_all(repo).unwrap();
++}
++
++#[test]
++fn release_tag_points_to_the_commit_pushed_after_a_lost_race() {
++    let root = temp_dir("tag-push-race");
++    let repo = root.join("local");
++    let remote = root.join("remote.git");
++    fs::create_dir_all(&repo).unwrap();
++    fs::create_dir_all(&remote).unwrap();
++    fixture_git(&remote, &["init", "-q", "--bare", "--initial-branch=main"]);
++    init_release_repo(&repo);
++    fixture_git(
++        &repo,
++        &["remote", "add", "origin", remote.to_str().unwrap()],
++    );
++    fixture_git(&repo, &["push", "-u", "origin", "main"]);
++    let other = root.join("other");
++    fixture_git(
++        &root,
++        &[
++            "clone",
++            "-q",
++            remote.to_str().unwrap(),
++            other.to_str().unwrap(),
++        ],
++    );
++    fixture_git(&other, &["config", "user.name", "Test"]);
++    fixture_git(&other, &["config", "user.email", "test@example.com"]);
++    fs::write(other.join("parallel.txt"), "another main commit").unwrap();
++    fixture_git(&other, &["add", "parallel.txt"]);
++    fixture_git(&other, &["commit", "-qm", "parallel main update"]);
++    fixture_git(&other, &["push", "origin", "main"]);
++    fs::write(repo.join("Cargo.toml"), "version = \"1.4.1\"\n").unwrap();
++    fixture_git(&repo, &["add", "Cargo.toml"]);
++    fixture_git(&repo, &["commit", "-qm", "release"]);
++    push_release(&repo, "main", "rust-v1.4.1", "Release rust-v1.4.1").unwrap();
++    let head = fixture_git(&repo, &["rev-parse", "HEAD"]);
++    assert_eq!(fixture_git(&remote, &["rev-parse", "main"]), head);
++    assert_eq!(
++        fixture_git(&remote, &["rev-parse", "rust-v1.4.1^{commit}"]),
++        head
++    );
++    fs::remove_dir_all(root).unwrap();
++}
++
+ fn temp_dir(name: &str) -> PathBuf {
+     let nanos = SystemTime::now()
+         .duration_since(UNIX_EPOCH)
+@@ -123,9 +237,11 @@ version = "0.13.0"
+         ]
+     );
+     for lock in [&cargo_lock, &benchmarks_lock] {
+-        assert!(fs::read_to_string(lock)
+-            .unwrap()
+-            .contains("name = \"example-sum-package-name\"\nversion = \"0.14.0\""));
++        assert!(
++            fs::read_to_string(lock)
++                .unwrap()
++                .contains("name = \"example-sum-package-name\"\nversion = \"0.14.0\"")
++        );
+     }
+ }
+ 
+@@ -246,4 +362,8 @@ fn repository_rules_are_not_retried_as_a_lost_race() {
+         classify_push_failure("authentication failed"),
+         PushFailure::Other
+     );
++    assert_eq!(
++        classify_push_failure("[rejected] main -> main (shallow update not allowed)"),
++        PushFailure::Other
++    );
+ }
