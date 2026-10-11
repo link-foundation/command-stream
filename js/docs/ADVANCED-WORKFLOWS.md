@@ -119,6 +119,9 @@ included examples; independent publication and adoption metrics are release outc
 
 ## Development, REPL, debugger, and tests
 
+See the [interactive development guide](INTERACTIVE-DEVELOPMENT.md) for JavaScript
+syntax, the Rust evaluator, prerequisites, and Cargo watch/restart mode.
+
 `$.dev({watch:['./scripts/*.mjs'],repl:true})` watches matching files and restarts
 the current script after changes. `command-stream dev app.mjs 'scripts/**/*.mjs'`
 starts immediately. Globs support `*`, `**`, and `?`; creation and deletion are
@@ -183,6 +186,7 @@ and bounded broadcast frame subscriptions. `CommandEnvironment` provides typed
 closures, middleware, inherited commands, composition, and atomic packages.
 `CommandPackage::load(path)` loads a JSON manifest whose commands contain `file`
 and `args`; reinstall it after changes for safe hot reload without native dynamic
-linking. The npm ecosystem, JavaScript evaluator, VS Code integration, and browser
-development tools belong to the JavaScript package. The executable feature catalog
+linking. Native `dev` and `start_repl` APIs provide Cargo watching and full Rust
+evaluation via Evcxr. The npm ecosystem, JavaScript evaluator, VS Code integration,
+and browser development tools belong to the JavaScript package. The executable feature catalog
 includes Node, Bun, and Rust examples for the shared core APIs.

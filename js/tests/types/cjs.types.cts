@@ -65,5 +65,11 @@ export async function commonJsAdvanced(): Promise<void> {
   const terminal = new $.TerminalBuffer({ cols: 20, rows: 4 });
   terminal.dispose();
   const debugger_ = new $.PipelineDebugger();
+  const repl: $.RustReplController = await $.startRustRepl({
+    cratePath: './rust',
+  });
+  await repl.close();
+  const watcher = $.dev({ language: 'rust', entry: 'Cargo.toml' });
+  await watcher.close();
   use(code, values, debugger_);
 }

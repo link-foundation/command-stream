@@ -1,4 +1,5 @@
 import shelljs from './shelljs/index.mjs';
+import * as publicApi from './$.mjs';
 // command-stream - A unified shell command execution library
 // Main entry point - integrates all ProcessRunner modules
 
@@ -55,6 +56,7 @@ import {
   PipelineDebugger,
 } from './development.mjs';
 import { testing } from './testing.mjs';
+import { startRustRepl } from './rust-repl.mjs';
 import { toStreamResult } from './$.result-streams.mjs';
 import crossSpawn from 'cross-spawn';
 import { createRequire } from 'node:module';
@@ -486,20 +488,17 @@ Object.assign($tagged, {
   install,
   marketplace,
 });
-const developmentApi = {
-  $: $tagged,
-  sh,
-  register,
-  unregister,
-  listCommands,
-  command,
-  stream,
-  merge,
+// Read the namespace when a session starts, after module initialization, so
+// every current and future public export is available in the REPL.
+const startRepl = (options) => createRepl(publicApi, options);
+const dev = (options) => createDev(publicApi, options);
+Object.assign($tagged, {
+  dev,
+  startRepl,
+  startRustRepl,
   PipelineDebugger,
-};
-const startRepl = (options) => createRepl(developmentApi, options);
-const dev = (options) => createDev(developmentApi, options);
-Object.assign($tagged, { dev, startRepl, PipelineDebugger, testing });
+  testing,
+});
 Object.defineProperty($tagged, 'shelljs', { get: () => shelljs });
 // `$.bun`: the Bun.$-compatible shell (also `command-stream/bun`).
 $tagged.bun = bunShell;
@@ -546,6 +545,7 @@ trace(
 );
 
 export {
+  startRustRepl,
   dev,
   startRepl,
   PipelineDebugger,

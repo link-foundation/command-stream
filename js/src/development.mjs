@@ -1,12 +1,14 @@
 import { performance } from 'node:perf_hooks';
 import repl from 'node:repl';
 import { inspect } from 'node:util';
+import { runInContext } from 'node:vm';
 import { readdir, realpath, stat } from 'node:fs/promises';
 import { resolve, relative, join } from 'node:path';
 import { command } from './command-builder.mjs';
 import { stream } from './stream-processing.mjs';
 import { trace } from './$.trace.mjs';
 import { serveDebugger } from './debugger-view.mjs';
+import { startRustRepl } from './rust-repl.mjs';
 
 /** Preserve Node's JavaScript evaluator while also accepting bare shell commands. */
 export function startRepl(
@@ -30,39 +32,49 @@ export function startRepl(
         : inspect(value, { colors: terminal }),
   });
   Object.assign(server.context, api, { $: api.$ });
+  server.on('reset', (context) => Object.assign(context, api, { $: api.$ }));
+  server.defineCommand('commands', {
+    help: 'List registered virtual commands',
+    action() {
+      output.write(
+        `Registered virtual commands: ${api.listCommands().join(', ')}\n`
+      );
+      this.displayPrompt();
+    },
+  });
   const evaluate = server.eval;
   server.commandNames = () => api.listCommands();
   server.eval = (source, context, filename, callback) => {
-    const first = source.trim().split(/\s/)[0];
-    const shell =
-      api.listCommands().includes(first) ||
-      /^[\w./-]+\s+(?:--?\w|[^=+({])/.test(source.trim());
-    if (
-      shell &&
-      !/^(await|const|let|var|function|import|throw|return)\b/.test(
-        source.trim()
-      )
-    ) {
-      api
-        .sh(source.trim(), { mirror: false })
-        .then((value) => callback(null, value), callback);
+    const trimmed = source.trim();
+    if (['help', 'exit', 'clear'].includes(trimmed)) {
+      server.commands[trimmed].action.call(server);
+      callback(null);
+      return;
+    }
+    if (isShellInput(trimmed, api.listCommands(), context)) {
+      // Node's await evaluator pauses and queues subsequent input itself.
+      evaluate.call(
+        server,
+        `await sh(${JSON.stringify(trimmed)}, { mirror: false })\n`,
+        context,
+        filename,
+        callback
+      );
       return;
     }
     evaluate.call(server, source, context, filename, (error, value) => {
       if (error) {
-        if (
-          error.name === 'ReferenceError' &&
-          /^[\w./-]+$/.test(source.trim())
-        ) {
-          api
-            .sh(source.trim(), { mirror: false })
-            .then((result) => callback(null, result), callback);
-        } else {
-          callback(error);
-        }
+        callback(error);
         return;
       }
-      Promise.resolve(value).then((result) => callback(null, result), callback);
+      if (value?.then) {
+        Promise.resolve(value).then(
+          (result) => callback(null, result),
+          callback
+        );
+      } else {
+        callback(null, value);
+      }
     });
   };
   const complete = server.completer;
@@ -75,6 +87,36 @@ export function startRepl(
     }
   };
   return server;
+}
+
+function isShellInput(source, commands, context) {
+  // Send declarations and expressions to Node's evaluator. Only shell-shaped
+  // input uses command-stream; the public sh() API handles ambiguous input.
+  const first = source.split(/\s/)[0];
+  if (/^[a-zA-Z_$][\w$]*$/.test(first)) {
+    try {
+      if (runInContext(`typeof ${first}`, context) !== 'undefined') {
+        return false;
+      }
+    } catch {
+      // Keywords and uninitialized bindings belong to the JavaScript evaluator.
+      return false;
+    }
+  }
+  if (
+    /^(await|break|case|catch|class|const|continue|debugger|default|delete|do|else|export|finally|for|function|if|import|in|instanceof|let|new|return|super|switch|this|throw|try|typeof|using|var|void|while|with|yield)$/.test(
+      first
+    )
+  ) {
+    return false;
+  }
+  if (/^[\w./-]+$/.test(source)) {
+    return commands.includes(first);
+  }
+  return (
+    commands.includes(first) ||
+    /^[\w./-]+\s+(?:--?\w|[^=+*({[\s-])/.test(source)
+  );
 }
 
 function matcher(pattern) {
@@ -107,6 +149,7 @@ async function watchSnapshot(cwd, patterns) {
     for (const entry of await readdir(dir, { withFileTypes: true })) {
       if (
         entry.name === 'node_modules' ||
+        entry.name === 'target' ||
         entry.name === '.git' ||
         entry.name.startsWith('.command-stream-')
       ) {
@@ -134,7 +177,7 @@ async function watchSnapshot(cwd, patterns) {
 export function dev(
   api,
   {
-    watch = ['./scripts/*.mjs'],
+    watch,
     entry = process.argv[1],
     cwd = process.cwd(),
     repl: useRepl = false,
@@ -144,9 +187,11 @@ export function dev(
     debounce = 50,
     onRestart,
     onError = (error) => console.error(error),
+    language = 'javascript',
   } = {}
 ) {
   validateWatchOptions(interval, debounce);
+  watch = watchPatterns(watch, language);
   const patterns = watch.map((pattern) =>
     matcher(relative(cwd, resolve(cwd, pattern)))
   );
@@ -162,11 +207,12 @@ export function dev(
   const changes = new Set();
   const controller = {
     ready: null,
-    repl: useRepl && !closed ? startRepl(api) : null,
+    repl:
+      useRepl && !closed && language === 'javascript' ? startRepl(api) : null,
     async close() {
       closed = true;
       clearInterval(timer);
-      controller.repl?.close();
+      await controller.repl?.close();
       child?.kill();
       await controller.ready.catch(() => {});
       await pollWork;
@@ -193,7 +239,11 @@ export function dev(
       if (closed) {
         return;
       }
-      child = command(process.execPath, resolve(cwd, entry))
+      const execute =
+        language === 'rust'
+          ? command('cargo', 'run', '--manifest-path', resolve(cwd, entry))
+          : command(process.execPath, resolve(cwd, entry));
+      child = execute
         .with({
           cwd,
           env: { ...process.env, COMMAND_STREAM_DEV_CHILD: '1' },
@@ -244,6 +294,12 @@ export function dev(
     watchRoot = await realpath(cwd);
     trace('Development', () => `Watching canonical directory: ${watchRoot}`);
     previous = await watchSnapshot(watchRoot, patterns);
+    if (useRepl && language === 'rust' && !closed) {
+      controller.repl = await startRustRepl();
+      if (closed) {
+        await controller.repl.close();
+      }
+    }
     if (initial && !closed) {
       await restart([]);
     }
@@ -380,4 +436,16 @@ function validateWatchOptions(interval, debounce) {
   ) {
     throw new RangeError('Invalid watch interval or debounce');
   }
+}
+
+function watchPatterns(watch, language) {
+  if (!['javascript', 'rust'].includes(language)) {
+    throw new TypeError('Unknown development language');
+  }
+  return (
+    watch ??
+    (language === 'rust'
+      ? ['**/*.rs', '**/Cargo.toml', '**/Cargo.lock']
+      : ['./scripts/*.mjs'])
+  );
 }

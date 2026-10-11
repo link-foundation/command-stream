@@ -66,7 +66,11 @@ pub mod ansi;
 pub mod bun_shell;
 pub mod command_builder;
 pub mod command_packages;
+pub mod development;
 pub use command_packages::{CommandEnvironment, CommandPackage, PackageHandler};
+pub use development::{
+    dev, start_repl, DevController, DevEvent, DevOptions, ReplOptions, RustRepl,
+};
 pub mod events;
 pub mod execa;
 pub mod local_bin;

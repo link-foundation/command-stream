@@ -705,6 +705,9 @@ cargo run --release --locked --manifest-path benchmarks/Cargo.toml -- --smoke
 
 ## Development
 
+For the native Rust REPL and Cargo watch/restart commands, see the
+[interactive development guide](../js/docs/INTERACTIVE-DEVELOPMENT.md).
+
 ```bash
 cargo fmt --all -- --check
 cargo clippy --all-targets --all-features

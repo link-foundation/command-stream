@@ -231,6 +231,22 @@ jobs:
         working-directory: rust
         run: cargo test --all-features --verbose
 
+      - name: Install real Rust evaluator
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          rustup component add rust-src
+          curl --fail --location --retry 3 --output "$RUNNER_TEMP/evcxr.tar.gz" \
+            https://github.com/evcxr/evcxr/releases/download/v0.22.0/evcxr-v0.22.0-x86_64-unknown-linux-gnu.tar.gz
+          echo "f557d543aa6c47ee45e4bb0e0fd752440792bed58c6023abf60be6ca95f9de33  $RUNNER_TEMP/evcxr.tar.gz" | sha256sum --check
+          tar -xzf "$RUNNER_TEMP/evcxr.tar.gz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/evcxr-v0.22.0-x86_64-unknown-linux-gnu" >> "$GITHUB_PATH"
+
+      - name: Verify real Rust REPL syntax and public APIs
+        if: runner.os == 'Linux'
+        working-directory: rust
+        run: cargo test --test development_cli real_repl_evaluates -- --ignored --nocapture
+
   scripts:
     name: Test Rust scripts and check sizes
     runs-on: ubuntu-24.04

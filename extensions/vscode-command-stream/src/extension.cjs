@@ -146,7 +146,11 @@ function activate(context, vscode = require('vscode')) {
     vscode.commands.registerCommand('command-stream.repl', () => {
       const terminal = vscode.window.createTerminal('Command Stream REPL');
       terminal.show();
-      terminal.sendText('npx command-stream repl');
+      const rust =
+        vscode.window.activeTextEditor?.document.languageId === 'rust';
+      terminal.sendText(
+        `npx command-stream repl${rust ? ' --language rust' : ''}`
+      );
     })
   );
   vscode.workspace.textDocuments.forEach(update);
