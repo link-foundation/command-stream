@@ -182,6 +182,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [1.5.5] - 2026-10-11
+
+### Changed
+
+- Refresh serde_json to 1.0.152 in the library, benchmark and release-script
+  manifests to satisfy dependency freshness checks.
+
 ## [1.5.4] - 2026-10-10
 
 ### Changed
