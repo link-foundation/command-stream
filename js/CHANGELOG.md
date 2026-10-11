@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.0.1
+
+### Patch Changes
+
+- Make node-pty optional so core process execution installs on Linux without a
+  native build toolchain and works with lifecycle scripts disabled or optional
+  dependencies omitted. Report recovery instructions when PTY support is used
+  without an available native binding, and test packed production installs in
+  clean Node slim containers.
+
+  Fix core imports and command execution from esm.sh on Deno by resolving the
+  ShellJS glob guard through CDN imports when filesystem resolution is unavailable
+  and deferring the filesystem loader for zx and Execa until those APIs are used.
+  Preserve ShellJS dependency isolation and glob protection in local installations.
+
 ## 2.0.0
 
 ### Major Changes
