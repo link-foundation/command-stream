@@ -624,6 +624,153 @@ export const features = [
       child_process: "execFile('head', ['-n', '2', 'log.txt'], callback);",
     },
   },
+  {
+    id: 'command-builder',
+    title: 'Build commands with literal arguments',
+    category: 'Running commands',
+    summary:
+      'Immutable command descriptions execute exact argv and support fluent option transforms.',
+    file: 'js/examples/features/command-builder.mjs',
+    api: ['command', 'CommandBuilder'],
+    alternatives: {
+      'bun-shell': {
+        unsupported:
+          'No command-stream transform API; invoke the executable with separate arguments',
+      },
+      zx: {
+        unsupported:
+          'No command-stream transform API; invoke the executable with separate arguments',
+      },
+      execa: "await execa('printf', ['%s', 'literal ; text']);",
+      shelljs: {
+        unsupported:
+          'No command-stream transform API; invoke the executable with separate arguments',
+      },
+      child_process: "spawn('printf', ['%s', 'literal ; text']);",
+    },
+  },
+  {
+    id: 'stream-processing',
+    title: 'Process streams incrementally',
+    category: 'Streaming',
+    summary:
+      'Pull-driven operators provide batching, windows, split, merge, backpressure and online statistics.',
+    file: 'js/examples/features/stream-processing.mjs',
+    api: ['stream', 'StreamPipeline'],
+    alternatives: {
+      'bun-shell': {
+        unsupported:
+          'No built-in window, split, merge, or command analytics operators; use runtime stream primitives',
+      },
+      zx: {
+        unsupported:
+          'No built-in window, split, merge, or command analytics operators; use runtime stream primitives',
+      },
+      execa: {
+        unsupported:
+          'No built-in window, split, merge, or command analytics operators; use runtime stream primitives',
+      },
+      shelljs: {
+        unsupported:
+          'No built-in window, split, merge, or command analytics operators; use runtime stream primitives',
+      },
+      child_process:
+        "for await (const chunk of spawn('node', ['server.mjs']).stdout) { await consume(chunk); }",
+    },
+  },
+  {
+    id: 'terminal-buffer',
+    title: 'Track virtual terminal frames',
+    category: 'Streaming',
+    summary:
+      'Independent terminal emulators expose visible text, colors and changed-frame subscriptions.',
+    file: 'js/examples/features/terminal-buffer.mjs',
+    api: ['TerminalBuffer'],
+    alternatives: {
+      'bun-shell': {
+        unsupported:
+          'No virtual terminal emulator or frame API; combine with xterm/headless',
+      },
+      zx: {
+        unsupported:
+          'No virtual terminal emulator or frame API; combine with xterm/headless',
+      },
+      execa: {
+        unsupported:
+          'No virtual terminal emulator or frame API; combine with xterm/headless',
+      },
+      shelljs: {
+        unsupported:
+          'No virtual terminal emulator or frame API; combine with xterm/headless',
+      },
+      child_process: {
+        unsupported:
+          'No virtual terminal emulator or frame API; combine with xterm/headless',
+      },
+    },
+  },
+  {
+    id: 'command-packages',
+    title: 'Compose and extend virtual commands',
+    category: 'Your own commands',
+    summary:
+      'Typed command packages support registration, composition, middleware, inheritance and atomic reload.',
+    file: 'js/examples/features/command-packages.mjs',
+    api: ['create', 'install', 'compose', 'extend', 'inherit'],
+    alternatives: {
+      'bun-shell': {
+        unsupported:
+          'No validated command package, inheritance, middleware, or registry search API',
+      },
+      zx: {
+        unsupported:
+          'No validated command package, inheritance, middleware, or registry search API',
+      },
+      execa: {
+        unsupported:
+          'No validated command package, inheritance, middleware, or registry search API',
+      },
+      shelljs: {
+        unsupported:
+          'No validated command package, inheritance, middleware, or registry search API',
+      },
+      child_process: {
+        unsupported:
+          'No validated command package, inheritance, middleware, or registry search API',
+      },
+    },
+  },
+  {
+    id: 'fy',
+    title: 'Translate shell programs into modules',
+    category: 'Utilities',
+    summary:
+      'Generate executable ES modules that preserve shell semantics and literal process arguments.',
+    file: 'js/examples/features/fy.mjs',
+    api: ['fy'],
+    alternatives: {
+      'bun-shell': {
+        unsupported:
+          'No shell-to-module translator; execute the source with its interpreter',
+      },
+      zx: {
+        unsupported:
+          'No shell-to-module translator; execute the source with its interpreter',
+      },
+      execa: {
+        unsupported:
+          'No shell-to-module translator; execute the source with its interpreter',
+      },
+      shelljs: {
+        unsupported:
+          'No shell-to-module translator; execute the source with its interpreter',
+      },
+      child_process: {
+        unsupported:
+          'No shell-to-module translator; execute the source with its interpreter',
+      },
+    },
+  },
 ];
 
 export const featuresById = new Map(
@@ -645,6 +792,11 @@ export const languages = [
 
 export const rustApiByFeature = new Map(
   Object.entries({
+    fy: ['fy'],
+    'command-packages': ['CommandEnvironment', 'CommandPackage'],
+    'terminal-buffer': ['terminal::TerminalBuffer'],
+    'stream-processing': ['DataStream', 'StreamStats'],
+    'command-builder': ['CommandBuilder'],
     'await-result': ['run', 'CommandResult'],
     'result-text': ['CommandResult::stdout'],
     'sync-execution': ['run_sync'],

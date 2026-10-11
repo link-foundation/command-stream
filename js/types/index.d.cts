@@ -17,6 +17,24 @@ interface CommonJsDollar extends CommandStream.Dollar, Exports {
 declare const $: CommonJsDollar;
 
 declare namespace $ {
+  export type CommandBuilder<T = CommandStream.StreamResult> =
+    import('./advanced.cjs').CommandBuilder<T>;
+  export type CommandFactory = import('./advanced.cjs').CommandFactory;
+  export type StreamOptions = import('./advanced.cjs').StreamOptions;
+  export type StreamStats = import('./advanced.cjs').StreamStats;
+  export type AnalyzeOptions<T> = import('./advanced.cjs').AnalyzeOptions<T>;
+  export type StreamPipeline<T> = import('./advanced.cjs').StreamPipeline<T>;
+  export type CommandStream = import('./advanced.cjs').CommandStream;
+  export type TerminalBuffer = import('./advanced.cjs').TerminalBuffer;
+  export type CommandHandler = import('./advanced.cjs').CommandHandler;
+  export type CommandMiddleware = import('./advanced.cjs').CommandMiddleware;
+  export type CommandPackage = import('./advanced.cjs').CommandPackage;
+  export type InstalledPackage = import('./advanced.cjs').InstalledPackage;
+  export type DevOptions = import('./advanced.cjs').DevOptions;
+  export type DevController = import('./advanced.cjs').DevController;
+  export type DebugEvent = import('./advanced.cjs').DebugEvent;
+  export type PipelineDebugger = import('./advanced.cjs').PipelineDebugger;
+
   export type ProcessRunner = CommandStream.ProcessRunner;
   export type StreamEmitter<
     Events extends { [K in keyof Events]: unknown[] } =

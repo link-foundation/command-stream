@@ -31,3 +31,5 @@ trace(
 );
 
 export { ProcessRunner };
+export { command, CommandBuilder } from './command-builder.mjs';
+export { stream, merge, StreamPipeline } from './stream-processing.mjs';

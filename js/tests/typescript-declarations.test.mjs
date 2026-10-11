@@ -18,7 +18,9 @@ import * as bunModule from '../src/bun.mjs';
 
 const read = (path) =>
   readFileSync(join(PACKAGE_ROOT, path), 'utf8').replace(/\r\n/g, '\n');
+const advancedDts = read('types/advanced.d.cts');
 const apiDts = read('types/api.d.cts');
+const completeDts = `${apiDts}\n${advancedDts}`;
 const indexDts = read('types/index.d.ts');
 const indexDcts = read('types/index.d.cts');
 const processRunnerDts = read('types/process-runner.d.ts');
@@ -29,7 +31,9 @@ const sorted = (values) => [...new Set(values)].sort();
 
 function declaredValueExports() {
   const names = [
-    ...apiDts.matchAll(/^export declare (?:const|function|class) ([\w$]+)/gm),
+    ...completeDts.matchAll(
+      /^export (?:declare )?(?:const|function|class) ([\w$]+)/gm
+    ),
   ].map((match) => match[1]);
   // The ES module entry re-exports the shared API and adds the default export.
   expect(indexDts).toContain("export * from './api.cjs';");
@@ -45,7 +49,10 @@ function declaredTypeExports(source) {
       .map((match) => match[1])
       .concat(
         [...source.matchAll(/^export type \{([^}]*)\}/gm)].flatMap((match) =>
-          match[1].split(',').map((name) => name.trim())
+          match[1]
+            .split(',')
+            .map((name) => name.trim())
+            .filter(Boolean)
         )
       )
       .filter(Boolean)
@@ -92,7 +99,12 @@ describe('TypeScript declarations match the runtime API', () => {
   test('./process-runner subpath exports are all declared', () => {
     const declared = [
       ...processRunnerDts.matchAll(/^export \{([^}]*)\}/gm),
-    ].flatMap((match) => match[1].split(',').map((name) => name.trim()));
+    ].flatMap((match) =>
+      match[1]
+        .split(',')
+        .map((name) => name.trim())
+        .filter(Boolean)
+    );
     expect(sorted(declared)).toEqual(sorted(Object.keys(processRunnerModule)));
   });
 
@@ -139,11 +151,11 @@ describe('TypeScript declarations match the runtime API', () => {
         (match) => match[1]
       )
     );
-    const classes = [...apiDts.matchAll(/^export declare class (\w+)/gm)].map(
-      (match) => match[1]
-    );
+    const classes = [
+      ...completeDts.matchAll(/^export (?:declare )?class (\w+)/gm),
+    ].map((match) => match[1]);
     expect(cjsTypes).toEqual(
-      sorted([...declaredTypeExports(apiDts), ...classes])
+      sorted([...declaredTypeExports(completeDts), ...classes])
     );
   });
 });

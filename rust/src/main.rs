@@ -2,8 +2,9 @@
 //!
 //! A simple CLI wrapper for the command-stream library.
 
-use command_stream::run;
+use command_stream::{fy, run};
 use std::env;
+use std::io::Write;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -19,6 +20,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         eprintln!("  command-stream ls -la");
         eprintln!("  command-stream 'echo hello && echo world'");
         std::process::exit(1);
+    }
+
+    if args[0] == "fy" {
+        if args.len() != 3 {
+            return Err("Usage: command-stream fy input.sh output.mjs".into());
+        }
+        let source = tokio::fs::read_to_string(&args[1]).await?;
+        let mut options = std::fs::OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o755);
+        }
+        let mut file = options.open(&args[2])?;
+        file.write_all(fy(&source).as_bytes())?;
+        return Ok(());
     }
 
     let command = args.join(" ");

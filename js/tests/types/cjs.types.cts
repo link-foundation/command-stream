@@ -54,3 +54,16 @@ export async function commonJsBun(): Promise<void> {
   const text: string = await bun.$`echo hi`.text();
   use(text);
 }
+
+export async function commonJsAdvanced(): Promise<void> {
+  const code: number = await $.command('node', '-e', 'process.exit(0)')
+    .pipe($.command.stdout('ignore'), $.command.exitCode)
+    .run();
+  const values: number[] = await $.stream([1, 2])
+    .map((value) => value * 2)
+    .toArray();
+  const terminal = new $.TerminalBuffer({ cols: 20, rows: 4 });
+  terminal.dispose();
+  const debugger_ = new $.PipelineDebugger();
+  use(code, values, debugger_);
+}

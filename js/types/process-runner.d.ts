@@ -12,3 +12,11 @@ export type {
   StreamChunk,
   StreamResult,
 } from './index.js';
+
+export {
+  CommandBuilder,
+  command,
+  StreamPipeline,
+  stream,
+  merge,
+} from './index.js';

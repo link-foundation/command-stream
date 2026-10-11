@@ -167,7 +167,7 @@ const terminalCells = (line, columns) =>
     };
   });
 
-const terminalFrame = (terminal, elapsed) => {
+export const terminalFrame = (terminal, elapsed) => {
   const buffer = terminal.buffer.active;
   const allLines = Array.from(
     { length: buffer.length },
@@ -199,7 +199,7 @@ const terminalFrame = (terminal, elapsed) => {
   };
 };
 
-const sameFrame = (left, right) =>
+export const sameFrame = (left, right) =>
   left.cols === right.cols &&
   left.rows === right.rows &&
   left.cursor.x === right.cursor.x &&

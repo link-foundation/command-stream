@@ -64,6 +64,9 @@
 // Modular utility modules (following JavaScript modular pattern)
 pub mod ansi;
 pub mod bun_shell;
+pub mod command_builder;
+pub mod command_packages;
+pub use command_packages::{CommandEnvironment, CommandPackage, PackageHandler};
 pub mod events;
 pub mod execa;
 pub mod local_bin;
@@ -76,6 +79,7 @@ mod run_options;
 pub mod signal;
 pub mod state;
 pub mod stream;
+pub mod stream_processing;
 pub mod terminal;
 pub mod trace;
 
@@ -94,6 +98,7 @@ use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};
 use tokio::process::Child;
 use tokio::sync::mpsc;
 
+pub use command_builder::{fy, CommandBuilder, CommandStdio};
 pub use commands::{CommandContext, StreamChunk};
 pub use execa::{execa, execa_compat, execa_node, execa_sync};
 pub use run_options::{Error, Result, RunOptions, StdinOption};
@@ -116,6 +121,7 @@ pub use state::{
     GlobalState, ShellSettings,
 };
 pub use stream::{AsyncIterator, IntoStream, OutputChunk, OutputStream, StreamingRunner};
+pub use stream_processing::{DataStream, StreamStats};
 pub use trace::trace;
 
 #[derive(Clone, Copy)]
