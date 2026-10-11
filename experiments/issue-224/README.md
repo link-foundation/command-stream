@@ -8,6 +8,9 @@ bun experiments/issue-224/pipeline-pressure.mjs
 node experiments/issue-224/pipeline-cancellation.mjs
 bun experiments/issue-224/pipeline-cancellation.mjs
 node experiments/issue-224/editor-escapes.mjs
+node experiments/issue-224/watch-symlink.mjs
+node --preserve-symlinks experiments/issue-224/watch-symlink.mjs
+bun experiments/issue-224/watch-symlink.mjs
 bun test --preload ./experiments/issue-224/disabled-virtual-preload.mjs js/tests/development-tools.test.mjs
 node --max-old-space-size=128 experiments/issue-224/stream-memory.mjs stream
 node --max-old-space-size=128 experiments/issue-224/stream-memory.mjs buffer
@@ -24,6 +27,9 @@ The cancellation fixture exits by itself after 500ms and verifies that cancellin
 a mixed pipeline also stops a native stage that ignores SIGTERM. The editor probe
 uses 32 escape sequences in a worker capped at 16 MiB, terminates the worker after
 a 500ms watchdog, and checks diagnostics on an unclosed template.
+
+The symlink watcher probe checks canonical package identity and reloads through
+a linked workspace (a Windows junction on Windows), with a two-second watchdog.
 
 See [requirements and design](../../dev/log/issues/224/pulls/225/analysis/requirements.md),
 [measurements](../../dev/log/issues/224/pulls/225/analysis/measurements.md), and the

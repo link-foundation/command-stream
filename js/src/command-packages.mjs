@@ -7,7 +7,7 @@ import {
   extname,
   join,
 } from 'node:path';
-import { readFile, writeFile, unlink } from 'node:fs/promises';
+import { readFile, realpath, writeFile, unlink } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { execa } from './execa/index.mjs';
@@ -156,7 +156,10 @@ export async function install(
   if (typeof specifier !== 'string' || !specifier) {
     throw new TypeError('Expected a package name or module path');
   }
-  const file = await resolvePackage(specifier, { cwd, install });
+  // Keep one identity for linked packages even with --preserve-symlinks.
+  const file = await realpath(
+    await resolvePackage(specifier, { cwd, install })
+  );
   const current = packages.get(file);
   if (current && !reload) {
     return current;

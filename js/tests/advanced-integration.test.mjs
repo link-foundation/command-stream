@@ -1,6 +1,14 @@
 import { test, expect, beforeEach, afterEach } from 'bun:test';
 import { beforeTestCleanup, afterTestCleanup } from './test-cleanup.mjs';
-import { mkdtemp, writeFile, readFile, rename, rm } from 'node:fs/promises';
+import {
+  mkdtemp,
+  mkdir,
+  symlink,
+  writeFile,
+  readFile,
+  rename,
+  rm,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -119,7 +127,15 @@ test('watch mode reloads package edits and stops watching on close', async () =>
   let controller;
   let installed;
   try {
-    const file = join(dir, 'commands.mjs');
+    const packageDir = join(dir, 'packages');
+    const watchDir = join(dir, 'linked-packages');
+    await mkdir(packageDir);
+    await symlink(
+      packageDir,
+      watchDir,
+      process.platform === 'win32' ? 'junction' : 'dir'
+    );
+    const file = join(watchDir, 'commands.mjs');
     await writeFile(
       file,
       "export default {name:'watch-fixture',commands:{'watch-fixture':()=>({code:0,stdout:'before'})}}"
@@ -130,7 +146,7 @@ test('watch mode reloads package edits and stops watching on close', async () =>
       done = resolve;
     });
     controller = dev({
-      cwd: dir,
+      cwd: watchDir,
       entry: null,
       watch: ['**/*.mjs'],
       packages: [installed],
@@ -140,11 +156,11 @@ test('watch mode reloads package edits and stops watching on close', async () =>
     });
     await controller.ready;
     await writeFile(
-      join(dir, 'next.tmp'),
+      join(watchDir, 'next.tmp'),
       "export default {name:'watch-fixture',commands:{'watch-fixture':()=>({code:0,stdout:'after-longer'})}}"
     );
     // Model an editor's atomic save so debounce:0 cannot read a partial write.
-    await rename(join(dir, 'next.tmp'), file);
+    await rename(join(watchDir, 'next.tmp'), file);
     await changed;
     expect(await (await $({ mirror: false })`watch-fixture`).text()).toBe(
       'after-longer'
@@ -156,6 +172,16 @@ test('watch mode reloads package edits and stops watching on close', async () =>
     installed?.uninstall();
     await rm(dir, { recursive: true, force: true });
   }
+}, 10000);
+
+test('package reload shares watch identity when Node preserves symlinks', async () => {
+  const result = await command(
+    'node',
+    '--preserve-symlinks',
+    join(import.meta.dir, '../../experiments/issue-224/watch-symlink.mjs')
+  );
+  expect(result.code).toBe(0);
+  expect(JSON.parse(await result.text()).reloaded).toBe(true);
 }, 10000);
 
 test('snapshot assertions detect mismatches and require explicit updates', async () => {

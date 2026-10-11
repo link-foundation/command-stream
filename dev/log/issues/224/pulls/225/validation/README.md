@@ -29,6 +29,13 @@ Reproduction precedes implementation:
   suites reproduces the CI failures (empty REPL output and mock exit code 127).
   The new suites now use the existing before/after cleanup hooks. Watched fixture
   saves use atomic rename so a zero-debounce watcher cannot read a partial write.
+- `watch-symlink-red.log`: a linked watch directory reproduces the remaining
+  macOS CI failure: package reload is skipped because watched and installed
+  paths have different identities. Canonicalizing the watch root makes the
+  same test pass; the finite Node/Bun `watch-symlink.mjs` probe verifies reload.
+- `watch-package-identity-red.log`: Node's `--preserve-symlinks` option retains
+  the package's logical entry path. Explicit canonical entry resolution makes
+  the same automated reload regression pass with that option as well.
 
 The regression tests are in `js/tests/advanced-*.test.mjs`,
 `command-packages.test.mjs`, `development-tools.test.mjs`,
@@ -37,7 +44,7 @@ the existing compatibility/type/artifact suites.
 
 Final test counts and CI status are recorded in the pull request description.
 
-Local verification: 2,687 Bun tests and 838 Rust tests passed; 104 Node core
+Local verification: 2,688 Bun tests and 838 Rust tests passed; 104 Node core
 checks and 524 Node zx/Execa tests passed. All 34 feature examples passed
 Node/Bun/Rust execution checks, and all 211 documentation checks passed.
 Lint, formatting, declarations, duplication, Rust Clippy/rustdoc, npm artifacts

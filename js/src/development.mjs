@@ -1,7 +1,7 @@
 import { performance } from 'node:perf_hooks';
 import repl from 'node:repl';
 import { inspect } from 'node:util';
-import { readdir, stat } from 'node:fs/promises';
+import { readdir, realpath, stat } from 'node:fs/promises';
 import { resolve, relative, join } from 'node:path';
 import { command } from './command-builder.mjs';
 import { stream } from './stream-processing.mjs';
@@ -150,6 +150,7 @@ export function dev(
   const patterns = watch.map((pattern) =>
     matcher(relative(cwd, resolve(cwd, pattern)))
   );
+  let watchRoot;
   let previous;
   let timer;
   let busy = Promise.resolve();
@@ -212,7 +213,7 @@ export function dev(
     }
     polling = true;
     try {
-      const next = await watchSnapshot(cwd, patterns);
+      const next = await watchSnapshot(watchRoot, patterns);
       for (const file of new Set([...previous.keys(), ...next.keys()])) {
         if (previous.get(file) !== next.get(file)) {
           changes.add(file);
@@ -238,7 +239,11 @@ export function dev(
     if (closed) {
       return;
     }
-    previous = await watchSnapshot(cwd, patterns);
+    // Package resolution canonicalizes symlinks (including macOS /var).
+    // Use the same identity for watched files so reload matches their entry.
+    watchRoot = await realpath(cwd);
+    trace('Development', () => `Watching canonical directory: ${watchRoot}`);
+    previous = await watchSnapshot(watchRoot, patterns);
     if (initial && !closed) {
       await restart([]);
     }
