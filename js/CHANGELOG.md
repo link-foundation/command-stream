@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.2.0
+
+### Minor Changes
+
+- 27a5166: Expose the complete public API in the JavaScript REPL and preserve declarations, classes, constructors, async iteration, and variable names shared with shell commands. Restore APIs after clearing the context. Add `startRustRepl`, `repl --language rust`, and Cargo watch/restart mode with isolated evaluator configuration and shutdown cleanup.
+
 ## 2.1.0
 
 ### Minor Changes
