@@ -20,6 +20,8 @@ from run 38094949858 (2026-10-10T23:25:03Z, head 04f5dac). Lines 640–646 name 
 serde_json 1.0.151 declarations that had become stale against 1.0.152. The fix
 updates all six library, benchmark and release-script declarations and both
 lockfiles. The direct-dependency check then reports 89 checked and zero stale.
+The same refresh subsequently merged into main through PR 222, so the final
+branch inherits that release fragment instead of adding a duplicate Rust release.
 
 Reproduction commands and bounded probes are documented in
 `experiments/issue-221/README.md`. Compressed logs are byte-preserving copies of
@@ -33,3 +35,11 @@ records the repository lint, format, duplication and TypeScript checks.
 `feature-parity.txt` covers all 29 features; `documentation.txt` verifies the
 generated documentation. The production matrix logs cover all three install
 modes on Node 22, 24 and 26, for local/global runtime and isolated declarations.
+
+`deno-cdn-duplicate-import-before.log.gz` records the duplicate import identifier
+exposed by bundling repeated ShellJS builtin imports after merging PR 222.
+`deno-cdn-conditional-export-before.log.gz` records esm.sh selecting the default
+unicorn-magic export without the filesystem helpers needed by current Execa.
+The CDN harness now deduplicates import bindings and requests the Node export
+condition. `deno-cdn-local-after.log.gz` records successful Deno HTTP import,
+core and ShellJS command execution, ordinary globs and input-depth protection.

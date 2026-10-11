@@ -20,6 +20,11 @@ is absent from production installs. Development reference packages and tooling
 can still resolve it; their audit exception does not apply to packed consumer
 audits. The native API offers streaming, events and cancellation alongside it.
 
+For Deno HTTP imports through esm.sh, include
+`?target=denonext&conditions=node` to select the process runner's Node filesystem
+exports. The `conditions` option is documented in the
+[esm.sh reference](https://github.com/esm-dev/esm.sh).
+
 Rust exposes `command_stream::shelljs::ShellJs`: asynchronous command calls,
 configuration, file operations and an isolated directory stack. See the limits
 below when translating JavaScript-specific behavior.
