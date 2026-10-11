@@ -20,7 +20,7 @@
 //! chrono = "0.4.45"
 //! ureq = "3.4.2"
 //! serde = { version = "1.0.229", features = ["derive"] }
-//! serde_json = "1.0.152"
+//! serde_json = "1.0.154"
 //! ```
 
 // `rust-script --test` builds this file as a test harness, where `main` is not
