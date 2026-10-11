@@ -488,6 +488,11 @@ test('VS Code activation wires completion, docs, diagnostics, and the REPL comma
   );
   registrations.command();
   expect(registrations.terminal).toBe('npx command-stream repl');
+  vscode.window.activeTextEditor = { document: { languageId: 'rust' } };
+  registrations.command();
+  expect(registrations.terminal).toBe(
+    'npx command-stream repl --language rust'
+  );
   context.subscriptions.forEach((item) => item.dispose());
 });
 

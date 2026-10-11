@@ -9,6 +9,9 @@ use std::io::Write;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().skip(1).collect();
+    if let Some(code) = command_stream::development::cli::cli(&args).await? {
+        std::process::exit(code);
+    }
 
     if args.is_empty() {
         eprintln!("Usage: command-stream <command> [args...]");

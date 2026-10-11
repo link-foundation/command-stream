@@ -12,6 +12,7 @@ import type {
 import type { REPLServer } from 'node:repl';
 import type { Readable, Writable } from 'node:stream';
 import { EventEmitter } from 'node:events';
+import type { ChildProcess, SpawnOptions } from 'node:child_process';
 
 export class CommandBuilder<T = StreamResult> implements PromiseLike<T> {
   constructor(
@@ -213,7 +214,8 @@ export const marketplace: {
     }
   ): Promise<Array<{ name: string; version: string; description?: string }>>;
 };
-export interface DevOptions {
+export interface DevOptions<L extends 'javascript' | 'rust' = 'javascript'> {
+  language?: L;
   watch?: string[];
   entry?: string | null;
   cwd?: string;
@@ -225,13 +227,27 @@ export interface DevOptions {
   onRestart?: (files: string[]) => void | Promise<void>;
   onError?: (error: Error) => void;
 }
-export interface DevController {
+export interface DevController<L extends 'javascript' | 'rust' = 'javascript'> {
   ready: Promise<void>;
   close(): Promise<void>;
-  repl: REPLServer | null;
+  repl: (L extends 'rust' ? RustReplController : REPLServer) | null;
   readonly child?: ProcessRunner;
 }
-export function dev(options?: DevOptions): DevController;
+export function dev<L extends 'javascript' | 'rust' = 'javascript'>(
+  options?: DevOptions<L>
+): DevController<L>;
+export interface RustReplController {
+  child: ChildProcess;
+  done: Promise<{ code: number | null; signal: NodeJS.Signals | null }>;
+  close(): Promise<void>;
+}
+export function startRustRepl(options?: {
+  executable?: string;
+  args?: string[];
+  cratePath?: string;
+  stdio?: SpawnOptions['stdio'];
+  disableReadline?: boolean;
+}): Promise<RustReplController>;
 export function startRepl(options?: {
   input?: Readable;
   output?: Writable;

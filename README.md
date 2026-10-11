@@ -54,6 +54,9 @@ JavaScript and Rust releases are independent:
 
 ## Development
 
+The [interactive development guide](./js/docs/INTERACTIVE-DEVELOPMENT.md) covers
+JavaScript and Rust REPLs, complete library access, and watch/restart commands.
+
 Both maintained language implementations carry pinned, executable competitor
 compatibility corpora with explicit missing-feature ledgers:
 

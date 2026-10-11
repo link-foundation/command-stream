@@ -30,8 +30,11 @@ declare namespace $ {
   export type CommandMiddleware = import('./advanced.cjs').CommandMiddleware;
   export type CommandPackage = import('./advanced.cjs').CommandPackage;
   export type InstalledPackage = import('./advanced.cjs').InstalledPackage;
-  export type DevOptions = import('./advanced.cjs').DevOptions;
-  export type DevController = import('./advanced.cjs').DevController;
+  export type DevOptions<L extends 'javascript' | 'rust' = 'javascript'> =
+    import('./advanced.cjs').DevOptions<L>;
+  export type DevController<L extends 'javascript' | 'rust' = 'javascript'> =
+    import('./advanced.cjs').DevController<L>;
+  export type RustReplController = import('./advanced.cjs').RustReplController;
   export type DebugEvent = import('./advanced.cjs').DebugEvent;
   export type PipelineDebugger = import('./advanced.cjs').PipelineDebugger;
 

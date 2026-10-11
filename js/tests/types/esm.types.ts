@@ -22,6 +22,7 @@ import $, {
   marketplace,
   dev,
   startRepl,
+  startRustRepl,
   PipelineDebugger,
   testing,
   ProcessRunner,
@@ -410,6 +411,15 @@ export async function advancedFeatures(): Promise<void> {
   await installed.reload();
   installed.uninstall();
   const controller = dev({ entry: null, packages: [installed] });
+  controller.repl?.displayPrompt();
+  const rustController = dev({ language: 'rust', entry: 'Cargo.toml' });
+  await rustController.repl?.done;
+  await rustController.close();
+  expectType<Equal<typeof $.startRustRepl, typeof startRustRepl>>();
+  const rustRepl = await startRustRepl({ cratePath: './rust' });
+  await rustRepl.close();
+  // @ts-expect-error supported languages are explicit
+  dev({ language: 'python' });
   await controller.ready;
   await controller.close();
   const terminal = new TerminalBuffer();

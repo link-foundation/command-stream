@@ -481,6 +481,7 @@ export interface Dollar extends CommandTag {
   marketplace: typeof import('./advanced.cjs').marketplace;
   dev: typeof import('./advanced.cjs').dev;
   startRepl: typeof import('./advanced.cjs').startRepl;
+  startRustRepl: typeof import('./advanced.cjs').startRustRepl;
   PipelineDebugger: typeof import('./advanced.cjs').PipelineDebugger;
   testing: typeof import('./advanced.cjs').testing;
   readonly shelljs: typeof shelljs;
@@ -949,6 +950,7 @@ export {
   marketplace,
   dev,
   startRepl,
+  startRustRepl,
   PipelineDebugger,
   testing,
 } from './advanced.cjs';
@@ -961,6 +963,7 @@ export type {
   InstalledPackage,
   DevOptions,
   DevController,
+  RustReplController,
   StreamStats,
   StreamOptions,
   AnalyzeOptions,
