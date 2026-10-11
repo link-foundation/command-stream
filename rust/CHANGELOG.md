@@ -184,6 +184,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [1.7.0] - 2026-10-11
+
+### Added
+
+- Native Rust `repl` and `dev` commands, Evcxr startup with the complete public crate and Tokio, and configurable local crate loading.
+- `dev`, `DevOptions`, `DevEvent`, `DevController`, `start_repl`, `ReplOptions`, and `RustRepl` APIs with debounced file creation/edit/deletion detection, build-output exclusions, and child shutdown before restarts.
+- Real Rust evaluator integration coverage in Linux CI.
+
 ## [1.6.0] - 2026-10-11
 
 Add exact-argv CommandBuilder and fy module generation, bounded DataStream
