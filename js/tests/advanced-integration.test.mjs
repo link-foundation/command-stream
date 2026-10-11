@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
-import { spawn } from 'node:child_process';
+import { spawn, execFileSync } from 'node:child_process';
 import { once } from 'node:events';
 import $, {
   command,
@@ -221,6 +221,21 @@ test('all ten example packages install and participate in command pipelines', as
       'env',
       'math',
     ]) {
+      // Local ignored files can otherwise make this pass while a fresh CI
+      // checkout or source archive is missing an advertised package.
+      execFileSync(
+        'git',
+        [
+          'ls-files',
+          '--error-unmatch',
+          `js/examples/packages/${name}/index.mjs`,
+          `js/examples/packages/${name}/package.json`,
+        ],
+        {
+          cwd: join(import.meta.dir, '../..'),
+          stdio: 'pipe',
+        }
+      );
       installed.push(
         await install(
           join(import.meta.dir, '../examples/packages', name, 'index.mjs')

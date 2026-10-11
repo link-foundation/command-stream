@@ -1,5 +1,9 @@
 # Logs
 logs
+# The logging command package contains source, not generated logs.
+!js/examples/packages/logs/
+!js/examples/packages/logs/index.mjs
+!js/examples/packages/logs/package.json
 *.log
 # Case-study CI evidence is committed intentionally (downloaded run logs).
 !docs/case-studies/**/ci-logs/

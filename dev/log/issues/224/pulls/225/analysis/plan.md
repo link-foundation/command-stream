@@ -13,6 +13,6 @@
 - [x] Add runnable examples, complete API types and documentation; audit the entire codebase for affected paths.
 - [x] Run focused checks then all available local CI checks, saving large outputs. Run memory-intensive Rust builds sequentially with one job and reduced debug data; await every background command.
 - [x] Add JS changeset and Rust release fragment; review changes and commit useful atomic steps only on issue-224-7434d5c60324.
-- [ ] Fetch/merge latest main, push only prepared branch, update PR 225 with implementation/reproduction/validation details and all seven closing references.
+- [x] Fetch/merge latest main, push only prepared branch, update PR 225 with implementation/reproduction/validation details and all seven closing references.
 - [ ] Inspect final PR diff and comments; verify latest-SHA CI timestamps, download/analyze each non-passing run and fix failures.
 - [ ] Verify clean worktree and complete scope, mark PR 225 ready, report PR URL and honest validation limits.
