@@ -1,0 +1,791 @@
+run-37303855729.log.gz
+2: Rust (full)	UNKNOWN STEP	2026-10-05T11:34:58.9884044Z ##[group]Runner Image Provisioner
+18: Rust (full)	UNKNOWN STEP	2026-10-05T11:34:58.9892680Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+85: Rust (full)	UNKNOWN STEP	2026-10-05T11:35:00.1594042Z ##[group]Setting up auth
+335: Rust (full)	UNKNOWN STEP	2026-10-05T11:35:01.9024046Z includeif.gitdir:/home/runner/work/command-stream/command-stream/.git.path
+763: Rust (full)	UNKNOWN STEP	2026-10-05T11:35:40.5540419Z running 0 tests
+819: Rust (full)	UNKNOWN STEP	2026-10-05T11:35:42.4044075Z ^[[1m^[[92m   Compiling^[[0m crossbeam-utils v0.8.23
+1103: JavaScript (full)	UNKNOWN STEP	2026-10-05T11:34:59.0051195Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+1460: JavaScript (full)	UNKNOWN STEP	2026-10-05T11:35:03.7040496Z [command]/home/runner/.bun/bin/bun --revision
+1498: JavaScript (full)	UNKNOWN STEP	2026-10-05T11:35:04.3467232Z $ cd .. && bun test js/tests/benchmark-suite.test.mjs --timeout 10000
+1499: JavaScript (full)	UNKNOWN STEP	2026-10-05T11:35:04.3489661Z bun test v1.4.2 (744846f84)
+1643: JavaScript (full)	UNKNOWN STEP	2026-10-05T11:36:02.0140458Z   7. zx                   19.64 ms  1.14x
+1647: JavaScript (full)	UNKNOWN STEP	2026-10-05T11:36:02.0419404Z ##[group]Run actions/upload-artifact@v7
+
+run-37310859773.log.gz
+18: Bun.$ reference on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:37:50.5404016Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+375: Bun.$ reference on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:37:55.6404327Z yarn: 1.22.22
+608: Bun.$ reference on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:07.2340467Z PASS bunshell/cmdsubst-edge/quoted-two-echos-inner-quotes
+632: Bun.$ reference on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:07.2349404Z PASS bunshell/redirect/stderr-to-buffer
+788: Bun.$ reference on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:07.2404290Z PASS bunshell/deno-complicated-pipeline-background-unsupported
+789: Bun.$ reference on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:07.2404694Z PASS bunshell/deno-multi-pipe
+945: Bun.$ reference on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:07.2488404Z PASS bunshell/condexpr-f-character-device
+1285: Bun.$ reference on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:07.2640424Z      - platform linux not in windows
+1693: Bun.$ reference on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:07.2734042Z
+1732: port on Deno on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:09.1049461Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+1830: port on Deno on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:11.9194042Z  * [new branch]      issue-144-4375266b4889  -> origin/issue-144-4375266b4889
+1884: port on Deno on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:11.9331404Z  * [new branch]      issue-30-f1b7d27d       -> origin/issue-30-f1b7d27d
+2028: port on Deno on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:11.9614049Z ##[endgroup]
+2134: port on Deno on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:24.1404028Z PASS assignments-in-pipeline/should-handle-unicode-characters-in-assignments
+2340: port on Deno on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:24.1574043Z PASS bunshell/unicode/escape-unicode-as-bun-receives
+2592: port on Deno on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:24.1744044Z PASS bunshell/if-reserved-else-suffix-word
+2662: port on Deno on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:24.1778404Z PASS bunshell/posix-nest-between-then-and-elif
+2956: port on Deno on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:24.1913404Z SKIP commands-mkdir/absolute-dot-slashes-as-written-windows  (test/js/bun/shell/commands/mkdir.test.ts:10, 0ms)
+3181: port on Deno on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:24.1994049Z PASS lex/quoted-edge-case
+3453: Bun.$ reference on macos-latest	UNKNOWN STEP	2026-10-05T12:37:53.4554040Z 25G83
+3560: Bun.$ reference on macos-latest	UNKNOWN STEP	2026-10-05T12:37:57.5404150Z  * [new branch]      issue-15-9fc0cb72       -> origin/issue-15-9fc0cb72
+3756: Bun.$ reference on macos-latest	UNKNOWN STEP	2026-10-05T12:37:57.5664040Z ##[group]Determining the checkout info
+4532: Bun.$ reference on macos-latest	UNKNOWN STEP	2026-10-05T12:38:02.0240450Z PASS commands-cp/files-to-dir-posix
+5105: Bun.$ reference on macos-latest	UNKNOWN STEP	2026-10-05T12:38:02.0404060Z      - platform darwin not in linux
+5106: Bun.$ reference on macos-latest	UNKNOWN STEP	2026-10-05T12:38:02.0404430Z SKIP shell-pipe-read-fault/quiet-chunk-sleep  (test/js/bun/shell/shell-pipe-read-fault.test.ts:405, 0ms)
+5107: Bun.$ reference on macos-latest	UNKNOWN STEP	2026-10-05T12:38:02.0404520Z      - platform darwin not in linux
+5108: Bun.$ reference on macos-latest	UNKNOWN STEP	2026-10-05T12:38:02.0404920Z SKIP shell-pipe-read-fault/poll-chunk-eagain-first  (test/js/bun/shell/shell-pipe-read-fault.test.ts:418, 0ms)
+5174: Bun.$ reference on macos-latest	UNKNOWN STEP	2026-10-05T12:38:02.4041990Z Temporarily overriding HOME='/Users/runner/work/_temp/e23866bb-f52a-4fa3-9a86-96e27221d032' before making global git config changes
+5175: Bun.$ reference on macos-latest	UNKNOWN STEP	2026-10-05T12:38:02.4042720Z Adding repository directory to the temporary git global config as a safe directory
+5176: Bun.$ reference on macos-latest	UNKNOWN STEP	2026-10-05T12:38:02.4046460Z [command]/opt/homebrew/bin/git config --global --add safe.directory /Users/runner/work/command-stream/command-stream
+6234: port on Deno on windows-latest	UNKNOWN STEP	2026-10-05T12:38:56.3940400Z PASS bunshell/interp-reserved-else
+6333: port on Deno on windows-latest	UNKNOWN STEP	2026-10-05T12:38:56.4004044Z PASS commands-echo/multiple-args
+6401: port on Deno on windows-latest	UNKNOWN STEP	2026-10-05T12:38:56.4040303Z      - platform win32 not in posix
+6402: port on Deno on windows-latest	UNKNOWN STEP	2026-10-05T12:38:56.4040985Z SKIP commands-ls/broken-symlink-dir  (test/js/bun/shell/commands/ls.test.ts:373, 0ms)
+6403: port on Deno on windows-latest	UNKNOWN STEP	2026-10-05T12:38:56.4041699Z      - platform win32 not in posix
+6404: port on Deno on windows-latest	UNKNOWN STEP	2026-10-05T12:38:56.4042351Z SKIP commands-ls/symlink-loop  (test/js/bun/shell/commands/ls.test.ts:384, 0ms)
+6405: port on Deno on windows-latest	UNKNOWN STEP	2026-10-05T12:38:56.4042962Z      - platform win32 not in posix
+6406: port on Deno on windows-latest	UNKNOWN STEP	2026-10-05T12:38:56.4043810Z SKIP commands-ls/symlink-loop-child  (test/js/bun/shell/commands/ls.test.ts:384, 3ms)
+6407: port on Deno on windows-latest	UNKNOWN STEP	2026-10-05T12:38:56.4044568Z      - platform win32 not in posix
+6408: port on Deno on windows-latest	UNKNOWN STEP	2026-10-05T12:38:56.4045270Z SKIP commands-ls/enotdir-f-x  (test/js/bun/shell/commands/ls.test.ts:396, 3ms)
+6409: port on Deno on windows-latest	UNKNOWN STEP	2026-10-05T12:38:56.4045882Z      - platform win32 not in posix
+6410: port on Deno on windows-latest	UNKNOWN STEP	2026-10-05T12:38:56.4046345Z PASS commands-ls/enotdir-f-x-windows
+6411: port on Deno on windows-latest	UNKNOWN STEP	2026-10-05T12:38:56.4047032Z SKIP commands-ls/enotdir-l-f-x  (test/js/bun/shell/commands/ls.test.ts:396, 3ms)
+6412: port on Deno on windows-latest	UNKNOWN STEP	2026-10-05T12:38:56.4047656Z      - platform win32 not in posix
+6413: port on Deno on windows-latest	UNKNOWN STEP	2026-10-05T12:38:56.4048180Z PASS commands-ls/enotdir-l-f-x-windows
+6414: port on Deno on windows-latest	UNKNOWN STEP	2026-10-05T12:38:56.4048844Z SKIP commands-ls/enotdir-d-f-x  (test/js/bun/shell/commands/ls.test.ts:396, 1ms)
+6415: port on Deno on windows-latest	UNKNOWN STEP	2026-10-05T12:38:56.4049451Z      - platform win32 not in posix
+6416: port on Deno on windows-latest	UNKNOWN STEP	2026-10-05T12:38:56.4049941Z PASS commands-ls/enotdir-d-f-x-windows
+6539: port on Deno on windows-latest	UNKNOWN STEP	2026-10-05T12:38:56.4104044Z PASS commands-seq/tiny-increment-stop
+7177: port on Bun on macos-latest	UNKNOWN STEP	2026-10-05T12:38:57.4840470Z  * [new branch]      issue-36-52b7c0a5       -> origin/issue-36-52b7c0a5
+7328: port on Bun on macos-latest	UNKNOWN STEP	2026-10-05T12:38:57.9404750Z Removing HTTP extra header
+7454: port on Bun on macos-latest	UNKNOWN STEP	2026-10-05T12:39:00.6404310Z RUN assignments-in-pipeline/should-not-persist-assignment-variables-in-pipeline-to-shell
+7455: port on Bun on macos-latest	UNKNOWN STEP	2026-10-05T12:39:00.6404990Z DONE assignments-in-pipeline/should-handle-mixed-quoting-styles-in-assignments: PASS
+7479: port on Bun on macos-latest	UNKNOWN STEP	2026-10-05T12:39:00.6440420Z DONE brace/three-variants: PASS
+7795: port on Bun on macos-latest	UNKNOWN STEP	2026-10-05T12:39:00.8404960Z DONE bunshell/exit-codes/mkdir-no-args: PASS
+8844: port on Bun on macos-latest	UNKNOWN STEP	2026-10-05T12:39:04.0340470Z RUN commands-echo/n-single-arg
+8935: port on Bun on macos-latest	UNKNOWN STEP	2026-10-05T12:39:04.0404750Z DONE commands-ls/d-multiple-dirs: PASS
+9160: port on Bun on macos-latest	UNKNOWN STEP	2026-10-05T12:39:04.0724040Z RUN commands-seq/tiny-increment-stop
+9844: port on Bun on macos-latest	UNKNOWN STEP	2026-10-05T12:39:06.0354040Z RUN shell-seq-condexpr/seq-neg-inf
+10430: port on Bun on macos-latest	UNKNOWN STEP	2026-10-05T12:39:06.2304040Z PASS bunshell/posix-linebreak-after-if
+10637: port on Bun on macos-latest	UNKNOWN STEP	2026-10-05T12:39:06.2404170Z PASS commands-dirname/absolute
+10638: port on Bun on macos-latest	UNKNOWN STEP	2026-10-05T12:39:06.2404420Z PASS commands-dirname/multiple
+10639: port on Bun on macos-latest	UNKNOWN STEP	2026-10-05T12:39:06.2404680Z PASS commands-dirname/windows-style-path
+10640: port on Bun on macos-latest	UNKNOWN STEP	2026-10-05T12:39:06.2404960Z PASS commands-dirname/trailing-slash
+11290: port on Deno on macos-latest	UNKNOWN STEP	2026-10-05T12:38:10.4740410Z ##[group]Run actions/checkout@v6
+11294: port on Deno on macos-latest	UNKNOWN STEP	2026-10-05T12:38:10.4744040Z   repository: link-foundation/command-stream
+11899: port on Deno on macos-latest	UNKNOWN STEP	2026-10-05T12:38:25.4840450Z PASS bunshell/redirect/stdout-to-bun-file
+12641: port on Deno on macos-latest	UNKNOWN STEP	2026-10-05T12:38:25.5164040Z PASS exec/help-flag-echo
+12953: port on Deno on macos-latest	UNKNOWN STEP	2026-10-05T12:38:25.5240470Z PASS shell-seq-condexpr/seq-inf
+13023: port on Node.js on windows-latest	UNKNOWN STEP	2026-10-05T12:38:25.4083404Z ##[endgroup]
+13348: port on Node.js on windows-latest	UNKNOWN STEP	2026-10-05T12:38:33.6404421Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-b138275f-b680-4423-be1d-a30f9180dc67.config
+13616: port on Node.js on windows-latest	UNKNOWN STEP	2026-10-05T12:38:46.5540420Z PASS bunshell/unicode/escape-unicode-as-bun-receives
+15156: port on Node.js on macos-latest	UNKNOWN STEP	2026-10-05T12:38:41.9404530Z /Users/runner/work/_temp/git-credentials-48aeebda-36fe-4343-ac19-eb5e71ef4d6f.config
+15264: port on Node.js on macos-latest	UNKNOWN STEP	2026-10-05T12:38:51.6104040Z PASS brace/nested-empty-variant-ox_oa_b_cc
+15758: port on Node.js on macos-latest	UNKNOWN STEP	2026-10-05T12:38:51.6324040Z PASS bunshell/condexpr-f-directory
+15888: port on Node.js on macos-latest	UNKNOWN STEP	2026-10-05T12:38:51.6404260Z PASS commands-basename/relative-command-substitution
+15889: port on Node.js on macos-latest	UNKNOWN STEP	2026-10-05T12:38:51.6404660Z PASS commands-basename/absolute-command-substitution
+16280: port on Node.js on macos-latest	UNKNOWN STEP	2026-10-05T12:38:51.6540460Z PASS lex/quote-multi
+16576: port on Node.js on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:11.8215633Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+16804: port on Node.js on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:15.4220404Z  * [new tag]         js-v0.21.3              -> js-v0.21.3
+16830: port on Node.js on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:15.4233404Z  * [new tag]         rust-v0.18.6            -> rust-v0.18.6
+17021: port on Node.js on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:24.0940416Z PASS brace/too-many-braces-rejected-in-shell
+17203: port on Node.js on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:24.1034048Z PASS bunshell/cmd-subst/basic
+17551: port on Node.js on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:24.1199404Z PASS bunshell/condexpr-bash-some-arithmetic-tests-for-completeness-see-what-happens-with-missing-o-8
+17933: port on Node.js on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:24.1354046Z PASS exec/cd-no-args
+18185: port on Node.js on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:24.1404196Z PASS pipeline_stack/yes-true-yes-terminates-on-epipe
+18186: port on Node.js on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:24.1404325Z PASS pipeline_stack/yes-false
+18187: port on Node.js on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:24.1404523Z PASS shell-blocking-pipe/raw-1mb-echo-to-system-cat
+18188: port on Node.js on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:24.1404728Z PASS shell-blocking-pipe/raw-1mb-echo-to-builtin-cat
+18189: port on Node.js on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:24.1404929Z PASS shell-blocking-pipe/var-1mb-echo-to-system-cat
+18291: port on Bun on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:11.7685619Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+18298: port on Bun on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:11.7694043Z Secret source: Actions
+18547: port on Bun on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:16.1723404Z  * [new tag]         rust-v0.20.0            -> rust-v0.20.0
+18677: port on Bun on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:23.0404214Z PASS assignments-in-pipeline/should-handle-assignments-with-special-characters-in-single
+18813: port on Bun on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:23.0468404Z PASS bunshell/js-obj/null
+19484: port on Bun on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:23.0734042Z SKIP commands-ls/enotdir-f-x-y-z-windows  (test/js/bun/shell/commands/ls.test.ts:396, 0ms)
+19856: port on Bun on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:23.0884048Z PASS pipeline_stack/pwd-cd-pwd-cd-in-middle-doesn-t-affect
+19983: port on Bun on ubuntu-latest	UNKNOWN STEP	2026-10-05T12:38:23.5526404Z Removing includeIf entries pointing to credentials config files
+20047: Bun.$ reference on windows-latest	UNKNOWN STEP	2026-10-05T12:38:33.7493404Z Deleting the contents of 'D:\a\command-stream\command-stream'
+20482: Bun.$ reference on windows-latest	UNKNOWN STEP	2026-10-05T12:38:50.2164044Z RUN brace/nested-empty-variant-poq_or_cos_cct
+20600: Bun.$ reference on windows-latest	UNKNOWN STEP	2026-10-05T12:38:50.3412404Z RUN bunshell-instance/stdin-redirect-from-uint8array
+20703: Bun.$ reference on windows-latest	UNKNOWN STEP	2026-10-05T12:38:50.4041667Z DONE bunshell/escape/raw-roundtrip-check-mark: PASS
+20704: Bun.$ reference on windows-latest	UNKNOWN STEP	2026-10-05T12:38:50.4042105Z RUN bunshell/escape/raw-roundtrip-assignment-like
+21093: Bun.$ reference on windows-latest	UNKNOWN STEP	2026-10-05T12:38:51.4047271Z DONE bunshell/deno-echo-cmdsubst-in-dquotes: PASS
+21094: Bun.$ reference on windows-latest	UNKNOWN STEP	2026-10-05T12:38:51.4047792Z RUN bunshell/deno-echo-cmdsubst-split
+21619: Bun.$ reference on windows-latest	UNKNOWN STEP	2026-10-05T12:38:57.4044015Z DONE bunshell/brace-group-effect-unsupported: PASS
+21620: Bun.$ reference on windows-latest	UNKNOWN STEP	2026-10-05T12:38:57.4044836Z RUN bunshell/brace-group-exit-status-unsupported
+22324: Bun.$ reference on windows-latest	UNKNOWN STEP	2026-10-05T12:38:59.2834043Z RUN leak/memleak-pipeline2
+22378: Bun.$ reference on windows-latest	UNKNOWN STEP	2026-10-05T12:38:59.3404481Z RUN leak/memleak-protect-buffer-builtin-external-mix
+22678: Bun.$ reference on windows-latest	UNKNOWN STEP	2026-10-05T12:39:00.0040424Z RUN pipeline_stack/20-alternating-true-false
+22870: Bun.$ reference on windows-latest	UNKNOWN STEP	2026-10-05T12:39:00.1628404Z RUN yield/dev-full-nested-cmdsubst
+23500: Bun.$ reference on windows-latest	UNKNOWN STEP	2026-10-05T12:39:00.1940469Z PASS bunshell/subshell-escaped-parens
+24524: port on Bun on windows-latest	UNKNOWN STEP	2026-10-05T12:38:40.9944043Z  * [new tag]         js-v0.18.2              -> js-v0.18.2
+25115: port on Bun on windows-latest	UNKNOWN STEP	2026-10-05T12:38:56.8940489Z PASS bunshell/redirects-stderr-dev-null
+25221: port on Bun on windows-latest	UNKNOWN STEP	2026-10-05T12:38:56.9083404Z PASS bunshell/posix-command-ending-with-asynchronous-command-after-elif
+25732: port on Bun on windows-latest	UNKNOWN STEP	2026-10-05T12:38:56.9404165Z PASS file-io/redirect-writer-keepalive
+25733: port on Bun on windows-latest	UNKNOWN STEP	2026-10-05T12:38:56.9404406Z PASS lazy/redirect-overwrites-when-run
+25734: port on Bun on windows-latest	UNKNOWN STEP	2026-10-05T12:38:56.9404613Z PASS leak/fdleak-redirect-file
+25735: port on Bun on windows-latest	UNKNOWN STEP	2026-10-05T12:38:56.9404790Z PASS leak/fdleak-change-cwd
+25736: port on Bun on windows-latest	UNKNOWN STEP	2026-10-05T12:38:56.9404962Z PASS leak/fdleak-pipeline
+
+run-37310859779.log.gz
+18: Audit npm lockfile	UNKNOWN STEP	2026-10-05T12:37:50.5462741Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+150: Audit npm lockfile	UNKNOWN STEP	2026-10-05T12:37:52.8404817Z  * [new branch]      issue-21-621d3004       -> origin/issue-21-621d3004
+369: Audit npm lockfile	UNKNOWN STEP	2026-10-05T12:37:55.2947404Z ignored GHSA-vfj7-8cjw-p6xm braces: braces vulnerable to stack-exhaustion denial of service through deeply nested patterns (high) https://github.com/advisories/GHSA-vfj7-8cjw-p6xm
+405: Audit bun lockfile	UNKNOWN STEP	2026-10-05T12:37:50.6323638Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+454: Audit bun lockfile	UNKNOWN STEP	2026-10-05T12:37:51.7157404Z hint: call:
+770: Audit bun lockfile	UNKNOWN STEP	2026-10-05T12:37:55.6740485Z Removing HTTP extra header
+794: CodeQL (rust)	UNKNOWN STEP	2026-10-05T12:37:50.8071473Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+1047: CodeQL (rust)	UNKNOWN STEP	2026-10-05T12:37:56.8140444Z             "description" : "Whether to skip the extraction of types in a TypeScript application",
+2311: CodeQL (rust)	UNKNOWN STEP	2026-10-05T12:38:20.5340477Z [2026-10-05 12:38:20] [build-stdout] [2026-10-05 12:38:20] [build-stdout] ^[[32m INFO^[[0m /home/runner/work/command-stream/command-stream/rust/scripts/wait-for-crate.rs:1:1: semantic analyzer unavailable (not included as a module): macro expansion will be skipped.
+2646: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T12:37:50.4135107Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+2661: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T12:37:50.7954044Z Download action repository 'github/codeql-action@v4' (SHA:2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2)
+2887: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T12:37:56.5440426Z                   "write" : {
+3244: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T12:37:56.5640483Z     ]
+3308: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T12:37:57.5194045Z                 "description" : "Controls the level of verbosity of the extractor. The supported levels are (in order of increasing verbosity):\n  - off\n  - errors\n  - warnings\n  - info or progress\n  - debug or progress+\n  - trace or progress++\n  - progress+++\n",
+3520: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T12:37:57.5324041Z             "description" : "Options about how the extractor handles TRAP files",
+4320: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T12:38:09.3404663Z [2026-10-05 12:38:09] [build-stdout] Done extracting /home/runner/work/command-stream/command-stream/experiments/issue-14/tee-mixed-pipeline2.mjs (5 ms)
+4350: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T12:38:09.4049452Z [2026-10-05 12:38:09] [build-stdout] Done extracting /home/runner/work/command-stream/command-stream/experiments/issue-27/corpus-per-file.mjs (7 ms)
+4362: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T12:38:09.4470404Z [2026-10-05 12:38:09] [build-stdout] Done extracting /home/runner/work/command-stream/command-stream/experiments/issue-27/interpreter-smoke.mjs (10 ms)
+4619: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T12:38:10.1129404Z [2026-10-05 12:38:10] [build-stdout] Extracting /home/runner/work/command-stream/command-stream/js/examples/debug-resource-cleanup.mjs
+4764: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T12:38:10.3399404Z [2026-10-05 12:38:10] [build-stdout] Done extracting /home/runner/work/command-stream/command-stream/js/examples/interactive-top-fixed.mjs (3 ms)
+5565: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T12:38:12.4049163Z [2026-10-05 12:38:12] [build-stdout] Extracting /home/runner/work/command-stream/command-stream/js/tests/wait-for-npm.test.mjs
+5761: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T12:38:13.6404004Z [2026-10-05 12:38:13] [build-stdout] Done extracting /opt/hostedtoolcache/CodeQL/2.27.1/x64/codeql/javascript/tools/data/externs/web/ie_dom.js (135 ms)
+5837: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T12:38:14.2749404Z [2026-10-05 12:38:14] [build-stdout] Done extracting /opt/hostedtoolcache/CodeQL/2.27.1/x64/codeql/javascript/tools/data/externs/web/ie_event.js (21 ms)
+5882: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T12:38:14.4048488Z [2026-10-05 12:38:14] [build-stdout] Extracting /opt/hostedtoolcache/CodeQL/2.27.1/x64/codeql/javascript/tools/data/externs/nodejs/timers.js
+6594: Audit Cargo lockfile	UNKNOWN STEP	2026-10-05T12:37:50.4139816Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+6633: Audit Cargo lockfile	UNKNOWN STEP	2026-10-05T12:37:51.8740471Z Adding repository directory to the temporary git global config as a safe directory
+6705: Audit Cargo lockfile	UNKNOWN STEP	2026-10-05T12:37:53.3477404Z  * [new branch]      issue-170-9e2e62bb506a  -> origin/issue-170-9e2e62bb506a
+6715: Audit Cargo lockfile	UNKNOWN STEP	2026-10-05T12:37:53.3484404Z  * [new branch]      issue-19-99f29373       -> origin/issue-19-99f29373
+6736: Audit Cargo lockfile	UNKNOWN STEP	2026-10-05T12:37:53.3494041Z  * [new branch]      issue-26-9bec6ea5       -> origin/issue-26-9bec6ea5
+6937: Audit Cargo lockfile	UNKNOWN STEP	2026-10-05T12:37:53.6235531Z ^[[36;1m  printf '::error::install-action: %s\n' "$*"^[[0m
+6955: Audit Cargo lockfile	UNKNOWN STEP	2026-10-05T12:37:53.6240468Z ^[[36;1m    fi^[[0m
+7029: Scan for committed secrets	UNKNOWN STEP	2026-10-05T12:37:51.5578000Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+7310: Scan for committed secrets	UNKNOWN STEP	2026-10-05T12:37:54.0524047Z  * [new tag]         v0.8.1                  -> v0.8.1
+7402: CodeQL (actions)	UNKNOWN STEP	2026-10-05T12:37:51.3543762Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+7490: CodeQL (actions)	UNKNOWN STEP	2026-10-05T12:37:53.6340462Z   origin/main
+7560: CodeQL (actions)	UNKNOWN STEP	2026-10-05T12:37:56.7640409Z   "productName": "CodeQL",
+7820: CodeQL (actions)	UNKNOWN STEP	2026-10-05T12:37:58.2840467Z                 "description" : "Controls the level of verbosity of the CodeQL Python extractor.\nThe supported levels are (in order of increasing verbosity):\n\n  - off\n  - errors\n  - warnings\n  - info or progress\n  - debug or progress+\n  - trace or progress++\n  - progress+++\n",
+
+run-37310859791.log.gz
+18: Check formatting of every tracked file	UNKNOWN STEP	2026-10-05T12:37:50.8217174Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+143: Check formatting of every tracked file	UNKNOWN STEP	2026-10-05T12:37:53.6574042Z  * [new branch]      issue-192-3752acabac90  -> origin/issue-192-3752acabac90
+229: Check formatting of every tracked file	UNKNOWN STEP	2026-10-05T12:37:53.6714047Z  * [new tag]         js-v0.13.0              -> js-v0.13.0
+234: Check formatting of every tracked file	UNKNOWN STEP	2026-10-05T12:37:53.6718404Z  * [new tag]         js-v0.17.0              -> js-v0.17.0
+435: Validate documentation	UNKNOWN STEP	2026-10-05T12:38:00.0819109Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+577: Validate documentation	UNKNOWN STEP	2026-10-05T12:38:03.5404171Z  * [new branch]      issue-26-9bec6ea5       -> origin/issue-26-9bec6ea5
+578: Validate documentation	UNKNOWN STEP	2026-10-05T12:38:03.5404688Z  * [new branch]      issue-27-01ac7c56       -> origin/issue-27-01ac7c56
+633: Validate documentation	UNKNOWN STEP	2026-10-05T12:38:03.5440431Z  * [new branch]      issue-6-156225d2        -> origin/issue-6-156225d2
+779: Validate documentation	UNKNOWN STEP	2026-10-05T12:38:05.6776426Z ##[group]Run bun test js/tests/docs-validation.test.mjs --timeout 10000
+780: Validate documentation	UNKNOWN STEP	2026-10-05T12:38:05.6777090Z ^[[36;1mbun test js/tests/docs-validation.test.mjs --timeout 10000^[[0m
+783: Validate documentation	UNKNOWN STEP	2026-10-05T12:38:05.7058108Z bun test v1.4.2 (744846f84)
+842: Validate documentation	UNKNOWN STEP	2026-10-05T12:38:05.7270404Z (pass) documentation validation > js/docs/case-studies/issue-144/README.md stays within the documentation line limit [0.08ms]
+855: Validate documentation	UNKNOWN STEP	2026-10-05T12:38:05.7282404Z (pass) documentation validation > rust/CHANGELOG.md stays within the documentation line limit [0.04ms]
+984: Check workflow invariants	UNKNOWN STEP	2026-10-05T12:38:11.7066383Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+1077: Check workflow invariants	UNKNOWN STEP	2026-10-05T12:38:14.6004042Z  * [new branch]      issue-14-47a807dc       -> origin/issue-14-47a807dc
+1138: Check workflow invariants	UNKNOWN STEP	2026-10-05T12:38:14.6052404Z  * [new branch]      issue-32-7a506d69       -> origin/issue-32-7a506d69
+1261: Check workflow invariants	UNKNOWN STEP	2026-10-05T12:38:14.6224048Z  * [new tag]         v0.5.0                  -> v0.5.0
+1328: Check workflow invariants	UNKNOWN STEP	2026-10-05T12:38:16.6868341Z ##[group]Run bun test js/tests/workflow-hygiene.test.mjs --timeout 10000
+1329: Check workflow invariants	UNKNOWN STEP	2026-10-05T12:38:16.6869007Z ^[[36;1mbun test js/tests/workflow-hygiene.test.mjs --timeout 10000^[[0m
+1332: Check workflow invariants	UNKNOWN STEP	2026-10-05T12:38:16.7289058Z bun test v1.4.2 (744846f84)
+1431: Check workflow invariants	UNKNOWN STEP	2026-10-05T12:38:16.7540418Z (pass) workflow files > parity.yml gives every matrix job a name that distinguishes its entries
+1501: Check workflow invariants	UNKNOWN STEP	2026-10-05T12:38:16.7604258Z (pass) repository-wide checks are not hidden behind a paths filter > the docs job runs bun test js/tests/docs-validation.test.mjs
+1502: Check workflow invariants	UNKNOWN STEP	2026-10-05T12:38:16.7605381Z (pass) repository-wide checks are not hidden behind a paths filter > the hygiene job runs bun test js/tests/workflow-hygiene.test.mjs
+
+run-37310859798.log.gz
+18: Actionlint	UNKNOWN STEP	2026-10-05T12:37:50.6800700Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+413: Zizmor	UNKNOWN STEP	2026-10-05T12:37:50.8892328Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+598: Zizmor	UNKNOWN STEP	2026-10-05T12:37:54.5644042Z  * [new branch]      issue-46-52edd2db       -> origin/issue-46-52edd2db
+872: Zizmor	UNKNOWN STEP	2026-10-05T12:38:03.1934044Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+
+run-37310859834.log.gz
+14: Lint and format JavaScript	UNKNOWN STEP	2026-10-05T12:37:50.5340457Z ##[endgroup]
+18: Lint and format JavaScript	UNKNOWN STEP	2026-10-05T12:37:50.5345750Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+456: Lint and format JavaScript	UNKNOWN STEP	2026-10-05T12:38:18.7164040Z  - scripts/create-github-release.mjs [15:23 - 40:27] (25 lines, 194 tokens)
+642: Lint and format JavaScript	UNKNOWN STEP	2026-10-05T12:38:20.2470404Z
+1111: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:38:11.3240410Z + @eslint/js@9.39.5
+1134: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:38:11.3377060Z ##[group]Run bun test js/tests/ --timeout 10000
+1135: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:38:11.3400680Z ^[[36;1mbun test js/tests/ --timeout 10000^[[0m
+1140: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:38:11.4097560Z bun test v1.4.2 (744846f84)
+1179: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:38:14.4762690Z (pass) self-heals: no changesets + version not on npm → should_release=true, skip_bump=true, current_unpublished=true [1833.60ms]
+1180: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:38:15.0537820Z (pass) no release: no changesets + version already on npm → should_release=false, current_unpublished=false [577.53ms]
+1181: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:38:15.5454490Z (pass) changesets present + version already on npm → should_release=true, skip_bump=false, current_unpublished=false [491.75ms]
+1182: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:38:16.2119880Z (pass) #166 restart case: changesets present locally but current version not on npm → current_unpublished=true [666.22ms]
+1339: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:38:19.9894040Z (pass) double-quoted interpolation keeps "double-quoted value" as one argument [86.68ms]
+2089: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:38:28.9876850Z (pass) reports a published version as published [0.17ms]
+2090: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:38:28.9877880Z (pass) reports a missing version as not published [0.04ms]
+2091: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:38:28.9878950Z (pass) treats a 404 as "not published", not an error [0.04ms]
+2266: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:38:50.4049040Z (pass) Resource Cleanup Internal Verification > ProcessRunner Lifecycle > should cleanup ProcessRunner on successful completion [10.84ms]
+2572: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:38:53.5525120Z (pass) recognises npm E409 "previously staged version" as already published [0.09ms]
+2574: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:38:53.5526940Z (pass) recognises the classic "previously published version" conflict too [0.01ms]
+2576: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:38:53.5527860Z (pass) does not treat an ordinary publish error as already published [0.04ms]
+2577: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:38:53.5528450Z (pass) every already-published pattern is matched case-insensitively [0.06ms]
+2958: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:39:05.9715530Z (pass) repository-wide checks are not hidden behind a paths filter > the docs job runs bun test js/tests/docs-validation.test.mjs
+2959: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:39:05.9716510Z (pass) repository-wide checks are not hidden behind a paths filter > the hygiene job runs bun test js/tests/workflow-hygiene.test.mjs
+3309: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:39:12.2404240Z (pass) matches /bin/sh: bash -c for loop [39.11ms]
+3771: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:39:12.7268500Z 404
+3912: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:39:12.7294040Z 545
+4510: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:39:16.7610660Z (pass) does NOT report published when changeset:publish fails (exit 1) [708.70ms]
+4511: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:39:17.1833600Z (pass) does NOT report published when changeset:publish exits 0 but nothing reaches npm [422.09ms]
+4512: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:39:17.3972150Z (pass) reports published for a version already on npm (legit success path) [214.03ms]
+4550: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:39:18.3440410Z (pass) built-in commands behave like their POSIX counterparts > ls -a sorts the dot entries in too [0.43ms]
+4616: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:39:20.4404920Z stderr
+4968: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:39:22.8404170Z repository-layout.test.mjs
+4969: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:39:22.8404570Z resource-cleanup-internals.test.mjs
+4970: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:39:22.8404830Z setup-npm.test.mjs
+5321: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:39:23.0534040Z 297
+5357: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:39:23.0540430Z 333
+5428: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:39:23.0558660Z 404
+5888: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:39:23.0664040Z 864
+6343: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:39:28.8034040Z (pass) ProcessRunner - EventEmitter Pattern > should support event chaining [1005.12ms]
+6461: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:39:29.9404960Z (pass) unquoted interpolation passes compact object as one literal argument [61.85ms]
+6508: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:39:31.7344300Z (pass) CommonJS entry point (issue #189) > package manifest > ships the CommonJS entry inside the published files [0.61ms]
+6546: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:39:32.9274190Z (pass) issue #170 - CI false positives > resetGlobalState() during an awaited command preserves the real exit code [404.88ms]
+6588: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:39:34.1666340Z (pass) classifies the OIDC bootstrap E404 as non-retryable [0.01ms]
+7470: Test JavaScript (bun on macos-latest)	UNKNOWN STEP	2026-10-05T12:40:21.0384040Z (pass) #!/usr/bin/env command-stream > fails the script when a command fails [88.98ms]
+7553: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:37:51.3703573Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+7759: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:37:54.1691404Z  * [new branch]      issue-96-eb9bb8d1       -> origin/issue-96-eb9bb8d1
+7792: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:37:54.1722404Z  * [new tag]         rust-v0.13.1            -> rust-v0.13.1
+7943: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:37:56.4611404Z Get:27 http://azure.archive.ubuntu.com/ubuntu noble-security/restricted amd64 Packages [1566 kB]
+8080: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:06.1404021Z (pass) jq streaming tests > generate JSON stream using echo in loop [10.26ms]
+8165: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:06.9344045Z (pass) Utility Functions > quote > should handle arrays [0.03ms]
+8270: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:09.2340476Z (pass) Coverage for Internal Functions > should test _writeToStdin with Uint8Array path [4.35ms]
+8970: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:14.7331404Z 324
+9050: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:14.7339448Z 404
+9061: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:14.7340430Z 415
+9406: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:14.7384049Z 760
+9608: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:14.7404060Z 962
+9609: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:14.7404149Z 963
+9610: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:14.7404375Z 964
+9611: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:14.7404528Z 965
+9612: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:14.7404617Z 966
+9613: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:14.7404704Z 967
+9614: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:14.7404793Z 968
+9615: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:14.7404882Z 969
+9616: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:14.7404972Z 970
+9677: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:15.1065712Z (pass) treats a 404 as "not published", not an error [0.04ms]
+9740: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:15.6558404Z (pass) Interactive Streaming > should handle errors in expressions [55.65ms]
+9748: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:15.7440477Z RESULT: 2
+10105: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:20.1406249Z (pass) classifies the OIDC bootstrap E404 as non-retryable [0.02ms]
+10335: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:27.7540408Z rm: cannot remove 'test-builtin-commands/to-remove-dir': Is a directory(pass) Built-in Commands (Bun.$ compatible) > File Removal Commands > rm should fail on directories without -r [0.34ms]
+10556: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:27.8069404Z Line 70
+10647: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:28.0382404Z (pass) Git and GH commands with cd virtual command > Git operations in temp directories > should handle git commands in temp directory with cd chain [14.12ms]
+10987: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:28.6634048Z (pass) documentation validation > js/docs/case-studies/issue-153/README.md stays within the documentation line limit [0.02ms]
+11160: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:30.9963404Z (pass) command-stream Feature Validation > Memory Efficiency > should stream without accumulating large buffers [3.72ms]
+11488: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:32.4034048Z 28
+11546: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:32.4040007Z 86
+11547: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:32.4040097Z 87
+11548: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:32.4040186Z 88
+11549: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:32.4040276Z 89
+11550: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:32.4040368Z 90
+11551: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:32.4040458Z 91
+11552: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:32.4040549Z 92
+11553: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:32.4040638Z 93
+11554: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:32.4040727Z 94
+11555: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:32.4040815Z 95
+11556: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:32.4040905Z 96
+11557: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:32.4040997Z 97
+11558: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:32.4041085Z 98
+11559: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:32.4041174Z 99
+11560: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:32.4041264Z 100
+11860: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:33.6956404Z (pass) Redirection is never handed to a built-in as an argument (issue #46) > matches /bin/sh for: true > out.txt [6.70ms]
+11866: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:33.7435404Z (pass) Redirection is never handed to a built-in as an argument (issue #46) > matches /bin/sh for: ls /definitely/missing/path 2>/dev/null [8.22ms]
+12363: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:48.8170404Z 72
+12700: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:48.8227932Z 404
+12829: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:48.8240463Z 533
+13706: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:00.8670404Z (pass) cd sh-compatibility within one invocation > cd ~/subpath expands tilde prefix (like sh) [5.90ms]
+13981: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:04.3219404Z (pass) core > ProcessPromise > state machine transitions > [zx:test/core.test.js:566:7:registration] running > rejected [1.37ms]
+14106: Test JavaScript (bun on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:14.2604040Z     at loadSource (file:///home/runner/work/command-stream/command-stream/js/src/zx/cli.mjs:268:13)
+14668: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:37:50.2754049Z ##[group]Runner Image
+14671: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:37:50.2757428Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+15418: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:19.9701955Z # $ fetch http://127.0.0.1:40433/script.mjs
+15626: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:21.6640485Z           ...
+15937: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:21.8540404Z         ok 6 - [zx:test/core.test.js:637:5:registration] resolves with ProcessOutput
+16135: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:27.6394044Z         ok 10 - unpipe()
+16294: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:29.4404572Z             # Subtest: [zx:test/core.test.js:1273:7:registration] handles non-iterable stdio
+16973: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:36.4404436Z         ok 2 - integration
+16974: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:36.4404743Z           ---
+17116: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:36.5024042Z   ...
+17320: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:39.2440497Z     ok 1 - root handling
+17358: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:39.4164043Z     ok 1 - runs the script with the zx globals and its arguments
+17421: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:39.5114048Z   ...
+17599: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:45.3021236Z       duration_ms: 0.240435
+17715: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:45.3514813Z       duration_ms: 0.612404
+17800: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:45.4040037Z       duration_ms: 0.252563
+17801: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:45.4040325Z       type: 'test'
+17802: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:45.4040582Z       ...
+17803: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:45.4040812Z     1..10
+17804: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:45.4041083Z ok 29 - vendor/dotenv
+17805: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:45.4041360Z   ---
+17806: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:45.4041625Z   duration_ms: 6.314903
+17807: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:45.4041953Z   type: 'suite'
+17808: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:45.4042203Z   ...
+18201: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:45.6517404Z       ---
+18319: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:45.9240465Z       duration_ms: 0.572065
+18449: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:46.0274047Z       ...
+18656: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:46.0404146Z       ...
+18657: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:46.0404357Z     1..10
+18658: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:46.0404537Z ok 42 - vendor/yaml stringify
+18659: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:46.0404742Z   ---
+18660: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:46.0404908Z   duration_ms: 5.382406
+18782: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:46.0432721Z       duration_ms: 0.404397
+18941: Test JavaScript (node 22 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:46.1413404Z     # Subtest: [zx:test/vendor.test.js:68:3:registration] globby() works
+19407: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:38:25.8442404Z + dejavu-fonts-ttf@2.37.3
+19481: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:38:27.3597404Z (pass) Utility Functions > quote > should not quote safe strings [0.06ms]
+19562: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:38:30.6724049Z (pass) Promise Interface > should handle catch for errors [75.11ms]
+19701: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:38:32.7414404Z 1
+19896: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:38:33.2740499Z (pass) cd invocation isolation (issue #197) > isolates overlapping invocations while cd is active [203.95ms]
+20176: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:38:36.7354040Z (pass) documentation validation > docs/features/zx-compat.md stays within the documentation line limit [0.08ms]
+20204: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:38:36.7404139Z (pass) documentation validation > js/tests/zx/fixtures/markdown.md stays within the documentation line limit [0.06ms]
+20210: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:38:36.7414404Z (pass) documentation validation > rust/changelog.d/README.md stays within the documentation line limit [0.09ms]
+20438: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:38:40.1324404Z (pass) unquoted template with a space is split (shell parity with bash) [96.75ms]
+20701: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:38:45.1032012Z (pass) treats a 404 as "not published", not an error [0.10ms]
+21169: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:38:47.8728024Z (pass) classifies the OIDC bootstrap E404 as non-retryable [0.03ms]
+21314: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:38:49.3393404Z success
+21982: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:38:53.6340488Z 59
+22151: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:38:53.6374042Z 228
+22216: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:38:53.6384043Z 293
+22327: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:38:53.6403915Z 404
+22328: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:38:53.6404068Z 405
+22329: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:38:53.6404206Z 406
+22330: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:38:53.6404346Z 407
+22331: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:38:53.6404488Z 408
+22332: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:38:53.6404628Z 409
+22333: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:38:53.6404783Z 410
+22334: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:38:53.6404927Z 411
+22961: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:38:53.8684049Z ##[endgroup]
+23025: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:39:10.8464045Z competitor-corpus.mjs
+23547: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:39:11.6854983Z 404
+23884: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:39:11.6954041Z 741
+24157: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:39:12.5404086Z (pass) TypeScript examples > typescript-streaming.ts runs [177.71ms]
+24167: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:39:12.6294048Z (pass) every attempt carries an abort deadline [0.17ms]
+24612: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:39:13.7404038Z ##[endgroup]
+24613: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:39:13.7404156Z
+24614: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:39:13.7404418Z ##[group]js\tests\zx\cli.test.mjs:
+25152: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:40:30.2054044Z (pass) vendor/chalk > re-opens the outer style after nested styles close [0.11ms]
+25167: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:40:30.2120404Z (pass) vendor/depseek > exports the depseek API [0.05ms]
+25196: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:40:30.2384042Z (pass) vendor/fs > JSON helpers [4.37ms]
+25612: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:40:34.0934045Z (skip) unquoted interpolation keeps "windows path" as one argument
+25745: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:40:34.1044041Z (skip) matches /bin/sh: path with a suffix appended with shell operators
+25872: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:40:34.1117404Z (skip) an explicit kill(signal) overrides the configured killSignal
+25910: Test JavaScript (bun on windows-latest)	UNKNOWN STEP	2026-10-05T12:40:34.1140446Z
+25974: Test JavaScript (node 24 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:37:50.5054815Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+26257: Test JavaScript (node 24 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:37:53.0044047Z  * [new tag]         v0.8.0                  -> v0.8.0
+26292: Test JavaScript (node 24 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:37:53.2284043Z includeif.gitdir:/home/runner/work/command-stream/command-stream/.git/worktrees/*.path
+26784: Test JavaScript (node 24 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:25.4504049Z   ▶ kill()
+27128: Test JavaScript (node 24 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:42.1714049Z   ✔ supports --no-* negation and dotted keys (0.318264ms)
+27318: Test JavaScript (node 20 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:01.9169846Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+27371: Test JavaScript (node 20 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:02.9464404Z hint: 	git config --global init.defaultBranch <name>
+27900: Test JavaScript (node 20 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:23.8404488Z # Subtest: all
+27961: Test JavaScript (node 20 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:24.4940422Z     ok 9 - [zx:test/cli.test.js:100:3:registration] supports `--shell` flag
+28137: Test JavaScript (node 20 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:26.4354404Z       duration_ms: 123.102305
+28277: Test JavaScript (node 20 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:27.0175404Z           ...
+28523: Test JavaScript (node 20 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:27.1725404Z               ---
+28618: Test JavaScript (node 20 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:30.8865466Z               duration_ms: 2007.935404
+28825: Test JavaScript (node 20 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:35.0404122Z           ---
+28826: Test JavaScript (node 20 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:35.0404673Z           duration_ms: 1.950002
+28939: Test JavaScript (node 20 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:35.8224404Z             ok 2 - [zx:test/core.test.js:1563:7:registration] getErrorMessage()
+29124: Test JavaScript (node 20 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:40.5954049Z       duration_ms: 2.151349
+29257: Test JavaScript (node 20 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:40.8043404Z   type: 'suite'
+29313: Test JavaScript (node 20 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:41.1404050Z           duration_ms: 7.915769
+29314: Test JavaScript (node 20 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:41.1404446Z           ...
+29570: Test JavaScript (node 20 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:43.8681404Z     ok 1 - contents
+29769: Test JavaScript (node 20 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:45.4668404Z # js
+29990: Test JavaScript (node 20 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:51.3305404Z           ...
+30043: Test JavaScript (node 20 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:51.3814046Z       ...
+30527: Test JavaScript (node 20 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:51.7424044Z     # Subtest: parses ps output
+30728: Test JavaScript (node 20 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:52.0732614Z       duration_ms: 0.404006
+30753: Test JavaScript (node 20 on ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:52.0740469Z     ok 3 - unclosed double quote
+31155: Release JavaScript package	UNKNOWN STEP	2026-10-05T12:40:42.6194047Z Worker ID: {fdc35cd1-5af9-4d26-a5c4-389cc202a455}
+31166: Release JavaScript package	UNKNOWN STEP	2026-10-05T12:40:42.6203025Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+31234: Release JavaScript package	UNKNOWN STEP	2026-10-05T12:40:44.0504049Z Removing SSH command configuration
+31516: Release JavaScript package	UNKNOWN STEP	2026-10-05T12:40:48.7262404Z + esbuild@0.28.2
+
+run-37310859865.log.gz
+315: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:38:19.2340430Z   origin/main
+374: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:38:20.2714040Z ^[[36;1m    echo "toolchain=1.$((($(date -v-$(sed 's/stable \([0-9]*\) \(.\).*/\1\2/' <<< $toolchain) +%s)/60/60/24-16569)/7/6))" >> $GITHUB_OUTPUT^[[0m
+1918: Test Rust (macos-latest)	UNKNOWN STEP	2026-10-05T12:39:47.2404350Z
+2212: Lint and format Rust	UNKNOWN STEP	2026-10-05T12:38:28.8026689Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+3059: Test Rust scripts and check sizes	UNKNOWN STEP	2026-10-05T12:38:04.4593601Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+3264: Test Rust scripts and check sizes	UNKNOWN STEP	2026-10-05T12:38:06.8404223Z  * [new branch]      issue-841-722d23014d4b  -> origin/issue-841-722d23014d4b
+3265: Test Rust scripts and check sizes	UNKNOWN STEP	2026-10-05T12:38:06.8404872Z  * [new branch]      issue-9-55d6d25e        -> origin/issue-9-55d6d25e
+3281: Test Rust scripts and check sizes	UNKNOWN STEP	2026-10-05T12:38:06.8414042Z  * [new tag]         js-v0.17.1              -> js-v0.17.1
+4078: Test Rust scripts and check sizes	UNKNOWN STEP	2026-10-05T12:39:09.4726636Z WARNING: rust/scripts/version-and-commit.rs has 932 lines (approaching limit of 1000, warning threshold: 900)
+4080: Test Rust scripts and check sizes	UNKNOWN STEP	2026-10-05T12:39:09.4729865Z WARNING: rust/src/bun_shell/builtins/small.rs has 915 lines (approaching limit of 1000, warning threshold: 900)
+4082: Test Rust scripts and check sizes	UNKNOWN STEP	2026-10-05T12:39:09.4733029Z WARNING: rust/src/bun_shell/lexer.rs has 949 lines (approaching limit of 1000, warning threshold: 900)
+4084: Test Rust scripts and check sizes	UNKNOWN STEP	2026-10-05T12:39:09.4735773Z WARNING: rust/src/bun_shell/io.rs has 910 lines (approaching limit of 1000, warning threshold: 900)
+4086: Test Rust scripts and check sizes	UNKNOWN STEP	2026-10-05T12:39:09.4738779Z WARNING: rust/src/lib.rs has 935 lines (approaching limit of 1000, warning threshold: 900)
+4092: Test Rust scripts and check sizes	UNKNOWN STEP	2026-10-05T12:39:09.4740481Z   rust/src/bun_shell/io.rs
+4163: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:32.0004775Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+4516: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:35.3440496Z ^[[36;1melif [[ $toolchain =~ ^stable' '[0-9]+' '(year|month|week|day)s?' 'ago$ ]]; then^[[0m
+4843: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:43.4047257Z ^[[1m^[[92m  Downloaded^[[0m linux-raw-sys v0.11.0
+4867: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:38:43.9774042Z ^[[1m^[[92m     Running^[[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name aho_corasick --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aho-corasick-1.1.4/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 --cfg 'feature="perf-literal"' --cfg 'feature="std"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("default", "logging", "perf-literal", "std"))' -C metadata=c73849911c61525a -C extra-filename=-04cc127b60a761d1 --out-dir /home/runner/work/command-stream/command-stream/rust/target/debug/deps -L dependency=/home/runner/work/command-stream/command-stream/rust/target/debug/deps --extern memchr=/home/runner/work/command-stream/command-stream/rust/target/debug/deps/libmemchr-67fdea32fc6e2968.rmeta --cap-lints allow -Dwarnings`
+5074: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:01.9404630Z ^[[1m^[[92m     Running^[[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name zx_dotenv --edition=2021 tests/zx_dotenv.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 '--warn=clippy::all' --forbid=unsafe_code --test --cfg 'feature="default"' --cfg 'feature="json"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("default", "json"))' -C metadata=147036c4c7a271bb -C extra-filename=-871071443abb7254 --out-dir /home/runner/work/command-stream/command-stream/rust/target/debug/deps -L dependency=/home/runner/work/command-stream/command-stream/rust/target/debug/deps --extern assert_cmd=/home/runner/work/command-stream/command-stream/rust/target/debug/deps/libassert_cmd-cd4151a7028f0739.rlib --extern async_trait=/home/runner/work/command-stream/command-stream/rust/target/debug/deps/libasync_trait-46b2e508097bf613.so --extern chrono=/home/runner/work/command-stream/command-stream/rust/target/debug/deps/libchrono-e53214b5bb843a47.rlib --extern command_stream=/home/runner/work/command-stream/command-stream/rust/target/debug/deps/libcommand_stream-7933f43232eff325.rlib --extern fancy_regex=/home/runner/work/command-stream/command-stream/rust/target/debug/deps/libfancy_regex-01545e03cd1a6049.rlib --extern filetime=/home/runner/work/command-stream/command-stream/rust/target/debug/deps/libfiletime-cc374baf588e5572.rlib --extern glob=/home/runner/work/command-stream/command-stream/rust/target/debug/deps/libglob-a3cc3ac86156fc55.rlib --extern libc=/home/runner/work/command-stream/command-stream/rust/target/debug/deps/liblibc-9b5ad389dd6c8ee3.rlib --extern nix=/home/runner/work/command-stream/command-stream/rust/target/debug/deps/libnix-26aa945597c2a434.rlib --extern once_cell=/home/runner/work/command-stream/command-stream/rust/target/debug/deps/libonce_cell-428c25d2c78ecfc7.rlib --extern portable_pty=/home/runner/work/command-stream/command-stream/rust/target/debug/deps/libportable_pty-46e47cf60d00af9b.rlib --extern regex=/home/runner/work/command-stream/command-stream/rust/target/debug/deps/libregex-312576a6913bfb8b.rlib --extern serde=/home/runner/work/command-stream/command-stream/rust/target/debug/deps/libserde-f094295788837175.rlib --extern serde_json=/home/runner/work/command-stream/command-stream/rust/target/debug/deps/libserde_json-36bb7568b2317681.rlib --extern tempfile=/home/runner/work/command-stream/command-stream/rust/target/debug/deps/libtempfile-49de11f9b83a1d93.rlib --extern thiserror=/home/runner/work/command-stream/command-stream/rust/target/debug/deps/libthiserror-b3d8e3bcf60f81d1.rlib --extern tokio=/home/runner/work/command-stream/command-stream/rust/target/debug/deps/libtokio-cae0a16bfb2c8907.rlib --extern tokio_test=/home/runner/work/command-stream/command-stream/rust/target/debug/deps/libtokio_test-a0e1b9b25972d509.rlib --extern vt100=/home/runner/work/command-stream/command-stream/rust/target/debug/deps/libvt100-570459366411c669.rlib --extern which=/home/runner/work/command-stream/command-stream/rust/target/debug/deps/libwhich-6f1f7473dd168c05.rlib -Dwarnings`
+5251: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:06.4040955Z test commands::mkdir::tests::test_mkdir_missing_operand ... ok
+5252: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:06.4042255Z test commands::mkdir::tests::test_mkdir_simple ... ok
+5253: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:06.4045421Z test commands::mv::tests::test_mv_directory ... ok
+5254: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:06.4045803Z test commands::mkdir::tests::test_mkdir_with_parents ... ok
+5255: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:06.4048103Z test commands::mv::tests::test_mv_nonexistent ... ok
+5256: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:06.4048493Z test commands::mv::tests::test_mv_file ... ok
+5257: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:06.4049391Z test commands::r#false::tests::test_false ... ok
+5258: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:06.4049876Z test commands::pwd::tests::test_pwd ... ok
+5698: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:08.6169404Z test test_exit_code_zero ... ok
+5812: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:23.8974042Z test test_global_state_with_shell_settings ... ok
+5845: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:24.0100404Z test test_streaming_runner_with_stdin ... ok
+5970: Test Rust (ubuntu-latest)	UNKNOWN STEP	2026-10-05T12:39:24.9404868Z test broken_quoting ... ok
+6685: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:38:13.0404765Z ##[start-action display=Parse toolchain version;id=__dtolnay_rust-toolchain.parse]
+6888: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:38:40.4940442Z env:
+7193: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:39:17.4048465Z ^[[1m^[[92m     Running^[[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name portable_pty --edition=2018 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\portable-pty-0.9.0\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 --cfg "feature=\"default\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"default\", \"serde\", \"serde_derive\", \"serde_support\"))" -C metadata=21ee658ccee2d6c6 -C extra-filename=-6832a8544a1b35e6 --out-dir D:\a\command-stream\command-stream\rust\target\debug\deps -L dependency=D:\a\command-stream\command-stream\rust\target\debug\deps --extern anyhow=D:\a\command-stream\command-stream\rust\target\debug\deps\libanyhow-d77c1b260d316796.rmeta --extern bitflags=D:\a\command-stream\command-stream\rust\target\debug\deps\libbitflags-4abbbd22557c5b76.rmeta --extern downcast_rs=D:\a\command-stream\command-stream\rust\target\debug\deps\libdowncast_rs-7c17387763e503a9.rmeta --extern filedescriptor=D:\a\command-stream\command-stream\rust\target\debug\deps\libfiledescriptor-c1f8d3d695c5dbbb.rmeta --extern lazy_static=D:\a\command-stream\command-stream\rust\target\debug\deps\liblazy_static-31353e7f69491162.rmeta --extern libc=D:\a\command-stream\command-stream\rust\target\debug\deps\liblibc-54da4c2a2c690867.rmeta --extern log=D:\a\command-stream\command-stream\rust\target\debug\deps\liblog-d615fb43221700e7.rmeta --extern nix=D:\a\command-stream\command-stream\rust\target\debug\deps\libnix-57ec074da7f3060c.rmeta --extern serial2=D:\a\command-stream\command-stream\rust\target\debug\deps\libserial2-6984b140d2ae68d2.rmeta --extern shared_library=D:\a\command-stream\command-stream\rust\target\debug\deps\libshared_library-9f913ff7dd985125.rmeta --extern shell_words=D:\a\command-stream\command-stream\rust\target\debug\deps\libshell_words-16d4b6891df78cab.rmeta --extern winapi=D:\a\command-stream\command-stream\rust\target\debug\deps\libwinapi-4d90830930c1e777.rmeta --extern winreg=D:\a\command-stream\command-stream\rust\target\debug\deps\libwinreg-d287253594a878de.rmeta --cap-lints allow -Dwarnings`
+7280: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:39:45.2554044Z ^[[1m^[[92m     Running^[[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name zx_error --edition=2021 tests\zx_error.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --warn=clippy::all --forbid=unsafe_code --test --cfg "feature=\"default\"" --cfg "feature=\"json\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"default\", \"json\"))" -C metadata=0a994f47187175d5 -C extra-filename=-744647a79b0af8b4 --out-dir D:\a\command-stream\command-stream\rust\target\debug\deps -L dependency=D:\a\command-stream\command-stream\rust\target\debug\deps --extern assert_cmd=D:\a\command-stream\command-stream\rust\target\debug\deps\libassert_cmd-4774d07b98fdb05b.rlib --extern async_trait=D:\a\command-stream\command-stream\rust\target\debug\deps\async_trait-6ebd3e27ab8481b1.dll --extern chrono=D:\a\command-stream\command-stream\rust\target\debug\deps\libchrono-0777db73a4bef798.rlib --extern command_stream=D:\a\command-stream\command-stream\rust\target\debug\deps\libcommand_stream-344c41da0f8b8656.rlib --extern fancy_regex=D:\a\command-stream\command-stream\rust\target\debug\deps\libfancy_regex-ad8fb1b51c2f8d61.rlib --extern filetime=D:\a\command-stream\command-stream\rust\target\debug\deps\libfiletime-69cc76b86414360e.rlib --extern glob=D:\a\command-stream\command-stream\rust\target\debug\deps\libglob-dd7ee08ecc6b2d54.rlib --extern libc=D:\a\command-stream\command-stream\rust\target\debug\deps\liblibc-54da4c2a2c690867.rlib --extern nix=D:\a\command-stream\command-stream\rust\target\debug\deps\libnix-b75caecbde4b97c8.rlib --extern once_cell=D:\a\command-stream\command-stream\rust\target\debug\deps\libonce_cell-fe41bc64d561c3a5.rlib --extern portable_pty=D:\a\command-stream\command-stream\rust\target\debug\deps\libportable_pty-6832a8544a1b35e6.rlib --extern regex=D:\a\command-stream\command-stream\rust\target\debug\deps\libregex-83daa2183637a787.rlib --extern serde=D:\a\command-stream\command-stream\rust\target\debug\deps\libserde-e6e3732305dc0cfe.rlib --extern serde_json=D:\a\command-stream\command-stream\rust\target\debug\deps\libserde_json-271e46b3fa780321.rlib --extern tempfile=D:\a\command-stream\command-stream\rust\target\debug\deps\libtempfile-cc766c138beb45b8.rlib --extern thiserror=D:\a\command-stream\command-stream\rust\target\debug\deps\libthiserror-1837f2ea63cc691e.rlib --extern tokio=D:\a\command-stream\command-stream\rust\target\debug\deps\libtokio-a96290ddf342059d.rlib --extern tokio_test=D:\a\command-stream\command-stream\rust\target\debug\deps\libtokio_test-7bb8f940e43eca17.rlib --extern vt100=D:\a\command-stream\command-stream\rust\target\debug\deps\libvt100-fa781f440de650dd.rlib --extern which=D:\a\command-stream\command-stream\rust\target\debug\deps\libwhich-9cd8c8553c296c83.rlib -Dwarnings -L native=C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows_x86_64_msvc-0.53.1\lib`
+7467: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:39:54.1545404Z test commands::test::tests::test_empty_string ... ok
+7638: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:39:54.4049238Z ^[[1m^[[92m     Running^[[0m `D:\a\command-stream\command-stream\rust\target\debug\deps\bun_shell_conformance-d3c090a639b391b2.exe`
+7854: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:40:06.7540401Z test executes_boolean_and_sequence_operators ... ok
+7957: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:40:07.0440454Z test test_ansi_config_default ... ok
+8129: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:40:07.4042232Z
+8130: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:40:07.4042450Z running 6 tests
+8235: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:40:14.0900404Z ^[[1m^[[92m       Fresh^[[0m aho-corasick v1.1.4
+8332: Test Rust (windows-latest)	UNKNOWN STEP	2026-10-05T12:40:15.7394049Z test src\ansi.rs - ansi::AnsiUtils::strip_control_chars (line 37) ... ok
+8401: Build Rust package	UNKNOWN STEP	2026-10-05T12:40:36.7818017Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+9034: Build Rust package	UNKNOWN STEP	2026-10-05T12:40:51.6404015Z ^[[1m^[[92m  Downloaded^[[0m unicode-ident v1.0.22
+9127: Build Rust package	UNKNOWN STEP	2026-10-05T12:40:53.9873404Z ^[[1m^[[92m     Running^[[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name vte_generate_state_changes --edition=2018 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/vte_generate_state_changes-0.1.2/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type proc-macro --emit=dep-info,link -C prefer-dynamic -C embed-bitcode=no -C debug-assertions=off --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=a5db76a177b86103 -C extra-filename=-4fd483f243f7897f --out-dir /home/runner/work/command-stream/command-stream/rust/target/release/deps -C strip=debuginfo -L dependency=/home/runner/work/command-stream/command-stream/rust/target/release/deps --extern proc_macro2=/home/runner/work/command-stream/command-stream/rust/target/release/deps/libproc_macro2-9eb91484581bc4e3.rlib --extern quote=/home/runner/work/command-stream/command-stream/rust/target/release/deps/libquote-2f611309a3869708.rlib --extern proc_macro --cap-lints allow -Dwarnings`
+9348: Release Rust crate	UNKNOWN STEP	2026-10-05T12:43:12.6391533Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+9818: Release Rust crate	UNKNOWN STEP	2026-10-05T12:43:24.4440473Z   RUSTDOCFLAGS: -Dwarnings
+9945: Release Rust crate	UNKNOWN STEP	2026-10-05T12:43:25.0805404Z ^[[1m^[[92m  Downloaded^[[0m equivalent v1.0.2
+9956: Release Rust crate	UNKNOWN STEP	2026-10-05T12:43:25.1040438Z ^[[1m^[[92m  Downloaded^[[0m strsim v0.11.1
+10162: Release Rust crate	UNKNOWN STEP	2026-10-05T12:44:25.1040490Z ##[endgroup]
+
+run-37310859981.log.gz
+18: Rust (full)	UNKNOWN STEP	2026-10-05T12:37:50.4437947Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+394: Rust (full)	UNKNOWN STEP	2026-10-05T12:37:53.2404116Z ##[start-action display=Set $CARGO_HOME;id=__dtolnay_rust-toolchain.__run]
+442: Rust (full)	UNKNOWN STEP	2026-10-05T12:37:54.4304046Z info: downloading 5 components
+827: JavaScript (full)	UNKNOWN STEP	2026-10-05T12:37:52.4716108Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+867: JavaScript (full)	UNKNOWN STEP	2026-10-05T12:37:53.8110266Z Temporarily overriding HOME='/home/runner/work/_temp/13404b09-f506-4597-8552-e76e52f353b6' before making global git config changes
+1222: JavaScript (full)	UNKNOWN STEP	2026-10-05T12:38:00.4471806Z $ cd .. && bun test js/tests/benchmark-suite.test.mjs --timeout 10000
+1223: JavaScript (full)	UNKNOWN STEP	2026-10-05T12:38:00.4500244Z bun test v1.4.2 (744846f84)
+1399: JavaScript (full)	UNKNOWN STEP	2026-10-05T12:39:05.6583047Z Artifact command-stream-javascript-benchmarks-37310859981-1 successfully finalized. Artifact ID 11346240420
+1400: JavaScript (full)	UNKNOWN STEP	2026-10-05T12:39:05.6585254Z Artifact command-stream-javascript-benchmarks-37310859981-1 has been successfully uploaded! Final size is 11354 bytes. Artifact ID is 11346240420
+1401: JavaScript (full)	UNKNOWN STEP	2026-10-05T12:39:05.6588324Z Artifact download URL: https://github.com/link-foundation/command-stream/actions/runs/37310859981/artifacts/11346240420
+
+run-37310860026.log.gz
+18: Verify and deploy generated documentation	UNKNOWN STEP	2026-10-05T12:38:50.5581712Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+328: Verify and deploy generated documentation	UNKNOWN STEP	2026-10-05T12:39:02.5696404Z   CARGO_HOME: /home/runner/.cargo
+342: Verify and deploy generated documentation	UNKNOWN STEP	2026-10-05T12:39:02.6034042Z   CARGO_INCREMENTAL: 0
+449: Verify and deploy generated documentation	UNKNOWN STEP	2026-10-05T12:39:24.8285050Z ##[error]Get Pages site failed. Please verify that the repository has Pages enabled and configured to build using GitHub Actions, or consider exploring the `enablement` parameter for this action. Error: Not Found - https://docs.github.com/rest/pages/pages#get-a-apiname-pages-site
+450: Verify and deploy generated documentation	UNKNOWN STEP	2026-10-05T12:39:24.8300315Z ##[error]HttpError: Not Found - https://docs.github.com/rest/pages/pages#get-a-apiname-pages-site
+
+run-37315903872-attempt-2.log.gz
+18: Check external links	Set up job	2026-10-05T17:35:54.4594413Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+
+run-37315903872.log.gz
+18: Check external links	UNKNOWN STEP	2026-10-05T13:19:30.9587301Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+268: Check external links	UNKNOWN STEP	2026-10-05T13:19:35.6474556Z [404] https://link-foundation.github.io/command-stream/ (at 29:1) | Rejected status code: 404 Not Found
+305: Check external links	UNKNOWN STEP	2026-10-05T13:19:38.6728061Z * [404] <https://link-foundation.github.io/command-stream/> (at 29:1) | Rejected status code: 404 Not Found
+320: Check external links	UNKNOWN STEP	2026-10-05T13:19:38.6764769Z ##[error]Process completed with exit code 2.
+
+run-37318353511.log.gz
+18: Audit bun lockfile	UNKNOWN STEP	2026-10-05T13:38:21.1381004Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+205: Audit bun lockfile	UNKNOWN STEP	2026-10-05T13:38:24.7940408Z  * [new branch]      issue-47-b31e0547       -> origin/issue-47-b31e0547
+408: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:21.0356523Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+445: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:22.5840475Z [command]/usr/bin/git version
+689: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:28.4040039Z         "extractor_root" : "/opt/hostedtoolcache/CodeQL/2.27.1/x64/codeql/html"
+690: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:28.4040424Z       }
+691: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:28.4040583Z     ],
+692: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:28.4040753Z     "csharp" : [
+693: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:28.4040936Z       {
+694: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:28.4041215Z         "extractor_root" : "/opt/hostedtoolcache/CodeQL/2.27.1/x64/codeql/csharp",
+695: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:28.4041581Z         "extractor_options" : {
+696: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:28.4041804Z           "trap" : {
+697: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:28.4042042Z             "title" : "Options pertaining to TRAP.",
+698: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:28.4042364Z             "description" : "Options pertaining to TRAP.",
+699: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:28.4042659Z             "type" : "object",
+700: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:28.4042889Z             "properties" : {
+701: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:28.4043114Z               "compression" : {
+702: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:28.4043471Z                 "title" : "Controls compression for the TRAP files written by the extractor.",
+703: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:28.4044416Z                 "description" : "This option is only intended for use in debugging the extractor. Accepted values are 'brotli' (the default, to write brotli-compressed TRAP), 'gzip', and 'none' (to write uncompressed TRAP).\n",
+704: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:28.4045233Z                 "type" : "string",
+705: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:28.4045473Z                 "pattern" : "^(none|gzip|brotli)$"
+706: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:28.4045706Z               }
+707: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:28.4045875Z             }
+708: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:28.4046042Z           },
+709: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:28.4046224Z           "buildless" : {
+710: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:28.4046563Z             "title" : "DEPRECATED - Whether to use buildless (standalone) extraction.",
+711: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:28.4048538Z             "description" : "DEPRECATED: Use `--build-mode none` instead.\nA value indicating, which type of extraction the autobuilder should perform. If 'true', then the standalone extractor will be used, otherwise tracing extraction will be performed. The default is 'false'. Note that buildless extraction will generally yield less accurate analysis results, and should only be used in cases where it is not possible to build the code (for example if it uses inaccessible dependencies).\n",
+1067: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:29.1334404Z             "properties" : {
+1092: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:29.1340475Z         "extractor_root" : "/opt/hostedtoolcache/CodeQL/2.27.1/x64/codeql/csharp",
+1297: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:29.1404021Z                     "title" : "TRAP cache bound",
+1298: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:29.1404362Z                     "description" : "A soft limit (in MB) on the size of the TRAP cache",
+1299: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:29.1404705Z                     "type" : "string",
+1300: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:29.1404938Z                     "pattern" : "[0-9]+"
+1782: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:37.0649404Z [2026-10-05 13:38:37] [build-stdout] Done extracting /home/runner/work/command-stream/command-stream/js/examples/features/builtin-catalog.mjs (3 ms)
+2245: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:38.3404183Z [2026-10-05 13:38:38] [build-stdout] Extracting /home/runner/work/command-stream/command-stream/js/examples/commandstream-working.mjs
+2317: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:38.3904040Z [2026-10-05 13:38:38] [build-stdout] Extracting /home/runner/work/command-stream/command-stream/js/examples/debug-getter-internals.mjs
+2657: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:38.6124047Z [2026-10-05 13:38:38] [build-stdout] Extracting /home/runner/work/command-stream/command-stream/js/examples/streaming-interactive-stdin.mjs
+3145: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:39.4044125Z [2026-10-05 13:38:39] [build-stdout] Extracting /home/runner/work/command-stream/command-stream/js/tests/bun-shell-subprocess-race.test.mjs
+3189: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:39.5640495Z [2026-10-05 13:38:39] [build-stdout] Extracting /home/runner/work/command-stream/command-stream/js/tests/exitcode-alias.test.mjs
+3355: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:38:40.0404232Z [2026-10-05 13:38:40] [build-stdout] Extracting /home/runner/work/command-stream/command-stream/experiments/issue-199-publish-false-positive.mjs
+3859: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:39:08.6289404Z [14/89 eval 3.4s] Evaluation done; writing results to codeql/javascript-queries/Security/CWE-022/ZipSlip.bqrs.
+4216: CodeQL (javascript-typescript)	UNKNOWN STEP	2026-10-05T13:39:20.6740409Z Interpreted pathproblem query "XML internal entity expansion" (js/xml-bomb) at path /home/runner/work/_temp/codeql_databases/javascript/results/codeql/javascript-queries/Security/CWE-776/XmlBomb.bqrs.
+4356: Scan for committed secrets	UNKNOWN STEP	2026-10-05T13:38:21.2141792Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+4657: Scan for committed secrets	UNKNOWN STEP	2026-10-05T13:38:24.4047681Z Switched to a new branch 'main'
+4700: Scan for committed secrets	UNKNOWN STEP	2026-10-05T13:38:32.8557834Z Temporarily overriding HOME='/home/runner/work/_temp/c9463621-d018-404d-8ca7-90791eb0f5dd' before making global git config changes
+4730: Audit Cargo lockfile	UNKNOWN STEP	2026-10-05T13:38:21.6047447Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+4888: Audit Cargo lockfile	UNKNOWN STEP	2026-10-05T13:38:24.2850404Z  * [new branch]      issue-36-042fe722       -> origin/issue-36-042fe722
+5120: Audit Cargo lockfile	UNKNOWN STEP	2026-10-05T13:38:25.0954404Z ##[group]Run cargo audit --file Cargo.lock
+5166: CodeQL (actions)	UNKNOWN STEP	2026-10-05T13:38:21.0977082Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+5260: CodeQL (actions)	UNKNOWN STEP	2026-10-05T13:38:23.1334046Z [command]/usr/bin/git sparse-checkout disable
+5324: CodeQL (actions)	UNKNOWN STEP	2026-10-05T13:38:25.7087404Z   "productName": "CodeQL",
+5548: CodeQL (actions)	UNKNOWN STEP	2026-10-05T13:38:26.9827404Z             "title" : "Options pertaining to TRAP.",
+6030: CodeQL (actions)	UNKNOWN STEP	2026-10-05T13:38:27.9987404Z           }
+6088: CodeQL (actions)	UNKNOWN STEP	2026-10-05T13:38:28.0004046Z                   "dir" : {
+6121: CodeQL (actions)	UNKNOWN STEP	2026-10-05T13:38:28.0014048Z         "extractor_options" : {
+6594: CodeQL (actions)	UNKNOWN STEP	2026-10-05T13:38:31.8425404Z ##[endgroup]
+6832: Audit npm lockfile	UNKNOWN STEP	2026-10-05T13:38:21.1231096Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+6854: Audit npm lockfile	UNKNOWN STEP	2026-10-05T13:38:21.8840406Z   ssh-user: git
+7063: Audit npm lockfile	UNKNOWN STEP	2026-10-05T13:38:24.0498404Z  * [new tag]         rust-v0.10.0            -> rust-v0.10.0
+7089: Audit npm lockfile	UNKNOWN STEP	2026-10-05T13:38:24.0540480Z  * [new tag]         rust-v0.22.1            -> rust-v0.22.1
+7189: Audit npm lockfile	UNKNOWN STEP	2026-10-05T13:38:26.7140418Z git version 2.55.0
+7220: CodeQL (rust)	UNKNOWN STEP	2026-10-05T13:38:21.0161530Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+8075: CodeQL (rust)	UNKNOWN STEP	2026-10-05T13:38:28.3384042Z             "description" : "A value indicating whether Go test files should be included in the CodeQL database. The default is 'false'.\n",
+8126: CodeQL (rust)	UNKNOWN STEP	2026-10-05T13:38:28.3404248Z     ],
+8127: CodeQL (rust)	UNKNOWN STEP	2026-10-05T13:38:28.3404507Z     "javascript" : [
+8128: CodeQL (rust)	UNKNOWN STEP	2026-10-05T13:38:28.3404766Z       {
+8776: CodeQL (rust)	UNKNOWN STEP	2026-10-05T13:40:24.0540444Z [9/37] Loaded /opt/hostedtoolcache/CodeQL/2.27.1/x64/codeql/qlpacks/codeql/rust-queries/0.1.43/queries/security/CWE-312/CleartextStorageDatabase.qlx.
+
+run-37345116818.log.gz
+26: Test Rust (windows-latest)	Set up job	2026-10-05T17:00:26.2254044Z Cache mode: write
+505: Test Rust (windows-latest)	Setup Rust	2026-10-05T17:00:54.5396404Z ^[[36;1m  echo CARGO_TERM_COLOR=always >> $GITHUB_ENV^[[0m
+687: Test Rust (windows-latest)	Run tests	2026-10-05T17:01:14.4354049Z ^[[1m^[[92m       Fresh^[[0m glob v0.3.3
+728: Test Rust (windows-latest)	Run tests	2026-10-05T17:01:39.8697404Z ^[[1m^[[92m     Running^[[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name getcwd_error_handling --edition=2021 tests\getcwd_error_handling.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --warn=clippy::all --forbid=unsafe_code --test --cfg "feature=\"default\"" --cfg "feature=\"json\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"default\", \"json\"))" -C metadata=15bc42519615ebbe -C extra-filename=-a1da6aee5263d850 --out-dir D:\a\command-stream\command-stream\rust\target\debug\deps -L dependency=D:\a\command-stream\command-stream\rust\target\debug\deps --extern assert_cmd=D:\a\command-stream\command-stream\rust\target\debug\deps\libassert_cmd-4774d07b98fdb05b.rlib --extern async_trait=D:\a\command-stream\command-stream\rust\target\debug\deps\async_trait-6ebd3e27ab8481b1.dll --extern chrono=D:\a\command-stream\command-stream\rust\target\debug\deps\libchrono-0777db73a4bef798.rlib --extern command_stream=D:\a\command-stream\command-stream\rust\target\debug\deps\libcommand_stream-3410749f90ee4232.rlib --extern fancy_regex=D:\a\command-stream\command-stream\rust\target\debug\deps\libfancy_regex-ad8fb1b51c2f8d61.rlib --extern filetime=D:\a\command-stream\command-stream\rust\target\debug\deps\libfiletime-69cc76b86414360e.rlib --extern glob=D:\a\command-stream\command-stream\rust\target\debug\deps\libglob-dd7ee08ecc6b2d54.rlib --extern libc=D:\a\command-stream\command-stream\rust\target\debug\deps\liblibc-54da4c2a2c690867.rlib --extern nix=D:\a\command-stream\command-stream\rust\target\debug\deps\libnix-b75caecbde4b97c8.rlib --extern once_cell=D:\a\command-stream\command-stream\rust\target\debug\deps\libonce_cell-fe41bc64d561c3a5.rlib --extern portable_pty=D:\a\command-stream\command-stream\rust\target\debug\deps\libportable_pty-6832a8544a1b35e6.rlib --extern regex=D:\a\command-stream\command-stream\rust\target\debug\deps\libregex-83daa2183637a787.rlib --extern serde=D:\a\command-stream\command-stream\rust\target\debug\deps\libserde-e6e3732305dc0cfe.rlib --extern serde_json=D:\a\command-stream\command-stream\rust\target\debug\deps\libserde_json-271e46b3fa780321.rlib --extern tempfile=D:\a\command-stream\command-stream\rust\target\debug\deps\libtempfile-cc766c138beb45b8.rlib --extern thiserror=D:\a\command-stream\command-stream\rust\target\debug\deps\libthiserror-1837f2ea63cc691e.rlib --extern tokio=D:\a\command-stream\command-stream\rust\target\debug\deps\libtokio-a96290ddf342059d.rlib --extern tokio_test=D:\a\command-stream\command-stream\rust\target\debug\deps\libtokio_test-7bb8f940e43eca17.rlib --extern vt100=D:\a\command-stream\command-stream\rust\target\debug\deps\libvt100-fa781f440de650dd.rlib --extern which=D:\a\command-stream\command-stream\rust\target\debug\deps\libwhich-9cd8c8553c296c83.rlib -Dwarnings -L native=C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows_x86_64_msvc-0.53.1\lib`
+1163: Test Rust (windows-latest)	Run tests	2026-10-05T17:01:57.2625404Z test inventory_is_unique_and_pinned_to_immutable_commits ... ok
+1234: Test Rust (windows-latest)	Run tests	2026-10-05T17:01:58.7740457Z ^[[1m^[[92m     Running^[[0m `D:\a\command-stream\command-stream\rust\target\debug\deps\multiline_interpolation-a81ddfb54654487d.exe`
+1238: Test Rust (windows-latest)	Run tests	2026-10-05T17:01:58.7840456Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+1679: Test Rust (windows-latest)	Run tests	2026-10-05T17:02:13.4046370Z test src\ansi.rs - ansi::AnsiUtils::strip_ansi (line 17) ... ok
+1888: Test Rust scripts and check sizes	Set up job	2026-10-05T17:00:10.7754579Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+1939: Test Rust scripts and check sizes	Run actions/checkout@v6	2026-10-05T17:00:11.7384404Z hint: Using 'master' as the name for the initial branch. This default branch name
+2505: Test Rust scripts and check sizes	Install rust-script	2026-10-05T17:00:22.7440476Z ^[[1m^[[92m   Compiling^[[0m aho-corasick v1.1.5
+2554: Test Rust scripts and check sizes	Install rust-script	2026-10-05T17:00:46.8002404Z ^[[1m^[[92m    Finished^[[0m `release` profile [optimized] target(s) in 24.83s
+2623: Test Rust scripts and check sizes	Run release script unit tests	2026-10-05T17:00:50.1192404Z ^[[1m^[[92m   Compiling^[[0m serde_core v1.0.229
+2702: Test Rust scripts and check sizes	Run release script unit tests	2026-10-05T17:00:55.5076404Z ^[[1m^[[92m   Compiling^[[0m webpki-roots v1.0.9
+2779: Test Rust scripts and check sizes	Check Rust file sizes	2026-10-05T17:01:04.5189766Z WARNING: rust/scripts/version-and-commit.rs has 932 lines (approaching limit of 1000, warning threshold: 900)
+2781: Test Rust scripts and check sizes	Check Rust file sizes	2026-10-05T17:01:04.5192350Z WARNING: rust/src/bun_shell/builtins/small.rs has 915 lines (approaching limit of 1000, warning threshold: 900)
+2783: Test Rust scripts and check sizes	Check Rust file sizes	2026-10-05T17:01:04.5194575Z WARNING: rust/src/bun_shell/lexer.rs has 949 lines (approaching limit of 1000, warning threshold: 900)
+2785: Test Rust scripts and check sizes	Check Rust file sizes	2026-10-05T17:01:04.5196621Z WARNING: rust/src/bun_shell/io.rs has 910 lines (approaching limit of 1000, warning threshold: 900)
+2787: Test Rust scripts and check sizes	Check Rust file sizes	2026-10-05T17:01:04.5199068Z WARNING: rust/src/lib.rs has 937 lines (approaching limit of 1000, warning threshold: 900)
+2798: Test Rust scripts and check sizes	Check Rust file sizes	2026-10-05T17:01:04.5201404Z All files are within the line limit
+2821: Test Rust scripts and check sizes	Check packaged crate size	2026-10-05T17:01:10.8466404Z Limit: 10.00 MiB (10485760 bytes)
+3860: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:24.7964040Z test state::tests::test_global_state_reset ... ok
+4493: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:48.2840410Z test minimist_negation_and_dotted_keys ... ok
+4501: Test Rust (macos-latest)	Run tests	2026-10-05T17:01:48.2854040Z
+4815: Test Rust (macos-latest)	Run doc tests	2026-10-05T17:01:53.7774040Z ^[[1m^[[92m       Fresh^[[0m command-stream v1.3.0 (/Users/runner/work/command-stream/command-stream/rust)
+4901: Lint and format Rust	Set up job	2026-10-05T17:00:11.1633927Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+5353: Lint and format Rust	Setup Rust	2026-10-05T17:00:22.9404510Z ##[end-action id=__dtolnay_rust-toolchain.__run_4;outcome=success;conclusion=success;duration_ms=7412]
+5449: Lint and format Rust	Setup Rust	2026-10-05T17:00:23.0884046Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+5640: Lint and format Rust	Post Cache cargo registry	2026-10-05T17:00:42.8640466Z Sent 237259525 of 237259525 (100.0%), 121.5 MBs/sec
+5675: Test Rust (ubuntu-latest)	Set up job	2026-10-05T17:00:30.6982405Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+5922: Test Rust (ubuntu-latest)	Run actions/checkout@v6	2026-10-05T17:00:35.2254043Z  * [new tag]         rust-v0.17.1            -> rust-v0.17.1
+6233: Test Rust (ubuntu-latest)	Setup Rust	2026-10-05T17:00:45.5484404Z commit-date: 2026-09-28
+6355: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:00:53.4404830Z ^[[1m^[[92m       Fresh^[[0m filetime v0.2.26
+6466: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:15.5640449Z test bun_shell::builtins::cat::tests::parse_opts_cases ... ok
+6824: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:15.9840475Z test unit::js_only_values_are_marked_js_only ... ok
+6922: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:17.9332404Z
+7211: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:34.5108404Z test test_stream_kill_from_loop_honors_kill_signal ... ok
+7306: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:35.3404566Z test test_execute_virtual_pwd ... ok
+7317: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:35.4440460Z test test_stdin_content_reaches_virtual_command ... ok
+7428: Test Rust (ubuntu-latest)	Run tests	2026-10-05T17:01:35.6404804Z test spinner_works ... ok
+7726: Build Rust package	Set up job	2026-10-05T17:02:53.1998505Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+8451: Release Rust crate	Set up job	2026-10-05T17:03:40.3284068Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+8818: Release Rust crate	Setup Rust	2026-10-05T17:03:43.1940472Z ##[end-action id=__dtolnay_rust-toolchain.flags;outcome=success;conclusion=success;duration_ms=58]
+9055: Release Rust crate	Install rust-script	2026-10-05T17:03:54.1964041Z ^[[1m^[[92m  Downloaded^[[0m quote v1.0.47
+9201: Release Rust crate	Check whether Rust release is needed	2026-10-05T17:04:39.3310374Z Max published version on crates.io: 1.3.0
+
+run-37345116899.log.gz
+18: Audit bun lockfile	Set up job	2026-10-05T17:00:14.1857145Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+292: Audit bun lockfile	Run actions/checkout@v6	2026-10-05T17:00:17.8092404Z  * [new tag]         v0.3.0                  -> v0.3.0
+408: Scan for committed secrets	Set up job	2026-10-05T17:00:12.7129994Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+630: Scan for committed secrets	Run actions/checkout@v6	2026-10-05T17:00:15.5040407Z  * [new tag]         js-v0.20.2              -> js-v0.20.2
+782: Audit npm lockfile	Set up job	2026-10-05T17:00:47.2552145Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+822: Audit npm lockfile	Run actions/checkout@v6	2026-10-05T17:00:48.1140476Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/command-stream/command-stream
+839: Audit npm lockfile	Run actions/checkout@v6	2026-10-05T17:00:48.1354404Z hint:
+1170: CodeQL (actions)	Set up job	2026-10-05T17:00:11.0965283Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+1241: CodeQL (actions)	Run actions/checkout@v6	2026-10-05T17:00:12.3823404Z Removing HTTP extra header
+1246: CodeQL (actions)	Run actions/checkout@v6	2026-10-05T17:00:12.4047203Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+1974: CodeQL (actions)	Initialize CodeQL	2026-10-05T17:00:17.7264048Z           },
+2836: CodeQL (javascript-typescript)	Set up job	2026-10-05T17:00:11.7100115Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+2892: CodeQL (javascript-typescript)	Run actions/checkout@v6	2026-10-05T17:00:13.0740420Z hint: 'development'. The just-created branch can be renamed via this command:
+2989: CodeQL (javascript-typescript)	Initialize CodeQL	2026-10-05T17:00:16.8340483Z Written by John Gilmore and Jay Fenlason.
+3645: CodeQL (javascript-typescript)	Initialize CodeQL	2026-10-05T17:00:23.1404150Z             "visibility" : 3
+3646: CodeQL (javascript-typescript)	Initialize CodeQL	2026-10-05T17:00:23.1404359Z           }
+3647: CodeQL (javascript-typescript)	Initialize CodeQL	2026-10-05T17:00:23.1404526Z         }
+3648: CodeQL (javascript-typescript)	Initialize CodeQL	2026-10-05T17:00:23.1404690Z       }
+3649: CodeQL (javascript-typescript)	Initialize CodeQL	2026-10-05T17:00:23.1404852Z     ],
+3738: CodeQL (javascript-typescript)	Initialize CodeQL	2026-10-05T17:00:23.1440423Z             }
+4010: CodeQL (javascript-typescript)	Analyze	2026-10-05T17:00:36.4040508Z [2026-10-05 17:00:36] [build-stdout] Done extracting /home/runner/work/command-stream/command-stream/docs/case-studies/issue-160/templates/csharp-ai-driven-development-pipeline-template/scripts/create-github-release.test.mjs (111 ms)
+4278: CodeQL (javascript-typescript)	Analyze	2026-10-05T17:00:38.1494040Z [2026-10-05 17:00:38] [build-stdout] Done extracting /home/runner/work/command-stream/command-stream/js/src/bun-shell/env.mjs (66 ms)
+4347: CodeQL (javascript-typescript)	Analyze	2026-10-05T17:00:38.6044042Z [2026-10-05 17:00:38] [build-stdout] Extracting /home/runner/work/command-stream/command-stream/js/src/execa/index.mjs
+4631: CodeQL (javascript-typescript)	Analyze	2026-10-05T17:00:39.9504044Z [2026-10-05 17:00:39] [build-stdout] Extracting /home/runner/work/command-stream/command-stream/js/examples/add-test-timeouts.js
+4863: CodeQL (javascript-typescript)	Analyze	2026-10-05T17:00:40.4240461Z [2026-10-05 17:00:40] [build-stdout] Extracting /home/runner/work/command-stream/command-stream/js/examples/debug-stdin-simple.mjs
+5235: CodeQL (javascript-typescript)	Analyze	2026-10-05T17:00:40.8404406Z [2026-10-05 17:00:40] [build-stdout] Extracting /home/runner/work/command-stream/command-stream/js/examples/test-edge-cases-quoting.mjs
+5329: CodeQL (javascript-typescript)	Analyze	2026-10-05T17:00:40.9404847Z [2026-10-05 17:00:40] [build-stdout] Extracting /home/runner/work/command-stream/command-stream/js/examples/test-runner.mjs
+5336: CodeQL (javascript-typescript)	Analyze	2026-10-05T17:00:40.9440445Z [2026-10-05 17:00:40] [build-stdout] Done extracting /home/runner/work/command-stream/command-stream/js/examples/test-scope-parse.mjs (4 ms)
+5396: CodeQL (javascript-typescript)	Analyze	2026-10-05T17:00:40.9640458Z [2026-10-05 17:00:40] [build-stdout] Done extracting /home/runner/work/command-stream/command-stream/js/examples/test-top-inherit-stdout-stdin-control.mjs (17 ms)
+6642: CodeQL (javascript-typescript)	Analyze	2026-10-05T17:01:40.7740447Z Interpreted pathproblem query "Stored cross-site scripting" (js/stored-xss) at path /home/runner/work/_temp/codeql_databases/javascript/results/codeql/javascript-queries/Security/CWE-079/StoredXss.bqrs.
+6793: CodeQL (javascript-typescript)	Post Run actions/checkout@v6	2026-10-05T17:02:25.4404603Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+6819: Audit Cargo lockfile	Set up job	2026-10-05T17:00:10.8399509Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+6821: Audit Cargo lockfile	Set up job	2026-10-05T17:00:10.8404889Z ##[endgroup]
+6869: Audit Cargo lockfile	Run actions/checkout@v6	2026-10-05T17:00:11.9314040Z hint:
+7163: Audit Cargo lockfile	Run taiki-e/install-action@e67fa11c4b9316fa714ddf0abed07a0c3143b95b	2026-10-05T17:00:13.6328397Z ^[[36;1m  printf '::error::install-action: %s\n' "$*"^[[0m
+7255: CodeQL (rust)	Set up job	2026-10-05T17:00:11.9242427Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+7859: CodeQL (rust)	Initialize CodeQL	2026-10-05T17:00:22.3337404Z [command]/opt/hostedtoolcache/CodeQL/2.27.1/x64/codeql/codeql resolve languages --format=betterjson --extractor-options-verbosity=4 --extractor-include-aliases --filter-to-languages-with-queries
+8750: CodeQL (rust)	Analyze	2026-10-05T17:00:33.1140403Z [2026-10-05 17:00:33] [build-stdout] [2026-10-05 17:00:33] [build-stdout] ^[[33m WARN^[[0m /home/runner/work/command-stream/command-stream/docs/case-studies/issue-160/templates/rust-ai-driven-development-pipeline-template/scripts/publish-crate.rs:1:1: semantic analyzer unavailable (no manifest found): macro expansion will be skipped.
+8887: CodeQL (rust)	Analyze	2026-10-05T17:03:59.9553404Z [10/37 eval 1m19s] Evaluation done; writing results to codeql/rust-queries/queries/diagnostics/AstConsistencyCounts.bqrs.
+8998: CodeQL (rust)	Analyze	2026-10-05T17:04:57.3868404Z Interpreted pathproblem query "Uncontrolled allocation size" (rust/uncontrolled-allocation-size) at path /home/runner/work/_temp/codeql_databases/rust/results/codeql/rust-queries/queries/security/CWE-770/UncontrolledAllocationSize.bqrs.
+9032: CodeQL (rust)	Analyze	2026-10-05T17:04:57.8501404Z Loaded file baseline information.
+
+run-37345116966.log.gz
+18: Actionlint	Set up job	2026-10-05T17:00:13.0181056Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+95: Actionlint	Run actions/checkout@v6	2026-10-05T17:00:18.3419404Z hint: 'development'. The just-created branch can be renamed via this command:
+414: Zizmor	Set up job	2026-10-05T17:00:11.5037560Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+416: Zizmor	Set up job	2026-10-05T17:00:11.5040464Z ##[endgroup]
+440: Zizmor	Run actions/checkout@v6	2026-10-05T17:00:13.2297404Z   sparse-checkout-cone-mode: true
+785: Zizmor	Run zizmorcore/zizmor-action@v0.6.2	2026-10-05T17:00:15.4042352Z ##[group]Pulling zizmor image
+
+run-37345116991.log.gz
+18: Rust (full)	Set up job	2026-10-05T17:00:12.4424414Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+330: Rust (full)	Run actions/checkout@v6	2026-10-05T17:00:15.8141404Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+342: Rust (full)	Run actions/checkout@v6	2026-10-05T17:00:15.8764404Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/command-stream/command-stream/.git.path /home/runner/work/_temp/git-credentials-8041b31c-2511-46c7-a08e-cb401ba24d81.config
+372: Rust (full)	Setup Rust	2026-10-05T17:00:15.9914041Z ^[[36;1melif [[ $toolchain =~ ^stable' 'minus' '[0-9]+' 'releases?$ ]]; then^[[0m
+457: Rust (full)	Setup Rust	2026-10-05T17:00:24.9944040Z
+730: Rust (full)	Run benchmark profile	2026-10-05T17:01:10.9684040Z Log processing (1,000 records)
+835: JavaScript (full)	Set up job	2026-10-05T17:00:11.5334320Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+839: JavaScript (full)	Set up job	2026-10-05T17:00:11.5340444Z Contents: read
+1146: JavaScript (full)	Run actions/checkout@v6	2026-10-05T17:00:14.9794041Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+1231: JavaScript (full)	Test benchmark infrastructure and adapters	2026-10-05T17:00:17.9398718Z $ cd .. && bun test js/tests/benchmark-suite.test.mjs --timeout 10000
+1232: JavaScript (full)	Test benchmark infrastructure and adapters	2026-10-05T17:00:17.9428417Z bun test v1.4.2 (744846f84)
+1399: JavaScript (full)	Upload JSON and HTML reports	2026-10-05T17:01:19.0334042Z The least common ancestor is /home/runner/work/command-stream/command-stream/js/benchmarks. This will be the root directory of the artifact
+
+run-37345117236.log.gz
+18: Check formatting of every tracked file	Set up job	2026-10-05T17:00:10.7436181Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+90: Check formatting of every tracked file	Run actions/checkout@v6	2026-10-05T17:00:11.9474040Z Removing includeIf entries pointing to credentials config files
+266: Check formatting of every tracked file	Run actions/checkout@v6	2026-10-05T17:00:13.6704040Z  * [new tag]         rust-v0.18.2            -> rust-v0.18.2
+398: Check formatting of every tracked file	Check formatting	2026-10-05T17:00:15.6864044Z ##[endgroup]
+436: Validate documentation	Set up job	2026-10-05T17:00:27.7770136Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+757: Validate documentation	Run actions/checkout@v6	2026-10-05T17:00:31.5316404Z /home/runner/work/_temp/git-credentials-6281550a-271d-40b5-992b-a45e669cc3ef.config
+781: Validate documentation	Check documentation links, size and required sections	﻿2026-10-05T17:00:33.3660835Z ##[group]Run bun test js/tests/docs-validation.test.mjs --timeout 10000
+782: Validate documentation	Check documentation links, size and required sections	2026-10-05T17:00:33.3661403Z ^[[36;1mbun test js/tests/docs-validation.test.mjs --timeout 10000^[[0m
+785: Validate documentation	Check documentation links, size and required sections	2026-10-05T17:00:33.4031047Z bun test v1.4.2 (744846f84)
+996: Check workflow invariants	Set up job	2026-10-05T17:00:10.7890434Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+1024: Check workflow invariants	Run actions/checkout@v6	2026-10-05T17:00:12.2679404Z   submodules: false
+1046: Check workflow invariants	Run actions/checkout@v6	2026-10-05T17:00:12.4040627Z hint:
+1047: Check workflow invariants	Run actions/checkout@v6	2026-10-05T17:00:12.4043277Z hint: 	git config --global init.defaultBranch <name>
+1048: Check workflow invariants	Run actions/checkout@v6	2026-10-05T17:00:12.4045512Z hint:
+1049: Check workflow invariants	Run actions/checkout@v6	2026-10-05T17:00:12.4047495Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+1050: Check workflow invariants	Run actions/checkout@v6	2026-10-05T17:00:12.4049761Z hint: 'development'. The just-created branch can be renamed via this command:
+1341: Check workflow invariants	Check CI/CD invariants	﻿2026-10-05T17:00:15.5102439Z ##[group]Run bun test js/tests/workflow-hygiene.test.mjs --timeout 10000
+1342: Check workflow invariants	Check CI/CD invariants	2026-10-05T17:00:15.5103055Z ^[[36;1mbun test js/tests/workflow-hygiene.test.mjs --timeout 10000^[[0m
+1345: Check workflow invariants	Check CI/CD invariants	2026-10-05T17:00:15.5468442Z bun test v1.4.2 (744846f84)
+1514: Check workflow invariants	Check CI/CD invariants	2026-10-05T17:00:15.5772374Z (pass) repository-wide checks are not hidden behind a paths filter > the docs job runs bun test js/tests/docs-validation.test.mjs
+1515: Check workflow invariants	Check CI/CD invariants	2026-10-05T17:00:15.5773139Z (pass) repository-wide checks are not hidden behind a paths filter > the hygiene job runs bun test js/tests/workflow-hygiene.test.mjs
+
+run-37345117246-attempt-2.log.gz
+18: Verify and deploy generated documentation	Set up job	2026-10-05T17:33:06.2011169Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+69: Verify and deploy generated documentation	Run actions/checkout@v6	2026-10-05T17:33:08.2864048Z ##[endgroup]
+334: Verify and deploy generated documentation	Setup Rust	2026-10-05T17:33:20.6404411Z ##[group]Run # https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo/topic/timeout.20investigation
+
+run-37345117246.log.gz
+18: Verify and deploy generated documentation	Set up job	2026-10-05T17:00:27.3838316Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+173: Verify and deploy generated documentation	Setup Bun	2026-10-05T17:00:32.6540407Z ##[endgroup]
+450: Verify and deploy generated documentation	Configure GitHub Pages	2026-10-05T17:01:16.3509751Z ##[error]Get Pages site failed. Please verify that the repository has Pages enabled and configured to build using GitHub Actions, or consider exploring the `enablement` parameter for this action. Error: Not Found - https://docs.github.com/rest/pages/pages#get-a-apiname-pages-site
+451: Verify and deploy generated documentation	Configure GitHub Pages	2026-10-05T17:01:16.3522223Z ##[error]HttpError: Not Found - https://docs.github.com/rest/pages/pages#get-a-apiname-pages-site
+
+run-37347693304.log.gz
+18: Audit bun lockfile	Set up job	2026-10-05T17:20:37.2798682Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+149: Audit bun lockfile	Run actions/checkout@v6	2026-10-05T17:20:40.1219006Z  * [new branch]      issue-209-4043f0c126d5                   -> origin/issue-209-4043f0c126d5
+432: Scan for committed secrets	Set up job	2026-10-05T17:21:18.1470840Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+530: Scan for committed secrets	Run actions/checkout@v6	2026-10-05T17:21:21.7317404Z  * [new branch]      issue-15-9fc0cb72                        -> origin/issue-15-9fc0cb72
+562: Scan for committed secrets	Run actions/checkout@v6	2026-10-05T17:21:21.7376698Z  * [new branch]      issue-209-4043f0c126d5                   -> origin/issue-209-4043f0c126d5
+622: Scan for committed secrets	Run actions/checkout@v6	2026-10-05T17:21:21.7474041Z  * [new branch]      issue-48-ad9abe01                        -> origin/issue-48-ad9abe01
+727: Scan for committed secrets	Run actions/checkout@v6	2026-10-05T17:21:21.7664048Z ##[endgroup]
+797: Scan for committed secrets	Post Run actions/checkout@v6	﻿2026-10-05T17:21:26.4404133Z Post job cleanup.
+830: CodeQL (rust)	Set up job	2026-10-05T17:20:38.6796900Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+1817: CodeQL (rust)	Initialize CodeQL	2026-10-05T17:20:50.3240411Z         "extractor_root" : "/opt/hostedtoolcache/CodeQL/2.27.1/x64/codeql/swift"
+2179: CodeQL (rust)	Initialize CodeQL	2026-10-05T17:20:51.6844045Z             "type" : "string",
+2682: Audit Cargo lockfile	Set up job	2026-10-05T17:20:35.2507084Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+2813: Audit Cargo lockfile	Run actions/checkout@v6	2026-10-05T17:20:38.2947143Z  * [new branch]      issue-209-4043f0c126d5                   -> origin/issue-209-4043f0c126d5
+2890: Audit Cargo lockfile	Run actions/checkout@v6	2026-10-05T17:20:38.3075404Z  * [new tag]         js-v0.10.1                               -> js-v0.10.1
+2967: Audit Cargo lockfile	Run actions/checkout@v6	2026-10-05T17:20:38.3120404Z  * [new tag]         v0.8.1                                   -> v0.8.1
+3050: Audit Cargo lockfile	Run taiki-e/install-action@e67fa11c4b9316fa714ddf0abed07a0c3143b95b	2026-10-05T17:20:38.9524464Z ^[[36;1m  printf '::error::install-action: %s\n' "$*"^[[0m
+3128: Audit npm lockfile	Set up job	2026-10-05T17:21:30.5828404Z Version: 20260901.588
+3142: Audit npm lockfile	Set up job	2026-10-05T17:21:30.5834870Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+3273: Audit npm lockfile	Run actions/checkout@v6	2026-10-05T17:21:32.8365203Z  * [new branch]      issue-209-4043f0c126d5                   -> origin/issue-209-4043f0c126d5
+3314: Audit npm lockfile	Run actions/checkout@v6	2026-10-05T17:21:32.8404149Z  * [new branch]      issue-41-49cfed34                        -> origin/issue-41-49cfed34
+3554: CodeQL (actions)	Set up job	2026-10-05T17:21:23.3453497Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+4039: CodeQL (actions)	Initialize CodeQL	2026-10-05T17:21:29.9830404Z             "type" : "string",
+4047: CodeQL (actions)	Initialize CodeQL	2026-10-05T17:21:29.9854041Z           },
+4056: CodeQL (actions)	Initialize CodeQL	2026-10-05T17:21:29.9857404Z     ],
+4121: CodeQL (actions)	Initialize CodeQL	2026-10-05T17:21:29.9886404Z             "pattern" : "^(false|true)$"
+4495: CodeQL (actions)	Initialize CodeQL	2026-10-05T17:21:30.9802404Z                     "title" : "TRAP cache bound",
+4600: CodeQL (actions)	Initialize CodeQL	2026-10-05T17:21:32.2862404Z           },
+4757: CodeQL (actions)	Initialize CodeQL	2026-10-05T17:21:32.2940495Z     "python" : [
+5218: Dependency Review	Set up job	2026-10-05T17:21:31.4193963Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+5360: Dependency Review	Check whether the dependency graph is enabled	﻿2026-10-05T17:21:35.5657269Z ##[group]Run set -uo pipefail
+5361: Dependency Review	Check whether the dependency graph is enabled	2026-10-05T17:21:35.5657708Z ^[[36;1mset -uo pipefail^[[0m
+5362: Dependency Review	Check whether the dependency graph is enabled	2026-10-05T17:21:35.5658037Z ^[[36;1mcode="$(curl -sS -o /dev/null -w '%{http_code}' \^[[0m
+5363: Dependency Review	Check whether the dependency graph is enabled	2026-10-05T17:21:35.5658735Z ^[[36;1m  -H "Authorization: ***" \^[[0m
+5364: Dependency Review	Check whether the dependency graph is enabled	2026-10-05T17:21:35.5659065Z ^[[36;1m  -H 'Accept: application/vnd.github+json' \^[[0m
+5365: Dependency Review	Check whether the dependency graph is enabled	2026-10-05T17:21:35.5659514Z ^[[36;1m  "$GITHUB_API_URL/repos/$REPOSITORY/dependency-graph/compare/$BASE_SHA...$HEAD_SHA")"^[[0m
+5366: Dependency Review	Check whether the dependency graph is enabled	2026-10-05T17:21:35.5660014Z ^[[36;1mecho "Dependency graph compare endpoint answered HTTP $code"^[[0m
+5367: Dependency Review	Check whether the dependency graph is enabled	2026-10-05T17:21:35.5660349Z ^[[36;1mif [ "$code" = '200' ]; then^[[0m
+5368: Dependency Review	Check whether the dependency graph is enabled	2026-10-05T17:21:35.5660636Z ^[[36;1m  echo 'enabled=true' >> "$GITHUB_OUTPUT"^[[0m
+5369: Dependency Review	Check whether the dependency graph is enabled	2026-10-05T17:21:35.5660941Z ^[[36;1melif [ "$code" = '403' ]; then^[[0m
+5370: Dependency Review	Check whether the dependency graph is enabled	2026-10-05T17:21:35.5661231Z ^[[36;1m  echo 'enabled=false' >> "$GITHUB_OUTPUT"^[[0m
+5371: Dependency Review	Check whether the dependency graph is enabled	2026-10-05T17:21:35.5662065Z ^[[36;1m  echo "::warning::Dependency graph is disabled for $REPOSITORY, so dependency review cannot run. The npm, bun and cargo audit jobs still check the committed lockfiles. Enable the graph under Settings -> Code security to restore per-pull-request review."^[[0m
+5372: Dependency Review	Check whether the dependency graph is enabled	2026-10-05T17:21:35.5662909Z ^[[36;1melse^[[0m
+5373: Dependency Review	Check whether the dependency graph is enabled	2026-10-05T17:21:35.5663238Z ^[[36;1m  echo "::error::Unexpected HTTP $code from the dependency-graph compare endpoint"^[[0m
+5374: Dependency Review	Check whether the dependency graph is enabled	2026-10-05T17:21:35.5663603Z ^[[36;1m  exit 1^[[0m
+5375: Dependency Review	Check whether the dependency graph is enabled	2026-10-05T17:21:35.5663813Z ^[[36;1mfi^[[0m
+5418: CodeQL (javascript-typescript)	Set up job	2026-10-05T17:21:31.2633724Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+6137: CodeQL (javascript-typescript)	Initialize CodeQL	2026-10-05T17:21:39.2404170Z           },
+6138: CodeQL (javascript-typescript)	Initialize CodeQL	2026-10-05T17:21:39.2404327Z           "logging" : {
+6139: CodeQL (javascript-typescript)	Initialize CodeQL	2026-10-05T17:21:39.2404534Z             "title" : "Options pertaining to logging.",
+6140: CodeQL (javascript-typescript)	Initialize CodeQL	2026-10-05T17:21:39.2404812Z             "description" : "Options pertaining to logging.",
+6249: CodeQL (javascript-typescript)	Initialize CodeQL	2026-10-05T17:21:39.2440423Z         "extractor_root" : "/opt/hostedtoolcache/CodeQL/2.27.1/x64/codeql/java",
+6321: CodeQL (javascript-typescript)	Initialize CodeQL	2026-10-05T17:21:39.2463404Z                   "bound" : {
+6334: CodeQL (javascript-typescript)	Initialize CodeQL	2026-10-05T17:21:39.2477404Z               }
+6625: CodeQL (javascript-typescript)	Analyze	2026-10-05T17:22:04.1404706Z Starting evaluation of codeql/javascript-queries/Security/CWE-078/UselessUseOfCat.ql.
+6848: CodeQL (javascript-typescript)	Analyze	2026-10-05T17:22:13.8840406Z Interpreting /opt/hostedtoolcache/CodeQL/2.27.1/x64/codeql/qlpacks/codeql/javascript-queries/2.4.6/Security/CWE-601/ServerSideUrlRedirect.ql...
+6877: CodeQL (javascript-typescript)	Analyze	2026-10-05T17:22:13.9404715Z  ... found results file at /home/runner/work/_temp/codeql_databases/javascript/results/codeql/javascript-queries/Security/CWE-829/InsecureDownload.bqrs.
+
+run-37347693383.log.gz
+7: JS/Rust implementation parity	UNKNOWN STEP	2026-10-05T17:20:41.9624704Z Worker ID: {8097c167-12b7-404e-96d9-2420d6adfe59}
+18: JS/Rust implementation parity	UNKNOWN STEP	2026-10-05T17:20:41.9638637Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+151: JS/Rust implementation parity	UNKNOWN STEP	2026-10-05T17:20:44.5640273Z  * [new branch]      issue-209-4043f0c126d5                   -> origin/issue-209-4043f0c126d5
+521: JS/Rust implementation parity	UNKNOWN STEP	2026-10-05T17:20:55.9264049Z ##[end-action id=__dtolnay_rust-toolchain.rustc-version;outcome=success;conclusion=success;duration_ms=44]
+
+run-37347693691.log.gz
+18: Validate documentation	Set up job	2026-10-05T17:20:57.7426266Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+101: Validate documentation	Run actions/checkout@v6	2026-10-05T17:21:01.4046821Z From https://github.com/link-foundation/command-stream
+102: Validate documentation	Run actions/checkout@v6	2026-10-05T17:21:01.4048307Z  * [new branch]      changeset-release/command-stream-0.15.0  -> origin/changeset-release/command-stream-0.15.0
+103: Validate documentation	Run actions/checkout@v6	2026-10-05T17:21:01.4049603Z  * [new branch]      chore-js-release-0-15-0                  -> origin/chore-js-release-0-15-0
+147: Validate documentation	Run actions/checkout@v6	2026-10-05T17:21:01.4085404Z  * [new branch]      issue-20-171029a1                        -> origin/issue-20-171029a1
+149: Validate documentation	Run actions/checkout@v6	2026-10-05T17:21:01.4086675Z  * [new branch]      issue-209-4043f0c126d5                   -> origin/issue-209-4043f0c126d5
+243: Validate documentation	Run actions/checkout@v6	2026-10-05T17:21:01.4152404Z  * [new tag]         js-v0.20.3                               -> js-v0.20.3
+387: Validate documentation	Check documentation links, size and required sections	﻿2026-10-05T17:21:03.9009849Z ##[group]Run bun test js/tests/docs-validation.test.mjs --timeout 10000
+388: Validate documentation	Check documentation links, size and required sections	2026-10-05T17:21:03.9010464Z ^[[36;1mbun test js/tests/docs-validation.test.mjs --timeout 10000^[[0m
+391: Validate documentation	Check documentation links, size and required sections	2026-10-05T17:21:03.9141656Z bun test v1.4.2 (744846f84)
+476: Validate documentation	Check documentation links, size and required sections	2026-10-05T17:21:03.9404440Z (pass) documentation validation > docs/CI-CD.md has no broken relative links [0.07ms]
+600: Check workflow invariants	Set up job	2026-10-05T17:21:33.3132522Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+731: Check workflow invariants	Run actions/checkout@v6	2026-10-05T17:21:35.9887026Z  * [new branch]      issue-209-4043f0c126d5                   -> origin/issue-209-4043f0c126d5
+969: Check workflow invariants	Check CI/CD invariants	﻿2026-10-05T17:21:37.7364533Z ##[group]Run bun test js/tests/workflow-hygiene.test.mjs --timeout 10000
+970: Check workflow invariants	Check CI/CD invariants	2026-10-05T17:21:37.7365013Z ^[[36;1mbun test js/tests/workflow-hygiene.test.mjs --timeout 10000^[[0m
+973: Check workflow invariants	Check CI/CD invariants	2026-10-05T17:21:37.7517295Z bun test v1.4.2 (744846f84)
+1142: Check workflow invariants	Check CI/CD invariants	2026-10-05T17:21:37.7772611Z (pass) repository-wide checks are not hidden behind a paths filter > the docs job runs bun test js/tests/docs-validation.test.mjs
+1143: Check workflow invariants	Check CI/CD invariants	2026-10-05T17:21:37.7773422Z (pass) repository-wide checks are not hidden behind a paths filter > the hygiene job runs bun test js/tests/workflow-hygiene.test.mjs
+1202: Check formatting of every tracked file	Set up job	2026-10-05T17:21:38.6595356Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+1333: Check formatting of every tracked file	Run actions/checkout@v6	2026-10-05T17:21:41.3023271Z  * [new branch]      issue-209-4043f0c126d5                   -> origin/issue-209-4043f0c126d5
+

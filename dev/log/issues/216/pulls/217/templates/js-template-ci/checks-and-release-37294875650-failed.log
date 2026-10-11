@@ -1,0 +1,672 @@
+Release	UNKNOWN STEP	﻿2026-10-05T10:12:28.3941415Z Current runner version: '2.337.0'
+Release	UNKNOWN STEP	2026-10-05T10:12:28.3967499Z ##[group]Runner Image Provisioner
+Release	UNKNOWN STEP	2026-10-05T10:12:28.3968364Z Hosted Compute Agent
+Release	UNKNOWN STEP	2026-10-05T10:12:28.3969096Z Version: 20260901.588
+Release	UNKNOWN STEP	2026-10-05T10:12:28.3969727Z Commit: f88ec8081b781fac6c440065ac7ff9e710ce3d0b
+Release	UNKNOWN STEP	2026-10-05T10:12:28.3970530Z Build Date: 2026-09-01T19:56:44Z
+Release	UNKNOWN STEP	2026-10-05T10:12:28.3971228Z Worker ID: {1c6eb879-ebe5-4726-bcad-2d279552e154}
+Release	UNKNOWN STEP	2026-10-05T10:12:28.3971966Z Azure Region: eastus
+Release	UNKNOWN STEP	2026-10-05T10:12:28.3972600Z ##[endgroup]
+Release	UNKNOWN STEP	2026-10-05T10:12:28.3974454Z ##[group]Operating System
+Release	UNKNOWN STEP	2026-10-05T10:12:28.3975171Z Ubuntu
+Release	UNKNOWN STEP	2026-10-05T10:12:28.3975714Z 24.04.5
+Release	UNKNOWN STEP	2026-10-05T10:12:28.3976262Z LTS
+Release	UNKNOWN STEP	2026-10-05T10:12:28.3976871Z ##[endgroup]
+Release	UNKNOWN STEP	2026-10-05T10:12:28.3977424Z ##[group]Runner Image
+Release	UNKNOWN STEP	2026-10-05T10:12:28.3978063Z Image: ubuntu-24.04
+Release	UNKNOWN STEP	2026-10-05T10:12:28.3978650Z Version: 20260927.320.1
+Release	UNKNOWN STEP	2026-10-05T10:12:28.3980013Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+Release	UNKNOWN STEP	2026-10-05T10:12:28.3981621Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260927.320
+Release	UNKNOWN STEP	2026-10-05T10:12:28.3982654Z ##[endgroup]
+Release	UNKNOWN STEP	2026-10-05T10:12:28.3984341Z ##[group]GITHUB_TOKEN Permissions
+Release	UNKNOWN STEP	2026-10-05T10:12:28.3986653Z Checks: write
+Release	UNKNOWN STEP	2026-10-05T10:12:28.3987280Z Contents: write
+Release	UNKNOWN STEP	2026-10-05T10:12:28.3987845Z Metadata: read
+Release	UNKNOWN STEP	2026-10-05T10:12:28.3988459Z PullRequests: write
+Release	UNKNOWN STEP	2026-10-05T10:12:28.3989058Z ##[endgroup]
+Release	UNKNOWN STEP	2026-10-05T10:12:28.3991856Z Secret source: Actions
+Release	UNKNOWN STEP	2026-10-05T10:12:28.3993000Z Cache mode: write
+Release	UNKNOWN STEP	2026-10-05T10:12:28.3994022Z Prepare workflow directory
+Release	UNKNOWN STEP	2026-10-05T10:12:28.4386310Z Prepare all required actions
+Release	UNKNOWN STEP	2026-10-05T10:12:28.4434975Z Getting action download info
+Release	UNKNOWN STEP	2026-10-05T10:12:28.6896813Z Download action repository 'actions/checkout@v6' (SHA:d23441a48e516b6c34aea4fa41551a30e30af803)
+Release	UNKNOWN STEP	2026-10-05T10:12:28.7994199Z Download action repository 'actions/setup-node@v6' (SHA:249970729cb0ef3589644e2896645e5dc5ba9c38)
+Release	UNKNOWN STEP	2026-10-05T10:12:29.0278327Z Complete job name: Release
+Release	UNKNOWN STEP	2026-10-05T10:12:29.1101535Z ##[group]Run actions/checkout@v6
+Release	UNKNOWN STEP	2026-10-05T10:12:29.1102485Z with:
+Release	UNKNOWN STEP	2026-10-05T10:12:29.1103250Z   persist-credentials: true
+Release	UNKNOWN STEP	2026-10-05T10:12:29.1103757Z   fetch-depth: 0
+Release	UNKNOWN STEP	2026-10-05T10:12:29.1104451Z   repository: link-foundation/js-ai-driven-development-pipeline-template
+Release	UNKNOWN STEP	2026-10-05T10:12:29.1108805Z   token: ***
+Release	UNKNOWN STEP	2026-10-05T10:12:29.1109246Z   ssh-strict: true
+Release	UNKNOWN STEP	2026-10-05T10:12:29.1109684Z   ssh-user: git
+Release	UNKNOWN STEP	2026-10-05T10:12:29.1110111Z   clean: true
+Release	UNKNOWN STEP	2026-10-05T10:12:29.1110555Z   sparse-checkout-cone-mode: true
+Release	UNKNOWN STEP	2026-10-05T10:12:29.1111076Z   fetch-tags: false
+Release	UNKNOWN STEP	2026-10-05T10:12:29.1111512Z   show-progress: true
+Release	UNKNOWN STEP	2026-10-05T10:12:29.1112017Z   lfs: false
+Release	UNKNOWN STEP	2026-10-05T10:12:29.1112430Z   submodules: false
+Release	UNKNOWN STEP	2026-10-05T10:12:29.1113024Z   set-safe-directory: true
+Release	UNKNOWN STEP	2026-10-05T10:12:29.1113528Z   allow-unsafe-pr-checkout: false
+Release	UNKNOWN STEP	2026-10-05T10:12:29.1114352Z env:
+Release	UNKNOWN STEP	2026-10-05T10:12:29.1114767Z   GIT_CONFIG_COUNT: 1
+Release	UNKNOWN STEP	2026-10-05T10:12:29.1115263Z   GIT_CONFIG_KEY_0: init.defaultBranch
+Release	UNKNOWN STEP	2026-10-05T10:12:29.1115876Z   GIT_CONFIG_VALUE_0: main
+Release	UNKNOWN STEP	2026-10-05T10:12:29.1116348Z ##[endgroup]
+Release	UNKNOWN STEP	2026-10-05T10:12:29.2130171Z Syncing repository: link-foundation/js-ai-driven-development-pipeline-template
+Release	UNKNOWN STEP	2026-10-05T10:12:29.2133377Z ##[group]Getting Git version info
+Release	UNKNOWN STEP	2026-10-05T10:12:29.2135360Z Working directory is '/home/runner/work/js-ai-driven-development-pipeline-template/js-ai-driven-development-pipeline-template'
+Release	UNKNOWN STEP	2026-10-05T10:12:29.2137856Z [command]/usr/bin/git version
+Release	UNKNOWN STEP	2026-10-05T10:12:29.2197353Z git version 2.55.0
+Release	UNKNOWN STEP	2026-10-05T10:12:29.2221375Z ##[endgroup]
+Release	UNKNOWN STEP	2026-10-05T10:12:29.2236502Z Temporarily overriding HOME='/home/runner/work/_temp/94bc2de8-9313-40df-8729-20a03c287aa8' before making global git config changes
+Release	UNKNOWN STEP	2026-10-05T10:12:29.2239086Z Adding repository directory to the temporary git global config as a safe directory
+Release	UNKNOWN STEP	2026-10-05T10:12:29.2255771Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/js-ai-driven-development-pipeline-template/js-ai-driven-development-pipeline-template
+Release	UNKNOWN STEP	2026-10-05T10:12:29.2331803Z Deleting the contents of '/home/runner/work/js-ai-driven-development-pipeline-template/js-ai-driven-development-pipeline-template'
+Release	UNKNOWN STEP	2026-10-05T10:12:29.2336738Z ##[group]Determining repository object format
+Release	UNKNOWN STEP	2026-10-05T10:12:29.2339584Z ##[endgroup]
+Release	UNKNOWN STEP	2026-10-05T10:12:29.2340892Z ##[group]Initializing the repository
+Release	UNKNOWN STEP	2026-10-05T10:12:29.2346506Z [command]/usr/bin/git init /home/runner/work/js-ai-driven-development-pipeline-template/js-ai-driven-development-pipeline-template
+Release	UNKNOWN STEP	2026-10-05T10:12:29.2448545Z Initialized empty Git repository in /home/runner/work/js-ai-driven-development-pipeline-template/js-ai-driven-development-pipeline-template/.git/
+Release	UNKNOWN STEP	2026-10-05T10:12:29.2459306Z [command]/usr/bin/git remote add origin https://github.com/link-foundation/js-ai-driven-development-pipeline-template
+Release	UNKNOWN STEP	2026-10-05T10:12:29.2510786Z ##[endgroup]
+Release	UNKNOWN STEP	2026-10-05T10:12:29.2511940Z ##[group]Disabling automatic garbage collection
+Release	UNKNOWN STEP	2026-10-05T10:12:29.2515067Z [command]/usr/bin/git config --local gc.auto 0
+Release	UNKNOWN STEP	2026-10-05T10:12:29.2548488Z ##[endgroup]
+Release	UNKNOWN STEP	2026-10-05T10:12:29.2549710Z ##[group]Setting up auth
+Release	UNKNOWN STEP	2026-10-05T10:12:29.2550610Z Removing SSH command configuration
+Release	UNKNOWN STEP	2026-10-05T10:12:29.2556474Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Release	UNKNOWN STEP	2026-10-05T10:12:29.2592217Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Release	UNKNOWN STEP	2026-10-05T10:12:29.2991130Z Removing HTTP extra header
+Release	UNKNOWN STEP	2026-10-05T10:12:29.3004538Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Release	UNKNOWN STEP	2026-10-05T10:12:29.3057399Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Release	UNKNOWN STEP	2026-10-05T10:12:29.3290411Z Removing includeIf entries pointing to credentials config files
+Release	UNKNOWN STEP	2026-10-05T10:12:29.3298439Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+Release	UNKNOWN STEP	2026-10-05T10:12:29.3339179Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Release	UNKNOWN STEP	2026-10-05T10:12:29.3585280Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-7b297027-7357-4db4-86ed-576589dc8fe5.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+Release	UNKNOWN STEP	2026-10-05T10:12:29.3640091Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/js-ai-driven-development-pipeline-template/js-ai-driven-development-pipeline-template/.git.path /home/runner/work/_temp/git-credentials-7b297027-7357-4db4-86ed-576589dc8fe5.config
+Release	UNKNOWN STEP	2026-10-05T10:12:29.3682625Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/js-ai-driven-development-pipeline-template/js-ai-driven-development-pipeline-template/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-7b297027-7357-4db4-86ed-576589dc8fe5.config
+Release	UNKNOWN STEP	2026-10-05T10:12:29.3727317Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-7b297027-7357-4db4-86ed-576589dc8fe5.config
+Release	UNKNOWN STEP	2026-10-05T10:12:29.3764796Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-7b297027-7357-4db4-86ed-576589dc8fe5.config
+Release	UNKNOWN STEP	2026-10-05T10:12:29.3796586Z ##[endgroup]
+Release	UNKNOWN STEP	2026-10-05T10:12:29.3797354Z ##[group]Fetching the repository
+Release	UNKNOWN STEP	2026-10-05T10:12:29.3808386Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules origin +refs/heads/*:refs/remotes/origin/* +refs/tags/*:refs/tags/*
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8160067Z From https://github.com/link-foundation/js-ai-driven-development-pipeline-template
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8163223Z  * [new branch]      fix-all-open-pipeline-issues -> origin/fix-all-open-pipeline-issues
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8165470Z  * [new branch]      issue-1-ea8fe58370e7   -> origin/issue-1-ea8fe58370e7
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8167894Z  * [new branch]      issue-103-d3c4f4ecdbd1 -> origin/issue-103-d3c4f4ecdbd1
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8169803Z  * [new branch]      issue-104-fea61a10d5f1 -> origin/issue-104-fea61a10d5f1
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8171814Z  * [new branch]      issue-105-0b61526b00d8 -> origin/issue-105-0b61526b00d8
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8173606Z  * [new branch]      issue-106-baf7ec38511b -> origin/issue-106-baf7ec38511b
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8174646Z  * [new branch]      issue-11-28f0cd01dfc4  -> origin/issue-11-28f0cd01dfc4
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8175601Z  * [new branch]      issue-111-8b292fa789f3 -> origin/issue-111-8b292fa789f3
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8176535Z  * [new branch]      issue-113-4d934d95a1c7 -> origin/issue-113-4d934d95a1c7
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8177462Z  * [new branch]      issue-115-18eec7433910 -> origin/issue-115-18eec7433910
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8178369Z  * [new branch]      issue-117-7685e6734645 -> origin/issue-117-7685e6734645
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8179295Z  * [new branch]      issue-119-e1175f37682a -> origin/issue-119-e1175f37682a
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8180227Z  * [new branch]      issue-122-20f6aa469ba4 -> origin/issue-122-20f6aa469ba4
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8181386Z  * [new branch]      issue-123-694cc3367d40 -> origin/issue-123-694cc3367d40
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8182457Z  * [new branch]      issue-127-69ba4b8740e4 -> origin/issue-127-69ba4b8740e4
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8183679Z  * [new branch]      issue-128-8c3460cd1b90 -> origin/issue-128-8c3460cd1b90
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8184602Z  * [new branch]      issue-129-9393ba78da85 -> origin/issue-129-9393ba78da85
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8185516Z  * [new branch]      issue-13-c4759791ea2b  -> origin/issue-13-c4759791ea2b
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8186414Z  * [new branch]      issue-133-00428f7f7023 -> origin/issue-133-00428f7f7023
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8187322Z  * [new branch]      issue-134-f1d9961b5769 -> origin/issue-134-f1d9961b5769
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8188220Z  * [new branch]      issue-137-9e84180cc245 -> origin/issue-137-9e84180cc245
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8189393Z  * [new branch]      issue-138-1d5c5c2dace7 -> origin/issue-138-1d5c5c2dace7
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8190404Z  * [new branch]      issue-141-71671ce6c096 -> origin/issue-141-71671ce6c096
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8191320Z  * [new branch]      issue-143-32a1a75b2e75 -> origin/issue-143-32a1a75b2e75
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8192245Z  * [new branch]      issue-144-4cf472d6da14 -> origin/issue-144-4cf472d6da14
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8193443Z  * [new branch]      issue-145-6c9d54b15524 -> origin/issue-145-6c9d54b15524
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8194366Z  * [new branch]      issue-149-6b50a07807b0 -> origin/issue-149-6b50a07807b0
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8195346Z  * [new branch]      issue-15-c758daddaba1  -> origin/issue-15-c758daddaba1
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8196517Z  * [new branch]      issue-151-0a075b5892ef -> origin/issue-151-0a075b5892ef
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8197570Z  * [new branch]      issue-151-f2ab47a41470 -> origin/issue-151-f2ab47a41470
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8198503Z  * [new branch]      issue-158-7619a697816a -> origin/issue-158-7619a697816a
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8199428Z  * [new branch]      issue-161-f004cfb4f490 -> origin/issue-161-f004cfb4f490
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8200372Z  * [new branch]      issue-17-be8bb4383694  -> origin/issue-17-be8bb4383694
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8201282Z  * [new branch]      issue-19-363e6f8ba4ed  -> origin/issue-19-363e6f8ba4ed
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8202200Z  * [new branch]      issue-190-f965a60d7b29 -> origin/issue-190-f965a60d7b29
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8203373Z  * [new branch]      issue-194-1b92d4ad5049 -> origin/issue-194-1b92d4ad5049
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8204291Z  * [new branch]      issue-199-3356c89203ca -> origin/issue-199-3356c89203ca
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8205192Z  * [new branch]      issue-203-b686033d1fe7 -> origin/issue-203-b686033d1fe7
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8206097Z  * [new branch]      issue-21-a5acd9a5822b  -> origin/issue-21-a5acd9a5822b
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8207003Z  * [new branch]      issue-23-f48d4a5a9f2c  -> origin/issue-23-f48d4a5a9f2c
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8207906Z  * [new branch]      issue-25-b30f7fe2baf4  -> origin/issue-25-b30f7fe2baf4
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8209006Z  * [new branch]      issue-27-207607f5b700  -> origin/issue-27-207607f5b700
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8209893Z  * [new branch]      issue-29-2f358775b13e  -> origin/issue-29-2f358775b13e
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8210785Z  * [new branch]      issue-3-a15a45522435   -> origin/issue-3-a15a45522435
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8211686Z  * [new branch]      issue-31-5adf4dcddf53  -> origin/issue-31-5adf4dcddf53
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8212582Z  * [new branch]      issue-33-471ebe58c767  -> origin/issue-33-471ebe58c767
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8213947Z  * [new branch]      issue-36-780ff21d4079  -> origin/issue-36-780ff21d4079
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8215166Z  * [new branch]      issue-38-7f3635309645  -> origin/issue-38-7f3635309645
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8216748Z  * [new branch]      issue-40-712d252c6da1  -> origin/issue-40-712d252c6da1
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8218283Z  * [new branch]      issue-41-e10a632ead79  -> origin/issue-41-e10a632ead79
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8219678Z  * [new branch]      issue-42-28b78f974190  -> origin/issue-42-28b78f974190
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8221328Z  * [new branch]      issue-46-4f6fd1033f3f  -> origin/issue-46-4f6fd1033f3f
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8223065Z  * [new branch]      issue-48-38f13ae76ba6  -> origin/issue-48-38f13ae76ba6
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8224557Z  * [new branch]      issue-49-952e3ba7469c  -> origin/issue-49-952e3ba7469c
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8225932Z  * [new branch]      issue-5-8dda7358d367   -> origin/issue-5-8dda7358d367
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8226885Z  * [new branch]      issue-52-f0f8ab695319  -> origin/issue-52-f0f8ab695319
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8227791Z  * [new branch]      issue-54-483e7bfb6b4f  -> origin/issue-54-483e7bfb6b4f
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8228687Z  * [new branch]      issue-56-792944d0466b  -> origin/issue-56-792944d0466b
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8229597Z  * [new branch]      issue-58-4fd60491b94f  -> origin/issue-58-4fd60491b94f
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8230516Z  * [new branch]      issue-60-eb653d808d28  -> origin/issue-60-eb653d808d28
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8231636Z  * [new branch]      issue-62-768f27a1146b  -> origin/issue-62-768f27a1146b
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8232673Z  * [new branch]      issue-64-c3a5f9e6b30b  -> origin/issue-64-c3a5f9e6b30b
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8234010Z  * [new branch]      issue-67-d1d4f1952199  -> origin/issue-67-d1d4f1952199
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8234925Z  * [new branch]      issue-69-a297716d6f5f  -> origin/issue-69-a297716d6f5f
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8235817Z  * [new branch]      issue-7-3362e31f8860   -> origin/issue-7-3362e31f8860
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8236706Z  * [new branch]      issue-71-aa26a2d9b106  -> origin/issue-71-aa26a2d9b106
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8237603Z  * [new branch]      issue-73-e14d5ef8be31  -> origin/issue-73-e14d5ef8be31
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8238514Z  * [new branch]      issue-75-3df42bc3fcfb  -> origin/issue-75-3df42bc3fcfb
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8239403Z  * [new branch]      issue-77-380f06950764  -> origin/issue-77-380f06950764
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8240367Z  * [new branch]      issue-79-8c7b6b8eb416  -> origin/issue-79-8c7b6b8eb416
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8241275Z  * [new branch]      issue-81-643595bef73f  -> origin/issue-81-643595bef73f
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8319937Z  * [new branch]      issue-82-28149351836e  -> origin/issue-82-28149351836e
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8322183Z  * [new branch]      issue-85-ac58b85ad1b5  -> origin/issue-85-ac58b85ad1b5
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8324245Z  * [new branch]      issue-86-f8ac77b89ed4  -> origin/issue-86-f8ac77b89ed4
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8325779Z  * [new branch]      issue-87-9afc3da3fcb1  -> origin/issue-87-9afc3da3fcb1
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8327524Z  * [new branch]      issue-9-6a4fc6338212   -> origin/issue-9-6a4fc6338212
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8329408Z  * [new branch]      issue-91-8418a0f23eec  -> origin/issue-91-8418a0f23eec
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8331011Z  * [new branch]      issue-93-31d76555ad4d  -> origin/issue-93-31d76555ad4d
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8332658Z  * [new branch]      issue-95-1521bdf3c8af  -> origin/issue-95-1521bdf3c8af
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8334586Z  * [new branch]      issue-97-26bb61723e63  -> origin/issue-97-26bb61723e63
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8336549Z  * [new branch]      issue-98-6ad7eaf94297  -> origin/issue-98-6ad7eaf94297
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8338193Z  * [new branch]      issue-99-07063aba5237  -> origin/issue-99-07063aba5237
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8339681Z  * [new branch]      main                   -> origin/main
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8340848Z  * [new tag]         v0.1.0                 -> v0.1.0
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8341577Z  * [new tag]         v0.1.1                 -> v0.1.1
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8342278Z  * [new tag]         v0.1.2                 -> v0.1.2
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8343433Z  * [new tag]         v0.1.3                 -> v0.1.3
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8344141Z  * [new tag]         v0.1.4                 -> v0.1.4
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8344856Z  * [new tag]         v0.2.0                 -> v0.2.0
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8345535Z  * [new tag]         v0.2.1                 -> v0.2.1
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8346206Z  * [new tag]         v0.2.2                 -> v0.2.2
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8346915Z  * [new tag]         v0.3.0                 -> v0.3.0
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8348544Z [command]/usr/bin/git branch --list --remote origin/main
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8349341Z   origin/main
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8350496Z [command]/usr/bin/git rev-parse refs/remotes/origin/main
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8351205Z 4c8644fb457b65933fcb19b033e60e7d0338f2ad
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8352676Z ##[endgroup]
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8353803Z ##[group]Determining the checkout info
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8354652Z ##[endgroup]
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8355197Z [command]/usr/bin/git sparse-checkout disable
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8356672Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8390197Z ##[group]Checking out the ref
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8397043Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8894837Z Reset branch 'main'
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8899072Z branch 'main' set up to track 'origin/main'.
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8909979Z ##[endgroup]
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8961822Z [command]/usr/bin/git log -1 --format=%H
+Release	UNKNOWN STEP	2026-10-05T10:12:29.8992135Z 4c8644fb457b65933fcb19b033e60e7d0338f2ad
+Release	UNKNOWN STEP	2026-10-05T10:12:29.9295461Z ##[group]Run actions/setup-node@v6
+Release	UNKNOWN STEP	2026-10-05T10:12:29.9296109Z with:
+Release	UNKNOWN STEP	2026-10-05T10:12:29.9296553Z   node-version: 24.x
+Release	UNKNOWN STEP	2026-10-05T10:12:29.9297089Z   registry-url: https://registry.npmjs.org
+Release	UNKNOWN STEP	2026-10-05T10:12:29.9297686Z   check-latest: false
+Release	UNKNOWN STEP	2026-10-05T10:12:29.9301681Z   token: ***
+Release	UNKNOWN STEP	2026-10-05T10:12:29.9302171Z   package-manager-cache: true
+Release	UNKNOWN STEP	2026-10-05T10:12:29.9302695Z env:
+Release	UNKNOWN STEP	2026-10-05T10:12:29.9303310Z   GIT_CONFIG_COUNT: 1
+Release	UNKNOWN STEP	2026-10-05T10:12:29.9303861Z   GIT_CONFIG_KEY_0: init.defaultBranch
+Release	UNKNOWN STEP	2026-10-05T10:12:29.9304465Z   GIT_CONFIG_VALUE_0: main
+Release	UNKNOWN STEP	2026-10-05T10:12:29.9304973Z ##[endgroup]
+Release	UNKNOWN STEP	2026-10-05T10:12:30.0754008Z Found in cache @ /opt/hostedtoolcache/node/24.21.0/x64
+Release	UNKNOWN STEP	2026-10-05T10:12:30.0760533Z ##[group]Environment details
+Release	UNKNOWN STEP	2026-10-05T10:12:30.4790095Z node: v24.21.0
+Release	UNKNOWN STEP	2026-10-05T10:12:30.4791428Z npm: 11.19.0
+Release	UNKNOWN STEP	2026-10-05T10:12:30.4792623Z yarn: 1.22.22
+Release	UNKNOWN STEP	2026-10-05T10:12:30.4795761Z ##[endgroup]
+Release	UNKNOWN STEP	2026-10-05T10:12:30.4803338Z Detected npm as the package manager from package.json's packageManager field. Auto caching has been enabled for npm. If you want to disable it, set package-manager-cache input to false
+Release	UNKNOWN STEP	2026-10-05T10:12:30.4820114Z [command]/opt/hostedtoolcache/node/24.21.0/x64/bin/npm config get cache
+Release	UNKNOWN STEP	2026-10-05T10:12:30.6267320Z /home/runner/.npm
+Release	UNKNOWN STEP	2026-10-05T10:12:30.7118388Z Cache hit for: node-cache-Linux-x64-npm-0a70f130a2c33115cae51c965a3c8b2e94dc2ab3dad6b731edad3c5e57ecc4c6
+Release	UNKNOWN STEP	2026-10-05T10:12:30.7772510Z Received 5062 of 5062 (100.0%), 0.2 MBs/sec
+Release	UNKNOWN STEP	2026-10-05T10:12:30.7775293Z Cache Size: ~0 MB (5062 B)
+Release	UNKNOWN STEP	2026-10-05T10:12:30.7809125Z [command]/usr/bin/tar -xf /home/runner/work/_temp/c315222e-acdd-4508-8721-f9cd17a322a2/cache.tzst -P -C /home/runner/work/js-ai-driven-development-pipeline-template/js-ai-driven-development-pipeline-template --use-compress-program unzstd
+Release	UNKNOWN STEP	2026-10-05T10:12:30.7877892Z Cache restored successfully
+Release	UNKNOWN STEP	2026-10-05T10:12:30.7884471Z Cache restored from key: node-cache-Linux-x64-npm-0a70f130a2c33115cae51c965a3c8b2e94dc2ab3dad6b731edad3c5e57ecc4c6
+Release	UNKNOWN STEP	2026-10-05T10:12:30.8031247Z ##[group]Run node scripts/sanitize-npm-userconfig.mjs
+Release	UNKNOWN STEP	2026-10-05T10:12:30.8031921Z ^[[36;1mnode scripts/sanitize-npm-userconfig.mjs^[[0m
+Release	UNKNOWN STEP	2026-10-05T10:12:30.8316780Z shell: /usr/bin/bash -e {0}
+Release	UNKNOWN STEP	2026-10-05T10:12:30.8317295Z env:
+Release	UNKNOWN STEP	2026-10-05T10:12:30.8317660Z   GIT_CONFIG_COUNT: 1
+Release	UNKNOWN STEP	2026-10-05T10:12:30.8318103Z   GIT_CONFIG_KEY_0: init.defaultBranch
+Release	UNKNOWN STEP	2026-10-05T10:12:30.8318586Z   GIT_CONFIG_VALUE_0: main
+Release	UNKNOWN STEP	2026-10-05T10:12:30.8319084Z   NPM_CONFIG_USERCONFIG: /home/runner/work/_temp/.npmrc
+Release	UNKNOWN STEP	2026-10-05T10:12:30.8319709Z   NODE_AUTH_TOKEN: XXXXX-XXXXX-XXXXX-XXXXX
+Release	UNKNOWN STEP	2026-10-05T10:12:30.8320193Z ##[endgroup]
+Release	UNKNOWN STEP	2026-10-05T10:12:30.8762557Z No deprecated always-auth entry found in /home/runner/work/_temp/.npmrc.
+Release	UNKNOWN STEP	2026-10-05T10:12:30.8848748Z ##[group]Run node scripts/check-package-manager.mjs
+Release	UNKNOWN STEP	2026-10-05T10:12:30.8849318Z ^[[36;1mnode scripts/check-package-manager.mjs^[[0m
+Release	UNKNOWN STEP	2026-10-05T10:12:30.8916165Z shell: /usr/bin/bash -e {0}
+Release	UNKNOWN STEP	2026-10-05T10:12:30.8916533Z env:
+Release	UNKNOWN STEP	2026-10-05T10:12:30.8916817Z   GIT_CONFIG_COUNT: 1
+Release	UNKNOWN STEP	2026-10-05T10:12:30.8917191Z   GIT_CONFIG_KEY_0: init.defaultBranch
+Release	UNKNOWN STEP	2026-10-05T10:12:30.8917625Z   GIT_CONFIG_VALUE_0: main
+Release	UNKNOWN STEP	2026-10-05T10:12:30.8918034Z   NPM_CONFIG_USERCONFIG: /home/runner/work/_temp/.npmrc
+Release	UNKNOWN STEP	2026-10-05T10:12:30.8918494Z   NODE_AUTH_TOKEN: XXXXX-XXXXX-XXXXX-XXXXX
+Release	UNKNOWN STEP	2026-10-05T10:12:30.8918881Z ##[endgroup]
+Release	UNKNOWN STEP	2026-10-05T10:12:30.9309584Z ##[warning]lockfile(s) for another package manager at the repository root: deno.lock. The npm declaration outranks them, but any tool embedding the same lockfile table without reading the declaration will pick the wrong agent.
+Release	UNKNOWN STEP	2026-10-05T10:12:30.9322134Z Package manager check passed: declared "npm", 1 foreign lockfile(s) present (outranked by the declaration).
+Release	UNKNOWN STEP	2026-10-05T10:12:30.9384130Z ##[group]Run bash scripts/run-with-budget-warning.sh 240 "Release dependency install" npm install
+Release	UNKNOWN STEP	2026-10-05T10:12:30.9385161Z ^[[36;1mbash scripts/run-with-budget-warning.sh 240 "Release dependency install" npm install^[[0m
+Release	UNKNOWN STEP	2026-10-05T10:12:30.9453619Z shell: /usr/bin/bash -e {0}
+Release	UNKNOWN STEP	2026-10-05T10:12:30.9454022Z env:
+Release	UNKNOWN STEP	2026-10-05T10:12:30.9454343Z   GIT_CONFIG_COUNT: 1
+Release	UNKNOWN STEP	2026-10-05T10:12:30.9454729Z   GIT_CONFIG_KEY_0: init.defaultBranch
+Release	UNKNOWN STEP	2026-10-05T10:12:30.9455149Z   GIT_CONFIG_VALUE_0: main
+Release	UNKNOWN STEP	2026-10-05T10:12:30.9455588Z   NPM_CONFIG_USERCONFIG: /home/runner/work/_temp/.npmrc
+Release	UNKNOWN STEP	2026-10-05T10:12:30.9456089Z   NODE_AUTH_TOKEN: XXXXX-XXXXX-XXXXX-XXXXX
+Release	UNKNOWN STEP	2026-10-05T10:12:30.9456519Z ##[endgroup]
+Release	UNKNOWN STEP	2026-10-05T10:12:30.9680182Z Running Release dependency install with a 240s budget (warning at 168s).
+Release	UNKNOWN STEP	2026-10-05T10:12:34.0391514Z 
+Release	UNKNOWN STEP	2026-10-05T10:12:34.0392582Z > @link-foundation/example-package-name@0.11.31 prepare
+Release	UNKNOWN STEP	2026-10-05T10:12:34.0393925Z > node scripts/install-git-hooks.mjs
+Release	UNKNOWN STEP	2026-10-05T10:12:34.0394449Z 
+Release	UNKNOWN STEP	2026-10-05T10:12:34.0394465Z 
+Release	UNKNOWN STEP	2026-10-05T10:12:34.0394749Z added 168 packages, and audited 169 packages in 2s
+Release	UNKNOWN STEP	2026-10-05T10:12:34.0395033Z 
+Release	UNKNOWN STEP	2026-10-05T10:12:34.0395220Z 55 packages are looking for funding
+Release	UNKNOWN STEP	2026-10-05T10:12:34.0395600Z   run `npm fund` for details
+Release	UNKNOWN STEP	2026-10-05T10:12:34.0395798Z 
+Release	UNKNOWN STEP	2026-10-05T10:12:34.0395944Z found 0 vulnerabilities
+Release	UNKNOWN STEP	2026-10-05T10:12:34.0432157Z Release dependency install finished in 4s of its 240s budget (exit 0).
+Release	UNKNOWN STEP	2026-10-05T10:12:34.0482126Z ##[group]Run node scripts/setup-npm.mjs
+Release	UNKNOWN STEP	2026-10-05T10:12:34.0482499Z ^[[36;1mnode scripts/setup-npm.mjs^[[0m
+Release	UNKNOWN STEP	2026-10-05T10:12:34.0551622Z shell: /usr/bin/bash -e {0}
+Release	UNKNOWN STEP	2026-10-05T10:12:34.0551889Z env:
+Release	UNKNOWN STEP	2026-10-05T10:12:34.0552090Z   GIT_CONFIG_COUNT: 1
+Release	UNKNOWN STEP	2026-10-05T10:12:34.0552341Z   GIT_CONFIG_KEY_0: init.defaultBranch
+Release	UNKNOWN STEP	2026-10-05T10:12:34.0552629Z   GIT_CONFIG_VALUE_0: main
+Release	UNKNOWN STEP	2026-10-05T10:12:34.0553208Z   NPM_CONFIG_USERCONFIG: /home/runner/work/_temp/.npmrc
+Release	UNKNOWN STEP	2026-10-05T10:12:34.0553578Z   NODE_AUTH_TOKEN: XXXXX-XXXXX-XXXXX-XXXXX
+Release	UNKNOWN STEP	2026-10-05T10:12:34.0553863Z ##[endgroup]
+Release	UNKNOWN STEP	2026-10-05T10:12:35.9749528Z Current Node.js version: v24.21.0
+Release	UNKNOWN STEP	2026-10-05T10:12:36.0716825Z 11.19.0
+Release	UNKNOWN STEP	2026-10-05T10:12:36.0777001Z Current npm version: 11.19.0
+Release	UNKNOWN STEP	2026-10-05T10:12:36.0778466Z Trying npm install -g npm@11...
+Release	UNKNOWN STEP	2026-10-05T10:12:39.5551670Z 
+Release	UNKNOWN STEP	2026-10-05T10:12:39.5552325Z changed 20 packages in 3s
+Release	UNKNOWN STEP	2026-10-05T10:12:39.5553401Z 
+Release	UNKNOWN STEP	2026-10-05T10:12:39.5556543Z 15 packages are looking for funding
+Release	UNKNOWN STEP	2026-10-05T10:12:39.5557390Z   run `npm fund` for details
+Release	UNKNOWN STEP	2026-10-05T10:12:39.6640451Z 11.21.0
+Release	UNKNOWN STEP	2026-10-05T10:12:39.6693283Z Updated npm version: 11.21.0
+Release	UNKNOWN STEP	2026-10-05T10:12:39.6837693Z ##[group]Run node scripts/check-changesets.mjs
+Release	UNKNOWN STEP	2026-10-05T10:12:39.6838086Z ^[[36;1mnode scripts/check-changesets.mjs^[[0m
+Release	UNKNOWN STEP	2026-10-05T10:12:39.6902541Z shell: /usr/bin/bash -e {0}
+Release	UNKNOWN STEP	2026-10-05T10:12:39.6903069Z env:
+Release	UNKNOWN STEP	2026-10-05T10:12:39.6903266Z   GIT_CONFIG_COUNT: 1
+Release	UNKNOWN STEP	2026-10-05T10:12:39.6903516Z   GIT_CONFIG_KEY_0: init.defaultBranch
+Release	UNKNOWN STEP	2026-10-05T10:12:39.6903801Z   GIT_CONFIG_VALUE_0: main
+Release	UNKNOWN STEP	2026-10-05T10:12:39.6904101Z   NPM_CONFIG_USERCONFIG: /home/runner/work/_temp/.npmrc
+Release	UNKNOWN STEP	2026-10-05T10:12:39.6904450Z   NODE_AUTH_TOKEN: XXXXX-XXXXX-XXXXX-XXXXX
+Release	UNKNOWN STEP	2026-10-05T10:12:39.6904732Z ##[endgroup]
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7271843Z Checking for pending changeset files...
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7272273Z 
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7275679Z Detected single-language repository (package.json in root)
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7278370Z Package: @link-foundation/example-package-name
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7279069Z Changeset directory: ./.changeset
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7283349Z Found 1 changeset file(s)
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7285160Z has_changesets=true
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7293870Z changeset_count=1
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7376521Z ##[group]Run node scripts/check-release-needed.mjs
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7376942Z ^[[36;1mnode scripts/check-release-needed.mjs^[[0m
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7441217Z shell: /usr/bin/bash -e {0}
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7441475Z env:
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7441676Z   GIT_CONFIG_COUNT: 1
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7441918Z   GIT_CONFIG_KEY_0: init.defaultBranch
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7442194Z   GIT_CONFIG_VALUE_0: main
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7442481Z   NPM_CONFIG_USERCONFIG: /home/runner/work/_temp/.npmrc
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7443127Z   NODE_AUTH_TOKEN: XXXXX-XXXXX-XXXXX-XXXXX
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7443432Z   HAS_CHANGESETS: true
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7443653Z ##[endgroup]
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7826969Z Detected single-language repository (package.json in root)
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7831622Z Package: @link-foundation/example-package-name
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7832341Z Current version: 0.11.31
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7833160Z Has changesets: true
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7833735Z Found changesets, proceeding with release
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7844263Z Output: should_release=true
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7844661Z Output: skip_bump=false
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7932330Z ##[group]Run node scripts/version-and-commit.mjs --mode changeset
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7933180Z ^[[36;1mnode scripts/version-and-commit.mjs --mode changeset^[[0m
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7998202Z shell: /usr/bin/bash -e {0}
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7998470Z env:
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7998670Z   GIT_CONFIG_COUNT: 1
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7998917Z   GIT_CONFIG_KEY_0: init.defaultBranch
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7999197Z   GIT_CONFIG_VALUE_0: main
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7999516Z   NPM_CONFIG_USERCONFIG: /home/runner/work/_temp/.npmrc
+Release	UNKNOWN STEP	2026-10-05T10:12:39.7999874Z   NODE_AUTH_TOKEN: XXXXX-XXXXX-XXXXX-XXXXX
+Release	UNKNOWN STEP	2026-10-05T10:12:39.8000168Z   RELEASE_PR_TOKEN: 
+Release	UNKNOWN STEP	2026-10-05T10:12:39.8003459Z   GITHUB_TOKEN: ***
+Release	UNKNOWN STEP	2026-10-05T10:12:39.8003704Z   RELEASE_METADATA_PATHS: 
+Release	UNKNOWN STEP	2026-10-05T10:12:39.8003941Z ##[endgroup]
+Release	UNKNOWN STEP	2026-10-05T10:12:41.5986907Z Detected single-language repository (package.json in root)
+Release	UNKNOWN STEP	2026-10-05T10:12:41.5989338Z Parsed configuration: { mode: 'changeset', bumpType: '', jsRoot: '.' }
+Release	UNKNOWN STEP	2026-10-05T10:12:41.5990110Z Description:
+Release	UNKNOWN STEP	2026-10-05T10:12:41.5998159Z ::stop-commands::***
+Release	UNKNOWN STEP	2026-10-05T10:12:41.5998507Z (none)
+Release	UNKNOWN STEP	2026-10-05T10:12:41.5998972Z ::***::
+Release	UNKNOWN STEP	2026-10-05T10:12:41.6231457Z Checking for remote changes...
+Release	UNKNOWN STEP	2026-10-05T10:12:41.8045138Z From https://github.com/link-foundation/js-ai-driven-development-pipeline-template
+Release	UNKNOWN STEP	2026-10-05T10:12:41.8046146Z  * branch            main       -> FETCH_HEAD
+Release	UNKNOWN STEP	2026-10-05T10:12:41.8159330Z 4c8644fb457b65933fcb19b033e60e7d0338f2ad
+Release	UNKNOWN STEP	2026-10-05T10:12:41.8251054Z 4c8644fb457b65933fcb19b033e60e7d0338f2ad
+Release	UNKNOWN STEP	2026-10-05T10:12:41.8261046Z Current version: 0.11.31
+Release	UNKNOWN STEP	2026-10-05T10:12:41.8261698Z Running changeset version...
+Release	UNKNOWN STEP	2026-10-05T10:12:41.9335467Z 
+Release	UNKNOWN STEP	2026-10-05T10:12:41.9336372Z > @link-foundation/example-package-name@0.11.31 changeset:version
+Release	UNKNOWN STEP	2026-10-05T10:12:41.9337288Z > node scripts/changeset-version.mjs
+Release	UNKNOWN STEP	2026-10-05T10:12:41.9337663Z 
+Release	UNKNOWN STEP	2026-10-05T10:12:42.3302255Z Detected single-language repository (package.json in root)
+Release	UNKNOWN STEP	2026-10-05T10:12:42.3303408Z Running changeset version...
+Release	UNKNOWN STEP	2026-10-05T10:12:42.6381303Z 🦋 changeset v3.0.3
+Release	UNKNOWN STEP	2026-10-05T10:12:42.7469865Z 
+Release	UNKNOWN STEP	2026-10-05T10:12:42.7470504Z Error: spawn deno ENOENT
+Release	UNKNOWN STEP	2026-10-05T10:12:42.7471346Z     at ChildProcess._handle.onexit (node:internal/child_process:287:19)
+Release	UNKNOWN STEP	2026-10-05T10:12:42.7472209Z     at onErrorNT (node:internal/child_process:525:16)
+Release	UNKNOWN STEP	2026-10-05T10:12:42.7473426Z     at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Release	UNKNOWN STEP	2026-10-05T10:12:42.7474777Z 🦋 Exited with code 1
+Release	UNKNOWN STEP	2026-10-05T10:12:42.7475198Z 
+Release	UNKNOWN STEP	2026-10-05T10:12:42.7750865Z Error during version bump: Command failed with exit code 1
+Release	UNKNOWN STEP	2026-10-05T10:12:42.7879464Z Error: Command failed with exit code 1
+Release	UNKNOWN STEP	2026-10-05T10:12:42.7948396Z ##[error]Process completed with exit code 1.
+Release	UNKNOWN STEP	2026-10-05T10:12:42.8103670Z Post job cleanup.
+Release	UNKNOWN STEP	2026-10-05T10:12:42.8995889Z [command]/usr/bin/git version
+Release	UNKNOWN STEP	2026-10-05T10:12:42.9040549Z git version 2.55.0
+Release	UNKNOWN STEP	2026-10-05T10:12:42.9087139Z Temporarily overriding HOME='/home/runner/work/_temp/c59ced8c-47e1-4f6f-a911-d5336773dd20' before making global git config changes
+Release	UNKNOWN STEP	2026-10-05T10:12:42.9088946Z Adding repository directory to the temporary git global config as a safe directory
+Release	UNKNOWN STEP	2026-10-05T10:12:42.9095232Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/js-ai-driven-development-pipeline-template/js-ai-driven-development-pipeline-template
+Release	UNKNOWN STEP	2026-10-05T10:12:42.9131284Z Removing SSH command configuration
+Release	UNKNOWN STEP	2026-10-05T10:12:42.9139211Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Release	UNKNOWN STEP	2026-10-05T10:12:42.9179276Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Release	UNKNOWN STEP	2026-10-05T10:12:42.9449695Z Removing HTTP extra header
+Release	UNKNOWN STEP	2026-10-05T10:12:42.9457274Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Release	UNKNOWN STEP	2026-10-05T10:12:42.9498114Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Release	UNKNOWN STEP	2026-10-05T10:12:42.9771464Z Removing includeIf entries pointing to credentials config files
+Release	UNKNOWN STEP	2026-10-05T10:12:42.9779927Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+Release	UNKNOWN STEP	2026-10-05T10:12:42.9817595Z includeif.gitdir:/home/runner/work/js-ai-driven-development-pipeline-template/js-ai-driven-development-pipeline-template/.git.path
+Release	UNKNOWN STEP	2026-10-05T10:12:42.9820154Z includeif.gitdir:/home/runner/work/js-ai-driven-development-pipeline-template/js-ai-driven-development-pipeline-template/.git/worktrees/*.path
+Release	UNKNOWN STEP	2026-10-05T10:12:42.9821806Z includeif.gitdir:/github/workspace/.git.path
+Release	UNKNOWN STEP	2026-10-05T10:12:42.9823277Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+Release	UNKNOWN STEP	2026-10-05T10:12:42.9828821Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/js-ai-driven-development-pipeline-template/js-ai-driven-development-pipeline-template/.git.path
+Release	UNKNOWN STEP	2026-10-05T10:12:42.9861783Z /home/runner/work/_temp/git-credentials-7b297027-7357-4db4-86ed-576589dc8fe5.config
+Release	UNKNOWN STEP	2026-10-05T10:12:42.9879211Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/js-ai-driven-development-pipeline-template/js-ai-driven-development-pipeline-template/.git.path /home/runner/work/_temp/git-credentials-7b297027-7357-4db4-86ed-576589dc8fe5.config
+Release	UNKNOWN STEP	2026-10-05T10:12:42.9931001Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/js-ai-driven-development-pipeline-template/js-ai-driven-development-pipeline-template/.git/worktrees/*.path
+Release	UNKNOWN STEP	2026-10-05T10:12:42.9960934Z /home/runner/work/_temp/git-credentials-7b297027-7357-4db4-86ed-576589dc8fe5.config
+Release	UNKNOWN STEP	2026-10-05T10:12:42.9990595Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/js-ai-driven-development-pipeline-template/js-ai-driven-development-pipeline-template/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-7b297027-7357-4db4-86ed-576589dc8fe5.config
+Release	UNKNOWN STEP	2026-10-05T10:12:43.0045793Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+Release	UNKNOWN STEP	2026-10-05T10:12:43.0070774Z /github/runner_temp/git-credentials-7b297027-7357-4db4-86ed-576589dc8fe5.config
+Release	UNKNOWN STEP	2026-10-05T10:12:43.0087632Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-7b297027-7357-4db4-86ed-576589dc8fe5.config
+Release	UNKNOWN STEP	2026-10-05T10:12:43.0130753Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+Release	UNKNOWN STEP	2026-10-05T10:12:43.0158100Z /github/runner_temp/git-credentials-7b297027-7357-4db4-86ed-576589dc8fe5.config
+Release	UNKNOWN STEP	2026-10-05T10:12:43.0170085Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-7b297027-7357-4db4-86ed-576589dc8fe5.config
+Release	UNKNOWN STEP	2026-10-05T10:12:43.0221983Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Release	UNKNOWN STEP	2026-10-05T10:12:43.0470035Z Removing credentials config '/home/runner/work/_temp/git-credentials-7b297027-7357-4db4-86ed-576589dc8fe5.config'
+Release	UNKNOWN STEP	2026-10-05T10:12:43.0643430Z Evaluate and set job outputs
+Release	UNKNOWN STEP	2026-10-05T10:12:43.0649928Z Cleaning up orphan processes
+Pipeline Status	UNKNOWN STEP	﻿2026-10-05T10:12:47.1653169Z Current runner version: '2.337.0'
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.1688850Z ##[group]Runner Image Provisioner
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.1690205Z Hosted Compute Agent
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.1691377Z Version: 20260901.588
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.1692533Z Commit: f88ec8081b781fac6c440065ac7ff9e710ce3d0b
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.1694547Z Build Date: 2026-09-01T19:56:44Z
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.1695819Z Worker ID: {480380ea-2797-4e4e-a047-f3ecc3a3f1d1}
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.1697081Z Azure Region: eastus2
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.1698545Z ##[endgroup]
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.1700701Z ##[group]Operating System
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.1701814Z Ubuntu
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.1702938Z 24.04.5
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.1703888Z LTS
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.1704948Z ##[endgroup]
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.1706008Z ##[group]Runner Image
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.1707436Z Image: ubuntu-24.04
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.1708598Z Version: 20260927.320.1
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.1710805Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.1713860Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260927.320
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.1715577Z ##[endgroup]
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.1717882Z ##[group]GITHUB_TOKEN Permissions
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.1720813Z Contents: read
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.1721936Z Metadata: read
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.1722897Z ##[endgroup]
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.1725790Z Secret source: Actions
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.1727700Z Cache mode: write
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.1729321Z Prepare workflow directory
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.2288610Z Prepare all required actions
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.2360160Z Getting action download info
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.4739080Z Download action repository 'actions/checkout@v6' (SHA:d23441a48e516b6c34aea4fa41551a30e30af803)
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.5873214Z Download action repository 'actions/setup-node@v6' (SHA:249970729cb0ef3589644e2896645e5dc5ba9c38)
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.7667746Z Complete job name: Pipeline Status
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.8406630Z ##[group]Run actions/checkout@v6
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.8407768Z with:
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.8408227Z   persist-credentials: false
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.8408957Z   repository: link-foundation/js-ai-driven-development-pipeline-template
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.8412838Z   token: ***
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.8413268Z   ssh-strict: true
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.8413759Z   ssh-user: git
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.8414177Z   clean: true
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.8414621Z   sparse-checkout-cone-mode: true
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.8415163Z   fetch-depth: 1
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.8415596Z   fetch-tags: false
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.8416034Z   show-progress: true
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.8416479Z   lfs: false
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.8416889Z   submodules: false
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.8417553Z   set-safe-directory: true
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.8418085Z   allow-unsafe-pr-checkout: false
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.8418862Z env:
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.8419281Z   GIT_CONFIG_COUNT: 1
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.8419763Z   GIT_CONFIG_KEY_0: init.defaultBranch
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.8420344Z   GIT_CONFIG_VALUE_0: main
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.8420814Z ##[endgroup]
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.9420800Z Syncing repository: link-foundation/js-ai-driven-development-pipeline-template
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.9423917Z ##[group]Getting Git version info
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.9426044Z Working directory is '/home/runner/work/js-ai-driven-development-pipeline-template/js-ai-driven-development-pipeline-template'
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.9428956Z [command]/usr/bin/git version
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.9477659Z git version 2.55.0
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.9500487Z ##[endgroup]
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.9519081Z Temporarily overriding HOME='/home/runner/work/_temp/b55726f8-73e9-4ab6-9537-c2113c0141a7' before making global git config changes
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.9521250Z Adding repository directory to the temporary git global config as a safe directory
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.9549295Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/js-ai-driven-development-pipeline-template/js-ai-driven-development-pipeline-template
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.9576188Z Deleting the contents of '/home/runner/work/js-ai-driven-development-pipeline-template/js-ai-driven-development-pipeline-template'
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.9580145Z ##[group]Determining repository object format
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.9582558Z ##[endgroup]
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.9583992Z ##[group]Initializing the repository
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.9589565Z [command]/usr/bin/git init /home/runner/work/js-ai-driven-development-pipeline-template/js-ai-driven-development-pipeline-template
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.9711576Z Initialized empty Git repository in /home/runner/work/js-ai-driven-development-pipeline-template/js-ai-driven-development-pipeline-template/.git/
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.9722411Z [command]/usr/bin/git remote add origin https://github.com/link-foundation/js-ai-driven-development-pipeline-template
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.9779377Z ##[endgroup]
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.9780575Z ##[group]Disabling automatic garbage collection
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.9783912Z [command]/usr/bin/git config --local gc.auto 0
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.9816857Z ##[endgroup]
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.9818598Z ##[group]Setting up auth
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.9819624Z Removing SSH command configuration
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.9828194Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:47.9862379Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.0268197Z Removing HTTP extra header
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.0276330Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.0318239Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.0551893Z Removing includeIf entries pointing to credentials config files
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.0560257Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.0598378Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.0828262Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-dabe7c57-6211-48f6-bb37-ad6ce5175980.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.0870865Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/js-ai-driven-development-pipeline-template/js-ai-driven-development-pipeline-template/.git.path /home/runner/work/_temp/git-credentials-dabe7c57-6211-48f6-bb37-ad6ce5175980.config
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.0908357Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/js-ai-driven-development-pipeline-template/js-ai-driven-development-pipeline-template/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-dabe7c57-6211-48f6-bb37-ad6ce5175980.config
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.0947571Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-dabe7c57-6211-48f6-bb37-ad6ce5175980.config
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.0984146Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-dabe7c57-6211-48f6-bb37-ad6ce5175980.config
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.1014297Z ##[endgroup]
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.1015080Z ##[group]Fetching the repository
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.1022386Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +4c8644fb457b65933fcb19b033e60e7d0338f2ad:refs/remotes/origin/main
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.4970201Z From https://github.com/link-foundation/js-ai-driven-development-pipeline-template
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.4972716Z  * [new ref]         4c8644fb457b65933fcb19b033e60e7d0338f2ad -> origin/main
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.4980706Z [command]/usr/bin/git branch --list --remote origin/main
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.5012750Z   origin/main
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.5022976Z [command]/usr/bin/git rev-parse refs/remotes/origin/main
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.5049956Z 4c8644fb457b65933fcb19b033e60e7d0338f2ad
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.5060177Z ##[endgroup]
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.5061015Z ##[group]Determining the checkout info
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.5061887Z ##[endgroup]
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.5062517Z [command]/usr/bin/git sparse-checkout disable
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.5118073Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.5151596Z ##[group]Checking out the ref
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.5153983Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.5629624Z Reset branch 'main'
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.5632274Z branch 'main' set up to track 'origin/main'.
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.5642190Z ##[endgroup]
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.5689526Z [command]/usr/bin/git log -1 --format=%H
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.5718723Z 4c8644fb457b65933fcb19b033e60e7d0338f2ad
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.5727448Z ##[group]Removing auth
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.5728453Z Removing SSH command configuration
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.5731524Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.5770214Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.5996747Z Removing HTTP extra header
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.6002260Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.6040642Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.6261749Z Removing includeIf entries pointing to credentials config files
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.6265800Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.6299326Z includeif.gitdir:/home/runner/work/js-ai-driven-development-pipeline-template/js-ai-driven-development-pipeline-template/.git.path
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.6307705Z includeif.gitdir:/home/runner/work/js-ai-driven-development-pipeline-template/js-ai-driven-development-pipeline-template/.git/worktrees/*.path
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.6311797Z includeif.gitdir:/github/workspace/.git.path
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.6313928Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.6320354Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/js-ai-driven-development-pipeline-template/js-ai-driven-development-pipeline-template/.git.path
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.6337051Z /home/runner/work/_temp/git-credentials-dabe7c57-6211-48f6-bb37-ad6ce5175980.config
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.6353015Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/js-ai-driven-development-pipeline-template/js-ai-driven-development-pipeline-template/.git.path /home/runner/work/_temp/git-credentials-dabe7c57-6211-48f6-bb37-ad6ce5175980.config
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.6392561Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/js-ai-driven-development-pipeline-template/js-ai-driven-development-pipeline-template/.git/worktrees/*.path
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.6420346Z /home/runner/work/_temp/git-credentials-dabe7c57-6211-48f6-bb37-ad6ce5175980.config
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.6435305Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/js-ai-driven-development-pipeline-template/js-ai-driven-development-pipeline-template/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-dabe7c57-6211-48f6-bb37-ad6ce5175980.config
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.6471422Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.6519509Z /github/runner_temp/git-credentials-dabe7c57-6211-48f6-bb37-ad6ce5175980.config
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.6526483Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-dabe7c57-6211-48f6-bb37-ad6ce5175980.config
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.6554621Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.6579877Z /github/runner_temp/git-credentials-dabe7c57-6211-48f6-bb37-ad6ce5175980.config
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.6589220Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-dabe7c57-6211-48f6-bb37-ad6ce5175980.config
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.6626669Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.6847452Z Removing credentials config '/home/runner/work/_temp/git-credentials-dabe7c57-6211-48f6-bb37-ad6ce5175980.config'
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.6856152Z ##[endgroup]
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.7197781Z ##[group]Run actions/setup-node@v6
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.7198940Z with:
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.7199793Z   node-version: 24.x
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.7200784Z   check-latest: false
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.7209310Z   token: ***
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.7210279Z   package-manager-cache: true
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.7211311Z env:
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.7212140Z   GIT_CONFIG_COUNT: 1
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.7213146Z   GIT_CONFIG_KEY_0: init.defaultBranch
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.7214286Z   GIT_CONFIG_VALUE_0: main
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.7215287Z ##[endgroup]
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.8708846Z Found in cache @ /opt/hostedtoolcache/node/24.21.0/x64
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:48.8714724Z ##[group]Environment details
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.2689638Z node: v24.21.0
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.2690720Z npm: 11.19.0
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.2691577Z yarn: 1.22.22
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.2693116Z ##[endgroup]
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.2694916Z Detected npm as the package manager from package.json's packageManager field. Auto caching has been enabled for npm. If you want to disable it, set package-manager-cache input to false
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.2705796Z [command]/opt/hostedtoolcache/node/24.21.0/x64/bin/npm config get cache
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.4039203Z /home/runner/.npm
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.5087704Z Cache hit for: node-cache-Linux-x64-npm-0a70f130a2c33115cae51c965a3c8b2e94dc2ab3dad6b731edad3c5e57ecc4c6
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.6104481Z Received 5062 of 5062 (100.0%), 0.1 MBs/sec
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.6105137Z Cache Size: ~0 MB (5062 B)
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.6140560Z [command]/usr/bin/tar -xf /home/runner/work/_temp/0f269f05-5d5f-47c5-a8a5-4119b20f4f8f/cache.tzst -P -C /home/runner/work/js-ai-driven-development-pipeline-template/js-ai-driven-development-pipeline-template --use-compress-program unzstd
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.6214857Z Cache restored successfully
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.6219835Z Cache restored from key: node-cache-Linux-x64-npm-0a70f130a2c33115cae51c965a3c8b2e94dc2ab3dad6b731edad3c5e57ecc4c6
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.6398968Z ##[group]Run bash scripts/check-pipeline-status.sh
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.6399481Z ^[[36;1mbash scripts/check-pipeline-status.sh^[[0m
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.6679205Z shell: /usr/bin/bash -e {0}
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.6679507Z env:
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.6679761Z   GIT_CONFIG_COUNT: 1
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.6680028Z   GIT_CONFIG_KEY_0: init.defaultBranch
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.6680314Z   GIT_CONFIG_VALUE_0: main
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.6683829Z   NEEDS_JSON: {
+Pipeline Status	UNKNOWN STEP	  "detect-changes": {
+Pipeline Status	UNKNOWN STEP	    "result": "success",
+Pipeline Status	UNKNOWN STEP	    "outputs": {
+Pipeline Status	UNKNOWN STEP	      "js-changed": "true",
+Pipeline Status	UNKNOWN STEP	      "docs-changed": "true",
+Pipeline Status	UNKNOWN STEP	      "any-code-changed": "true"
+Pipeline Status	UNKNOWN STEP	    }
+Pipeline Status	UNKNOWN STEP	  },
+Pipeline Status	UNKNOWN STEP	  "test-compilation": {
+Pipeline Status	UNKNOWN STEP	    "result": "success",
+Pipeline Status	UNKNOWN STEP	    "outputs": {}
+Pipeline Status	UNKNOWN STEP	  },
+Pipeline Status	UNKNOWN STEP	  "check-file-line-limits": {
+Pipeline Status	UNKNOWN STEP	    "result": "success",
+Pipeline Status	UNKNOWN STEP	    "outputs": {}
+Pipeline Status	UNKNOWN STEP	  },
+Pipeline Status	UNKNOWN STEP	  "version-check": {
+Pipeline Status	UNKNOWN STEP	    "result": "skipped",
+Pipeline Status	UNKNOWN STEP	    "outputs": {}
+Pipeline Status	UNKNOWN STEP	  },
+Pipeline Status	UNKNOWN STEP	  "changeset-check": {
+Pipeline Status	UNKNOWN STEP	    "result": "skipped",
+Pipeline Status	UNKNOWN STEP	    "outputs": {}
+Pipeline Status	UNKNOWN STEP	  },
+Pipeline Status	UNKNOWN STEP	  "lint": {
+Pipeline Status	UNKNOWN STEP	    "result": "success",
+Pipeline Status	UNKNOWN STEP	    "outputs": {}
+Pipeline Status	UNKNOWN STEP	  },
+Pipeline Status	UNKNOWN STEP	  "test": {
+Pipeline Status	UNKNOWN STEP	    "result": "success",
+Pipeline Status	UNKNOWN STEP	    "outputs": {}
+Pipeline Status	UNKNOWN STEP	  },
+Pipeline Status	UNKNOWN STEP	  "docker-build": {
+Pipeline Status	UNKNOWN STEP	    "result": "skipped",
+Pipeline Status	UNKNOWN STEP	    "outputs": {}
+Pipeline Status	UNKNOWN STEP	  },
+Pipeline Status	UNKNOWN STEP	  "docker-publish-config": {
+Pipeline Status	UNKNOWN STEP	    "result": "skipped",
+Pipeline Status	UNKNOWN STEP	    "outputs": {}
+Pipeline Status	UNKNOWN STEP	  },
+Pipeline Status	UNKNOWN STEP	  "docker-publish-build": {
+Pipeline Status	UNKNOWN STEP	    "result": "skipped",
+Pipeline Status	UNKNOWN STEP	    "outputs": {}
+Pipeline Status	UNKNOWN STEP	  },
+Pipeline Status	UNKNOWN STEP	  "validate-docs": {
+Pipeline Status	UNKNOWN STEP	    "result": "success",
+Pipeline Status	UNKNOWN STEP	    "outputs": {}
+Pipeline Status	UNKNOWN STEP	  },
+Pipeline Status	UNKNOWN STEP	  "release-preflight": {
+Pipeline Status	UNKNOWN STEP	    "result": "success",
+Pipeline Status	UNKNOWN STEP	    "outputs": {}
+Pipeline Status	UNKNOWN STEP	  },
+Pipeline Status	UNKNOWN STEP	  "release": {
+Pipeline Status	UNKNOWN STEP	    "result": "failure",
+Pipeline Status	UNKNOWN STEP	    "outputs": {}
+Pipeline Status	UNKNOWN STEP	  },
+Pipeline Status	UNKNOWN STEP	  "instant-release": {
+Pipeline Status	UNKNOWN STEP	    "result": "skipped",
+Pipeline Status	UNKNOWN STEP	    "outputs": {}
+Pipeline Status	UNKNOWN STEP	  },
+Pipeline Status	UNKNOWN STEP	  "docker-publish": {
+Pipeline Status	UNKNOWN STEP	    "result": "skipped",
+Pipeline Status	UNKNOWN STEP	    "outputs": {}
+Pipeline Status	UNKNOWN STEP	  },
+Pipeline Status	UNKNOWN STEP	  "changeset-pr": {
+Pipeline Status	UNKNOWN STEP	    "result": "skipped",
+Pipeline Status	UNKNOWN STEP	    "outputs": {}
+Pipeline Status	UNKNOWN STEP	  }
+Pipeline Status	UNKNOWN STEP	}
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.6688196Z   RUN_SHA: 4c8644fb457b65933fcb19b033e60e7d0338f2ad
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.6688513Z   BRANCH_NAME: main
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.6688731Z ##[endgroup]
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.7374569Z Failed jobs:    release
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.7375071Z Cancelled jobs: <none>
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.7391729Z ##[error]Failing jobs: release
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.7403105Z ##[error]Process completed with exit code 1.
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.7550514Z Post job cleanup.
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.8398750Z [command]/usr/bin/git version
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.8443495Z git version 2.55.0
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.8488866Z Temporarily overriding HOME='/home/runner/work/_temp/d78cf346-fed9-440e-a517-8bedc2f10f84' before making global git config changes
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.8490615Z Adding repository directory to the temporary git global config as a safe directory
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.8499207Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/js-ai-driven-development-pipeline-template/js-ai-driven-development-pipeline-template
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.8528946Z Removing SSH command configuration
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.8534533Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.8569637Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.8816661Z Removing HTTP extra header
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.8823271Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.8876257Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.9126537Z Removing includeIf entries pointing to credentials config files
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.9128184Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.9168444Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Pipeline Status	UNKNOWN STEP	2026-10-05T10:12:49.9554023Z Cleaning up orphan processes

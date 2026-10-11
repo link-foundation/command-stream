@@ -1,0 +1,920 @@
+{
+  "source": "test/js/bun/shell/leak.test.ts",
+  "units": [
+    {
+      "line": 58,
+      "upstream": "fd leak > fdleak_${name} (redirect_file, change_cwd, pipeline, pipeline2, ls, rm)",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "leak/fdleak-redirect-file",
+          "template": ["echo hello > test.txt"],
+          "expect": {
+            "files": {
+              "test.txt": "hello\n"
+            }
+          }
+        },
+        {
+          "id": "leak/fdleak-change-cwd",
+          "template": ["cd ", " && cd -"],
+          "values": [
+            {
+              "string": "{{TEMP}}"
+            }
+          ],
+          "expect": {
+            "stdout": ""
+          }
+        },
+        {
+          "id": "leak/fdleak-pipeline",
+          "template": ["echo hi | cat"],
+          "expect": {
+            "stdout": "hi\n"
+          }
+        },
+        {
+          "id": "leak/fdleak-pipeline2",
+          "template": ["echo hi | echo lol | cat"],
+          "expect": {
+            "stdout": "lol\n"
+          }
+        },
+        {
+          "id": "leak/fdleak-ls",
+          "template": [
+            "mkdir foo; touch ./foo/lol ./foo/nice ./foo/lmao; mkdir foo/bar; touch ./foo/bar/great; touch ./foo/bar/wow; ls -R foo/"
+          ],
+          "expect": {
+            "stdout": {
+              "sortedLines": [
+                "lmao",
+                "lol",
+                "nice",
+                "foo/bar:",
+                "bar",
+                "great",
+                "wow"
+              ]
+            }
+          },
+          "note": "Bun's ls does not sort entries (directory order), so upstream compares sorted non-empty lines"
+        },
+        {
+          "id": "leak/fdleak-rm",
+          "template": [
+            "mkdir foo; touch ./foo/lol ./foo/nice ./foo/lmao; mkdir foo/bar; touch ./foo/bar/great; touch ./foo/bar/wow; rm -rfv foo/"
+          ],
+          "expect": {
+            "stdout": {
+              "sortedLines": [
+                "foo/",
+                "foo/bar",
+                "foo/bar/great",
+                "foo/bar/wow",
+                "foo/lmao",
+                "foo/lol",
+                "foo/nice"
+              ]
+            },
+            "absent": ["foo"]
+          },
+          "note": "rm -v prints removal order depth-first in directory order; compared as sorted lines like upstream"
+        }
+      ],
+      "note": "Upstream runs each TestBuilder command 1000 (ls: 500, rm: 100) times in a `bun --smol test` subprocess and fails if /proc/self/fd grows by > 5 afterwards. The fd counting is Bun-internal; each command's observable TestBuilder expectations are reproduced once."
+    },
+    {
+      "line": 116,
+      "upstream": "fd leak > memleak_${name} (TESTS + ArrayBuffer, Buffer, Blob_something, Blob_nothing, String)",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "leak/memleak-redirect-file",
+          "template": ["echo hello > test.txt"],
+          "expect": {
+            "files": {
+              "test.txt": "hello\n"
+            }
+          }
+        },
+        {
+          "id": "leak/memleak-change-cwd",
+          "template": ["cd ", " && cd -"],
+          "values": [
+            {
+              "string": "{{TEMP}}"
+            }
+          ],
+          "expect": {
+            "stdout": ""
+          }
+        },
+        {
+          "id": "leak/memleak-pipeline",
+          "template": ["echo hi | cat"],
+          "expect": {
+            "stdout": "hi\n"
+          }
+        },
+        {
+          "id": "leak/memleak-pipeline2",
+          "template": ["echo hi | echo lol | cat"],
+          "expect": {
+            "stdout": "lol\n"
+          }
+        },
+        {
+          "id": "leak/memleak-ls",
+          "template": [
+            "mkdir foo; touch ./foo/lol ./foo/nice ./foo/lmao; mkdir foo/bar; touch ./foo/bar/great; touch ./foo/bar/wow; ls -R foo/"
+          ],
+          "expect": {
+            "stdout": {
+              "sortedLines": [
+                "lmao",
+                "lol",
+                "nice",
+                "foo/bar:",
+                "bar",
+                "great",
+                "wow"
+              ]
+            }
+          },
+          "note": "Bun's ls does not sort entries (directory order), so upstream compares sorted non-empty lines"
+        },
+        {
+          "id": "leak/memleak-rm",
+          "template": [
+            "mkdir foo; touch ./foo/lol ./foo/nice ./foo/lmao; mkdir foo/bar; touch ./foo/bar/great; touch ./foo/bar/wow; rm -rfv foo/"
+          ],
+          "expect": {
+            "stdout": {
+              "sortedLines": [
+                "foo/",
+                "foo/bar",
+                "foo/bar/great",
+                "foo/bar/wow",
+                "foo/lmao",
+                "foo/lol",
+                "foo/nice"
+              ]
+            },
+            "absent": ["foo"]
+          },
+          "note": "rm -v prints removal order depth-first in directory order; compared as sorted lines like upstream"
+        },
+        {
+          "id": "leak/memleak-arraybuffer",
+          "template": ["cat ", " > ", ""],
+          "values": [
+            {
+              "path": "leak.test.ts"
+            },
+            {
+              "outBuffer": {
+                "id": "b1",
+                "size": 128
+              }
+            }
+          ],
+          "files": {
+            "leak.test.ts": {
+              "repeat": "0123456789abcdef",
+              "count": 64
+            }
+          },
+          "expect": {
+            "buffers": {
+              "b1": {
+                "repeat": "0123456789abcdef",
+                "count": 8
+              }
+            }
+          },
+          "note": "upstream target is new ArrayBuffer(128); represented by a 128-byte zeroed Buffer. Output larger than the buffer is silently truncated, exit 0. Upstream cats the test file itself."
+        },
+        {
+          "id": "leak/memleak-buffer",
+          "template": ["cat ", " > ", ""],
+          "values": [
+            {
+              "path": "leak.test.ts"
+            },
+            {
+              "outBuffer": {
+                "id": "b1",
+                "size": 128
+              }
+            }
+          ],
+          "files": {
+            "leak.test.ts": {
+              "repeat": "0123456789abcdef",
+              "count": 64
+            }
+          },
+          "expect": {
+            "buffers": {
+              "b1": {
+                "repeat": "0123456789abcdef",
+                "count": 8
+              }
+            }
+          },
+          "note": "output larger than the 128-byte buffer is silently truncated, exit 0"
+        },
+        {
+          "id": "leak/memleak-blob-something",
+          "template": ["cat < ", ""],
+          "values": [
+            {
+              "bytes": {
+                "repeat": "a",
+                "count": 131072
+              }
+            }
+          ],
+          "expect": {
+            "stdout": {
+              "repeat": "a",
+              "count": 131072
+            }
+          },
+          "note": "upstream stdin is a Blob of 128 KiB 'a'; a Buffer is used here (see the -blob variant for the JS-only Blob form)"
+        },
+        {
+          "id": "leak/memleak-blob-nothing",
+          "template": ["echo hi < ", ""],
+          "values": [
+            {
+              "bytes": {
+                "repeat": "a",
+                "count": 131072
+              }
+            }
+          ],
+          "expect": {
+            "stdout": "hi\n"
+          },
+          "note": "upstream stdin is a Blob; echo ignores stdin"
+        },
+        {
+          "id": "leak/memleak-string",
+          "template": ["echo ", ""],
+          "values": [
+            {
+              "string": {
+                "repeat": "a",
+                "count": 4096
+              }
+            }
+          ],
+          "expect": {
+            "stdout": {
+              "concat": [
+                {
+                  "repeat": "a",
+                  "count": 4096
+                },
+                "\n"
+              ]
+            }
+          },
+          "note": "upstream stdout callback asserts nothing; exact output encoded"
+        },
+        {
+          "id": "leak/memleak-blob-something-blob",
+          "template": ["cat < ", ""],
+          "values": [
+            {
+              "blob": {
+                "repeat": "a",
+                "count": 131072
+              }
+            }
+          ],
+          "expect": {
+            "stdout": {
+              "repeat": "a",
+              "count": 131072
+            }
+          },
+          "languages": ["js"],
+          "note": "JS-only Blob stdin variant of Blob_something"
+        },
+        {
+          "id": "leak/memleak-blob-nothing-blob",
+          "template": ["echo hi < ", ""],
+          "values": [
+            {
+              "blob": {
+                "repeat": "a",
+                "count": 131072
+              }
+            }
+          ],
+          "expect": {
+            "stdout": "hi\n"
+          },
+          "languages": ["js"],
+          "note": "JS-only Blob stdin variant of Blob_nothing"
+        }
+      ],
+      "note": "Upstream runs each command many times in a subprocess and checks RSS growth plus ParsedShellScript/ShellInterpreter heap counts (Bun-internal). Only the command behaviour (TestBuilder expectations) is reproduced."
+    },
+    {
+      "line": 214,
+      "upstream": "fd leak > memleak_protect_${name} (22 generated tests)",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "leak/memleak-protect-arraybuffer",
+          "template": ["cat ", " > ", ""],
+          "values": [
+            {
+              "path": "leak.test.ts"
+            },
+            {
+              "outBuffer": {
+                "id": "b1",
+                "size": 64
+              }
+            }
+          ],
+          "files": {
+            "leak.test.ts": {
+              "repeat": "0123456789abcdef",
+              "count": 64
+            }
+          },
+          "expect": {
+            "buffers": {
+              "b1": {
+                "repeat": "0123456789abcdef",
+                "count": 4
+              }
+            }
+          },
+          "note": "upstream target is new ArrayBuffer(64); represented by a zeroed Buffer of the same size (truncated write, exit 0)"
+        },
+        {
+          "id": "leak/memleak-protect-buffer",
+          "template": ["cat ", " > ", ""],
+          "values": [
+            {
+              "path": "leak.test.ts"
+            },
+            {
+              "outBuffer": {
+                "id": "b1",
+                "size": 64
+              }
+            }
+          ],
+          "files": {
+            "leak.test.ts": {
+              "repeat": "0123456789abcdef",
+              "count": 64
+            }
+          },
+          "expect": {
+            "buffers": {
+              "b1": {
+                "repeat": "0123456789abcdef",
+                "count": 4
+              }
+            }
+          },
+          "note": "upstream target is Buffer.alloc(64); represented by a zeroed Buffer of the same size (truncated write, exit 0)"
+        },
+        {
+          "id": "leak/memleak-protect-arraybuffer-builtin",
+          "template": ["echo ", " > ", ""],
+          "values": [
+            {
+              "string": "/tmp/test/js/bun/shell/leak.test.ts"
+            },
+            {
+              "outBuffer": {
+                "id": "b1",
+                "size": 64
+              }
+            }
+          ],
+          "expect": {
+            "buffers": {
+              "b1": "/tmp/test/js/bun/shell/leak.test.ts\n"
+            }
+          },
+          "note": "upstream echoes import.meta.filename into new ArrayBuffer(64); a fixed path string is used; represented by a zeroed Buffer"
+        },
+        {
+          "id": "leak/memleak-protect-buffer-builtin",
+          "template": ["echo ", " > ", ""],
+          "values": [
+            {
+              "string": "/tmp/test/js/bun/shell/leak.test.ts"
+            },
+            {
+              "outBuffer": {
+                "id": "b1",
+                "size": 64
+              }
+            }
+          ],
+          "expect": {
+            "buffers": {
+              "b1": "/tmp/test/js/bun/shell/leak.test.ts\n"
+            }
+          },
+          "note": "upstream echoes import.meta.filename into Buffer.alloc(64); a fixed path string is used; represented by a zeroed Buffer"
+        },
+        {
+          "id": "leak/memleak-protect-uint8array",
+          "template": ["cat ", " > ", ""],
+          "values": [
+            {
+              "path": "leak.test.ts"
+            },
+            {
+              "outBuffer": {
+                "id": "b1",
+                "size": 64
+              }
+            }
+          ],
+          "files": {
+            "leak.test.ts": {
+              "repeat": "0123456789abcdef",
+              "count": 64
+            }
+          },
+          "expect": {
+            "buffers": {
+              "b1": {
+                "repeat": "0123456789abcdef",
+                "count": 4
+              }
+            }
+          },
+          "note": "upstream target is new Uint8Array(64); represented by a zeroed Buffer of the same size (truncated write, exit 0)"
+        },
+        {
+          "id": "leak/memleak-protect-uint8array-builtin",
+          "template": ["echo ", " > ", ""],
+          "values": [
+            {
+              "string": "/tmp/test/js/bun/shell/leak.test.ts"
+            },
+            {
+              "outBuffer": {
+                "id": "b1",
+                "size": 64
+              }
+            }
+          ],
+          "expect": {
+            "buffers": {
+              "b1": "/tmp/test/js/bun/shell/leak.test.ts\n"
+            }
+          },
+          "note": "upstream echoes import.meta.filename into new Uint8Array(64); a fixed path string is used; represented by a zeroed Buffer"
+        },
+        {
+          "id": "leak/memleak-protect-dataview",
+          "template": ["cat ", " > ", ""],
+          "values": [
+            {
+              "path": "leak.test.ts"
+            },
+            {
+              "outBuffer": {
+                "id": "b1",
+                "size": 64
+              }
+            }
+          ],
+          "files": {
+            "leak.test.ts": {
+              "repeat": "0123456789abcdef",
+              "count": 64
+            }
+          },
+          "expect": {
+            "buffers": {
+              "b1": {
+                "repeat": "0123456789abcdef",
+                "count": 4
+              }
+            }
+          },
+          "note": "upstream target is new DataView(new ArrayBuffer(64)) i.e. DataView(64); represented by a zeroed Buffer of the same size (truncated write, exit 0)"
+        },
+        {
+          "id": "leak/memleak-protect-dataview-builtin",
+          "template": ["echo ", " > ", ""],
+          "values": [
+            {
+              "string": "/tmp/test/js/bun/shell/leak.test.ts"
+            },
+            {
+              "outBuffer": {
+                "id": "b1",
+                "size": 64
+              }
+            }
+          ],
+          "expect": {
+            "buffers": {
+              "b1": "/tmp/test/js/bun/shell/leak.test.ts\n"
+            }
+          },
+          "note": "upstream echoes import.meta.filename into new DataView(new ArrayBuffer(64)) i.e. DataView(64); a fixed path string is used; represented by a zeroed Buffer"
+        },
+        {
+          "id": "leak/memleak-protect-string-large-input",
+          "template": ["echo ", ""],
+          "values": [
+            {
+              "string": {
+                "repeat": "test",
+                "count": 4096
+              }
+            }
+          ],
+          "expect": {
+            "stdout": {
+              "concat": [
+                {
+                  "repeat": "test",
+                  "count": 4096
+                },
+                "\n"
+              ]
+            }
+          }
+        },
+        {
+          "id": "leak/memleak-protect-string-pipeline",
+          "template": ["echo ", " | cat"],
+          "values": [
+            {
+              "string": {
+                "repeat": "data",
+                "count": 1024
+              }
+            }
+          ],
+          "expect": {
+            "stdout": {
+              "concat": [
+                {
+                  "repeat": "data",
+                  "count": 1024
+                },
+                "\n"
+              ]
+            }
+          }
+        },
+        {
+          "id": "leak/memleak-protect-arraybuffer-nested-pipeline",
+          "template": ["echo ", " | head -n 10 | tail -n 5 | wc -l"],
+          "values": [
+            {
+              "outBuffer": {
+                "id": "b1",
+                "size": 256
+              }
+            }
+          ],
+          "expect": {
+            "error": "expected a command or assignment but got: \"JSObjRef\""
+          },
+          "platforms": ["posix"],
+          "requires": ["head", "tail", "wc"],
+          "note": "upstream value new ArrayBuffer(256); posix-only upstream. A binary buffer object (ArrayBuffer/Buffer/Uint8Array/DataView) interpolated in ARGUMENT position (not as a redirect target) is rejected by Bun 1.4.2 with a parse error; upstream only checks that nothing leaks (it ignores the result)."
+        },
+        {
+          "id": "leak/memleak-protect-buffer-triple-pipeline",
+          "template": ["echo ", " | cat | grep -v nonexistent | wc -c"],
+          "values": [
+            {
+              "outBuffer": {
+                "id": "b1",
+                "size": 256
+              }
+            }
+          ],
+          "expect": {
+            "error": "expected a command or assignment but got: \"JSObjRef\""
+          },
+          "platforms": ["posix"],
+          "requires": ["grep", "wc"],
+          "note": "upstream value Buffer.alloc(256); posix-only upstream. A binary buffer object (ArrayBuffer/Buffer/Uint8Array/DataView) interpolated in ARGUMENT position (not as a redirect target) is rejected by Bun 1.4.2 with a parse error; upstream only checks that nothing leaks (it ignores the result)."
+        },
+        {
+          "id": "leak/memleak-protect-string-complex-pipeline",
+          "template": ["echo ", " | sort | uniq | head -n 3"],
+          "values": [
+            {
+              "string": {
+                "concat": [
+                  {
+                    "repeat": "pipeline\n",
+                    "count": 511
+                  },
+                  "pipeline"
+                ]
+              }
+            }
+          ],
+          "expect": {
+            "stdout": "pipeline\n"
+          },
+          "platforms": ["posix"],
+          "requires": ["sort", "uniq", "head"],
+          "note": "value is 512 x 'pipeline' joined by newlines: a single escaped argument whose newlines survive, so sort|uniq collapses it to one line; posix-only upstream"
+        },
+        {
+          "id": "leak/memleak-protect-arraybuffer-subshell",
+          "template": ["echo $(echo ", " | wc -c)"],
+          "values": [
+            {
+              "outBuffer": {
+                "id": "b1",
+                "size": 128
+              }
+            }
+          ],
+          "expect": {
+            "error": "expected a command or assignment but got: \"JSObjRef\""
+          },
+          "platforms": ["posix"],
+          "requires": ["wc"],
+          "note": "upstream value new ArrayBuffer(128); posix-only upstream. A binary buffer object (ArrayBuffer/Buffer/Uint8Array/DataView) interpolated in ARGUMENT position (not as a redirect target) is rejected by Bun 1.4.2 with a parse error; upstream only checks that nothing leaks (it ignores the result)."
+        },
+        {
+          "id": "leak/memleak-protect-buffer-nested-subshell",
+          "template": ["echo $(echo ", " | head -c 10) done"],
+          "values": [
+            {
+              "outBuffer": {
+                "id": "b1",
+                "size": 128
+              }
+            }
+          ],
+          "expect": {
+            "error": "expected a command or assignment but got: \"JSObjRef\""
+          },
+          "platforms": ["posix"],
+          "requires": ["head"],
+          "note": "upstream value Buffer.alloc(128); posix-only upstream. A binary buffer object (ArrayBuffer/Buffer/Uint8Array/DataView) interpolated in ARGUMENT position (not as a redirect target) is rejected by Bun 1.4.2 with a parse error; upstream only checks that nothing leaks (it ignores the result)."
+        },
+        {
+          "id": "leak/memleak-protect-string-subshell-pipeline",
+          "template": ["echo start $(echo ", " | wc -c | cat) end"],
+          "values": [
+            {
+              "string": {
+                "repeat": "sub",
+                "count": 256
+              }
+            }
+          ],
+          "expect": {
+            "stdout": "start 769 end\n"
+          },
+          "platforms": ["posix"],
+          "requires": ["wc"],
+          "note": "768 chars + newline = 769 bytes; command substitution output is word-split/trimmed; posix-only upstream"
+        },
+        {
+          "id": "leak/memleak-protect-arraybuffer-mixed-commands",
+          "template": [
+            "mkdir -p tmp && echo ",
+            " > tmp/test.txt && cat tmp/test.txt && rm -rf tmp"
+          ],
+          "values": [
+            {
+              "outBuffer": {
+                "id": "b1",
+                "size": 192
+              }
+            }
+          ],
+          "expect": {
+            "error": "expected a command or assignment but got: \"JSObjRef\"",
+            "absent": ["tmp"]
+          },
+          "note": "upstream value new ArrayBuffer(192); nothing runs because the script fails to parse. A binary buffer object (ArrayBuffer/Buffer/Uint8Array/DataView) interpolated in ARGUMENT position (not as a redirect target) is rejected by Bun 1.4.2 with a parse error; upstream only checks that nothing leaks (it ignores the result)."
+        },
+        {
+          "id": "leak/memleak-protect-buffer-builtin-external-mix",
+          "template": [
+            "echo ",
+            " | ",
+            " -e 'process.stdin.on(\"data\", d => process.stdout.write(d))' | head -c 50"
+          ],
+          "values": [
+            {
+              "outBuffer": {
+                "id": "b1",
+                "size": 192
+              }
+            },
+            {
+              "string": "{{NODE}}"
+            }
+          ],
+          "expect": {
+            "error": "expected a command or assignment but got: \"JSObjRef\""
+          },
+          "requires": ["node", "head"],
+          "note": "upstream value Buffer.alloc(192); bunExe() replaced by {{NODE}}. A binary buffer object (ArrayBuffer/Buffer/Uint8Array/DataView) interpolated in ARGUMENT position (not as a redirect target) is rejected by Bun 1.4.2 with a parse error; upstream only checks that nothing leaks (it ignores the result)."
+        },
+        {
+          "id": "leak/memleak-protect-string-cd-operations",
+          "template": [
+            "mkdir -p testdir && cd testdir && echo ",
+            " > file.txt && cd .. && cat testdir/file.txt && rm -rf testdir"
+          ],
+          "values": [
+            {
+              "string": {
+                "repeat": "dir",
+                "count": 128
+              }
+            }
+          ],
+          "expect": {
+            "stdout": {
+              "concat": [
+                {
+                  "repeat": "dir",
+                  "count": 128
+                },
+                "\n"
+              ]
+            },
+            "absent": ["testdir"]
+          }
+        },
+        {
+          "id": "leak/memleak-protect-arraybuffer-conditional",
+          "template": ["echo ", " && echo success || echo failure"],
+          "values": [
+            {
+              "outBuffer": {
+                "id": "b1",
+                "size": 64
+              }
+            }
+          ],
+          "expect": {
+            "error": "expected a command or assignment but got: \"JSObjRef\""
+          },
+          "note": "upstream value new ArrayBuffer(64). A binary buffer object (ArrayBuffer/Buffer/Uint8Array/DataView) interpolated in ARGUMENT position (not as a redirect target) is rejected by Bun 1.4.2 with a parse error; upstream only checks that nothing leaks (it ignores the result)."
+        },
+        {
+          "id": "leak/memleak-protect-buffer-test-conditional",
+          "template": ["test -n ", " && echo 'has content' || echo 'empty'"],
+          "values": [
+            {
+              "outBuffer": {
+                "id": "b1",
+                "size": 64
+              }
+            }
+          ],
+          "expect": {
+            "error": "expected a command or assignment but got: \"JSObjRef\""
+          },
+          "platforms": ["posix"],
+          "note": "upstream value Buffer.alloc(64); posix-only upstream (external `test`). A binary buffer object (ArrayBuffer/Buffer/Uint8Array/DataView) interpolated in ARGUMENT position (not as a redirect target) is rejected by Bun 1.4.2 with a parse error; upstream only checks that nothing leaks (it ignores the result)."
+        }
+      ],
+      "note": "Upstream checks heapStats().protectedObjectTypeCounts does not grow after running the command 5 times (GC-internal). The commands' results are not asserted upstream; the corpus encodes real Bun 1.4.2 behaviour, including parse errors for buffer objects in argument position."
+    },
+    {
+      "line": 407,
+      "upstream": "fd leak > #11816 > external / builtin",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "leak/issue-11816-external",
+          "template": ["", " -e ", ""],
+          "values": [
+            {
+              "string": "{{NODE}}"
+            },
+            {
+              "string": "console.log(Array(1024).fill('a').join(''))"
+            }
+          ],
+          "requires": ["node"],
+          "expect": {
+            "stdout": {
+              "concat": [
+                {
+                  "repeat": "a",
+                  "count": 1024
+                },
+                "\n"
+              ]
+            }
+          },
+          "note": "upstream runs this 100 times (10 concurrent batches) with bunExe() and checks ShellInterpreter/ParsedShellScript heap counts; only the command's behaviour is reproduced"
+        },
+        {
+          "id": "leak/issue-11816-builtin",
+          "template": ["cat ", "/input.txt"],
+          "values": [
+            {
+              "path": "."
+            }
+          ],
+          "files": {
+            "input.txt": {
+              "repeat": "a",
+              "count": 2048
+            }
+          },
+          "expect": {
+            "stdout": {
+              "repeat": "a",
+              "count": 2048
+            }
+          },
+          "note": "upstream runs this 100 times (10 concurrent batches) and checks heap object counts; only the command's behaviour is reproduced"
+        }
+      ]
+    },
+    {
+      "line": 448,
+      "upstream": "fd leak > not leaking ParsedShellScript when ShellInterpreter never runs > external / builtin",
+      "disposition": "js-api",
+      "api": "Creating $`cat ${dir}/input.txt` (builtin) or $`${node} -e ${code}` (external) 100 times WITHOUT awaiting must not execute anything (shell promises are lazy: e.g. an un-awaited $`echo hi > marker.txt` leaves marker.txt absent after 200ms) and the never-run promises must be garbage-collectable (upstream: heapStats ShellInterpreter/ParsedShellScript counts <= 3 after GC). No output is produced.",
+      "cases": [
+        {
+          "id": "leak/never-runs-external-when-awaited",
+          "template": ["", " -e ", ""],
+          "values": [
+            {
+              "string": "{{NODE}}"
+            },
+            {
+              "string": "console.log(Array(1024).fill('a').join(''))"
+            }
+          ],
+          "requires": ["node"],
+          "expect": {
+            "stdout": {
+              "concat": [
+                {
+                  "repeat": "a",
+                  "count": 1024
+                },
+                "\n"
+              ]
+            }
+          },
+          "note": "upstream never awaits this command; this is what it produces when it does run"
+        },
+        {
+          "id": "leak/never-runs-builtin-when-awaited",
+          "template": ["cat ", "/input.txt"],
+          "values": [
+            {
+              "path": "."
+            }
+          ],
+          "files": {
+            "input.txt": {
+              "repeat": "a",
+              "count": 2048
+            }
+          },
+          "expect": {
+            "stdout": {
+              "repeat": "a",
+              "count": 2048
+            }
+          },
+          "note": "upstream never awaits this command; this is what it produces when it does run"
+        }
+      ],
+      "note": "cases show what the never-run commands produce when they DO run"
+    }
+  ],
+  "nonUnitSites": [
+    {
+      "line": 130,
+      "reason": "`.runAsTest(` inside the generated script template string of memLeakTest (the test( at line 116 is the unit)"
+    }
+  ]
+}

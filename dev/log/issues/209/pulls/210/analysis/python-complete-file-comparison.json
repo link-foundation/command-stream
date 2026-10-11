@@ -1,0 +1,709 @@
+[
+  {
+    "path": ".github/workflows/docs.yml",
+    "sha256": "517bcf1b34d45f33ed11bc5f327b1cdb224b5f147d13f76ae3d79620d36a459c",
+    "bytes": 4319,
+    "ci_related": true,
+    "disposition": "Compare transferable CI policy; Python distribution/release implementation is not applicable"
+  },
+  {
+    "path": ".github/workflows/links.yml",
+    "sha256": "bbc1d9c2c7a39b8bc96d588a32bc5fd450fe5351fb252a8ad6d132ac649f5ae9",
+    "bytes": 4258,
+    "ci_related": true,
+    "disposition": "Compare transferable CI policy; Python distribution/release implementation is not applicable"
+  },
+  {
+    "path": ".github/workflows/release.yml",
+    "sha256": "be03dfccd14c56c05d2b698e2e056f38d233386212346b3d89468ae642725df2",
+    "bytes": 36591,
+    "ci_related": true,
+    "disposition": "Compare transferable CI policy; Python distribution/release implementation is not applicable"
+  },
+  {
+    "path": ".github/workflows/security.yml",
+    "sha256": "e77c8c97d6be0ac1ceb12830d88b169ec1c7c4536dd550993d5ae7d225e45e4f",
+    "bytes": 2820,
+    "ci_related": true,
+    "disposition": "Compare transferable CI policy; Python distribution/release implementation is not applicable"
+  },
+  {
+    "path": ".github/workflows/workflows.yml",
+    "sha256": "c464977c843bac61229a6e783f0a9fad9fcadab5c4c036861223177d85665210",
+    "bytes": 5620,
+    "ci_related": true,
+    "disposition": "Compare transferable CI policy; Python distribution/release implementation is not applicable"
+  },
+  {
+    "path": ".github/zizmor.yml",
+    "sha256": "172c7481e1de4bcf0e9c01b39d752dd0ab3ec6be86e969705957141c9c667872",
+    "bytes": 520,
+    "ci_related": true,
+    "disposition": "Compare transferable CI policy; Python distribution/release implementation is not applicable"
+  },
+  {
+    "path": ".gitignore",
+    "sha256": "cb696565497f962b25bf5c2852d3c46577da2af693e433528044dd711b31d2dd",
+    "bytes": 4714,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": ".pre-commit-config.yaml",
+    "sha256": "83c781ff9747ae466d7bd12e56d790eccd21e7ca2e79d55486fecba215f8e4db",
+    "bytes": 675,
+    "ci_related": true,
+    "disposition": "Compare transferable CI policy; Python distribution/release implementation is not applicable"
+  },
+  {
+    "path": ".ruff.toml",
+    "sha256": "aa49cec3d48d27d1327a96de9f044a281fb4d5915a25678429a2085c0ab08474",
+    "bytes": 133,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": ".secretlintrc.json",
+    "sha256": "1c0e86ca72216c22cc77b1c94c27f975b731aa9e104167f5d57a5befa654c10e",
+    "bytes": 92,
+    "ci_related": true,
+    "disposition": "Compare transferable CI policy; Python distribution/release implementation is not applicable"
+  },
+  {
+    "path": "CHANGELOG.md",
+    "sha256": "9206206e5c8479164217670a95f607c2a5965ce6fdc24cd027ab4324e280d9c3",
+    "bytes": 689,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "CONTRIBUTING.md",
+    "sha256": "98cc90f09db614acdaaef09f3c650635f6b0406594f2671f25a77bce0e0f805b",
+    "bytes": 6989,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "LICENSE",
+    "sha256": "6b0382b16279f26ff69014300541967a356a666eb0b91b422f6862f6b7dad17e",
+    "bytes": 1211,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "README.md",
+    "sha256": "91a551f4ae25dbb401de69eba93405d96ea778b07056bac77ee53b4925ad912d",
+    "bytes": 14396,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/20251218_133759_drakonard_issue_1_3b50e2f12be6.md",
+    "sha256": "f13398f621e0d4dda55f55d57e114181831e81a5c80e5129b0966f52285e1ca2",
+    "bytes": 317,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/20260509_204000_issue_6_release_metadata.md",
+    "sha256": "e3ecb0b5f404fc29d4cc8d80eae337e8e526d2f14adbb6250e7152d0a14ae71b",
+    "bytes": 207,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/20260515_000000_issue_8_docs_pages.md",
+    "sha256": "8a0ce1423e753c8da437eb177d8020ba68f6f02e37310bf8330dd4c68ad377fb",
+    "bytes": 500,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/20260529_222900_issue_9_preview_regeneration.md",
+    "sha256": "7fdf10a0fc16666d59190f85e2ad152307465f09ec214ba48f82e8bf0e44d1ee",
+    "bytes": 165,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/20260604_170000_issue_16_release_notes_limit.md",
+    "sha256": "fffe0e3032f6d2ecedf9196e359a2dc894f8b055931035edc70ec7cedf32f7fb",
+    "bytes": 180,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/20260609_000000_issue_18_manual_release_skip.md",
+    "sha256": "1dfa9683a2fd5fb7680070d953a51c57b7c26c40e9e7c6d90daeabe8ddc78b0f",
+    "bytes": 404,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/20260614_000000_issue_20_published_package_smoke_test.md",
+    "sha256": "95450c73029dc9213448fe49baed4256857ce135a7bec76ec418ca8ba4392136",
+    "bytes": 335,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/20260614_issue_21_python_monorepo_releases.md",
+    "sha256": "d5579906cc9c29723222894ea44d104d120882e7b57411ab0b08bcc2d9a0fc2f",
+    "bytes": 356,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/20260628_issue_24_file_size_warnings.md",
+    "sha256": "757ed13128a14c307ad80a331f66fbfe5f5203717d2c8a38b417652016c9d9dd",
+    "bytes": 165,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/20260703_issue_26_docs_pages_opt_in.md",
+    "sha256": "ec0e2468fefa85ac9247d54a50e5b66866892d70680d531fa9e2df8cedf5c3c4",
+    "bytes": 204,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/20260703_issue_27_codecov_token_gate.md",
+    "sha256": "e7d0dac93f6f8f15384ac7db85facb4aeab11a93445dce7f008ff89dc422e344",
+    "bytes": 156,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/20260703_issue_28_git_default_branch_env.md",
+    "sha256": "652cfe6be40c8321a7d89ce9f29997024b44bdbca4a63fdacb99bb211c965d5d",
+    "bytes": 81,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/20260722_issue_32_node24_actions.md",
+    "sha256": "916ab018d0bfff54e153c80c8b5eeaecdd44f9d189421d88a963f0bf78e462f1",
+    "bytes": 155,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/20260722_issue_33_release_permissions.md",
+    "sha256": "6ac3be408885874efc42f8eb7ad84f8e2f8883a91f6890c2737e57fa9175cb09",
+    "bytes": 151,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/20260722_issue_34_codecov_v7_input.md",
+    "sha256": "c6e260aa3e4d46e8a56a4ff3f976333987a9c5db8d7417b41911e37d4a8ef969",
+    "bytes": 92,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/20260722_issue_35_ci_release_guards.md",
+    "sha256": "43965adf790d49938adb8118695fc1658cd0d68275e97ce1b2bc3fbc378c4996",
+    "bytes": 307,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/20260727_issue_40_change_detection.md",
+    "sha256": "77a6d95e933f8d03d78520b7923ccc0e5c1cd02c8d2ec6ddcfa7bd803f1f1cfe",
+    "bytes": 214,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/20260801_issue_42_workflow_hardening.md",
+    "sha256": "0299d34ec3640be34547b1b0a24dce6088cab073451dc4f74f8eb3c997353ebf",
+    "bytes": 247,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/20260802_issue_44_mypy_python_39.md",
+    "sha256": "6bc7671f5cee2679583fda3e76db73ba2d86e9408bd0401d2b8f034ee0d44b33",
+    "bytes": 123,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/20260802_issue_45_changelog_check.md",
+    "sha256": "071ecceb4057a56eb612c9a494969bd0f3b6a6492c01a983f8e47a4520870f1b",
+    "bytes": 226,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/20260809_issue_48_security_scanning.md",
+    "sha256": "b3a02aa6a2b0028df0247beb414d2cacae1a6f152147999354e8c8ca28dff2ea",
+    "bytes": 126,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/20260809_issue_49_broken_links.md",
+    "sha256": "3e75a5b096caf368ab0bbd698fdb48803586d0a9fcbb97a8436e58bd9270b7fb",
+    "bytes": 94,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/20260809_issue_50_pipeline_timeout_status.md",
+    "sha256": "a60f3b4d3dbd33e65bf41e3e8f6d7aedbb8423b1ecb83dce73a608a348c0d338",
+    "bytes": 220,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/20260812_issue_54_archived_broken_links.md",
+    "sha256": "1c60e42df38d35d14ce5882b03539c847dad7608a8c4646b2f47a973f07a5c3f",
+    "bytes": 107,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/20260812_issue_55_multi_arch_docker.md",
+    "sha256": "2a80d5c7470c0e9e2566d568b2c20675c96195f2ad07a0cbdf411669307528c2",
+    "bytes": 170,
+    "ci_related": false,
+    "disposition": "Not applicable: command-stream publishes libraries, no container/chart/mobile/desktop artifacts"
+  },
+  {
+    "path": "changelog.d/20260816_issue_58_dependency_audit.md",
+    "sha256": "489109417c8d3ef78ed66a0fa9017e7e7ec5079da3395421a014cb30ee6a1c71",
+    "bytes": 149,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/20260820_issue_60_step_execution_budgets.md",
+    "sha256": "d269b2221c2206ed0e648c4e6807830b6a0cb0bd6327f794bc57aa11a9368c06",
+    "bytes": 783,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/20260828_issue_62_workflow_lint.md",
+    "sha256": "bafc4e5862fe8c8e604c28c43c341450fbce41ce8c3f67725257a3a0d260ae41",
+    "bytes": 841,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/20260903_issue_64_workflow_audit.md",
+    "sha256": "efbd405a838bef6530c83d43607486088812b7ef5a0ad9d63152e0a3719ccdfd",
+    "bytes": 1310,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/20260909_issue_66_pipeline_hardening.md",
+    "sha256": "970daa44b88219167265e9262ae8b66c0e09746d994fd657d6eabc7a9e054df4",
+    "bytes": 3019,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/20260915_issue_83_pipeline_false_negatives.md",
+    "sha256": "d2f35a8e09977b8236ba8f96fd0f46ff691751461572e80cb94eabce9bc32c4a",
+    "bytes": 425,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/20260927_issue_85_86_release_changelog_artifact.md",
+    "sha256": "283def13298b44cd1014bc67b245036f84b741d7b1029ed4de0f02c06c8194cf",
+    "bytes": 207,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/20261005_issue_91_ci_links.md",
+    "sha256": "0899a4b2f9735a304eef49587092acc484054f6a20ace5bac3c4b076f91caa98",
+    "bytes": 365,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/README.md",
+    "sha256": "9bf9ea8aa6938f6fac7b45e2d726c4bfafcfe00f38325646491997c8e80df23f",
+    "bytes": 1469,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "changelog.d/fragment_template.md.j2",
+    "sha256": "1417d68060218437cea3cdfc3e1f72182e4997b2fff6ede26b5c46bf379c3551",
+    "bytes": 515,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/api.md",
+    "sha256": "3fd3d777c29da3a4c8809dfcc9752a7a0f68bb3bef9b0440b1fc601b94ab4031",
+    "bytes": 108,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/conf.py",
+    "sha256": "a3eb8f878a9cc734898fca544a0d5b4fd22d24a2ad35e87ae2c7a67bffa0985f",
+    "bytes": 1384,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/index.md",
+    "sha256": "ff555e8b31275b91a25eeaeb5d919bb7e60ce16aff6b60ab27808e92f5f784fc",
+    "bytes": 661,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/preview-regeneration.md",
+    "sha256": "4ab7639eeb95cdf77307eed5962865d087890d82e1d2dfff567e4b790bb695b2",
+    "bytes": 2842,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "docs/requirements.txt",
+    "sha256": "e0170e6ad53cadb3ded62843719ebdc954df28925445b3f85df3cfa76c91bbe1",
+    "bytes": 44,
+    "ci_related": false,
+    "disposition": "Repository documentation/metadata/assets; retain local package-specific content and compare relevant policy"
+  },
+  {
+    "path": "examples/basic_usage.py",
+    "sha256": "c19c01204e02e66c7c90ca69b1b43a5dda0f403e73de6372344659b7be3412ca",
+    "bytes": 863,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "pyproject.toml",
+    "sha256": "988965b531f2a4f4c6713b6b273be90b2f2b34ed10cb815e1eb73cf686138eae",
+    "bytes": 4387,
+    "ci_related": true,
+    "disposition": "Compare transferable CI policy; Python distribution/release implementation is not applicable"
+  },
+  {
+    "path": "scripts/audit_dependencies.py",
+    "sha256": "6a88c4e568121fe15d7f206738645047fcb8f3da135bde10a20d2837dbecdc05",
+    "bytes": 4644,
+    "ci_related": true,
+    "disposition": "Compare transferable CI policy; Python distribution/release implementation is not applicable"
+  },
+  {
+    "path": "scripts/bump_version.py",
+    "sha256": "d8e47381dc86e259d95db964de5b1ab519fec7ecdbfa9fa33f59b48d59825ea9",
+    "bytes": 5542,
+    "ci_related": true,
+    "disposition": "Compare transferable CI policy; Python distribution/release implementation is not applicable"
+  },
+  {
+    "path": "scripts/check-pipeline-status.sh",
+    "sha256": "82042ca20186f87ff12c800055abe9f7324a32709834a591e3ee8b413a38553c",
+    "bytes": 3980,
+    "ci_related": true,
+    "disposition": "Compare transferable CI policy; Python distribution/release implementation is not applicable"
+  },
+  {
+    "path": "scripts/check-required-docs.sh",
+    "sha256": "02134fa51ab872898a43824093bfa1727df4d99b65cdebb342022ac90d2f6afb",
+    "bytes": 3063,
+    "ci_related": true,
+    "disposition": "Compare transferable CI policy; Python distribution/release implementation is not applicable"
+  },
+  {
+    "path": "scripts/check_file_size.py",
+    "sha256": "5636d5260b7feea70bba7b4adf38b82d4b6a8d166015ec12eec4f4bdc998001b",
+    "bytes": 6784,
+    "ci_related": true,
+    "disposition": "Compare transferable CI policy; Python distribution/release implementation is not applicable"
+  },
+  {
+    "path": "scripts/check_web_archive.py",
+    "sha256": "30f9895b776a2747b5959c505fa852565166001836096b1caaee22e9804f9184",
+    "bytes": 7134,
+    "ci_related": true,
+    "disposition": "Compare transferable CI policy; Python distribution/release implementation is not applicable"
+  },
+  {
+    "path": "scripts/create_github_release.py",
+    "sha256": "1e366ac7e395e59203597495e17be419994d20c43ed72fd6d4fbb26b9f2eb84b",
+    "bytes": 9734,
+    "ci_related": true,
+    "disposition": "Compare transferable CI policy; Python distribution/release implementation is not applicable"
+  },
+  {
+    "path": "scripts/create_manual_changeset.py",
+    "sha256": "d921b57a5814e4d1f582111785dd5351d553eab8f04ade02393e1b5eaab322b5",
+    "bytes": 7319,
+    "ci_related": true,
+    "disposition": "Compare transferable CI policy; Python distribution/release implementation is not applicable"
+  },
+  {
+    "path": "scripts/detect_code_changes.py",
+    "sha256": "c497243bcda6ee2a4befdb0d702e54392ec0bda22aa0d8ff50a29ec87bd4fd91",
+    "bytes": 6442,
+    "ci_related": true,
+    "disposition": "Compare transferable CI policy; Python distribution/release implementation is not applicable"
+  },
+  {
+    "path": "scripts/format_release_notes.py",
+    "sha256": "bed22536df0456dfc966d624d20af51024736276980c22826c84df42bdac488e",
+    "bytes": 7494,
+    "ci_related": true,
+    "disposition": "Compare transferable CI policy; Python distribution/release implementation is not applicable"
+  },
+  {
+    "path": "scripts/preflight-credentials.sh",
+    "sha256": "4350b71bd93d2e4d3b4cf42b24783c867d85b2351f0e15d6509e220a0861b960",
+    "bytes": 10110,
+    "ci_related": true,
+    "disposition": "Compare transferable CI policy; Python distribution/release implementation is not applicable"
+  },
+  {
+    "path": "scripts/publish_to_pypi.py",
+    "sha256": "6e91b4cdaca258662416ba97886d931e1dbb3a0b7c997c2f723b4e9a18f2ef3f",
+    "bytes": 4530,
+    "ci_related": true,
+    "disposition": "Compare transferable CI policy; Python distribution/release implementation is not applicable"
+  },
+  {
+    "path": "scripts/read-job-cancel-in-progress.sh",
+    "sha256": "d5f7ac76c961b7b24a1f304ce54a046abb3c7293c06cbac88f0d60a171340e6f",
+    "bytes": 2718,
+    "ci_related": true,
+    "disposition": "Compare transferable CI policy; Python distribution/release implementation is not applicable"
+  },
+  {
+    "path": "scripts/read_manifest.py",
+    "sha256": "a359ecaad2a0ed741063654e50c5cadaebd60f5cf85a3df78b52c6a4494c6b9b",
+    "bytes": 2589,
+    "ci_related": true,
+    "disposition": "Compare transferable CI policy; Python distribution/release implementation is not applicable"
+  },
+  {
+    "path": "scripts/recheck_broken_links.py",
+    "sha256": "6c1e88f0149f83a02c45e40016d4c7e4add8e62b21de28a7cf9db60c74636f0e",
+    "bytes": 13400,
+    "ci_related": true,
+    "disposition": "Compare transferable CI policy; Python distribution/release implementation is not applicable"
+  },
+  {
+    "path": "scripts/release_naming.py",
+    "sha256": "c029680918683c92a0403886a645c3b4f2f620e7cfbfca2dc2f6c7d723b4fd47",
+    "bytes": 2856,
+    "ci_related": true,
+    "disposition": "Compare transferable CI policy; Python distribution/release implementation is not applicable"
+  },
+  {
+    "path": "scripts/run-with-budget-warning.sh",
+    "sha256": "9eb75b0587cfb3b93cedf17ece7a7c4b54178fdca36a6f0be7fd21b0d3830989",
+    "bytes": 8029,
+    "ci_related": true,
+    "disposition": "Compare transferable CI policy; Python distribution/release implementation is not applicable"
+  },
+  {
+    "path": "scripts/simulate-fresh-merge.sh",
+    "sha256": "e0ee63cf4c5d194552694b09baa0e2731a7cd7d48effaf3e63c3ae393e920635",
+    "bytes": 3041,
+    "ci_related": true,
+    "disposition": "Compare transferable CI policy; Python distribution/release implementation is not applicable"
+  },
+  {
+    "path": "scripts/smoke_test_published_package.py",
+    "sha256": "c03e125b8432fa7e8533fc5d786549107a90768509bd2ead0756f1cec6d944d1",
+    "bytes": 12976,
+    "ci_related": true,
+    "disposition": "Compare transferable CI policy; Python distribution/release implementation is not applicable"
+  },
+  {
+    "path": "scripts/validate_changeset.py",
+    "sha256": "2f57a0d136f66c6c84c3f6caa6044b19aedd18558c9de7125e2d52fc6c12f5b7",
+    "bytes": 4623,
+    "ci_related": true,
+    "disposition": "Compare transferable CI policy; Python distribution/release implementation is not applicable"
+  },
+  {
+    "path": "scripts/version_and_commit.py",
+    "sha256": "929eb3576773acb321471441f36480b246c4020074281d180746282f3ea3936d",
+    "bytes": 12577,
+    "ci_related": true,
+    "disposition": "Compare transferable CI policy; Python distribution/release implementation is not applicable"
+  },
+  {
+    "path": "src/my_package/__init__.py",
+    "sha256": "b2a806b2899561356c9fdc6ecd6bd4e0737950afc4b59d8c6a0ee95c096e7d6f",
+    "bytes": 780,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "src/my_package/py.typed",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/__init__.py",
+    "sha256": "d053d872f065af8999b8601fb0e6980354074e235cac2f81364f322ee820271a",
+    "bytes": 33,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/test_audit_dependencies.py",
+    "sha256": "eb007161eb5e66769a6e577012305860975247307c9df38086ae99526b4b1bc1",
+    "bytes": 2963,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/test_check_file_size.py",
+    "sha256": "5364074daf33c44fa0ff3796efb9a753228fd89e58185558d783de78bc2f34b9",
+    "bytes": 5421,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/test_check_pipeline_status.py",
+    "sha256": "02b8274fe160509214b34b1f24df99c56b116bd7f09a5444e43b0c79114a1dc0",
+    "bytes": 6471,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/test_check_required_docs.py",
+    "sha256": "819a9af5cf0b58ca3aaa45e3dc630309d9a145bfaba2137890b815a16d54698f",
+    "bytes": 1931,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/test_check_web_archive.py",
+    "sha256": "e534051eeb1b0bb5022899819357559fb8d73f75a79712cfea8facf285bc6dfd",
+    "bytes": 3924,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/test_create_github_release.py",
+    "sha256": "52c4ec835023e78dbe56d2c9b58b17f436403523c2fea89fa86c78b991d9e7e5",
+    "bytes": 9926,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/test_detect_code_changes.py",
+    "sha256": "07c50fd539db33da77b72ce2b6bf5109fc38b9203b1bb8ae6b0432561babd3b5",
+    "bytes": 1615,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/test_issue_91.py",
+    "sha256": "e1e650852cef62e864592b66558cb2985ac5b3f7d0c600ef905f5a0a0aa3bb18",
+    "bytes": 10377,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/test_my_package.py",
+    "sha256": "bfed38cf721c7b5ab6a8efc01da2983ba73a7d6cc80b46d1e28ab459414378ce",
+    "bytes": 1610,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/test_preflight_credentials.py",
+    "sha256": "3d17a619451ef02060c5eaa9939c3f7bdf14b645a04864c5e527303d33221884",
+    "bytes": 9552,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/test_preview_regeneration_docs.py",
+    "sha256": "abc632df65703c2fb43a34288f83b7dfad3dbf4a836e26b30f7d6387ab316fb9",
+    "bytes": 1110,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/test_project_metadata.py",
+    "sha256": "8b1d012f73ec0d1007f5133542c7d637342e07d7fe9116a0a8996db61d96335f",
+    "bytes": 1004,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/test_read_manifest.py",
+    "sha256": "59009711d8361397cf78899ffedd508af5bcbcf396cbd20e93404cfa89ca2d95",
+    "bytes": 2535,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/test_recheck_broken_links.py",
+    "sha256": "431e6b649ecc350b2bb34b49c2dd5839cc3e20e83c8181f4d9fc7685f5260cac",
+    "bytes": 13743,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/test_release_workflow.py",
+    "sha256": "11ff79385806f26a9a9f9c802f30f9b88c10264adc8841e9c0aa14ab0f2ac111",
+    "bytes": 24718,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/test_run_with_budget_warning.py",
+    "sha256": "853b63e1f92f591c1e51dcf8df0724a4d5984fe156136732d89f8dd625867b9b",
+    "bytes": 8384,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/test_simulate_fresh_merge.py",
+    "sha256": "0591d616a23fcf49df949c74f56fbdd551cc2b3ae78a36fb02f2c326fda3626d",
+    "bytes": 4077,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/test_smoke_test_published_package.py",
+    "sha256": "7fb6c8be6e5522ab84b0e52b62ba322938a95b5190c5be62654a1d67130c00c2",
+    "bytes": 3909,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/test_version_and_commit.py",
+    "sha256": "f63cea4648786c3a0a85bd278b19efad544c6f6aa65953d2a3aa47af47af71e4",
+    "bytes": 10320,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/test_workflows.py",
+    "sha256": "a58ebf470ec61f4db7b152daedd7090a20a5924fea837b9d0c59433337cde36f",
+    "bytes": 20174,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  },
+  {
+    "path": "tests/workflow_helpers.py",
+    "sha256": "45496a3f740747ee41c18e0f81f12700ae44e9774c31f9d426d205ab7327838f",
+    "bytes": 6676,
+    "ci_related": false,
+    "disposition": "Template example implementation/fixtures, not command-stream runtime; retain equivalent local behavior/tests"
+  }
+]

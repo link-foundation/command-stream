@@ -1,0 +1,61 @@
+{
+  "source": "test/js/bun/shell/commands/true.test.ts",
+  "units": [
+    {
+      "line": 6,
+      "upstream": "works",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-true/works",
+          "template": ["true"],
+          "expect": {
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 8,
+      "upstream": "works with arguments",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-true/with-arguments",
+          "template": ["true 3 5"],
+          "expect": {
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 10,
+      "upstream": "works with --help",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-true/with-help",
+          "template": ["true --help"],
+          "expect": {
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 12,
+      "upstream": "works with --version",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-true/with-version",
+          "template": ["true --version"],
+          "expect": {
+            "exitCode": 0
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,309 @@
+--- rust-template/scripts/check-changelog-fragment.rs
++++ rust/scripts/check-changelog-fragment.rs
+@@ -17,7 +17,7 @@
+ //!
+ //! ```cargo
+ //! [dependencies]
+-//! regex = "1"
++//! regex = "1.13.1"
+ //! ```
+ 
+ use regex::Regex;
+@@ -25,37 +25,22 @@
+ use std::path::Path;
+ use std::process::{exit, Command};
+ 
+-#[path = "rust-paths.rs"]
+-mod rust_paths;
+-
+-fn exec(command: &str, args: &[&str]) -> Result<String, String> {
++fn exec(command: &str, args: &[&str]) -> String {
+     match Command::new(command).args(args).output() {
+-        Ok(output) if output.status.success() => {
+-            Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+-        }
+-        Ok(output) => Err(format!(
+-            "{} {:?} exited with {}: {}",
+-            command,
+-            args,
+-            output.status,
+-            String::from_utf8_lossy(&output.stderr).trim()
+-        )),
+-        Err(error) => Err(format!(
+-            "failed to execute {} {:?}: {}",
+-            command, args, error
+-        )),
+-    }
+-}
+-
+-fn fetch_base(base_ref: &str) -> Result<(), String> {
+-    let refspec = format!("refs/heads/{base_ref}:refs/remotes/origin/{base_ref}");
+-    let shallow = exec("git", &["rev-parse", "--is-shallow-repository"])? == "true";
+-    let mut args = vec!["fetch", "origin"];
+-    if shallow {
+-        args.push("--unshallow");
+-    }
+-    args.push(&refspec);
+-    exec("git", &args).map(|_| ())
++        Ok(output) => {
++            if output.status.success() {
++                String::from_utf8_lossy(&output.stdout).trim().to_string()
++            } else {
++                eprintln!("Error executing {} {:?}", command, args);
++                eprintln!("{}", String::from_utf8_lossy(&output.stderr));
++                exit(1)
++            }
++        }
++        Err(e) => {
++            eprintln!("Failed to execute {} {:?}: {}", command, args, e);
++            exit(1)
++        }
++    }
+ }
+ 
+ fn get_rust_root() -> String {
+@@ -76,31 +61,30 @@
+     ".".to_string()
+ }
+ 
+-fn get_changed_files(added_only: bool) -> Result<Vec<String>, String> {
++fn get_changed_files() -> Vec<String> {
+     let base_ref = env::var("GITHUB_BASE_REF").unwrap_or_else(|_| "main".to_string());
+     eprintln!("Comparing against origin/{}...HEAD", base_ref);
+-    let comparison = format!("origin/{base_ref}...HEAD");
+-    let mut diff_args = vec!["diff", "--name-only", "-z", comparison.as_str()];
+-    if added_only {
+-        diff_args.push("--diff-filter=A");
+-    }
+-    let output = match exec("git", &diff_args) {
+-        Ok(output) => output,
+-        Err(first_error) => {
+-            eprintln!(
+-                "Initial diff failed ({first_error}); fetching the explicit base ref and retrying."
+-            );
+-            fetch_base(&base_ref).map_err(|fetch_error| {
+-                format!("could not prepare base after diff failure ({first_error}); {fetch_error}")
+-            })?;
+-            exec("git", &diff_args)?
+-        }
+-    };
+-    Ok(output
+-        .split('\0')
++
++    let output = exec(
++        "git",
++        &[
++            "diff",
++            "--name-only",
++            // Both sides of a move: code moved out of src/ is still a change.
++            "--no-renames",
++            &format!("origin/{}...HEAD", base_ref),
++        ],
++    );
++
++    if output.is_empty() {
++        return Vec::new();
++    }
++
++    output
++        .lines()
+         .filter(|s| !s.is_empty())
+         .map(String::from)
+-        .collect())
++        .collect()
+ }
+ 
+ fn is_source_file(file_path: &str, rust_root: &str) -> bool {
+@@ -111,14 +95,10 @@
+     };
+ 
+     let source_patterns = [
+-        Regex::new(&format!(r"^{}(?:[^/]+/)*src/", regex::escape(&prefix))).unwrap(),
+-        Regex::new(&format!(r"^{}(?:[^/]+/)*tests/", regex::escape(&prefix))).unwrap(),
+-        Regex::new(&format!(
+-            r"^(?:{}scripts/|scripts/)",
+-            regex::escape(&prefix)
+-        ))
+-        .unwrap(),
+-        Regex::new(&format!(r"^{}(?:[^/]+/)*Cargo\.toml$", regex::escape(&prefix))).unwrap(),
++        Regex::new(&format!(r"^{}src/", regex::escape(&prefix))).unwrap(),
++        Regex::new(&format!(r"^{}tests/", regex::escape(&prefix))).unwrap(),
++        Regex::new(&format!(r"^{}scripts/", regex::escape(&prefix))).unwrap(),
++        Regex::new(&format!(r"^{}Cargo\.toml$", regex::escape(&prefix))).unwrap(),
+     ];
+ 
+     source_patterns
+@@ -126,11 +106,16 @@
+         .any(|pattern| pattern.is_match(file_path))
+ }
+ 
++/// A fragment is a `.md` file directly in `<rust_root>/changelog.d/`: the only
++/// files the release reads (`collect_fragments` in version-and-commit.rs and
++/// collect-changelog.rs). Anything else -- a root `changelog.d/`, a
++/// subdirectory -- used to pass this check and then be silently left out of
++/// the release (issue #216).
+ fn is_changelog_fragment(file_path: &str, rust_root: &str) -> bool {
+     let changelog_dir = if rust_root == "." {
+-        "changelog.d/".to_string()
++        "changelog.d".to_string()
+     } else {
+-        format!("{}/changelog.d/", rust_root)
++        format!("{}/changelog.d", rust_root)
+     };
+ 
+     let path = Path::new(file_path);
+@@ -139,13 +124,24 @@
+         && path.file_name().is_some_and(|name| name != "README.md")
+ }
+ 
++/// The `bump:` value of a fragment's frontmatter must be one get-bump-type.rs
++/// understands; a typo such as `bump: majr` was silently released as the
++/// default patch bump (issue #216). A missing `bump:` keeps the default.
++fn invalid_bump(content: &str) -> Option<String> {
++    let frontmatter = Regex::new(r"(?s)^---\s*\n(.*?)\n---").unwrap();
++    let bump = Regex::new(r"(?m)^\s*bump\s*:\s*(.+?)\s*$").unwrap();
++    let value = bump
++        .captures(frontmatter.captures(content)?.get(1)?.as_str())?
++        .get(1)?
++        .as_str()
++        .to_string();
++    (!matches!(value.as_str(), "patch" | "minor" | "major")).then_some(value)
++}
++
+ fn main() {
+     println!("Checking for changelog fragment in PR diff...\n");
+ 
+-    let rust_root = rust_paths::repository_relative_root(&get_rust_root()).unwrap_or_else(|error| {
+-        eprintln!("::error::{error}");
+-        exit(1);
+-    });
++    let rust_root = get_rust_root();
+     if rust_root != "." {
+         println!(
+             "Detected multi-language repository (Rust root: {})",
+@@ -153,13 +149,7 @@
+         );
+     }
+ 
+-    let changed_files = match get_changed_files(false) {
+-        Ok(files) => files,
+-        Err(error) => {
+-            eprintln!("::error::Could not determine the PR's changed files: {error}");
+-            exit(1);
+-        }
+-    };
++    let changed_files = get_changed_files();
+ 
+     if changed_files.is_empty() {
+         println!("No changed files found");
+@@ -188,10 +178,22 @@
+     println!();
+ 
+     // Count changelog fragments added in this PR
+-    let added_files = get_changed_files(true).unwrap_or_else(|error| {
+-        eprintln!("::error::Could not determine added fragments: {error}");
+-        exit(1);
+-    });
++    let base_ref = env::var("GITHUB_BASE_REF").unwrap_or_else(|_| "main".to_string());
++    let added = exec(
++        "git",
++        &[
++            "diff",
++            "--name-only",
++            // A fragment is mostly frontmatter, so default rename detection
++            // pairs a new one with any fragment removed in the range and
++            // reports R, not A. Exact renames only: a byte-identical move of
++            // a pending fragment is still not a new one.
++            "--find-renames=100%",
++            "--diff-filter=A",
++            &format!("origin/{}...HEAD", base_ref),
++        ],
++    );
++    let added_files: Vec<String> = added.lines().map(String::from).collect();
+     let fragments_added: Vec<&String> = added_files
+         .iter()
+         .filter(|f| is_changelog_fragment(f, &rust_root))
+@@ -206,9 +208,34 @@
+     }
+     println!();
+ 
++    let misplaced: Vec<&String> = added_files
++        .iter()
++        .filter(|f| f.contains("changelog.d/") && f.ends_with(".md"))
++        .filter(|f| !f.ends_with("/README.md") && !is_changelog_fragment(f, &rust_root))
++        .collect();
++    for file in &misplaced {
++        eprintln!(
++            "::warning file={file}::Not a changelog fragment: the release only reads .md files directly in {rust_root}/changelog.d/"
++        );
++    }
++
++    let mut invalid = false;
++    for file in &fragments_added {
++        let content = std::fs::read_to_string(file.as_str()).unwrap_or_default();
++        if let Some(value) = invalid_bump(&content) {
++            eprintln!("::error file={file}::Invalid bump '{value}': use patch, minor or major");
++            invalid = true;
++        }
++    }
++    if invalid {
++        exit(1);
++    }
++
+     // Check if source files changed but no fragment was added
+     if source_changed_count > 0 && fragment_added_count == 0 {
+-        eprintln!("::error::No changelog fragment found in this PR. Please add a changelog entry in changelog.d/");
++        eprintln!(
++            "::error::No changelog fragment found in this PR. Please add a changelog entry in {rust_root}/changelog.d/"
++        );
+         eprintln!();
+         eprintln!("To create a changelog fragment:");
+         eprintln!("  Create a new .md file in changelog.d/ with your changes");
+@@ -228,12 +255,38 @@
+     use super::*;
+ 
+     #[test]
+-    fn command_failure_is_not_an_empty_success() {
+-        let error = exec(
+-            "git",
+-            &["diff", "--name-only", "definitely-not-a-ref...HEAD"],
+-        )
+-        .expect_err("an invalid revision must remain an error");
+-        assert!(error.contains("exited with"));
+-    }
+-}
++    fn only_top_level_fragments_in_the_rust_root_count() {
++        assert!(is_changelog_fragment(
++            "rust/changelog.d/20261007_fix.md",
++            "rust"
++        ));
++        assert!(is_changelog_fragment("changelog.d/20261007_fix.md", "."));
++        // The release never reads these, so they must not satisfy the check.
++        assert!(!is_changelog_fragment(
++            "changelog.d/20261007_fix.md",
++            "rust"
++        ));
++        assert!(!is_changelog_fragment(
++            "rust/changelog.d/old/20261007_fix.md",
++            "rust"
++        ));
++        assert!(!is_changelog_fragment("rust/changelog.d/README.md", "rust"));
++        assert!(!is_changelog_fragment("rust/changelog.d/notes.txt", "rust"));
++        assert!(!is_changelog_fragment(
++            "js/changelog.d/20261007_fix.md",
++            "rust"
++        ));
++    }
++
++    #[test]
++    fn rejects_a_misspelled_bump() {
++        assert_eq!(
++            invalid_bump("---\nbump: majr\n---\n\n### Fixed\n"),
++            Some("majr".into())
++        );
++        assert_eq!(invalid_bump("---\nbump: minor\n---\n\n### Added\n"), None);
++        assert_eq!(invalid_bump("### Fixed\n- no frontmatter\n"), None);
++        // `bump:` outside the frontmatter is prose, not a setting.
++        assert_eq!(invalid_bump("---\ntitle: x\n---\n\nbump: sideways\n"), None);
++    }
++}

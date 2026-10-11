@@ -1,0 +1,20 @@
+git 2.43.0
+
+default rename detection (rust template check-changelog-fragment.rs, detect-code-changes.rs):
+  replaced  added fragments: 
+  moved     added fragments: 
+  code-out  changed paths:   examples/lib.rs 
+
+--find-renames (python template validate_changeset.py additions):
+  replaced  added fragments: 
+  moved     added fragments: 
+
+--no-renames (js template pr-comparison.mjs; python template source paths):
+  replaced  added fragments: changelog.d/new.md 
+  moved     added fragments: changelog.d/moved.md 
+  code-out  changed paths:   examples/lib.rs src/lib.rs 
+
+--find-renames=100% for additions, --no-renames for changed paths (command-stream #217):
+  replaced  added fragments: changelog.d/new.md 
+  moved     added fragments: 
+  code-out  changed paths:   examples/lib.rs src/lib.rs 

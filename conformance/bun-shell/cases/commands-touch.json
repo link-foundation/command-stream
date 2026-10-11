@@ -1,0 +1,249 @@
+{
+  "source": "test/js/bun/shell/commands/touch.test.ts",
+  "units": [
+    {
+      "line": 9,
+      "upstream": "operands longer than the path buffer are reported, not a crash",
+      "disposition": "case",
+      "note": "upstream runs the $ calls inside a bun -e child (crash isolation) with cwd = temp dir; the observable behaviour is reproduced directly. touch reports a relative operand joined onto the cwd (absolute path) and an absolute operand as written. Windows variants are not validated by the Linux oracle run. touch.test.ts contains no timestamp assertions.",
+      "cases": [
+        {
+          "id": "commands-touch/long-relative",
+          "template": ["touch ", ""],
+          "values": [
+            {
+              "string": {
+                "repeat": "a",
+                "count": 5000
+              }
+            }
+          ],
+          "platforms": ["posix"],
+          "expect": {
+            "stderr": {
+              "concat": [
+                "touch: ",
+                "{{TEMP}}/",
+                {
+                  "repeat": "a",
+                  "count": 5000
+                },
+                ": File name too long\n"
+              ]
+            },
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "commands-touch/long-absolute",
+          "template": ["touch ", ""],
+          "values": [
+            {
+              "string": {
+                "concat": [
+                  "{{TEMP}}/",
+                  {
+                    "repeat": "a",
+                    "count": 5000
+                  }
+                ]
+              }
+            }
+          ],
+          "platforms": ["posix"],
+          "expect": {
+            "stderr": {
+              "concat": [
+                "touch: ",
+                "{{TEMP}}/",
+                {
+                  "repeat": "a",
+                  "count": 5000
+                },
+                ": File name too long\n"
+              ]
+            },
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "commands-touch/huge",
+          "template": ["touch ", ""],
+          "values": [
+            {
+              "string": {
+                "repeat": "h",
+                "count": 100000
+              }
+            }
+          ],
+          "platforms": ["posix"],
+          "expect": {
+            "stderr": {
+              "concat": [
+                "touch: ",
+                "{{TEMP}}/",
+                {
+                  "repeat": "h",
+                  "count": 100000
+                },
+                ": File name too long\n"
+              ]
+            },
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "commands-touch/long-mixed",
+          "template": ["touch ", ""],
+          "values": [
+            {
+              "array": [
+                {
+                  "string": {
+                    "repeat": "a",
+                    "count": 5000
+                  }
+                },
+                {
+                  "string": "short"
+                }
+              ]
+            }
+          ],
+          "platforms": ["posix"],
+          "expect": {
+            "stderr": {
+              "concat": [
+                "touch: ",
+                "{{TEMP}}/",
+                {
+                  "repeat": "a",
+                  "count": 5000
+                },
+                ": File name too long\n"
+              ]
+            },
+            "exitCode": 1,
+            "exists": ["short"]
+          }
+        },
+        {
+          "id": "commands-touch/dot-slashes-normalized",
+          "template": ["touch ", ""],
+          "values": [
+            {
+              "string": {
+                "concat": [
+                  {
+                    "repeat": "./",
+                    "count": 3000
+                  },
+                  "normalized"
+                ]
+              }
+            }
+          ],
+          "expect": {
+            "exitCode": 0,
+            "exists": ["normalized"],
+            "types": {
+              "normalized": "file"
+            }
+          },
+          "note": "a 6010-byte relative operand that normalizes down to one component succeeds"
+        },
+        {
+          "id": "commands-touch/long-relative-windows",
+          "template": ["touch ", ""],
+          "values": [
+            {
+              "string": {
+                "repeat": "a",
+                "count": 5000
+              }
+            }
+          ],
+          "platforms": ["windows"],
+          "expect": {
+            "stderr": {
+              "startsWith": "touch: "
+            },
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "commands-touch/long-absolute-windows",
+          "template": ["touch ", ""],
+          "values": [
+            {
+              "string": {
+                "concat": [
+                  "{{TEMP}}/",
+                  {
+                    "repeat": "a",
+                    "count": 5000
+                  }
+                ]
+              }
+            }
+          ],
+          "platforms": ["windows"],
+          "expect": {
+            "stderr": {
+              "startsWith": "touch: "
+            },
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "commands-touch/huge-windows",
+          "template": ["touch ", ""],
+          "values": [
+            {
+              "string": {
+                "repeat": "h",
+                "count": 100000
+              }
+            }
+          ],
+          "platforms": ["windows"],
+          "expect": {
+            "stderr": {
+              "startsWith": "touch: "
+            },
+            "exitCode": 1
+          },
+          "note": "upstream only checks the prefix on Windows"
+        },
+        {
+          "id": "commands-touch/long-mixed-windows",
+          "template": ["touch ", ""],
+          "values": [
+            {
+              "array": [
+                {
+                  "string": {
+                    "repeat": "a",
+                    "count": 5000
+                  }
+                },
+                {
+                  "string": "short"
+                }
+              ]
+            }
+          ],
+          "platforms": ["windows"],
+          "expect": {
+            "stderr": {
+              "startsWith": "touch: "
+            },
+            "exitCode": 1,
+            "exists": ["short"]
+          }
+        }
+      ]
+    }
+  ]
+}

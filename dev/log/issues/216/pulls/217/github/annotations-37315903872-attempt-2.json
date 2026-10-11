@@ -1,0 +1,28 @@
+{
+  "Check external links": [
+    {
+      "path": ".github",
+      "blob_href": "https://github.com/link-foundation/command-stream/blob/d9abbee10793e3c192aa43df97aaf5fbc4bcee1d/.github",
+      "start_line": 165,
+      "start_column": null,
+      "end_line": 165,
+      "end_column": null,
+      "annotation_level": "notice",
+      "title": "",
+      "message": "Summary report available at: https://github.com/link-foundation/command-stream/actions/runs/37315903872#summary-111896825296",
+      "raw_details": ""
+    },
+    {
+      "path": ".github",
+      "blob_href": "https://github.com/link-foundation/command-stream/blob/d9abbee10793e3c192aa43df97aaf5fbc4bcee1d/.github",
+      "start_line": 1,
+      "start_column": null,
+      "end_line": 1,
+      "end_column": null,
+      "annotation_level": "notice",
+      "title": "",
+      "message": "\"The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748\"",
+      "raw_details": ""
+    }
+  ]
+}

@@ -1,0 +1,599 @@
+{
+  "total_count": 10,
+  "jobs": [
+    {
+      "id": 111940292968,
+      "run_id": 37362523769,
+      "workflow_name": "Rust checks and release",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523769",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEClRaA",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111940292968",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523769/job/111940292968",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-05T19:18:59Z",
+      "started_at": "2026-10-05T19:20:04Z",
+      "completed_at": "2026-10-05T19:20:54Z",
+      "name": "Rust changelog and version checks",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-05T19:20:05Z",
+          "completed_at": "2026-10-05T19:20:05Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-05T19:20:05Z",
+          "completed_at": "2026-10-05T19:20:08Z"
+        },
+        {
+          "name": "Setup Rust",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-05T19:20:08Z",
+          "completed_at": "2026-10-05T19:20:19Z"
+        },
+        {
+          "name": "Install rust-script",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-05T19:20:19Z",
+          "completed_at": "2026-10-05T19:20:43Z"
+        },
+        {
+          "name": "Check for changelog fragments",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-05T19:20:43Z",
+          "completed_at": "2026-10-05T19:20:48Z"
+        },
+        {
+          "name": "Check for manual version changes",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-05T19:20:48Z",
+          "completed_at": "2026-10-05T19:20:53Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-10-05T19:20:53Z",
+          "completed_at": "2026-10-05T19:20:53Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-10-05T19:20:53Z",
+          "completed_at": "2026-10-05T19:20:53Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111940292968",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "runner_id": 1000084097,
+      "runner_name": "GitHub Actions 1000084097",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 111940294798,
+      "run_id": 37362523769,
+      "workflow_name": "Rust checks and release",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523769",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEClYjg",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111940294798",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523769/job/111940294798",
+      "status": "completed",
+      "conclusion": "skipped",
+      "created_at": "2026-10-05T19:18:59Z",
+      "started_at": "2026-10-05T19:18:59Z",
+      "completed_at": "2026-10-05T19:18:58Z",
+      "name": "Create Rust changelog PR",
+      "steps": [],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111940294798",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "runner_id": null,
+      "runner_name": null,
+      "runner_group_id": null,
+      "runner_group_name": null
+    },
+    {
+      "id": 111941019302,
+      "run_id": 37362523769,
+      "workflow_name": "Rust checks and release",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523769",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEDRmpg",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111941019302",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523769/job/111941019302",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-05T19:20:55Z",
+      "started_at": "2026-10-05T19:23:53Z",
+      "completed_at": "2026-10-05T19:24:16Z",
+      "name": "Lint and format Rust",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-05T19:23:54Z",
+          "completed_at": "2026-10-05T19:23:55Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-05T19:23:55Z",
+          "completed_at": "2026-10-05T19:23:57Z"
+        },
+        {
+          "name": "Simulate a fresh merge with the base branch",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-05T19:23:57Z",
+          "completed_at": "2026-10-05T19:23:57Z"
+        },
+        {
+          "name": "Check registry publish credentials",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 4,
+          "started_at": "2026-10-05T19:23:57Z",
+          "completed_at": "2026-10-05T19:23:57Z"
+        },
+        {
+          "name": "Setup Rust",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-05T19:23:57Z",
+          "completed_at": "2026-10-05T19:24:05Z"
+        },
+        {
+          "name": "Cache cargo registry",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-05T19:24:05Z",
+          "completed_at": "2026-10-05T19:24:09Z"
+        },
+        {
+          "name": "Check formatting",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-05T19:24:09Z",
+          "completed_at": "2026-10-05T19:24:09Z"
+        },
+        {
+          "name": "Run Clippy",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-10-05T19:24:09Z",
+          "completed_at": "2026-10-05T19:24:13Z"
+        },
+        {
+          "name": "Build documentation",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-10-05T19:24:13Z",
+          "completed_at": "2026-10-05T19:24:14Z"
+        },
+        {
+          "name": "Post Cache cargo registry",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17,
+          "started_at": "2026-10-05T19:24:14Z",
+          "completed_at": "2026-10-05T19:24:14Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 18,
+          "started_at": "2026-10-05T19:24:14Z",
+          "completed_at": "2026-10-05T19:24:14Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 19,
+          "started_at": "2026-10-05T19:24:14Z",
+          "completed_at": "2026-10-05T19:24:14Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111941019302",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "runner_id": 1000084124,
+      "runner_name": "GitHub Actions 1000084124",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 111942231987,
+      "run_id": 37362523769,
+      "workflow_name": "Rust checks and release",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523769",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEEbnsw",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111942231987",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523769/job/111942231987",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-05T19:24:16Z",
+      "started_at": "2026-10-05T19:34:30Z",
+      "completed_at": "2026-10-05T19:35:44Z",
+      "name": "Test Rust (ubuntu-24.04)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-05T19:34:31Z",
+          "completed_at": "2026-10-05T19:34:32Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-05T19:34:32Z",
+          "completed_at": "2026-10-05T19:34:36Z"
+        },
+        {
+          "name": "Simulate a fresh merge with the base branch",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-05T19:34:36Z",
+          "completed_at": "2026-10-05T19:34:36Z"
+        },
+        {
+          "name": "Setup Rust",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-05T19:34:36Z",
+          "completed_at": "2026-10-05T19:34:46Z"
+        },
+        {
+          "name": "Cache cargo registry",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-05T19:34:46Z",
+          "completed_at": "2026-10-05T19:34:51Z"
+        },
+        {
+          "name": "Run tests",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-05T19:34:51Z",
+          "completed_at": "2026-10-05T19:35:39Z"
+        },
+        {
+          "name": "Run doc tests",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-05T19:35:39Z",
+          "completed_at": "2026-10-05T19:35:41Z"
+        },
+        {
+          "name": "Post Cache cargo registry",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-10-05T19:35:41Z",
+          "completed_at": "2026-10-05T19:35:41Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14,
+          "started_at": "2026-10-05T19:35:41Z",
+          "completed_at": "2026-10-05T19:35:41Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15,
+          "started_at": "2026-10-05T19:35:41Z",
+          "completed_at": "2026-10-05T19:35:41Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111942231987",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "runner_id": 1000084177,
+      "runner_name": "GitHub Actions 1000084177",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 111942231995,
+      "run_id": 37362523769,
+      "workflow_name": "Rust checks and release",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523769",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEEbnuw",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111942231995",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523769/job/111942231995",
+      "status": "completed",
+      "conclusion": "cancelled",
+      "created_at": "2026-10-05T19:24:16Z",
+      "started_at": "2026-10-05T19:24:16Z",
+      "completed_at": "2026-10-05T19:45:21Z",
+      "name": "Test Rust scripts and check sizes",
+      "steps": [],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111942231995",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "runner_id": 0,
+      "runner_name": "",
+      "runner_group_id": 0,
+      "runner_group_name": ""
+    },
+    {
+      "id": 111942232075,
+      "run_id": 37362523769,
+      "workflow_name": "Rust checks and release",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523769",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEEboCw",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111942232075",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523769/job/111942232075",
+      "status": "completed",
+      "conclusion": "cancelled",
+      "created_at": "2026-10-05T19:24:16Z",
+      "started_at": "2026-10-05T19:24:16Z",
+      "completed_at": "2026-10-05T19:44:40Z",
+      "name": "Test Rust (macos-15)",
+      "steps": [],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111942232075",
+      "labels": [
+        "macos-15"
+      ],
+      "runner_id": 0,
+      "runner_name": "",
+      "runner_group_id": 0,
+      "runner_group_name": ""
+    },
+    {
+      "id": 111942232286,
+      "run_id": 37362523769,
+      "workflow_name": "Rust checks and release",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523769",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEEbo3g",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111942232286",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523769/job/111942232286",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-05T19:24:16Z",
+      "started_at": "2026-10-05T19:25:59Z",
+      "completed_at": "2026-10-05T19:28:33Z",
+      "name": "Test Rust (windows-2025)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-05T19:26:00Z",
+          "completed_at": "2026-10-05T19:26:01Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-05T19:26:01Z",
+          "completed_at": "2026-10-05T19:26:10Z"
+        },
+        {
+          "name": "Simulate a fresh merge with the base branch",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-05T19:26:10Z",
+          "completed_at": "2026-10-05T19:26:11Z"
+        },
+        {
+          "name": "Setup Rust",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-05T19:26:11Z",
+          "completed_at": "2026-10-05T19:26:31Z"
+        },
+        {
+          "name": "Cache cargo registry",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-05T19:26:31Z",
+          "completed_at": "2026-10-05T19:26:59Z"
+        },
+        {
+          "name": "Run tests",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-05T19:26:59Z",
+          "completed_at": "2026-10-05T19:28:20Z"
+        },
+        {
+          "name": "Run doc tests",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-05T19:28:20Z",
+          "completed_at": "2026-10-05T19:28:28Z"
+        },
+        {
+          "name": "Post Cache cargo registry",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-10-05T19:28:28Z",
+          "completed_at": "2026-10-05T19:28:28Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14,
+          "started_at": "2026-10-05T19:28:28Z",
+          "completed_at": "2026-10-05T19:28:30Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15,
+          "started_at": "2026-10-05T19:28:30Z",
+          "completed_at": "2026-10-05T19:28:30Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111942232286",
+      "labels": [
+        "windows-2025"
+      ],
+      "runner_id": 1000084134,
+      "runner_name": "GitHub Actions 1000084134",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 111949080321,
+      "run_id": 37362523769,
+      "workflow_name": "Rust checks and release",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523769",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEK9nAQ",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111949080321",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523769/job/111949080321",
+      "status": "completed",
+      "conclusion": "skipped",
+      "created_at": "2026-10-05T19:44:41Z",
+      "started_at": "2026-10-05T19:44:41Z",
+      "completed_at": "2026-10-05T19:44:40Z",
+      "name": "Build Rust package",
+      "steps": [],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111949080321",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "runner_id": null,
+      "runner_name": null,
+      "runner_group_id": null,
+      "runner_group_name": null
+    },
+    {
+      "id": 111949312749,
+      "run_id": 37362523769,
+      "workflow_name": "Rust checks and release",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523769",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaELLy7Q",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111949312749",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523769/job/111949312749",
+      "status": "completed",
+      "conclusion": "skipped",
+      "created_at": "2026-10-05T19:45:21Z",
+      "started_at": "2026-10-05T19:45:21Z",
+      "completed_at": "2026-10-05T19:45:21Z",
+      "name": "Instant Rust release",
+      "steps": [],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111949312749",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "runner_id": null,
+      "runner_name": null,
+      "runner_group_id": null,
+      "runner_group_name": null
+    },
+    {
+      "id": 111949312810,
+      "run_id": 37362523769,
+      "workflow_name": "Rust checks and release",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523769",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaELLzKg",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111949312810",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523769/job/111949312810",
+      "status": "completed",
+      "conclusion": "skipped",
+      "created_at": "2026-10-05T19:45:21Z",
+      "started_at": "2026-10-05T19:45:21Z",
+      "completed_at": "2026-10-05T19:45:21Z",
+      "name": "Release Rust crate",
+      "steps": [],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111949312810",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "runner_id": null,
+      "runner_name": null,
+      "runner_group_id": null,
+      "runner_group_name": null
+    }
+  ]
+}

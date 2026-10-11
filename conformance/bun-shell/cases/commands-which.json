@@ -1,0 +1,252 @@
+{
+  "source": "test/js/bun/shell/commands/which.test.ts",
+  "units": [
+    {
+      "line": 26,
+      "upstream": "which searches $PATH for bare names and the shell cwd for ./ names (captured stdout)",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-which/path-and-cwd",
+          "template": ["which tool ./tool"],
+          "files": {
+            "path-dir/tool": {
+              "content": "",
+              "mode": "755"
+            },
+            "cwd-dir/tool": {
+              "content": "",
+              "mode": "755"
+            }
+          },
+          "env": {
+            "PATH": "{{TEMP}}/path-dir"
+          },
+          "envReplace": true,
+          "cwd": "cwd-dir",
+          "platforms": ["posix"],
+          "expect": {
+            "stdout": "{{TEMP}}/path-dir/tool\n{{TEMP}}/cwd-dir/tool\n"
+          }
+        },
+        {
+          "id": "commands-which/path-and-cwd-windows",
+          "template": ["which tool ./tool"],
+          "files": {
+            "path-dir/tool.exe": {
+              "content": "",
+              "mode": "755"
+            },
+            "cwd-dir/tool.exe": {
+              "content": "",
+              "mode": "755"
+            }
+          },
+          "env": {
+            "PATH": "{{TEMP}}/path-dir"
+          },
+          "envReplace": true,
+          "cwd": "cwd-dir",
+          "platforms": ["windows"],
+          "expect": {
+            "stdout": {
+              "regex": "^.*[\\\\/]path-dir[\\\\/]tool\\.exe\\n.*[\\\\/]cwd-dir[\\\\/]tool\\.exe\\n$"
+            }
+          },
+          "note": "Windows variant (upstream uses tool.exe and path.join with backslashes). Not verifiable on the Linux oracle."
+        }
+      ]
+    },
+    {
+      "line": 35,
+      "upstream": "which searches $PATH for bare names and the shell cwd for ./ names (streamed stdout)",
+      "disposition": "case",
+      "note": "Streamed-stdout path (not .quiet()) is not reproducible by the capturing runner; the output expectation is the same as the captured variant.",
+      "cases": [
+        {
+          "id": "commands-which/path-and-cwd-streamed",
+          "template": ["which tool ./tool"],
+          "files": {
+            "path-dir/tool": {
+              "content": "",
+              "mode": "755"
+            },
+            "cwd-dir/tool": {
+              "content": "",
+              "mode": "755"
+            }
+          },
+          "env": {
+            "PATH": "{{TEMP}}/path-dir"
+          },
+          "envReplace": true,
+          "cwd": "cwd-dir",
+          "platforms": ["posix"],
+          "expect": {
+            "stdout": "{{TEMP}}/path-dir/tool\n{{TEMP}}/cwd-dir/tool\n"
+          },
+          "note": "Upstream runs the same command without .quiet() in a bun subprocess so the builtin writes straight to the process stdout (one write per argument); the observable output must be identical to the captured variant."
+        },
+        {
+          "id": "commands-which/path-and-cwd-streamed-windows",
+          "template": ["which tool ./tool"],
+          "files": {
+            "path-dir/tool.exe": {
+              "content": "",
+              "mode": "755"
+            },
+            "cwd-dir/tool.exe": {
+              "content": "",
+              "mode": "755"
+            }
+          },
+          "env": {
+            "PATH": "{{TEMP}}/path-dir"
+          },
+          "envReplace": true,
+          "cwd": "cwd-dir",
+          "platforms": ["windows"],
+          "expect": {
+            "stdout": {
+              "regex": "^.*[\\\\/]path-dir[\\\\/]tool\\.exe\\n.*[\\\\/]cwd-dir[\\\\/]tool\\.exe\\n$"
+            }
+          },
+          "note": "Windows variant (upstream uses tool.exe and path.join with backslashes). Not verifiable on the Linux oracle. Upstream runs the same command without .quiet() in a bun subprocess so the builtin writes straight to the process stdout (one write per argument); the observable output must be identical to the captured variant."
+        }
+      ]
+    },
+    {
+      "line": 58,
+      "upstream": "which with an absolute path at the platform path length limit reports not found",
+      "disposition": "case",
+      "note": "upstream skipIf(isWindows); path length is 4096 on Linux, 1024 elsewhere",
+      "cases": [
+        {
+          "id": "commands-which/path-max-linux",
+          "template": ["which ", ""],
+          "values": [
+            {
+              "string": {
+                "concat": [
+                  "/",
+                  {
+                    "repeat": "a",
+                    "count": 4095
+                  }
+                ]
+              }
+            }
+          ],
+          "platforms": ["linux"],
+          "expect": {
+            "stdout": {
+              "concat": [
+                "which: /",
+                {
+                  "repeat": "a",
+                  "count": 4095
+                },
+                " not found\n"
+              ]
+            },
+            "exitCode": 1
+          },
+          "note": "Upstream accepts the message with or without the 'which: ' prefix; Bun 1.4.2 prints it with the prefix."
+        },
+        {
+          "id": "commands-which/path-max-darwin",
+          "template": ["which ", ""],
+          "values": [
+            {
+              "string": {
+                "concat": [
+                  "/",
+                  {
+                    "repeat": "a",
+                    "count": 1023
+                  }
+                ]
+              }
+            }
+          ],
+          "platforms": ["darwin"],
+          "expect": {
+            "stdout": {
+              "concat": [
+                "which: /",
+                {
+                  "repeat": "a",
+                  "count": 1023
+                },
+                " not found\n"
+              ]
+            },
+            "exitCode": 1
+          },
+          "note": "Upstream accepts the message with or without the 'which: ' prefix; Bun 1.4.2 prints it with the prefix."
+        }
+      ]
+    },
+    {
+      "line": 78,
+      "upstream": "which rlly long",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-which/very-long-command-name-throws",
+          "template": ["", ""],
+          "values": [
+            {
+              "string": {
+                "repeat": "a",
+                "count": 100000
+              }
+            }
+          ],
+          "throws": true,
+          "expect": {
+            "error": "Failed with exit code 1",
+            "exitCode": 1,
+            "stdout": "",
+            "stderr": {
+              "concat": [
+                "bun: command not found: ",
+                {
+                  "repeat": "a",
+                  "count": 100000
+                },
+                "\n"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 83,
+      "upstream": "which PATH rlly long",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-which/very-long-path-throws",
+          "template": ["PATH=", " slkdfjlsdkfj"],
+          "values": [
+            {
+              "string": {
+                "repeat": "a",
+                "count": 100000
+              }
+            }
+          ],
+          "throws": true,
+          "expect": {
+            "error": "Failed with exit code 1",
+            "exitCode": 1,
+            "stdout": "",
+            "stderr": "bun: command not found: slkdfjlsdkfj\n"
+          }
+        }
+      ]
+    }
+  ]
+}

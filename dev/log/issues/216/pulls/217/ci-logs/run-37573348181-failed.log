@@ -1,0 +1,35 @@
+Release JavaScript package	Version package and commit to main	﻿2026-10-07T04:55:03.6994535Z ##[group]Run bun scripts/version-and-commit.mjs --mode changeset
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:03.6995017Z ^[[36;1mbun scripts/version-and-commit.mjs --mode changeset^[[0m
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:03.7062685Z shell: /usr/bin/bash -e {0}
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:03.7062939Z env:
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:03.7063366Z   NPM_CONFIG_USERCONFIG: /home/runner/work/_temp/.npmrc
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:03.7063691Z ##[endgroup]
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:04.4678199Z Parsed configuration: {
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:04.4678688Z   mode: "changeset",
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:04.4678938Z   bumpType: "",
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:04.4679175Z   description: "(none)",
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:04.4679417Z }
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:04.4862147Z Checking for remote changes...
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:04.8059913Z From https://github.com/link-foundation/command-stream
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:04.8060668Z  * branch            main       -> FETCH_HEAD
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:04.8150306Z 1fc9e3a30c1e3c55764fc44b19156a25cb3159df
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:04.8214035Z 1fc9e3a30c1e3c55764fc44b19156a25cb3159df
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:04.8222075Z Current version: 1.6.2
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:04.8227398Z Running changeset version...
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:04.8303239Z $ bun scripts/changeset-version.mjs
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:05.0750904Z Running changeset version...
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:05.1356977Z 🦋 changeset v3.0.3
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:05.2546808Z 
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:05.2547524Z Error: spawn deno ENOENT
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:05.2548047Z     at ChildProcess._handle.onexit (node:internal/child_process:287:19)
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:05.2548536Z     at onErrorNT (node:internal/child_process:525:16)
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:05.2549062Z     at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:05.2549769Z 🦋 Exited with code 1
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:05.2549924Z 
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:05.2735332Z Error during version bump: Release command failed (exit 1): 
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:05.2736458Z error: script "changeset:version" exited with code 1
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:05.2746218Z Error: Release command failed (exit 1): $ bun scripts/changeset-version.mjs
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:05.2746913Z Error during version bump: Release command failed (exit 1): 
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:05.2747466Z error: script "changeset:version" exited with code 1
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:05.2747741Z 
+Release JavaScript package	Version package and commit to main	2026-10-07T04:55:05.2787781Z ##[error]Process completed with exit code 1.

@@ -1,0 +1,51 @@
+{
+  "name": "command-stream",
+  "displayName": "Command Stream",
+  "description": "Shell syntax, command completion, documentation, and diagnostics for command-stream JavaScript and TypeScript.",
+  "version": "0.1.0",
+  "publisher": "link-foundation",
+  "license": "Unlicense",
+  "repository": "https://github.com/link-foundation/command-stream",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Other"
+  ],
+  "main": "./src/extension.cjs",
+  "activationEvents": [
+    "onLanguage:javascript",
+    "onLanguage:typescript",
+    "onLanguage:javascriptreact",
+    "onLanguage:typescriptreact"
+  ],
+  "contributes": {
+    "grammars": [
+      {
+        "scopeName": "command-stream.injection",
+        "path": "./syntaxes/command-stream.tmLanguage.json",
+        "injectTo": [
+          "source.js",
+          "source.js.jsx",
+          "source.ts",
+          "source.tsx"
+        ]
+      }
+    ],
+    "commands": [
+      {
+        "command": "command-stream.repl",
+        "title": "Command Stream: Start REPL"
+      }
+    ]
+  },
+  "scripts": {
+    "package": "npx @vscode/vsce package"
+  },
+  "keywords": [
+    "command-stream",
+    "shell",
+    "repl"
+  ]
+}

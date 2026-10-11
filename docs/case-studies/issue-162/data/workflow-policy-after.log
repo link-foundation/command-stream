@@ -1,0 +1,14 @@
+bun test v1.3.14 (0d9b296a)
+
+js/tests/repository-layout.test.mjs:
+(pass) repository language layout > keeps JavaScript package files inside js/ [1.15ms]
+(pass) repository language layout > does not keep language release scripts at the repository root [0.13ms]
+(pass) repository language layout > keeps Rust package release files inside rust/ [0.06ms]
+(pass) repository language layout > uses separate JavaScript and Rust workflows and release tags [0.28ms]
+(pass) repository language layout > release jobs evaluate after PR-only gate jobs are skipped on push [1.16ms]
+(pass) repository language layout > keeps root README focused on shared project information [0.13ms]
+
+ 6 pass
+ 0 fail
+ 51 expect() calls
+Ran 6 tests across 1 file. [39.00ms]

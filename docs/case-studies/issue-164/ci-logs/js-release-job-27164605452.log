@@ -1,0 +1,519 @@
+﻿2026-06-08T20:23:14.1609473Z Current runner version: '2.334.0'
+2026-06-08T20:23:14.1634667Z ##[group]Runner Image Provisioner
+2026-06-08T20:23:14.1635590Z Hosted Compute Agent
+2026-06-08T20:23:14.1636203Z Version: 20260520.533
+2026-06-08T20:23:14.1636914Z Commit: 189110e25284a9812c124fd27b339e2fb4f2f9db
+2026-06-08T20:23:14.1637671Z Build Date: 2026-05-20T17:44:04Z
+2026-06-08T20:23:14.1638367Z Worker ID: {a82d8230-c980-415f-a830-43a23294896b}
+2026-06-08T20:23:14.1639177Z Azure Region: centralus
+2026-06-08T20:23:14.1639833Z ##[endgroup]
+2026-06-08T20:23:14.1641160Z ##[group]Operating System
+2026-06-08T20:23:14.1642152Z Ubuntu
+2026-06-08T20:23:14.1642738Z 24.04.4
+2026-06-08T20:23:14.1643338Z LTS
+2026-06-08T20:23:14.1643924Z ##[endgroup]
+2026-06-08T20:23:14.1644489Z ##[group]Runner Image
+2026-06-08T20:23:14.1645238Z Image: ubuntu-24.04
+2026-06-08T20:23:14.1645837Z Version: 20260525.161.1
+2026-06-08T20:23:14.1647211Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260525.161/images/ubuntu/Ubuntu2404-Readme.md
+2026-06-08T20:23:14.1648697Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260525.161
+2026-06-08T20:23:14.1649826Z ##[endgroup]
+2026-06-08T20:23:14.1651023Z ##[group]GITHUB_TOKEN Permissions
+2026-06-08T20:23:14.1653349Z Contents: write
+2026-06-08T20:23:14.1653983Z Metadata: read
+2026-06-08T20:23:14.1654679Z PullRequests: write
+2026-06-08T20:23:14.1655286Z ##[endgroup]
+2026-06-08T20:23:14.1657319Z Secret source: Actions
+2026-06-08T20:23:14.1658203Z Prepare workflow directory
+2026-06-08T20:23:14.2001583Z Prepare all required actions
+2026-06-08T20:23:14.2038828Z Getting action download info
+2026-06-08T20:23:14.6676278Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+2026-06-08T20:23:14.7981067Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+2026-06-08T20:23:14.8874362Z Download action repository 'oven-sh/setup-bun@v2' (SHA:0c5077e51419868618aeaa5fe8019c62421857d6)
+2026-06-08T20:23:15.4456783Z Complete job name: Release JavaScript package
+2026-06-08T20:23:15.5375002Z ##[group]Run actions/checkout@v4
+2026-06-08T20:23:15.5376391Z with:
+2026-06-08T20:23:15.5377228Z   fetch-depth: 0
+2026-06-08T20:23:15.5378220Z   repository: link-foundation/command-stream
+2026-06-08T20:23:15.5389143Z   token: ***
+2026-06-08T20:23:15.5390106Z   ssh-strict: true
+2026-06-08T20:23:15.5391005Z   ssh-user: git
+2026-06-08T20:23:15.5392123Z   persist-credentials: true
+2026-06-08T20:23:15.5393170Z   clean: true
+2026-06-08T20:23:15.5394087Z   sparse-checkout-cone-mode: true
+2026-06-08T20:23:15.5395187Z   fetch-tags: false
+2026-06-08T20:23:15.5396113Z   show-progress: true
+2026-06-08T20:23:15.5397035Z   lfs: false
+2026-06-08T20:23:15.5397887Z   submodules: false
+2026-06-08T20:23:15.5398836Z   set-safe-directory: true
+2026-06-08T20:23:15.5400166Z ##[endgroup]
+2026-06-08T20:23:15.6531006Z Syncing repository: link-foundation/command-stream
+2026-06-08T20:23:15.6534343Z ##[group]Getting Git version info
+2026-06-08T20:23:15.6536035Z Working directory is '/home/runner/work/command-stream/command-stream'
+2026-06-08T20:23:15.6538360Z [command]/usr/bin/git version
+2026-06-08T20:23:15.6564617Z git version 2.54.0
+2026-06-08T20:23:15.6591369Z ##[endgroup]
+2026-06-08T20:23:15.6614362Z Temporarily overriding HOME='/home/runner/work/_temp/d7759c98-a9ea-4246-bfd4-032167b13f63' before making global git config changes
+2026-06-08T20:23:15.6619027Z Adding repository directory to the temporary git global config as a safe directory
+2026-06-08T20:23:15.6623301Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/command-stream/command-stream
+2026-06-08T20:23:15.6662590Z Deleting the contents of '/home/runner/work/command-stream/command-stream'
+2026-06-08T20:23:15.6665773Z ##[group]Initializing the repository
+2026-06-08T20:23:15.6669652Z [command]/usr/bin/git init /home/runner/work/command-stream/command-stream
+2026-06-08T20:23:15.6739980Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-06-08T20:23:15.6743573Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-06-08T20:23:15.6746590Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-06-08T20:23:15.6748979Z hint: call:
+2026-06-08T20:23:15.6750477Z hint:
+2026-06-08T20:23:15.6752261Z hint: 	git config --global init.defaultBranch <name>
+2026-06-08T20:23:15.6754184Z hint:
+2026-06-08T20:23:15.6755989Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-06-08T20:23:15.6759012Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-06-08T20:23:15.6761335Z hint:
+2026-06-08T20:23:15.6762961Z hint: 	git branch -m <name>
+2026-06-08T20:23:15.6764289Z hint:
+2026-06-08T20:23:15.6765557Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-06-08T20:23:15.6767750Z Initialized empty Git repository in /home/runner/work/command-stream/command-stream/.git/
+2026-06-08T20:23:15.6772929Z [command]/usr/bin/git remote add origin https://github.com/link-foundation/command-stream
+2026-06-08T20:23:15.6806741Z ##[endgroup]
+2026-06-08T20:23:15.6808989Z ##[group]Disabling automatic garbage collection
+2026-06-08T20:23:15.6810740Z [command]/usr/bin/git config --local gc.auto 0
+2026-06-08T20:23:15.6843394Z ##[endgroup]
+2026-06-08T20:23:15.6845782Z ##[group]Setting up auth
+2026-06-08T20:23:15.6850986Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-06-08T20:23:15.6887349Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-06-08T20:23:15.7194978Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-06-08T20:23:15.7227847Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-06-08T20:23:15.7467072Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-06-08T20:23:15.7497964Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-06-08T20:23:15.7731585Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-06-08T20:23:15.7767681Z ##[endgroup]
+2026-06-08T20:23:15.7769298Z ##[group]Fetching the repository
+2026-06-08T20:23:15.7776718Z [command]/usr/bin/git -c protocol.version=2 fetch --prune --no-recurse-submodules origin +refs/heads/*:refs/remotes/origin/* +refs/tags/*:refs/tags/*
+2026-06-08T20:23:17.1072856Z From https://github.com/link-foundation/command-stream
+2026-06-08T20:23:17.1074640Z  * [new branch]      issue-1-03052bff       -> origin/issue-1-03052bff
+2026-06-08T20:23:17.1075494Z  * [new branch]      issue-1-7de9505b       -> origin/issue-1-7de9505b
+2026-06-08T20:23:17.1076287Z  * [new branch]      issue-135-5b3a55f7db0e -> origin/issue-135-5b3a55f7db0e
+2026-06-08T20:23:17.1077137Z  * [new branch]      issue-136-c2c75f0016c4 -> origin/issue-136-c2c75f0016c4
+2026-06-08T20:23:17.1077836Z  * [new branch]      issue-139-34f447966ab4 -> origin/issue-139-34f447966ab4
+2026-06-08T20:23:17.1078505Z  * [new branch]      issue-14-427a6e27      -> origin/issue-14-427a6e27
+2026-06-08T20:23:17.1079171Z  * [new branch]      issue-14-47a807dc      -> origin/issue-14-47a807dc
+2026-06-08T20:23:17.1079812Z  * [new branch]      issue-141-392e7fb32761 -> origin/issue-141-392e7fb32761
+2026-06-08T20:23:17.1080471Z  * [new branch]      issue-142-d79c313dc0de -> origin/issue-142-d79c313dc0de
+2026-06-08T20:23:17.1081118Z  * [new branch]      issue-144-4375266b4889 -> origin/issue-144-4375266b4889
+2026-06-08T20:23:17.1081967Z  * [new branch]      issue-146-f111406088b3 -> origin/issue-146-f111406088b3
+2026-06-08T20:23:17.1083061Z  * [new branch]      issue-149-feab21d6ff91 -> origin/issue-149-feab21d6ff91
+2026-06-08T20:23:17.1084376Z  * [new branch]      issue-15-9fc0cb72      -> origin/issue-15-9fc0cb72
+2026-06-08T20:23:17.1085093Z  * [new branch]      issue-15-b280a47e      -> origin/issue-15-b280a47e
+2026-06-08T20:23:17.1085695Z  * [new branch]      issue-151-3da6bb3ea5e3 -> origin/issue-151-3da6bb3ea5e3
+2026-06-08T20:23:17.1086211Z  * [new branch]      issue-153-58c6ab4753ab -> origin/issue-153-58c6ab4753ab
+2026-06-08T20:23:17.1086715Z  * [new branch]      issue-156-eb63a328307e -> origin/issue-156-eb63a328307e
+2026-06-08T20:23:17.1087209Z  * [new branch]      issue-158-7e95ada294ce -> origin/issue-158-7e95ada294ce
+2026-06-08T20:23:17.1087704Z  * [new branch]      issue-160-a2a2313cf693 -> origin/issue-160-a2a2313cf693
+2026-06-08T20:23:17.1088202Z  * [new branch]      issue-162-0c186d5158ec -> origin/issue-162-0c186d5158ec
+2026-06-08T20:23:17.1088692Z  * [new branch]      issue-18-16ce2f52      -> origin/issue-18-16ce2f52
+2026-06-08T20:23:17.1089169Z  * [new branch]      issue-18-51ece309      -> origin/issue-18-51ece309
+2026-06-08T20:23:17.1089679Z  * [new branch]      issue-19-99f29373      -> origin/issue-19-99f29373
+2026-06-08T20:23:17.1090149Z  * [new branch]      issue-19-ee86110f      -> origin/issue-19-ee86110f
+2026-06-08T20:23:17.1090614Z  * [new branch]      issue-20-12ad6602      -> origin/issue-20-12ad6602
+2026-06-08T20:23:17.1091073Z  * [new branch]      issue-20-171029a1      -> origin/issue-20-171029a1
+2026-06-08T20:23:17.1091530Z  * [new branch]      issue-21-4d44bbc7      -> origin/issue-21-4d44bbc7
+2026-06-08T20:23:17.1092366Z  * [new branch]      issue-21-621d3004      -> origin/issue-21-621d3004
+2026-06-08T20:23:17.1092893Z  * [new branch]      issue-22-51ab60ad      -> origin/issue-22-51ab60ad
+2026-06-08T20:23:17.1093477Z  * [new branch]      issue-22-57b75318      -> origin/issue-22-57b75318
+2026-06-08T20:23:17.1093945Z  * [new branch]      issue-23-acb80d89      -> origin/issue-23-acb80d89
+2026-06-08T20:23:17.1094405Z  * [new branch]      issue-23-cfe40154      -> origin/issue-23-cfe40154
+2026-06-08T20:23:17.1095079Z  * [new branch]      issue-24-0a217d8d      -> origin/issue-24-0a217d8d
+2026-06-08T20:23:17.1095558Z  * [new branch]      issue-24-2ec0e8fa      -> origin/issue-24-2ec0e8fa
+2026-06-08T20:23:17.1096067Z  * [new branch]      issue-25-8431dd64      -> origin/issue-25-8431dd64
+2026-06-08T20:23:17.1096566Z  * [new branch]      issue-25-8ff13a2c      -> origin/issue-25-8ff13a2c
+2026-06-08T20:23:17.1097062Z  * [new branch]      issue-26-2cc88ea0      -> origin/issue-26-2cc88ea0
+2026-06-08T20:23:17.1097550Z  * [new branch]      issue-26-9bec6ea5      -> origin/issue-26-9bec6ea5
+2026-06-08T20:23:17.1098020Z  * [new branch]      issue-27-01ac7c56      -> origin/issue-27-01ac7c56
+2026-06-08T20:23:17.1098484Z  * [new branch]      issue-27-1d58c6b2      -> origin/issue-27-1d58c6b2
+2026-06-08T20:23:17.1098982Z  * [new branch]      issue-28-1c9c13c6      -> origin/issue-28-1c9c13c6
+2026-06-08T20:23:17.1099452Z  * [new branch]      issue-28-e256afcb      -> origin/issue-28-e256afcb
+2026-06-08T20:23:17.1099932Z  * [new branch]      issue-29-55357638      -> origin/issue-29-55357638
+2026-06-08T20:23:17.1100394Z  * [new branch]      issue-29-987b8dd4      -> origin/issue-29-987b8dd4
+2026-06-08T20:23:17.1100850Z  * [new branch]      issue-30-a0052265      -> origin/issue-30-a0052265
+2026-06-08T20:23:17.1101310Z  * [new branch]      issue-30-f1b7d27d      -> origin/issue-30-f1b7d27d
+2026-06-08T20:23:17.1101980Z  * [new branch]      issue-31-bfcb9a80      -> origin/issue-31-bfcb9a80
+2026-06-08T20:23:17.1102461Z  * [new branch]      issue-31-dc3e9249      -> origin/issue-31-dc3e9249
+2026-06-08T20:23:17.1102923Z  * [new branch]      issue-32-3dccbfab      -> origin/issue-32-3dccbfab
+2026-06-08T20:23:17.1103381Z  * [new branch]      issue-32-7a506d69      -> origin/issue-32-7a506d69
+2026-06-08T20:23:17.1103844Z  * [new branch]      issue-34-389ba67e      -> origin/issue-34-389ba67e
+2026-06-08T20:23:17.1104303Z  * [new branch]      issue-34-7cfa0880      -> origin/issue-34-7cfa0880
+2026-06-08T20:23:17.1104923Z  * [new branch]      issue-36-042fe722      -> origin/issue-36-042fe722
+2026-06-08T20:23:17.1105397Z  * [new branch]      issue-36-52b7c0a5      -> origin/issue-36-52b7c0a5
+2026-06-08T20:23:17.1105855Z  * [new branch]      issue-37-20720488      -> origin/issue-37-20720488
+2026-06-08T20:23:17.1106311Z  * [new branch]      issue-37-e875842b      -> origin/issue-37-e875842b
+2026-06-08T20:23:17.1106773Z  * [new branch]      issue-38-8ff5f784      -> origin/issue-38-8ff5f784
+2026-06-08T20:23:17.1107256Z  * [new branch]      issue-38-d399116a      -> origin/issue-38-d399116a
+2026-06-08T20:23:17.1107735Z  * [new branch]      issue-39-607bfb8e      -> origin/issue-39-607bfb8e
+2026-06-08T20:23:17.1108211Z  * [new branch]      issue-39-b4116e88      -> origin/issue-39-b4116e88
+2026-06-08T20:23:17.1108698Z  * [new branch]      issue-4-9c65943d       -> origin/issue-4-9c65943d
+2026-06-08T20:23:17.1109190Z  * [new branch]      issue-4-e24f5412       -> origin/issue-4-e24f5412
+2026-06-08T20:23:17.1109679Z  * [new branch]      issue-40-b1e760e6      -> origin/issue-40-b1e760e6
+2026-06-08T20:23:17.1110179Z  * [new branch]      issue-40-ef18d92c      -> origin/issue-40-ef18d92c
+2026-06-08T20:23:17.1110687Z  * [new branch]      issue-41-49cfed34      -> origin/issue-41-49cfed34
+2026-06-08T20:23:17.1111180Z  * [new branch]      issue-41-fed22157      -> origin/issue-41-fed22157
+2026-06-08T20:23:17.1111666Z  * [new branch]      issue-42-77ee242c      -> origin/issue-42-77ee242c
+2026-06-08T20:23:17.1112342Z  * [new branch]      issue-42-908eb7f7      -> origin/issue-42-908eb7f7
+2026-06-08T20:23:17.1183739Z  * [new branch]      issue-43-7298cd5c      -> origin/issue-43-7298cd5c
+2026-06-08T20:23:17.1184811Z  * [new branch]      issue-43-85b3ddfd      -> origin/issue-43-85b3ddfd
+2026-06-08T20:23:17.1185706Z  * [new branch]      issue-43-af132027      -> origin/issue-43-af132027
+2026-06-08T20:23:17.1186414Z  * [new branch]      issue-44-75df50dd      -> origin/issue-44-75df50dd
+2026-06-08T20:23:17.1187208Z  * [new branch]      issue-44-796ff0a8      -> origin/issue-44-796ff0a8
+2026-06-08T20:23:17.1188390Z  * [new branch]      issue-45-0325c0f5      -> origin/issue-45-0325c0f5
+2026-06-08T20:23:17.1189222Z  * [new branch]      issue-45-1ed9a563      -> origin/issue-45-1ed9a563
+2026-06-08T20:23:17.1190027Z  * [new branch]      issue-45-ce5f1e15      -> origin/issue-45-ce5f1e15
+2026-06-08T20:23:17.1190864Z  * [new branch]      issue-46-52edd2db      -> origin/issue-46-52edd2db
+2026-06-08T20:23:17.1191685Z  * [new branch]      issue-46-d4eec70e      -> origin/issue-46-d4eec70e
+2026-06-08T20:23:17.1192756Z  * [new branch]      issue-46-f237aa54      -> origin/issue-46-f237aa54
+2026-06-08T20:23:17.1193577Z  * [new branch]      issue-47-7a71c96e      -> origin/issue-47-7a71c96e
+2026-06-08T20:23:17.1194436Z  * [new branch]      issue-47-b31e0547      -> origin/issue-47-b31e0547
+2026-06-08T20:23:17.1195276Z  * [new branch]      issue-47-e7830e99      -> origin/issue-47-e7830e99
+2026-06-08T20:23:17.1196099Z  * [new branch]      issue-48-aaa5df6f      -> origin/issue-48-aaa5df6f
+2026-06-08T20:23:17.1196948Z  * [new branch]      issue-48-ad9abe01      -> origin/issue-48-ad9abe01
+2026-06-08T20:23:17.1197771Z  * [new branch]      issue-48-ead273fb      -> origin/issue-48-ead273fb
+2026-06-08T20:23:17.1198625Z  * [new branch]      issue-49-08e57741      -> origin/issue-49-08e57741
+2026-06-08T20:23:17.1199504Z  * [new branch]      issue-49-54f19e82      -> origin/issue-49-54f19e82
+2026-06-08T20:23:17.1200295Z  * [new branch]      issue-49-e74051ab      -> origin/issue-49-e74051ab
+2026-06-08T20:23:17.1200917Z  * [new branch]      issue-50-02f42ae4      -> origin/issue-50-02f42ae4
+2026-06-08T20:23:17.1201420Z  * [new branch]      issue-50-0b915412      -> origin/issue-50-0b915412
+2026-06-08T20:23:17.1202188Z  * [new branch]      issue-50-5de8b754      -> origin/issue-50-5de8b754
+2026-06-08T20:23:17.1202721Z  * [new branch]      issue-6-156225d2       -> origin/issue-6-156225d2
+2026-06-08T20:23:17.1203238Z  * [new branch]      issue-6-52fa1fa4       -> origin/issue-6-52fa1fa4
+2026-06-08T20:23:17.1203963Z  * [new branch]      issue-9-55d6d25e       -> origin/issue-9-55d6d25e
+2026-06-08T20:23:17.1204461Z  * [new branch]      issue-9-c5ab4ea2       -> origin/issue-9-c5ab4ea2
+2026-06-08T20:23:17.1204957Z  * [new branch]      issue-96-a24e1d66      -> origin/issue-96-a24e1d66
+2026-06-08T20:23:17.1205458Z  * [new branch]      issue-96-eb9bb8d1      -> origin/issue-96-eb9bb8d1
+2026-06-08T20:23:17.1205928Z  * [new branch]      main                   -> origin/main
+2026-06-08T20:23:17.1206348Z  * [new tag]         v0.0.1                 -> v0.0.1
+2026-06-08T20:23:17.1206746Z  * [new tag]         v0.0.2                 -> v0.0.2
+2026-06-08T20:23:17.1207133Z  * [new tag]         v0.0.3                 -> v0.0.3
+2026-06-08T20:23:17.1207512Z  * [new tag]         v0.0.4                 -> v0.0.4
+2026-06-08T20:23:17.1207894Z  * [new tag]         v0.0.5                 -> v0.0.5
+2026-06-08T20:23:17.1208264Z  * [new tag]         v0.1.0                 -> v0.1.0
+2026-06-08T20:23:17.1208647Z  * [new tag]         v0.2.0                 -> v0.2.0
+2026-06-08T20:23:17.1209016Z  * [new tag]         v0.3.0                 -> v0.3.0
+2026-06-08T20:23:17.1209389Z  * [new tag]         v0.3.1                 -> v0.3.1
+2026-06-08T20:23:17.1209756Z  * [new tag]         v0.3.2                 -> v0.3.2
+2026-06-08T20:23:17.1210125Z  * [new tag]         v0.4.0                 -> v0.4.0
+2026-06-08T20:23:17.1210492Z  * [new tag]         v0.5.0                 -> v0.5.0
+2026-06-08T20:23:17.1210859Z  * [new tag]         v0.6.0                 -> v0.6.0
+2026-06-08T20:23:17.1211233Z  * [new tag]         v0.7.0                 -> v0.7.0
+2026-06-08T20:23:17.1211617Z  * [new tag]         v0.7.1                 -> v0.7.1
+2026-06-08T20:23:17.1212216Z  * [new tag]         v0.8.0                 -> v0.8.0
+2026-06-08T20:23:17.1212601Z  * [new tag]         v0.8.1                 -> v0.8.1
+2026-06-08T20:23:17.1212975Z  * [new tag]         v0.8.2                 -> v0.8.2
+2026-06-08T20:23:17.1213352Z  * [new tag]         v0.8.3                 -> v0.8.3
+2026-06-08T20:23:17.1213881Z  * [new tag]         v0.9.0                 -> v0.9.0
+2026-06-08T20:23:17.1214265Z  * [new tag]         v0.9.1                 -> v0.9.1
+2026-06-08T20:23:17.1214646Z  * [new tag]         v0.9.2                 -> v0.9.2
+2026-06-08T20:23:17.1215018Z  * [new tag]         v0.9.4                 -> v0.9.4
+2026-06-08T20:23:17.1215402Z  * [new tag]         v0.9.5                 -> v0.9.5
+2026-06-08T20:23:17.1261012Z [command]/usr/bin/git branch --list --remote origin/main
+2026-06-08T20:23:17.1365286Z   origin/main
+2026-06-08T20:23:17.1375127Z [command]/usr/bin/git rev-parse refs/remotes/origin/main
+2026-06-08T20:23:17.1396646Z 89d47cf62671f8e1c4813af51128b0b9e47b6fa6
+2026-06-08T20:23:17.1400860Z ##[endgroup]
+2026-06-08T20:23:17.1401365Z ##[group]Determining the checkout info
+2026-06-08T20:23:17.1402263Z ##[endgroup]
+2026-06-08T20:23:17.1406584Z [command]/usr/bin/git sparse-checkout disable
+2026-06-08T20:23:17.1447174Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-06-08T20:23:17.1473243Z ##[group]Checking out the ref
+2026-06-08T20:23:17.1477982Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+2026-06-08T20:23:17.2253393Z Switched to a new branch 'main'
+2026-06-08T20:23:17.2254727Z branch 'main' set up to track 'origin/main'.
+2026-06-08T20:23:17.2267377Z ##[endgroup]
+2026-06-08T20:23:17.2314260Z [command]/usr/bin/git log -1 --format=%H
+2026-06-08T20:23:17.2338894Z 89d47cf62671f8e1c4813af51128b0b9e47b6fa6
+2026-06-08T20:23:17.2573896Z ##[group]Run actions/setup-node@v4
+2026-06-08T20:23:17.2574250Z with:
+2026-06-08T20:23:17.2574515Z   node-version: 20.x
+2026-06-08T20:23:17.2574838Z   registry-url: https://registry.npmjs.org
+2026-06-08T20:23:17.2575191Z   always-auth: false
+2026-06-08T20:23:17.2575517Z   check-latest: false
+2026-06-08T20:23:17.2578665Z   token: ***
+2026-06-08T20:23:17.2578930Z ##[endgroup]
+2026-06-08T20:23:17.4333389Z Attempting to download 20.x...
+2026-06-08T20:23:18.0836947Z Acquiring 20.20.2 - x64 from https://github.com/actions/node-versions/releases/download/20.20.2-23521894959/node-20.20.2-linux-x64.tar.gz
+2026-06-08T20:23:18.6483395Z Extracting ...
+2026-06-08T20:23:18.6589305Z [command]/usr/bin/tar xz --strip 1 --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/5125e9b6-bde6-466b-aeec-a954a58b3d40 -f /home/runner/work/_temp/4adaee56-01ee-4b13-b712-71f5ad7f0ebb
+2026-06-08T20:23:19.7340999Z Adding to the cache ...
+2026-06-08T20:23:21.2300847Z ##[group]Environment details
+2026-06-08T20:23:21.4513214Z node: v20.20.2
+2026-06-08T20:23:21.4513625Z npm: 10.8.2
+2026-06-08T20:23:21.4514039Z yarn: 1.22.22
+2026-06-08T20:23:21.4514804Z ##[endgroup]
+2026-06-08T20:23:21.4729969Z ##[group]Run oven-sh/setup-bun@v2
+2026-06-08T20:23:21.4730281Z with:
+2026-06-08T20:23:21.4730510Z   bun-version: latest
+2026-06-08T20:23:21.4730754Z   no-cache: false
+2026-06-08T20:23:21.4734254Z   token: ***
+2026-06-08T20:23:21.4734490Z env:
+2026-06-08T20:23:21.4734786Z   NPM_CONFIG_USERCONFIG: /home/runner/work/_temp/.npmrc
+2026-06-08T20:23:21.4735175Z   NODE_AUTH_TOKEN: XXXXX-XXXXX-XXXXX-XXXXX
+2026-06-08T20:23:21.4735468Z ##[endgroup]
+2026-06-08T20:23:21.9978231Z Downloading a new version of Bun: https://github.com/oven-sh/bun/releases/download/bun-v1.3.14/bun-linux-x64.zip
+2026-06-08T20:23:22.4568769Z [command]/usr/bin/unzip -o -q /home/runner/work/_temp/97279be7-5d8e-4139-83f6-46c824ca1357.zip
+2026-06-08T20:23:23.2339111Z [command]/home/runner/.bun/bin/bun --revision
+2026-06-08T20:23:23.2380810Z 1.3.14+0d9b296af
+2026-06-08T20:23:23.2525004Z ##[group]Run bun install
+2026-06-08T20:23:23.2525363Z ^[[36;1mbun install^[[0m
+2026-06-08T20:23:23.2557687Z shell: /usr/bin/bash -e {0}
+2026-06-08T20:23:23.2557980Z env:
+2026-06-08T20:23:23.2558258Z   NPM_CONFIG_USERCONFIG: /home/runner/work/_temp/.npmrc
+2026-06-08T20:23:23.2558642Z   NODE_AUTH_TOKEN: XXXXX-XXXXX-XXXXX-XXXXX
+2026-06-08T20:23:23.2558937Z ##[endgroup]
+2026-06-08T20:23:23.2656025Z bun install v1.3.14 (0d9b296a)
+2026-06-08T20:23:23.6266917Z 
+2026-06-08T20:23:23.6272317Z $ cd .. && js/node_modules/.bin/husky || true
+2026-06-08T20:23:23.6682566Z 
+2026-06-08T20:23:23.6683476Z + @changesets/cli@2.29.8
+2026-06-08T20:23:23.6684419Z + eslint@9.39.2
+2026-06-08T20:23:23.6685216Z + eslint-config-prettier@10.1.8
+2026-06-08T20:23:23.6686079Z + eslint-plugin-prettier@5.5.4
+2026-06-08T20:23:23.6686532Z + husky@9.1.7
+2026-06-08T20:23:23.6686854Z + jscpd@4.0.5
+2026-06-08T20:23:23.6687184Z + lint-staged@16.2.7
+2026-06-08T20:23:23.6687520Z + prettier@3.7.4
+2026-06-08T20:23:23.6687704Z 
+2026-06-08T20:23:23.6688016Z 301 packages installed [403.00ms]
+2026-06-08T20:23:23.6758426Z ##[group]Run bun scripts/setup-npm.mjs
+2026-06-08T20:23:23.6758796Z ^[[36;1mbun scripts/setup-npm.mjs^[[0m
+2026-06-08T20:23:23.6786964Z shell: /usr/bin/bash -e {0}
+2026-06-08T20:23:23.6787237Z env:
+2026-06-08T20:23:23.6787514Z   NPM_CONFIG_USERCONFIG: /home/runner/work/_temp/.npmrc
+2026-06-08T20:23:23.6787891Z   NODE_AUTH_TOKEN: XXXXX-XXXXX-XXXXX-XXXXX
+2026-06-08T20:23:23.6788182Z ##[endgroup]
+2026-06-08T20:23:24.5130913Z 10.8.2
+2026-06-08T20:23:24.5164393Z Current npm version: 10.8.2
+2026-06-08T20:23:27.8663672Z 
+2026-06-08T20:23:27.8664621Z removed 65 packages, and changed 112 packages in 3s
+2026-06-08T20:23:27.8679935Z 
+2026-06-08T20:23:27.8682246Z 15 packages are looking for funding
+2026-06-08T20:23:27.8682991Z   run `npm fund` for details
+2026-06-08T20:23:27.9803064Z 11.16.0
+2026-06-08T20:23:27.9836215Z Updated npm version: 11.16.0
+2026-06-08T20:23:27.9894189Z ##[group]Run CHANGESET_COUNT=$(find .changeset -name "*.md" ! -name "README.md" | wc -l)
+2026-06-08T20:23:27.9894845Z ^[[36;1mCHANGESET_COUNT=$(find .changeset -name "*.md" ! -name "README.md" | wc -l)^[[0m
+2026-06-08T20:23:27.9895450Z ^[[36;1mecho "Found $CHANGESET_COUNT JavaScript changeset file(s)"^[[0m
+2026-06-08T20:23:27.9917524Z ^[[36;1mecho "has_changesets=$([[ $CHANGESET_COUNT -gt 0 ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT^[[0m
+2026-06-08T20:23:27.9918140Z ^[[36;1mecho "changeset_count=$CHANGESET_COUNT" >> $GITHUB_OUTPUT^[[0m
+2026-06-08T20:23:27.9946268Z shell: /usr/bin/bash -e {0}
+2026-06-08T20:23:27.9946541Z env:
+2026-06-08T20:23:27.9946823Z   NPM_CONFIG_USERCONFIG: /home/runner/work/_temp/.npmrc
+2026-06-08T20:23:27.9947189Z   NODE_AUTH_TOKEN: XXXXX-XXXXX-XXXXX-XXXXX
+2026-06-08T20:23:27.9947473Z ##[endgroup]
+2026-06-08T20:23:28.0067968Z Found 2 JavaScript changeset file(s)
+2026-06-08T20:23:28.0143850Z ##[group]Run bun scripts/merge-changesets.mjs
+2026-06-08T20:23:28.0144219Z ^[[36;1mbun scripts/merge-changesets.mjs^[[0m
+2026-06-08T20:23:28.0168578Z shell: /usr/bin/bash -e {0}
+2026-06-08T20:23:28.0168846Z env:
+2026-06-08T20:23:28.0169116Z   NPM_CONFIG_USERCONFIG: /home/runner/work/_temp/.npmrc
+2026-06-08T20:23:28.0169471Z   NODE_AUTH_TOKEN: XXXXX-XXXXX-XXXXX-XXXXX
+2026-06-08T20:23:28.0169769Z ##[endgroup]
+2026-06-08T20:23:28.0434413Z Checking for multiple changesets to merge...
+2026-06-08T20:23:28.0435094Z Found 2 changeset file(s)
+2026-06-08T20:23:28.0435584Z Multiple changesets found, merging...
+2026-06-08T20:23:28.0436135Z   - release-job-skipped-by-gate.md
+2026-06-08T20:23:28.0436514Z   - separate-language-releases.md
+2026-06-08T20:23:28.0441050Z 
+2026-06-08T20:23:28.0441240Z Merge summary:
+2026-06-08T20:23:28.0441601Z   Bump types found: patch
+2026-06-08T20:23:28.0442189Z   Using highest: patch
+2026-06-08T20:23:28.0442533Z   Descriptions to merge: 2
+2026-06-08T20:23:28.0443452Z 
+2026-06-08T20:23:28.0443762Z Created merged changeset: merged-neat-flower.md
+2026-06-08T20:23:28.0444119Z 
+2026-06-08T20:23:28.0444362Z Removing original changeset files:
+2026-06-08T20:23:28.0444870Z   Removed: release-job-skipped-by-gate.md
+2026-06-08T20:23:28.0445405Z   Removed: separate-language-releases.md
+2026-06-08T20:23:28.0445712Z 
+2026-06-08T20:23:28.0445872Z Changeset merge completed successfully
+2026-06-08T20:23:28.0446070Z 
+2026-06-08T20:23:28.0446190Z Merged changeset content:
+2026-06-08T20:23:28.0446444Z ---
+2026-06-08T20:23:28.0446685Z 'command-stream': patch
+2026-06-08T20:23:28.0446935Z ---
+2026-06-08T20:23:28.0447046Z 
+2026-06-08T20:23:28.0447372Z Ensure the JavaScript release job still evaluates on main pushes after the
+2026-06-08T20:23:28.0447873Z pull-request-only changeset gate is skipped.
+2026-06-08T20:23:28.0448090Z 
+2026-06-08T20:23:28.0448399Z Separate JavaScript package metadata, scripts, documentation, and release tags
+2026-06-08T20:23:28.0448881Z from the Rust crate release path.
+2026-06-08T20:23:28.0449072Z 
+2026-06-08T20:23:28.0488028Z ##[group]Run bun scripts/version-and-commit.mjs --mode changeset
+2026-06-08T20:23:28.0488512Z ^[[36;1mbun scripts/version-and-commit.mjs --mode changeset^[[0m
+2026-06-08T20:23:28.0516782Z shell: /usr/bin/bash -e {0}
+2026-06-08T20:23:28.0517063Z env:
+2026-06-08T20:23:28.0517350Z   NPM_CONFIG_USERCONFIG: /home/runner/work/_temp/.npmrc
+2026-06-08T20:23:28.0517721Z   NODE_AUTH_TOKEN: XXXXX-XXXXX-XXXXX-XXXXX
+2026-06-08T20:23:28.0518012Z ##[endgroup]
+2026-06-08T20:23:28.7909206Z Parsed configuration: {
+2026-06-08T20:23:28.7909579Z   mode: "changeset",
+2026-06-08T20:23:28.7909846Z   bumpType: "",
+2026-06-08T20:23:28.7910136Z   description: "(none)",
+2026-06-08T20:23:28.7910394Z }
+2026-06-08T20:23:28.9476818Z Checking for remote changes...
+2026-06-08T20:23:29.2056549Z From https://github.com/link-foundation/command-stream
+2026-06-08T20:23:29.2057045Z  * branch            main       -> FETCH_HEAD
+2026-06-08T20:23:29.2166829Z 89d47cf62671f8e1c4813af51128b0b9e47b6fa6
+2026-06-08T20:23:29.2227895Z 89d47cf62671f8e1c4813af51128b0b9e47b6fa6
+2026-06-08T20:23:29.2234792Z Current version: 0.9.5
+2026-06-08T20:23:29.2235241Z Running changeset version...
+2026-06-08T20:23:29.2301042Z $ bun scripts/changeset-version.mjs
+2026-06-08T20:23:29.3866588Z Running changeset version...
+2026-06-08T20:23:29.8319340Z 🦋  All files have been updated. Review them and commit at your leisure
+2026-06-08T20:23:29.8444241Z 
+2026-06-08T20:23:29.8444720Z Synchronizing package-lock.json...
+2026-06-08T20:23:30.1377697Z npm warn Unknown user config "always-auth". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+2026-06-08T20:23:31.0072439Z 
+2026-06-08T20:23:31.0073110Z > command-stream@0.9.6 prepare
+2026-06-08T20:23:31.0073774Z > cd .. && js/node_modules/.bin/husky || true
+2026-06-08T20:23:31.0074135Z 
+2026-06-08T20:23:31.0764962Z 
+2026-06-08T20:23:31.0766323Z up to date, audited 320 packages in 1s
+2026-06-08T20:23:31.0766700Z 
+2026-06-08T20:23:31.0767001Z 74 packages are looking for funding
+2026-06-08T20:23:31.0767465Z   run `npm fund` for details
+2026-06-08T20:23:31.0848065Z 
+2026-06-08T20:23:31.0848757Z 6 vulnerabilities (3 moderate, 3 high)
+2026-06-08T20:23:31.0849428Z 
+2026-06-08T20:23:31.0849900Z To address all issues, run:
+2026-06-08T20:23:31.0850473Z   npm audit fix
+2026-06-08T20:23:31.0850758Z 
+2026-06-08T20:23:31.0851038Z Run `npm audit` for details.
+2026-06-08T20:23:31.0942022Z 
+2026-06-08T20:23:31.0943317Z ✅ Version bump complete with synchronized package-lock.json
+2026-06-08T20:23:31.0974567Z New version: 0.9.6
+2026-06-08T20:23:31.1475939Z  D js/.changeset/release-job-skipped-by-gate.md
+2026-06-08T20:23:31.1477010Z  D js/.changeset/separate-language-releases.md
+2026-06-08T20:23:31.1477553Z  M js/CHANGELOG.md
+2026-06-08T20:23:31.1502725Z  M js/package-lock.json
+2026-06-08T20:23:31.1513042Z  M js/package.json
+2026-06-08T20:23:31.1513519Z Changes detected, committing...
+2026-06-08T20:23:31.4652308Z npm warn Unknown user config "always-auth". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+2026-06-08T20:23:31.5957419Z ^[[33m[STARTED]^[[39m Backing up original state...
+2026-06-08T20:23:31.6262088Z ^[[32m[COMPLETED]^[[39m Backed up original state in git stash (e54180c)
+2026-06-08T20:23:31.6263509Z ^[[33m[STARTED]^[[39m Running tasks for staged files...
+2026-06-08T20:23:31.6272910Z ^[[33m[STARTED]^[[39m package.json^[[0;90m — 3 files^[[0m
+2026-06-08T20:23:31.6273708Z ^[[33m[STARTED]^[[39m *.{js,mjs,cjs}^[[0;90m — 0 files^[[0m
+2026-06-08T20:23:31.6274388Z ^[[33m[STARTED]^[[39m *.md^[[0;90m — 1 file^[[0m
+2026-06-08T20:23:31.6275096Z ^[[33m[SKIPPED]^[[39m *.{js,mjs,cjs}^[[0;90m — no files^[[0m
+2026-06-08T20:23:31.6275815Z ^[[33m[STARTED]^[[39m prettier --write
+2026-06-08T20:23:31.8222756Z ^[[32m[COMPLETED]^[[39m prettier --write
+2026-06-08T20:23:31.8223860Z ^[[33m[STARTED]^[[39m prettier --check
+2026-06-08T20:23:32.0130022Z ^[[32m[COMPLETED]^[[39m prettier --check
+2026-06-08T20:23:32.0131133Z ^[[32m[COMPLETED]^[[39m *.md^[[0;90m — 1 file^[[0m
+2026-06-08T20:23:32.0132696Z ^[[32m[COMPLETED]^[[39m package.json^[[0;90m — 3 files^[[0m
+2026-06-08T20:23:32.0133508Z ^[[32m[COMPLETED]^[[39m Running tasks for staged files...
+2026-06-08T20:23:32.0134297Z ^[[33m[STARTED]^[[39m Applying modifications from tasks...
+2026-06-08T20:23:32.0206872Z ^[[32m[COMPLETED]^[[39m Applying modifications from tasks...
+2026-06-08T20:23:32.0208231Z ^[[33m[STARTED]^[[39m Cleaning up temporary files...
+2026-06-08T20:23:32.0297713Z ^[[32m[COMPLETED]^[[39m Cleaning up temporary files...
+2026-06-08T20:23:32.0632282Z [main 971eab5] 0.9.6
+2026-06-08T20:23:32.0632883Z  5 files changed, 13 insertions(+), 15 deletions(-)
+2026-06-08T20:23:32.0633657Z  delete mode 100644 js/.changeset/release-job-skipped-by-gate.md
+2026-06-08T20:23:32.0634224Z  delete mode 100644 js/.changeset/separate-language-releases.md
+2026-06-08T20:23:33.0985738Z To https://github.com/link-foundation/command-stream
+2026-06-08T20:23:33.0986198Z    89d47cf..971eab5  main -> main
+2026-06-08T20:23:33.1033689Z ✅ Version bump committed and pushed to main
+2026-06-08T20:23:33.1112003Z ##[group]Run bun scripts/publish-to-npm.mjs --should-pull
+2026-06-08T20:23:33.1112532Z ^[[36;1mbun scripts/publish-to-npm.mjs --should-pull^[[0m
+2026-06-08T20:23:33.1140325Z shell: /usr/bin/bash -e {0}
+2026-06-08T20:23:33.1140588Z env:
+2026-06-08T20:23:33.1140862Z   NPM_CONFIG_USERCONFIG: /home/runner/work/_temp/.npmrc
+2026-06-08T20:23:33.1141224Z   NODE_AUTH_TOKEN: XXXXX-XXXXX-XXXXX-XXXXX
+2026-06-08T20:23:33.1141511Z ##[endgroup]
+2026-06-08T20:23:33.5956087Z From https://github.com/link-foundation/command-stream
+2026-06-08T20:23:33.5956558Z  * branch            main       -> FETCH_HEAD
+2026-06-08T20:23:33.6021552Z Already up to date.
+2026-06-08T20:23:33.6035719Z Current version to publish: 0.9.6
+2026-06-08T20:23:33.6036314Z Checking if version 0.9.6 is already published...
+2026-06-08T20:23:33.8340945Z npm warn Unknown user config "always-auth". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+2026-06-08T20:23:34.1273674Z npm error code E404
+2026-06-08T20:23:34.1275716Z npm error 404 No match found for version 0.9.6
+2026-06-08T20:23:34.1276272Z npm error 404
+2026-06-08T20:23:34.1278484Z npm error 404  The requested resource 'command-stream@0.9.6' could not be found or you do not have permission to access it.
+2026-06-08T20:23:34.1279413Z npm error 404
+2026-06-08T20:23:34.1280271Z npm error 404 Note that you can also install from a
+2026-06-08T20:23:34.1283619Z npm error 404 tarball, folder, http url, or git url.
+2026-06-08T20:23:34.1297311Z npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2026-06-08T20_23_33_667Z-debug-0.log
+2026-06-08T20:23:34.1343010Z Version 0.9.6 not found on npm, proceeding with publish...
+2026-06-08T20:23:34.1343593Z Publish attempt 1 of 3...
+2026-06-08T20:23:34.1412613Z $ changeset publish
+2026-06-08T20:23:34.4264741Z 🦋  ^[[36minfo^[[39m npm info command-stream
+2026-06-08T20:23:34.8987808Z 🦋  ^[[36minfo^[[39m command-stream is being published because our local version (0.9.6) has not been published on npm
+2026-06-08T20:23:34.8990085Z 🦋  ^[[36minfo^[[39m Publishing ^[[36m"command-stream"^[[39m at ^[[32m"0.9.6"^[[39m
+2026-06-08T20:23:36.8282336Z 🦋  ^[[31merror^[[39m an error occurred while publishing command-stream: E404 Not Found - PUT https://registry.npmjs.org/command-stream - Not found 
+2026-06-08T20:23:36.8284507Z 🦋  ^[[31merror^[[39m The requested resource 'command-stream@0.9.6' could not be found or you do not have permission to access it.
+2026-06-08T20:23:36.8286052Z 🦋  ^[[31merror^[[39m 
+2026-06-08T20:23:36.8286803Z 🦋  ^[[31merror^[[39m Note that you can also install from a
+2026-06-08T20:23:36.8287751Z 🦋  ^[[31merror^[[39m tarball, folder, http url, or git url.
+2026-06-08T20:23:36.8289593Z 🦋  ^[[31merror^[[39m npm warn Unknown user config "always-auth". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+2026-06-08T20:23:36.8290871Z 🦋  command-stream@0.9.6
+2026-06-08T20:23:36.8291510Z 🦋  ^[[31merror^[[39m 
+2026-06-08T20:23:36.8292626Z 🦋  ^[[31merror^[[39m > command-stream@0.9.6 prepare
+2026-06-08T20:23:36.8293251Z 🦋  ^[[31merror^[[39m > cd .. && js/node_modules/.bin/husky || true
+2026-06-08T20:23:36.8293679Z 🦋  ^[[31merror^[[39m 
+2026-06-08T20:23:36.8294562Z 🦋  ^[[31merror^[[39m npm notice Publishing to https://registry.npmjs.org with tag latest and public access
+2026-06-08T20:23:36.8295542Z 🦋  ^[[31merror^[[39m npm error code E404
+2026-06-08T20:23:36.8296615Z 🦋  ^[[31merror^[[39m npm error 404 Not Found - PUT https://registry.npmjs.org/command-stream - Not found
+2026-06-08T20:23:36.8297483Z 🦋  ^[[31merror^[[39m npm error 404
+2026-06-08T20:23:36.8298747Z 🦋  ^[[31merror^[[39m npm error 404  The requested resource 'command-stream@0.9.6' could not be found or you do not have permission to access it.
+2026-06-08T20:23:36.8299833Z 🦋  ^[[31merror^[[39m npm error 404
+2026-06-08T20:23:36.8300552Z 🦋  ^[[31merror^[[39m npm error 404 Note that you can also install from a
+2026-06-08T20:23:36.8301951Z 🦋  ^[[31merror^[[39m npm error 404 tarball, folder, http url, or git url.
+2026-06-08T20:23:36.8303337Z 🦋  ^[[31merror^[[39m npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2026-06-08T20_23_34_962Z-debug-0.log
+2026-06-08T20:23:36.8304256Z 🦋  ^[[31merror^[[39m 
+2026-06-08T20:23:36.8304788Z 🦋  ^[[31merror^[[39m packages failed to publish:
+2026-06-08T20:23:36.8335352Z error: script "changeset:publish" exited with code 1
+2026-06-08T20:23:36.8341059Z ✅ Published command-stream@0.9.6 to npm
+2026-06-08T20:23:36.8430783Z ##[group]Run bun scripts/create-github-release.mjs --release-version "0.9.6" --repository "link-foundation/command-stream" --tag-prefix js-v
+2026-06-08T20:23:36.8432263Z ^[[36;1mbun scripts/create-github-release.mjs --release-version "0.9.6" --repository "link-foundation/command-stream" --tag-prefix js-v^[[0m
+2026-06-08T20:23:36.8460065Z shell: /usr/bin/bash -e {0}
+2026-06-08T20:23:36.8460350Z env:
+2026-06-08T20:23:36.8460623Z   NPM_CONFIG_USERCONFIG: /home/runner/work/_temp/.npmrc
+2026-06-08T20:23:36.8460992Z   NODE_AUTH_TOKEN: XXXXX-XXXXX-XXXXX-XXXXX
+2026-06-08T20:23:36.8464675Z   GH_TOKEN: ***
+2026-06-08T20:23:36.8464927Z ##[endgroup]
+2026-06-08T20:23:37.0550219Z Creating JavaScript GitHub release for js-v0.9.6...
+2026-06-08T20:23:39.5370042Z {"url":"https://api.github.com/repos/link-foundation/command-stream/releases/336219532","assets_url":"https://api.github.com/repos/link-foundation/command-stream/releases/336219532/assets","upload_url":"https://uploads.github.com/repos/link-foundation/command-stream/releases/336219532/assets{?name,label}","html_url":"https://github.com/link-foundation/command-stream/releases/tag/js-v0.9.6","id":336219532,"author":{"login":"github-actions[bot]","id":41898282,"node_id":"MDM6Qm90NDE4OTgyODI=","avatar_url":"https://avatars.githubusercontent.com/in/15368?v=4","gravatar_id":"","url":"https://api.github.com/users/github-actions%5Bbot%5D","html_url":"https://github.com/apps/github-actions","followers_url":"https://api.github.com/users/github-actions%5Bbot%5D/followers","following_url":"https://api.github.com/users/github-actions%5Bbot%5D/following{/other_user}","gists_url":"https://api.github.com/users/github-actions%5Bbot%5D/gists{/gist_id}","starred_url":"https://api.github.com/users/github-actions%5Bbot%5D/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/github-actions%5Bbot%5D/subscriptions","organizations_url":"https://api.github.com/users/github-actions%5Bbot%5D/orgs","repos_url":"https://api.github.com/users/github-actions%5Bbot%5D/repos","events_url":"https://api.github.com/users/github-actions%5Bbot%5D/events{/privacy}","received_events_url":"https://api.github.com/users/github-actions%5Bbot%5D/received_events","type":"Bot","user_view_type":"public","site_admin":false},"node_id":"RE_kwDOPc80Bs4UCk2M","tag_name":"js-v0.9.6","target_commitish":"main","name":"JavaScript 0.9.6","draft":false,"immutable":false,"prerelease":false,"created_at":"2026-06-08T20:23:31Z","updated_at":"2026-06-08T20:23:39Z","published_at":"2026-06-08T20:23:39Z","assets":[],"tarball_url":"https://api.github.com/repos/link-foundation/command-stream/tarball/js-v0.9.6","zipball_url":"https://api.github.com/repos/link-foundation/command-stream/zipball/js-v0.9.6","body":"### Patch Changes\n\n- Ensure the JavaScript release job still evaluates on main pushes after the\n  pull-request-only changeset gate is skipped.\n\n  Separate JavaScript package metadata, scripts, documentation, and release tags\n  from the Rust crate release path."}Created JavaScript GitHub release: js-v0.9.6
+2026-06-08T20:23:39.5450961Z ##[group]Run bun scripts/format-github-release.mjs --release-version "0.9.6" --repository "link-foundation/command-stream" --commit-sha "89d47cf62671f8e1c4813af51128b0b9e47b6fa6" --tag-prefix js-v
+2026-06-08T20:23:39.5452656Z ^[[36;1mbun scripts/format-github-release.mjs --release-version "0.9.6" --repository "link-foundation/command-stream" --commit-sha "89d47cf62671f8e1c4813af51128b0b9e47b6fa6" --tag-prefix js-v^[[0m
+2026-06-08T20:23:39.5480960Z shell: /usr/bin/bash -e {0}
+2026-06-08T20:23:39.5481237Z env:
+2026-06-08T20:23:39.5481516Z   NPM_CONFIG_USERCONFIG: /home/runner/work/_temp/.npmrc
+2026-06-08T20:23:39.5482088Z   NODE_AUTH_TOKEN: XXXXX-XXXXX-XXXXX-XXXXX
+2026-06-08T20:23:39.5485451Z   GH_TOKEN: ***
+2026-06-08T20:23:39.5485724Z ##[endgroup]
+2026-06-08T20:23:40.1272460Z 336219532
+2026-06-08T20:23:40.1301009Z Formatting JavaScript release notes for js-v0.9.6...
+2026-06-08T20:23:40.6026961Z {"url":"https://api.github.com/repos/link-foundation/command-stream/releases/336219532","assets_url":"https://api.github.com/repos/link-foundation/command-stream/releases/336219532/assets","upload_url":"https://uploads.github.com/repos/link-foundation/command-stream/releases/336219532/assets{?name,label}","html_url":"https://github.com/link-foundation/command-stream/releases/tag/js-v0.9.6","id":336219532,"author":{"login":"github-actions[bot]","id":41898282,"node_id":"MDM6Qm90NDE4OTgyODI=","avatar_url":"https://avatars.githubusercontent.com/in/15368?v=4","gravatar_id":"","url":"https://api.github.com/users/github-actions%5Bbot%5D","html_url":"https://github.com/apps/github-actions","followers_url":"https://api.github.com/users/github-actions%5Bbot%5D/followers","following_url":"https://api.github.com/users/github-actions%5Bbot%5D/following{/other_user}","gists_url":"https://api.github.com/users/github-actions%5Bbot%5D/gists{/gist_id}","starred_url":"https://api.github.com/users/github-actions%5Bbot%5D/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/github-actions%5Bbot%5D/subscriptions","organizations_url":"https://api.github.com/users/github-actions%5Bbot%5D/orgs","repos_url":"https://api.github.com/users/github-actions%5Bbot%5D/repos","events_url":"https://api.github.com/users/github-actions%5Bbot%5D/events{/privacy}","received_events_url":"https://api.github.com/users/github-actions%5Bbot%5D/received_events","type":"Bot","user_view_type":"public","site_admin":false},"node_id":"RE_kwDOPc80Bs4UCk2M","tag_name":"js-v0.9.6","target_commitish":"main","name":"JavaScript 0.9.6","draft":false,"immutable":false,"prerelease":false,"created_at":"2026-06-08T20:23:31Z","updated_at":"2026-06-08T20:23:39Z","published_at":"2026-06-08T20:23:39Z","assets":[],"tarball_url":"https://api.github.com/repos/link-foundation/command-stream/tarball/js-v0.9.6","zipball_url":"https://api.github.com/repos/link-foundation/command-stream/zipball/js-v0.9.6","body":"### Patch Changes\n\n- Ensure the JavaScript release job still evaluates on main pushes after the\n  pull-request-only changeset gate is skipped.\n\n  Separate JavaScript package metadata, scripts, documentation, and release tags\n  from the Rust crate release path."}ℹ️ Found Patch Changes section
+2026-06-08T20:23:40.6040992Z ℹ️ Looking up PR for commit 89d47cf62671f8e1c4813af51128b0b9e47b6fa6 (from workflow)
+2026-06-08T20:23:41.1477531Z [{"url":"https://api.github.com/repos/link-foundation/command-stream/pulls/163","id":3826240845,"node_id":"PR_kwDOPc80Bs7kD81N","html_url":"https://github.com/link-foundation/command-stream/pull/163","diff_url":"https://github.com/link-foundation/command-stream/pull/163.diff","patch_url":"https://github.com/link-foundation/command-stream/pull/163.patch","issue_url":"https://api.github.com/repos/link-foundation/command-stream/issues/163","number":163,"state":"closed","locked":false,"title":"Fix split language release jobs after skipped gates","user":{"login":"konard","id":1431904,"node_id":"MDQ6VXNlcjE0MzE5MDQ=","avatar_url":"https://avatars.githubusercontent.com/u/1431904?v=4","gravatar_id":"","url":"https://api.github.com/users/konard","html_url":"https://github.com/konard","followers_url":"https://api.github.com/users/konard/followers","following_url":"https://api.github.com/users/konard/following{/other_user}","gists_url":"https://api.github.com/users/konard/gists{/gist_id}","starred_url":"https://api.github.com/users/konard/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/konard/subscriptions","organizations_url":"https://api.github.com/users/konard/orgs","repos_url":"https://api.github.com/users/konard/repos","events_url":"https://api.github.com/users/konard/events{/privacy}","received_events_url":"https://api.github.com/users/konard/received_events","type":"User","user_view_type":"public","site_admin":false},"body":"Fixes #162\n\n## Summary\n\nThis PR fixes the split JavaScript/Rust release workflows introduced by PR #161. The post-merge runs after PR #161 succeeded overall, but the actual language release jobs were skipped because their `needs` graph included PR-only gate jobs that are skipped on `push`.\n\nThe release jobs now use explicit status-check guards so GitHub Actions evaluates them after skipped PR-only dependencies:\n\n- JavaScript release: `always() && !cancelled()` plus successful `lint` and `test` results.\n- Rust release: `always() && !cancelled()` plus successful `lint`, `test`, and `build` results.\n\n## Case Study\n\nFull investigation and evidence:\n\nhttps://github.com/link-foundation/command-stream/blob/issue-162-0c186d5158ec/docs/case-studies/issue-162/README.md\n\nThe case study includes the PR #161 timeline, downloaded CI logs, package registry snapshots, template snapshots, and before/after test logs.\n\n## Template Reports\n\nThe JavaScript and Rust upstream templates already protect their automatic release paths from this skipped-needs behavior. I found related workflow-dispatch risks in two other templates and opened upstream reports:\n\n- Python template: https://github.com/link-foundation/python-ai-driven-development-pipeline-template/issues/18\n- C# template: https://github.com/link-foundation/csharp-ai-driven-development-pipeline-template/issues/23\n\n## Verification\n\nLocal checks run:\n\n```sh\nbun test js/tests/repository-layout.test.mjs --timeout 10000\nruby -e \"require 'yaml'; YAML.load_file('.github/workflows/js.yml'); YAML.load_file('.github/workflows/rust.yml'); puts 'ok'\"\ncd js && bun run format:check\ncd js && bun run lint\ncd js && bun run check:duplication\ncd js && PATH=/tmp/issue-162-bin:$PATH bun run test\n```\n\nThe full JS suite passed with 686 passing tests, 5 skipped, 0 failed. The container did not provide `jq` and passwordless sudo was unavailable, so the full local JS test run used a temporary uncommitted `jq-1.7.1` binary under `/tmp/issue-162-bin`; CI installs `jq` in the workflow.\n\n## Release Notes\n\nPatch release markers were added for both packages so the next merge to `main` has release input to consume.\n","created_at":"2026-06-08T19:24:51Z","updated_at":"2026-06-08T20:21:57Z","closed_at":"2026-06-08T20:21:56Z","merged_at":"2026-06-08T20:21:56Z","merge_commit_sha":"89d47cf62671f8e1c4813af51128b0b9e47b6fa6","assignees":[{"login":"konard","id":1431904,"node_id":"MDQ6VXNlcjE0MzE5MDQ=","avatar_url":"https://avatars.githubusercontent.com/u/1431904?v=4","gravatar_id":"","url":"https://api.github.com/users/konard","html_url":"https://github.com/konard","followers_url":"https://api.github.com/users/konard/followers","following_url":"https://api.github.com/users/konard/following{/other_user}","gists_url":"https://api.github.com/users/konard/gists{/gist_id}","starred_url":"https://api.github.com/users/konard/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/konard/subscriptions","organizations_url":"https://api.github.com/users/konard/orgs","repos_url":"https://api.github.com/users/konard/repos","events_url":"https://api.github.com/users/konard/events{/privacy}","received_events_url":"https://api.github.com/users/konard/received_events","type":"User","user_view_type":"public","site_admin":false}],"requested_reviewers":[],"requested_teams":[],"labels":[],"milestone":null,"draft":false,"commits_url":"https://api.github.com/repos/link-foundation/command-stream/pulls/163/commits","review_comments_url":"https://api.github.com/repos/link-foundation/command-stream/pulls/163/comments","review_comment_url":"https://api.github.com/repos/link-foundation/command-stream/pulls/comments{/number}","comments_url":"https://api.github.com/repos/link-foundation/command-stream/issues/163/comments","statuses_url":"https://api.github.com/repos/link-foundation/command-stream/statuses/9d18ab35d9e2a5f279695e606d61ecb763e1950e","head":{"label":"link-foundation:issue-162-0c186d5158ec","ref":"issue-162-0c186d5158ec","sha":"9d18ab35d9e2a5f279695e606d61ecb763e1950e","user":{"login":"link-foundation","id":176174013,"node_id":"O_kgDOCoAzvQ","avatar_url":"https://avatars.githubusercontent.com/u/176174013?v=4","gravatar_id":"","url":"https://api.github.com/users/link-foundation","html_url":"https://github.com/link-foundation","followers_url":"https://api.github.com/users/link-foundation/followers","following_url":"https://api.github.com/users/link-foundation/following{/other_user}","gists_url":"https://api.github.com/users/link-foundation/gists{/gist_id}","starred_url":"https://api.github.com/users/link-foundation/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/link-foundation/subscriptions","organizations_url":"https://api.github.com/users/link-foundation/orgs","repos_url":"https://api.github.com/users/link-foundation/repos","events_url":"https://api.github.com/users/link-foundation/events{/privacy}","received_events_url":"https://api.github.com/users/link-foundation/received_events","type":"Organization","user_view_type":"public","site_admin":false},"repo":{"id":1036989446,"node_id":"R_kgDOPc80Bg","name":"command-stream","full_name":"link-foundation/command-stream","private":false,"owner":{"login":"link-foundation","id":176174013,"node_id":"O_kgDOCoAzvQ","avatar_url":"https://avatars.githubusercontent.com/u/176174013?v=4","gravatar_id":"","url":"https://api.github.com/users/link-foundation","html_url":"https://github.com/link-foundation","followers_url":"https://api.github.com/users/link-foundation/followers","following_url":"https://api.github.com/users/link-foundation/following{/other_user}","gists_url":"https://api.github.com/users/link-foundation/gists{/gist_id}","starred_url":"https://api.github.com/users/link-foundation/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/link-foundation/subscriptions","organizations_url":"https://api.github.com/users/link-foundation/orgs","repos_url":"https://api.github.com/users/link-foundation/repos","events_url":"https://api.github.com/users/link-foundation/events{/privacy}","received_events_url":"https://api.github.com/users/link-foundation/received_events","type":"Organization","user_view_type":"public","site_admin":false},"html_url":"https://github.com/link-foundation/command-stream","description":"$treamable commands executor","fork":false,"url":"https://api.github.com/repos/link-foundation/command-stream","forks_url":"https://api.github.com/repos/link-foundation/command-stream/forks","keys_url":"https://api.github.com/repos/link-foundation/command-stream/keys{/key_id}","collaborators_url":"https://api.github.com/repos/link-foundation/command-stream/collaborators{/collaborator}","teams_url":"https://api.github.com/repos/link-foundation/command-stream/teams","hooks_url":"https://api.github.com/repos/link-foundation/command-stream/hooks","issue_events_url":"https://api.github.com/repos/link-foundation/command-stream/issues/events{/number}","events_url":"https://api.github.com/repos/link-foundation/command-stream/events","assignees_url":"https://api.github.com/repos/link-foundation/command-stream/assignees{/user}","branches_url":"https://api.github.com/repos/link-foundation/command-stream/branches{/branch}","tags_url":"https://api.github.com/repos/link-foundation/command-stream/tags","blobs_url":"https://api.github.com/repos/link-foundation/command-stream/git/blobs{/sha}","git_tags_url":"https://api.github.com/repos/link-foundation/command-stream/git/tags{/sha}","git_refs_url":"https://api.github.com/repos/link-foundation/command-stream/git/refs{/sha}","trees_url":"https://api.github.com/repos/link-foundation/command-stream/git/trees{/sha}","statuses_url":"https://api.github.com/repos/link-foundation/command-stream/statuses/{sha}","languages_url":"https://api.github.com/repos/link-foundation/command-stream/languages","stargazers_url":"https://api.github.com/repos/link-foundation/command-stream/stargazers","contributors_url":"https://api.github.com/repos/link-foundation/command-stream/contributors","subscribers_url":"https://api.github.com/repos/link-foundation/command-stream/subscribers","subscription_url":"https://api.github.com/repos/link-foundation/command-stream/subscription","commits_url":"https://api.github.com/repos/link-foundation/command-stream/commits{/sha}","git_commits_url":"https://api.github.com/repos/link-foundation/command-stream/git/commits{/sha}","comments_url":"https://api.github.com/repos/link-foundation/command-stream/comments{/number}","issue_comment_url":"https://api.github.com/repos/link-foundation/command-stream/issues/comments{/number}","contents_url":"https://api.github.com/repos/link-foundation/command-stream/contents/{+path}","compare_url":"https://api.github.com/repos/link-foundation/command-stream/compare/{base}...{head}","merges_url":"https://api.github.com/repos/link-foundation/command-stream/merges","archive_url":"https://api.github.com/repos/link-foundation/command-stream/{archive_format}{/ref}","downloads_url":"https://api.github.com/repos/link-foundation/command-stream/downloads","issues_url":"https://api.github.com/repos/link-foundation/command-stream/issues{/number}","pulls_url":"https://api.github.com/repos/link-foundation/command-stream/pulls{/number}","milestones_url":"https://api.github.com/repos/link-foundation/command-stream/milestones{/number}","notifications_url":"https://api.github.com/repos/link-foundation/command-stream/notifications{?since,all,participating}","labels_url":"https://api.github.com/repos/link-foundation/command-stream/labels{/name}","releases_url":"https://api.github.com/repos/link-foundation/command-stream/releases{/id}","deployments_url":"https://api.github.com/repos/link-foundation/command-stream/deployments","created_at":"2025-08-12T22:30:25Z","updated_at":"2026-06-08T20:23:36Z","pushed_at":"2026-06-08T20:23:39Z","git_url":"git://github.com/link-foundation/command-stream.git","ssh_url":"git@github.com:link-foundation/command-stream.git","clone_url":"https://github.com/link-foundation/command-stream.git","svn_url":"https://github.com/link-foundation/command-stream","homepage":null,"size":10069,"stargazers_count":4,"watchers_count":4,"language":"JavaScript","has_issues":true,"has_projects":true,"has_downloads":true,"has_wiki":true,"has_pages":false,"has_discussions":false,"forks_count":1,"mirror_url":null,"archived":false,"disabled":false,"open_issues_count":75,"license":{"key":"unlicense","name":"The Unlicense","spdx_id":"Unlicense","url":"https://api.github.com/licenses/unlicense","node_id":"MDc6TGljZW5zZTE1"},"allow_forking":true,"is_template":false,"web_commit_signoff_required":false,"has_pull_requests":true,"pull_request_creation_policy":"all","topics":[],"visibility":"public","forks":1,"open_issues":75,"watchers":4,"default_branch":"main"}},"base":{"label":"link-foundation:main","ref":"main","sha":"c84031dec59ab29d7199c0685c980d7e10532bc7","user":{"login":"link-foundation","id":176174013,"node_id":"O_kgDOCoAzvQ","avatar_url":"https://avatars.githubusercontent.com/u/176174013?v=4","gravatar_id":"","url":"https://api.github.com/users/link-foundation","html_url":"https://github.com/link-foundation","followers_url":"https://api.github.com/users/link-foundation/followers","following_url":"https://api.github.com/users/link-foundation/following{/other_user}","gists_url":"https://api.github.com/users/link-foundation/gists{/gist_id}","starred_url":"https://api.github.com/users/link-foundation/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/link-foundation/subscriptions","organizations_url":"https://api.github.com/users/link-foundation/orgs","repos_url":"https://api.github.com/users/link-foundation/repos","events_url":"https://api.github.com/users/link-foundation/events{/privacy}","received_events_url":"https://api.github.com/users/link-foundation/received_events","type":"Organization","user_view_type":"public","site_admin":false},"repo":{"id":1036989446,"node_id":"R_kgDOPc80Bg","name":"command-stream","full_name":"link-foundation/command-stream","private":false,"owner":{"login":"link-foundation","id":176174013,"node_id":"O_kgDOCoAzvQ","avatar_url":"https://avatars.githubusercontent.com/u/176174013?v=4","gravatar_id":"","url":"https://api.github.com/users/link-foundation","html_url":"https://github.com/link-foundation","followers_url":"https://api.github.com/users/link-foundation/followers","following_url":"https://api.github.com/users/link-foundation/following{/other_user}","gists_url":"https://api.github.com/users/link-foundation/gists{/gist_id}","starred_url":"https://api.github.com/users/link-foundation/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/link-foundation/subscriptions","organizations_url":"https://api.github.com/users/link-foundation/orgs","repos_url":"https://api.github.com/users/link-foundation/repos","events_url":"https://api.github.com/users/link-foundation/events{/privacy}","received_events_url":"https://api.github.com/users/link-foundation/received_events","type":"Organization","user_view_type":"public","site_admin":false},"html_url":"https://github.com/link-foundation/command-stream","description":"$treamable commands executor","fork":false,"url":"https://api.github.com/repos/link-foundation/command-stream","forks_url":"https://api.github.com/repos/link-foundation/command-stream/forks","keys_url":"https://api.github.com/repos/link-foundation/command-stream/keys{/key_id}","collaborators_url":"https://api.github.com/repos/link-foundation/command-stream/collaborators{/collaborator}","teams_url":"https://api.github.com/repos/link-foundation/command-stream/teams","hooks_url":"https://api.github.com/repos/link-foundation/command-stream/hooks","issue_events_url":"https://api.github.com/repos/link-foundation/command-stream/issues/events{/number}","events_url":"https://api.github.com/repos/link-foundation/command-stream/events","assignees_url":"https://api.github.com/repos/link-foundation/command-stream/assignees{/user}","branches_url":"https://api.github.com/repos/link-foundation/command-stream/branches{/branch}","tags_url":"https://api.github.com/repos/link-foundation/command-stream/tags","blobs_url":"https://api.github.com/repos/link-foundation/command-stream/git/blobs{/sha}","git_tags_url":"https://api.github.com/repos/link-foundation/command-stream/git/tags{/sha}","git_refs_url":"https://api.github.com/repos/link-foundation/command-stream/git/refs{/sha}","trees_url":"https://api.github.com/repos/link-foundation/command-stream/git/trees{/sha}","statuses_url":"https://api.github.com/repos/link-foundation/command-stream/statuses/{sha}","languages_url":"https://api.github.com/repos/link-foundation/command-stream/languages","stargazers_url":"https://api.github.com/repos/link-foundation/command-stream/stargazers","contributors_url":"https://api.github.com/repos/link-foundation/command-stream/contributors","subscribers_url":"https://api.github.com/repos/link-foundation/command-stream/subscribers","subscription_url":"https://api.github.com/repos/link-foundation/command-stream/subscription","commits_url":"https://api.github.com/repos/link-foundation/command-stream/commits{/sha}","git_commits_url":"https://api.github.com/repos/link-foundation/command-stream/git/commits{/sha}","comments_url":"https://api.github.com/repos/link-foundation/command-stream/comments{/number}","issue_comment_url":"https://api.github.com/repos/link-foundation/command-stream/issues/comments{/number}","contents_url":"https://api.github.com/repos/link-foundation/command-stream/contents/{+path}","compare_url":"https://api.github.com/repos/link-foundation/command-stream/compare/{base}...{head}","merges_url":"https://api.github.com/repos/link-foundation/command-stream/merges","archive_url":"https://api.github.com/repos/link-foundation/command-stream/{archive_format}{/ref}","downloads_url":"https://api.github.com/repos/link-foundation/command-stream/downloads","issues_url":"https://api.github.com/repos/link-foundation/command-stream/issues{/number}","pulls_url":"https://api.github.com/repos/link-foundation/command-stream/pulls{/number}","milestones_url":"https://api.github.com/repos/link-foundation/command-stream/milestones{/number}","notifications_url":"https://api.github.com/repos/link-foundation/command-stream/notifications{?since,all,participating}","labels_url":"https://api.github.com/repos/link-foundation/command-stream/labels{/name}","releases_url":"https://api.github.com/repos/link-foundation/command-stream/releases{/id}","deployments_url":"https://api.github.com/repos/link-foundation/command-stream/deployments","created_at":"2025-08-12T22:30:25Z","updated_at":"2026-06-08T20:23:36Z","pushed_at":"2026-06-08T20:23:39Z","git_url":"git://github.com/link-foundation/command-stream.git","ssh_url":"git@github.com:link-foundation/command-stream.git","clone_url":"https://github.com/link-foundation/command-stream.git","svn_url":"https://github.com/link-foundation/command-stream","homepage":null,"size":10069,"stargazers_count":4,"watchers_count":4,"language":"JavaScript","has_issues":true,"has_projects":true,"has_downloads":true,"has_wiki":true,"has_pages":false,"has_discussions":false,"forks_count":1,"mirror_url":null,"archived":false,"disabled":false,"open_issues_count":75,"license":{"key":"unlicense","name":"The Unlicense","spdx_id":"Unlicense","url":"https://api.github.com/licenses/unlicense","node_id":"MDc6TGljZW5zZTE1"},"allow_forking":true,"is_template":false,"web_commit_signoff_required":false,"has_pull_requests":true,"pull_request_creation_policy":"all","topics":[],"visibility":"public","forks":1,"open_issues":75,"watchers":4,"default_branch":"main"}},"_links":{"self":{"href":"https://api.github.com/repos/link-foundation/command-stream/pulls/163"},"html":{"href":"https://github.com/link-foundation/command-stream/pull/163"},"issue":{"href":"https://api.github.com/repos/link-foundation/command-stream/issues/163"},"comments":{"href":"https://api.github.com/repos/link-foundation/command-stream/issues/163/comments"},"review_comments":{"href":"https://api.github.com/repos/link-foundation/command-stream/pulls/163/comments"},"review_comment":{"href":"https://api.github.com/repos/link-foundation/command-stream/pulls/comments{/number}"},"commits":{"href":"https://api.github.com/repos/link-foundation/command-stream/pulls/163/commits"},"statuses":{"href":"https://api.github.com/repos/link-foundation/command-stream/statuses/9d18ab35d9e2a5f279695e606d61ecb763e1950e"}},"author_association":"MEMBER","auto_merge":null,"assignee":{"login":"konard","id":1431904,"node_id":"MDQ6VXNlcjE0MzE5MDQ=","avatar_url":"https://avatars.githubusercontent.com/u/1431904?v=4","gravatar_id":"","url":"https://api.github.com/users/konard","html_url":"https://github.com/konard","followers_url":"https://api.github.com/users/konard/followers","following_url":"https://api.github.com/users/konard/following{/other_user}","gists_url":"https://api.github.com/users/konard/gists{/gist_id}","starred_url":"https://api.github.com/users/konard/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/konard/subscriptions","organizations_url":"https://api.github.com/users/konard/orgs","repos_url":"https://api.github.com/users/konard/repos","events_url":"https://api.github.com/users/konard/events{/privacy}","received_events_url":"https://api.github.com/users/konard/received_events","type":"User","user_view_type":"public","site_admin":false},"active_lock_reason":null}]✅ Found PR #163 containing commit
+2026-06-08T20:23:41.6530095Z {"url":"https://api.github.com/repos/link-foundation/command-stream/releases/336219532","assets_url":"https://api.github.com/repos/link-foundation/command-stream/releases/336219532/assets","upload_url":"https://uploads.github.com/repos/link-foundation/command-stream/releases/336219532/assets{?name,label}","html_url":"https://github.com/link-foundation/command-stream/releases/tag/js-v0.9.6","id":336219532,"author":{"login":"github-actions[bot]","id":41898282,"node_id":"MDM6Qm90NDE4OTgyODI=","avatar_url":"https://avatars.githubusercontent.com/in/15368?v=4","gravatar_id":"","url":"https://api.github.com/users/github-actions%5Bbot%5D","html_url":"https://github.com/apps/github-actions","followers_url":"https://api.github.com/users/github-actions%5Bbot%5D/followers","following_url":"https://api.github.com/users/github-actions%5Bbot%5D/following{/other_user}","gists_url":"https://api.github.com/users/github-actions%5Bbot%5D/gists{/gist_id}","starred_url":"https://api.github.com/users/github-actions%5Bbot%5D/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/github-actions%5Bbot%5D/subscriptions","organizations_url":"https://api.github.com/users/github-actions%5Bbot%5D/orgs","repos_url":"https://api.github.com/users/github-actions%5Bbot%5D/repos","events_url":"https://api.github.com/users/github-actions%5Bbot%5D/events{/privacy}","received_events_url":"https://api.github.com/users/github-actions%5Bbot%5D/received_events","type":"Bot","user_view_type":"public","site_admin":false},"node_id":"RE_kwDOPc80Bs4UCk2M","tag_name":"js-v0.9.6","target_commitish":"main","name":"JavaScript 0.9.6","draft":false,"immutable":false,"prerelease":false,"created_at":"2026-06-08T20:23:31Z","updated_at":"2026-06-08T20:23:41Z","published_at":"2026-06-08T20:23:39Z","assets":[],"tarball_url":"https://api.github.com/repos/link-foundation/command-stream/tarball/js-v0.9.6","zipball_url":"https://api.github.com/repos/link-foundation/command-stream/zipball/js-v0.9.6","body":"Ensure the JavaScript release job still evaluates on main pushes after the\npull-request-only changeset gate is skipped.\n\nSeparate JavaScript package metadata, scripts, documentation, and release tags\nfrom the Rust crate release path.\n\n**Related Pull Request:** #163\n\n---\n\n[![npm version](https://img.shields.io/badge/npm-0.9.6-blue.svg)](https://www.npmjs.com/package/command-stream/v/0.9.6)"}✅ Formatted release notes for v0.9.6
+2026-06-08T20:23:41.6545383Z    - Added link to PR #163
+2026-06-08T20:23:41.6545866Z    - Added shields.io npm badge
+2026-06-08T20:23:41.6546318Z    - Cleaned up formatting
+2026-06-08T20:23:41.6580697Z Formatted JavaScript release notes for js-v0.9.6
+2026-06-08T20:23:41.6668268Z Post job cleanup.
+2026-06-08T20:23:41.8352807Z Post job cleanup.
+2026-06-08T20:23:42.0116184Z Post job cleanup.
+2026-06-08T20:23:42.1109502Z [command]/usr/bin/git version
+2026-06-08T20:23:42.1145043Z git version 2.54.0
+2026-06-08T20:23:42.1187427Z Temporarily overriding HOME='/home/runner/work/_temp/6f599d01-55aa-4994-b560-e767eca39335' before making global git config changes
+2026-06-08T20:23:42.1188593Z Adding repository directory to the temporary git global config as a safe directory
+2026-06-08T20:23:42.1200736Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/command-stream/command-stream
+2026-06-08T20:23:42.1235819Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-06-08T20:23:42.1268851Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-06-08T20:23:42.1509269Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-06-08T20:23:42.1533894Z http.https://github.com/.extraheader
+2026-06-08T20:23:42.1547248Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-06-08T20:23:42.1578085Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-06-08T20:23:42.1811288Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-06-08T20:23:42.1842702Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-06-08T20:23:42.2219802Z Cleaning up orphan processes
+2026-06-08T20:23:42.2509150Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, actions/setup-node@v4. Actions will be forced to run with Node.js 24 by default starting June 16th, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
