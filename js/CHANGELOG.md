@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.3.0
+
+### Minor Changes
+
+- Add size-or-deadline stream batching that flushes while input is idle, retains pending reads, and propagates cancellation. Add the slidingWindow alias, update monitoring examples and document sourced comparisons with streaming alternatives.
+
 ## 2.2.0
 
 ### Minor Changes
