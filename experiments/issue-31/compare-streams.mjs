@@ -3,14 +3,17 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { Readable } from 'node:stream';
 import { createInterface } from 'node:readline';
+import { pathToFileURL } from 'node:url';
 import { command } from '../../js/src/$.mjs';
 
 const require = createRequire(
   new URL('../../js/package.json', import.meta.url)
 );
-const { execa } = await import(require.resolve('execa'));
-const { $: zx } = await import(require.resolve('zx'));
-const { default: shell } = await import(require.resolve('shelljs'));
+const { execa } = await import(pathToFileURL(require.resolve('execa')).href);
+const { $: zx } = await import(pathToFileURL(require.resolve('zx')).href);
+const { default: shell } = await import(
+  pathToFileURL(require.resolve('shelljs')).href
+);
 const script = 'console.log(1);console.log(2);console.log(3);console.log(4)';
 const expected = [4, 8];
 const results = {};
@@ -39,9 +42,11 @@ for await (const line of execa(process.execPath, ['-e', script], {
   results.execa.push(Number(line));
 }
 results.zx = [];
+// zx runs Bash; forward slashes also address Windows executables in Git Bash.
+const bashExecutable = process.execPath.replaceAll('\\', '/');
 for await (const line of zx({
   quiet: true,
-})`${process.execPath} -e ${script}`) {
+})`${bashExecutable} -e ${script}`) {
   if (line.trim() && Number(line) % 2 === 0) {
     results.zx.push(Number(line) * 2);
   }
