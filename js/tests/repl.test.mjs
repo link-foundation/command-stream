@@ -53,6 +53,13 @@ test('REPL preserves declarations and evaluates classes and new expressions', as
     await evaluate('const echo = 42');
     expect(await evaluate('echo')).toBe(42);
     expect(await evaluate('echo - 1')).toBe(41);
+    await evaluate('const pwd = undefined');
+    expect(await evaluate('pwd')).toBeUndefined();
+    await evaluate('const help = 42');
+    expect(await evaluate('help')).toBe(42);
+    await evaluate('async function answer() { return 42; }');
+    expect(await evaluate('await answer()')).toBe(42);
+    expect(await evaluate('// a JavaScript comment')).toBeUndefined();
   } finally {
     server.close();
   }

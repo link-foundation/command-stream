@@ -46,7 +46,10 @@ export function startRepl(
   server.commandNames = () => api.listCommands();
   server.eval = (source, context, filename, callback) => {
     const trimmed = source.trim();
-    if (['help', 'exit', 'clear'].includes(trimmed)) {
+    if (
+      ['help', 'exit', 'clear'].includes(trimmed) &&
+      !isBoundIdentifier(trimmed, context)
+    ) {
       server.commands[trimmed].action.call(server);
       callback(null);
       return;
@@ -89,22 +92,36 @@ export function startRepl(
   return server;
 }
 
+function isBoundIdentifier(identifier, context) {
+  if (!/^[a-zA-Z_$][\w$]*$/.test(identifier)) {
+    return false;
+  }
+  try {
+    if (runInContext(`typeof ${identifier}`, context) !== 'undefined') {
+      return true;
+    }
+  } catch {
+    // Keywords and uninitialized bindings belong to the JavaScript evaluator.
+    return true;
+  }
+  try {
+    // `typeof` cannot distinguish an undefined binding from a missing name.
+    runInContext(identifier, context);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function isShellInput(source, commands, context) {
   // Send declarations and expressions to Node's evaluator. Only shell-shaped
   // input uses command-stream; the public sh() API handles ambiguous input.
   const first = source.split(/\s/)[0];
-  if (/^[a-zA-Z_$][\w$]*$/.test(first)) {
-    try {
-      if (runInContext(`typeof ${first}`, context) !== 'undefined') {
-        return false;
-      }
-    } catch {
-      // Keywords and uninitialized bindings belong to the JavaScript evaluator.
-      return false;
-    }
+  if (source.startsWith('//') || isBoundIdentifier(first, context)) {
+    return false;
   }
   if (
-    /^(await|break|case|catch|class|const|continue|debugger|default|delete|do|else|export|finally|for|function|if|import|in|instanceof|let|new|return|super|switch|this|throw|try|typeof|using|var|void|while|with|yield)$/.test(
+    /^(async|await|break|case|catch|class|const|continue|debugger|default|delete|do|else|export|finally|for|function|if|import|in|instanceof|let|new|return|super|switch|this|throw|try|typeof|using|var|void|while|with|yield)$/.test(
       first
     )
   ) {
