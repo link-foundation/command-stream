@@ -19,6 +19,15 @@ console.log('Core command execution passed');
 if ($.shelljs !== shelljs) {
   throw new Error('ShellJS entry points do not share one implementation');
 }
+const cmdResult = shelljs.cmd(
+  Deno.execPath(),
+  'eval',
+  'console.log("cdn-cmd")'
+);
+if (cmdResult.stdout.trim() !== 'cdn-cmd' || cmdResult.code !== 0) {
+  throw new Error('ShellJS process execution failed');
+}
+console.log('ShellJS process execution passed');
 const directory = mkdtempSync(join(tmpdir(), 'command-stream-cdn-'));
 try {
   writeFileSync(join(directory, 'a.txt'), 'a\n');

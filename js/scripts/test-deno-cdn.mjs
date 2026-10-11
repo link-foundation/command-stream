@@ -37,9 +37,11 @@ const result = await build({
               throw new Error(`Undeclared CDN dependency: ${args.path}`);
             }
             cdnDependencies.add(args.path);
-            path = `https://esm.sh/${args.path}@${version}?target=denonext`;
+            // Process runners need Node conditional exports, including
+            // unicorn-magic's filesystem helpers used by current Execa.
+            path = `https://esm.sh/${args.path}@${version}?target=denonext&conditions=node`;
           }
-          if (args.kind === 'require-call') {
+          if (args.kind === 'require-call' && !commonJsImports.has(path)) {
             commonJsImports.set(path, `cdn${commonJsImports.size}`);
           }
           return { path, external: true };
@@ -93,10 +95,10 @@ if (process.env.COMMAND_STREAM_CDN_REVISION) {
     `https://esm.sh/gh/${repository}@${revision}/js/src/$.mjs`
   );
   url.searchParams.set('target', 'denonext');
+  url.searchParams.set('conditions', 'node');
   url.searchParams.set(
     'deps',
-    // Pin only this entry point's imports: pinning unrelated adapters would
-    // also override dependencies inside ShellJS (which uses Execa 5).
+    // Pin only this entry point's imports, preserving transitive version ranges.
     [...cdnDependencies]
       .map((name) => `${name}@${manifest.dependencies[name]}`)
       .join(',')

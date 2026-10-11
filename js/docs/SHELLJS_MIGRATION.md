@@ -1,22 +1,29 @@
 # Migrating from ShellJS
 
 JavaScript exposes the **pinned ShellJS 0.10.0 API** at `command-stream/shelljs`,
-`$.shelljs` and the named `shelljs` export. All three share one implementation,
-configuration, environment, error state and directory stack. This boundary uses
-ShellJS itself, as the Execa boundary uses Execa; it preserves behavior that an
-argument-joining wrapper cannot reproduce. The native command-stream API offers
-streaming, events, cancellation and custom virtual commands alongside it.
+`$.shelljs` and the named `shelljs` export. All three share bundled ShellJS command
+source, configuration, environment, error state and directory stack. The source
+and type declarations ship with their upstream licenses. Globbing uses
+command-stream's existing dependency-free engine; `cmd()` uses the current Execa
+runtime. Production installs do not include `shelljs`, `@types/shelljs`,
+`fast-glob`, `micromatch` or `braces` through this boundary. A separately installed
+upstream ShellJS package has its own configuration and error state.
 
-The compatibility import installs a guard on ShellJS's resolved `fast-glob`
-synchronous entry points (`sync` and `globSync`), including any callers sharing
-that dependency instance. Patterns and ignore patterns are limited to 10,000
+The local synchronous glob boundary limits patterns and ignore patterns to 10,000
 characters and 100 combined brace/parenthesis nesting levels before parsing.
 Ordinary brace expansion remains available; ShellJS retains its usual literal
 fallback when argument expansion fails. Direct recursive glob calls can throw a
 `SyntaxError` for excessive nesting. Configuration resets cannot disable this
-guard. It mitigates [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm),
-which currently has no patched release. Direct imports of `braces` and
-`fast-glob`'s asynchronous entry points are outside this boundary.
+guard. Brace expansion also limits the result to 10,000 patterns. The vulnerable
+dependency chain reported in [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)
+is absent from production installs. Development reference packages and tooling
+can still resolve it; their audit exception does not apply to packed consumer
+audits. The native API offers streaming, events and cancellation alongside it.
+
+For Deno HTTP imports through esm.sh, include
+`?target=denonext&conditions=node` to select the process runner's Node filesystem
+exports. The `conditions` option is documented in the
+[esm.sh reference](https://github.com/esm-dev/esm.sh).
 
 Rust exposes `command_stream::shelljs::ShellJs`: asynchronous command calls,
 configuration, file operations and an isolated directory stack. See the limits
@@ -189,7 +196,10 @@ Rust can register a handler with `VirtualCommandRegistry::register`, or process
 `CommandContext` directly. ShellJS also has a plugin API; command-stream's
 native registry adds async handlers, async generators/output channels and mixed
 virtual/system pipelines. The JavaScript compatibility API keeps ShellJS's own
-plugin behavior; registering a native command does not alter ShellJS.
+plugin behavior through `command-stream/shelljs/plugin`. Plugin authors replace
+their `shelljs/plugin` import with this subpath so registrations update the same
+local singleton as `command-stream/shelljs`. Registering a native command does
+not alter ShellJS.
 
 ## Rust translation limits
 

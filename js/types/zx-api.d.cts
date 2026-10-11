@@ -830,6 +830,13 @@ export interface GlobOptions {
     | { files?: readonly string[]; extensions?: readonly string[] };
   extglob?: boolean;
   followSymbolicLinks?: boolean;
+  /** Synchronous filesystem overrides used by ShellJS compatibility globs. */
+  fs?: Partial<
+    Pick<
+      typeof import('node:fs'),
+      'readdir' | 'stat' | 'lstat' | 'readdirSync' | 'statSync' | 'lstatSync'
+    >
+  >;
   gitignore?: boolean;
   ignore?: readonly string[];
   ignoreFiles?: string | readonly string[];

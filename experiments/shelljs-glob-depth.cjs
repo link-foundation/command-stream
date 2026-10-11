@@ -8,10 +8,9 @@ const { createRequire } = require('node:module');
 const shellRequire = createRequire(
   require.resolve('../js/node_modules/shelljs')
 );
-const glob = shellRequire('fast-glob');
-if (process.argv.includes('--guard')) {
-  require('../js/src/shelljs/index.cjs');
-}
+const glob = process.argv.includes('--guard')
+  ? require('../js/src/shelljs/glob.cjs')
+  : shellRequire('fast-glob');
 const pattern = '{'.repeat(3000) + 'a,b' + '}'.repeat(3000);
 assert.throws(
   () => glob.sync(pattern),

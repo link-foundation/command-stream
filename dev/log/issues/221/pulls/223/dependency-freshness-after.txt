@@ -1,0 +1,2 @@
+$ cd .. && bun scripts/check-dependencies.mjs
+Checked 89 direct dependencies; 0 stale or unverifiable.

@@ -151,11 +151,14 @@ function buildBase() {
 // Generator driver: run a generator of fs operations sync or async
 // ---------------------------------------------------------------------------
 
-function execSync([op, ...args]) {
+function execSync([op, ...args], fileSystem = nodeFs) {
   if (op === 'call') {
     return args[0](...args.slice(1));
   }
-  return nodeFs[`${op}Sync`](...args);
+  return (fileSystem[`${op}Sync`] ?? nodeFs[`${op}Sync`]).apply(
+    fileSystem,
+    args
+  );
 }
 
 function execAsync([op, ...args]) {
@@ -169,8 +172,10 @@ function execAsync([op, ...args]) {
  * Drive `gen` to completion. In async mode every operation result is awaited
  * and a Promise is returned; in sync mode the plain value is returned.
  */
-function drive(gen, isAsync) {
-  const exec = isAsync ? execAsync : execSync;
+function drive(gen, isAsync, fileSystem) {
+  const exec = isAsync
+    ? execAsync
+    : (operation) => execSync(operation, fileSystem);
   const step = (method, arg) => {
     let m = method;
     let a = arg;

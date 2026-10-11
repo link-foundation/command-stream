@@ -43,6 +43,27 @@ for scope in local global; do
   else
     npm install "${flags[@]}" "$archive"
   fi
+  if [ "$scope" = local ]; then
+    # Audit the actual resolved consumer graph without repository exceptions.
+    npm audit --omit=dev --audit-level=high
+  fi
   node check.mjs
   echo "PASS: Node $(node --version), $scope production install, $mode, no build toolchain"
+done
+
+# The consumer has no upstream ShellJS types. Compile both export conditions
+# with only the normal Node types and the compiler, isolated from repo tooling.
+typescript_version="$(node -p 'require(process.argv[1]).devDependencies.typescript' "$script_directory/../package.json")"
+node_types_version="$(node -p 'require(process.argv[1]).devDependencies["@types/node"]' "$script_directory/../package.json")"
+npm install --prefix "$directory/type-tools" --ignore-scripts --no-audit --no-fund \
+  "typescript@$typescript_version" "@types/node@$node_types_version"
+for scope in local global; do
+  consumer="$directory/$scope"
+  ln -s "$directory/type-tools/node_modules/@types" "$consumer/node_modules/@types"
+  cp "$script_directory/production-types.mts" "$script_directory/production-types.cts" "$consumer/"
+  node "$directory/type-tools/node_modules/typescript/bin/tsc" \
+    --noEmit --strict --skipLibCheck false --target es2022 \
+    --module nodenext --moduleResolution nodenext \
+    "$consumer/production-types.mts" "$consumer/production-types.cts"
+  echo "PASS: $scope isolated ESM/CommonJS production declarations"
 done

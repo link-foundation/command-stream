@@ -8,8 +8,7 @@ import { join } from 'node:path';
 import shelljs from '../src/shelljs/index.mjs';
 
 const require = createRequire(import.meta.url);
-const shellRequire = createRequire(require.resolve('shelljs'));
-const glob = shellRequire('fast-glob');
+const glob = require('../src/shelljs/glob.cjs');
 const nested = (depth) => `${'{'.repeat(depth)}a,b${'}'.repeat(depth)}`;
 
 test('ShellJS rejects deeply nested globs before the vulnerable recursive walker', () => {
@@ -41,9 +40,51 @@ test('guards arrays, ignore patterns and parentheses independently of configurat
     /100 levels/
   );
   expect(() => glob.sync('x'.repeat(10001))).toThrow(/10000 characters/);
+  expect(() => glob.sync(`"${nested(101)}"`)).toThrow(/100 levels/);
   shelljs.config.reset();
   expect(() => glob.sync(nested(101))).toThrow(/100 levels/);
 });
+
+test('matches the pinned engine for configuration, quote and character-class options', () => {
+  const experiment = fileURLToPath(
+    new URL('../../experiments/issue-221/glob-parity.mjs', import.meta.url)
+  );
+  const result = spawnSync('node', [experiment], {
+    encoding: 'utf8',
+    maxBuffer: 64 * 1024,
+  });
+  expect(result.error).toBeUndefined();
+  expect(result.status).toBe(0);
+}, 5000);
+
+test('preserves synchronous filesystem overrides', () => {
+  let reads = 0;
+  expect(
+    glob.sync('*', {
+      fs: {
+        readdirSync() {
+          reads++;
+          return [];
+        },
+      },
+    })
+  ).toEqual([]);
+  expect(reads).toBe(1);
+});
+
+test('bounds the Cartesian product of shallow brace groups', () => {
+  const experiment = fileURLToPath(
+    new URL('../../experiments/issue-221/brace-budget.cjs', import.meta.url)
+  );
+  const result = spawnSync(
+    'node',
+    ['--max-old-space-size=64', '--stack-size=256', experiment],
+    { encoding: 'utf8', maxBuffer: 64 * 1024 }
+  );
+  expect(result.error).toBeUndefined();
+  expect(result.status).toBe(0);
+  expect(result.stdout).toContain('brace expansion budget passed');
+}, 5000);
 
 test('preserves normal brace globs and treats escaped, quoted and bracketed braces literally', () => {
   const directory = mkdtempSync(join(tmpdir(), 'command-stream-glob-'));

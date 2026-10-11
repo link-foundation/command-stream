@@ -5,6 +5,7 @@
   "skipComments": true,
   "format": ["javascript"],
   "ignore": [
+    "**/src/shelljs/vendor/**",
     "**/node_modules/**",
     "**/build/**",
     "**/dist/**",

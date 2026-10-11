@@ -1,8 +1,7 @@
 'use strict';
 
-// GHSA-vfj7-8cjw-p6xm has no patched braces release. ShellJS catches errors
-// during argument expansion, but its recursive ls path also calls glob.sync
-// directly. Guard that shared dependency before either path reaches braces.
+// ShellJS catches errors during argument expansion, but its recursive ls path
+// also calls glob.sync directly. Bound both paths before parsing glob syntax.
 const MAX_DEPTH = 100;
 const MAX_LENGTH = 10000;
 const guarded = Symbol.for('command-stream.shelljs.glob-depth-guard');
@@ -75,3 +74,5 @@ module.exports = function guardShellJsGlob(glob) {
   glob.sync = sync;
   glob.globSync = sync;
 };
+
+module.exports.checkPattern = checkPattern;

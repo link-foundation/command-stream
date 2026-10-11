@@ -257,6 +257,8 @@ export default [
   },
   {
     ignores: [
+      // Pinned third-party compatibility source is retained in upstream style.
+      '**/src/shelljs/vendor/**',
       '**/node_modules/**',
       '**/coverage/**',
       '**/dist/**',

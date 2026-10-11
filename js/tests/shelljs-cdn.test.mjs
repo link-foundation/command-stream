@@ -10,38 +10,19 @@ const source = readFileSync(
 );
 
 function loadCompat(resolved) {
-  const upstream = {};
-  const localGlob = { source: 'ShellJS dependency tree' };
-  const cdnGlob = { source: 'CDN import' };
-  const guarded = [];
-  const bases = [];
+  const bundled = {};
+  const imports = [];
   const require = (specifier) => {
+    imports.push(specifier);
+    if (specifier === './vendor/shell.js') {
+      return bundled;
+    }
     if (specifier === 'node:module') {
-      return {
-        createRequire: (filename) => {
-          // Use the real validation: the original implementation throws here.
-          createRequire(filename);
-          bases.push(filename);
-          return (name) => {
-            expect(name).toBe('fast-glob');
-            return localGlob;
-          };
-        },
-      };
+      // Keep real validation so the original CDN loader fails this regression.
+      return { createRequire };
     }
     if (specifier === 'node:path') {
       return nodePath;
-    }
-    if (specifier === 'fast-glob') {
-      return cdnGlob;
-    }
-    if (specifier === './glob-safety.cjs') {
-      return (glob) => guarded.push(glob);
-    }
-    if (specifier === 'shelljs') {
-      // The guard must be installed before exposing ShellJS.
-      expect(guarded).toHaveLength(1);
-      return upstream;
     }
     throw new Error(`Unexpected require: ${specifier}`);
   };
@@ -50,28 +31,20 @@ function loadCompat(resolved) {
   runInNewContext(source, { require, module });
   return {
     exported: module.exports,
-    upstream,
-    guarded,
-    bases,
-    localGlob,
-    cdnGlob,
+    bundled,
+    imports,
   };
 }
 
-test.each(['shelljs', 'https://esm.sh/shelljs@0.10.0'])(
-  'ShellJS imports when require.resolve returns %s',
+test.each([
+  'shelljs',
+  'https://esm.sh/shelljs@0.10.0',
+  nodePath.resolve('isolated/shelljs/shell.js'),
+])(
+  'ShellJS uses bundled commands without filesystem resolution for %s',
   (resolved) => {
     const result = loadCompat(resolved);
-    expect(result.exported).toBe(result.upstream);
-    expect(result.guarded).toEqual([result.cdnGlob]);
-    expect(result.bases).toEqual([]);
+    expect(result.exported).toBe(result.bundled);
+    expect(result.imports).toEqual(['./vendor/shell.js']);
   }
 );
-
-test('local installs guard ShellJS own fast-glob even when dependencies are not hoisted', () => {
-  const resolved = nodePath.resolve('isolated/shelljs/shell.js');
-  const result = loadCompat(resolved);
-  expect(result.exported).toBe(result.upstream);
-  expect(result.guarded).toEqual([result.localGlob]);
-  expect(result.bases).toEqual([resolved]);
-});
