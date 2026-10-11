@@ -9,6 +9,7 @@ import {
 import cp from 'child_process';
 import { Readable, Writable } from 'node:stream';
 import { createExitPromise } from './$.process-runner-exit.mjs';
+import { killChildProcess } from './$.process-runner-stream-kill.mjs';
 import { trace } from './$.trace.mjs';
 import { findAvailableShell, withExportedProcessContext } from './$.shell.mjs';
 import {
@@ -277,12 +278,18 @@ function spawnShellCommand(commandStr, options) {
     withExportedProcessContext(commandStr, options.env),
   ];
   if (isBun) {
-    return Bun.spawn(argv, { ...options, stdout: 'pipe', stderr: 'pipe' });
+    return Bun.spawn(argv, {
+      ...options,
+      stdout: 'pipe',
+      stderr: 'pipe',
+      detached: process.platform !== 'win32',
+    });
   }
   const child = cp.spawn(argv[0], argv.slice(1), {
     cwd: options.cwd,
     env: options.env,
     stdio: [options.stdin, 'pipe', 'pipe'],
+    detached: process.platform !== 'win32',
   });
   const exited = new Promise((resolve, reject) => {
     child.once('error', reject);
@@ -291,6 +298,7 @@ function spawnShellCommand(commandStr, options) {
   // A spawn error can occur before the caller starts awaiting stage statuses.
   exited.catch(() => {});
   return {
+    pid: child.pid,
     stdout: Readable.toWeb(child.stdout, {
       strategy: { highWaterMark: 65536, size: (chunk) => chunk.byteLength },
     }),
@@ -381,7 +389,12 @@ function nativePipelineStage(runner, command, input, last, collector, pumps) {
     env: effectiveEnv(runner),
     stdin: input ? 'pipe' : 'ignore',
   });
-  const stop = () => proc.kill(runner._cancellationSignal ?? 'SIGTERM');
+  const stop = () =>
+    killChildProcess(
+      proc,
+      runner._cancellationSignal ?? 'SIGTERM',
+      runner.options.killGrace
+    );
   runner._abortController.signal.addEventListener('abort', stop, {
     once: true,
   });

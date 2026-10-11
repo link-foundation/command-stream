@@ -152,7 +152,7 @@ function scheduleForcefulEscalation(pid, graceMilliseconds, runtime) {
  * @param {number} [graceMilliseconds] - Time the child is given to handle the
  *   signal before SIGKILL follows (default 100)
  */
-function killChildProcess(
+export function killChildProcess(
   child,
   signal = 'SIGTERM',
   graceMilliseconds = DEFAULT_KILL_GRACE

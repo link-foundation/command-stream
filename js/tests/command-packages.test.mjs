@@ -1,9 +1,13 @@
-import { test, expect } from 'bun:test';
+import { test, expect, beforeEach, afterEach } from 'bun:test';
+import { beforeTestCleanup, afterTestCleanup } from './test-cleanup.mjs';
 import * as api from '../src/$.mjs';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { commandMetadata } from '../src/command-packages.mjs';
+
+beforeEach(beforeTestCleanup);
+afterEach(afterTestCleanup);
 
 test('create, extend and inheritance preserve wrapped generator output', async () => {
   expect(typeof api.$.create).toBe('function');

@@ -1,6 +1,10 @@
-import { test, expect } from 'bun:test';
+import { test, expect, beforeEach, afterEach } from 'bun:test';
+import { beforeTestCleanup, afterTestCleanup } from './test-cleanup.mjs';
 import * as api from '../src/$.mjs';
 import { PassThrough } from 'node:stream';
+
+beforeEach(beforeTestCleanup);
+afterEach(afterTestCleanup);
 
 test('REPL accepts JavaScript and registered bare commands', async () => {
   expect(typeof api.startRepl).toBe('function');

@@ -1,5 +1,9 @@
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
+import { beforeTestCleanup, afterTestCleanup } from './test-cleanup.mjs';
 import * as api from '../src/$.mjs';
+
+beforeEach(beforeTestCleanup);
+afterEach(afterTestCleanup);
 
 describe('issue 34 exact-argv builder', () => {
   test('is lazy and preserves every argument literally', async () => {

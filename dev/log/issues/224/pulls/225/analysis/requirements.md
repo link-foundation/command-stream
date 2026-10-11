@@ -1,7 +1,7 @@
 # Requirements and design for issue 224 / PR 225
 
 The parent issue and every child issue and comment were read on 2026-10-11.
-There are no images or PR review comments. Issue 1 has only a title; issue 9
+At initial research there were no images or PR review comments. Issue 1 has only a title; issue 9
 has one comment permitting reuse of telegram-terminal-bot code. None of the
 six requests is completely resolved in the current codebase.
 

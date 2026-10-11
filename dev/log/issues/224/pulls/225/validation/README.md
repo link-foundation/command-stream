@@ -19,6 +19,16 @@ Reproduction precedes implementation:
 - `merge-cancel-red.log`: closing a merged stream waits for an idle child to
   complete instead of interrupting its pending read. Cancellation now propagates
   through line framing and operators before queued iterator cleanup is awaited.
+- `pipeline-cancellation-red-node.log` and `pipeline-cancellation-red-bun.log`:
+  a native stage that ignores SIGTERM survives mixed-pipeline cancellation.
+  The finite probe now verifies process-tree escalation in both runtimes.
+- `editor-escapes-red.log`: the editor's overlapping regexp alternatives stall
+  on 32 escape sequences before the bounded worker watchdog terminates it.
+  Disjoint alternatives complete the same scan immediately.
+- `disabled-virtual-red.log`: starting the development suite after native-only
+  suites reproduces the CI failures (empty REPL output and mock exit code 127).
+  The new suites now use the existing before/after cleanup hooks. Watched fixture
+  saves use atomic rename so a zero-debounce watcher cannot read a partial write.
 
 The regression tests are in `js/tests/advanced-*.test.mjs`,
 `command-packages.test.mjs`, `development-tools.test.mjs`,
@@ -27,7 +37,7 @@ the existing compatibility/type/artifact suites.
 
 Final test counts and CI status are recorded in the pull request description.
 
-Local verification: 2,685 Bun tests and 838 Rust tests passed; 87 Node core
+Local verification: 2,687 Bun tests and 838 Rust tests passed; 104 Node core
 checks and 524 Node zx/Execa tests passed. All 34 feature examples passed
 Node/Bun/Rust execution checks, and all 211 documentation checks passed.
 Lint, formatting, declarations, duplication, Rust Clippy/rustdoc, npm artifacts

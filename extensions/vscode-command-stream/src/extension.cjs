@@ -42,7 +42,9 @@ function shellPrefix(document, position) {
 // Check literal shell quote balance, leaving JS interpolation to the JS/TS service.
 function shellErrors(document) {
   const errors = [];
-  for (const match of document.getText().matchAll(/\$\s*`((?:\\.|[^`])*)`/gs)) {
+  for (const match of document
+    .getText()
+    .matchAll(/\$\s*`((?:\\.|[^`\\])*)`/gs)) {
     const shell = match[1];
     if (shell.includes('${')) {
       continue;

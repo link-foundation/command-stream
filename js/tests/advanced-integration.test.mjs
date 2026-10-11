@@ -1,5 +1,6 @@
-import { test, expect } from 'bun:test';
-import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
+import { test, expect, beforeEach, afterEach } from 'bun:test';
+import { beforeTestCleanup, afterTestCleanup } from './test-cleanup.mjs';
+import { mkdtemp, writeFile, readFile, rename, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -16,6 +17,9 @@ import $, {
   testing,
   startRepl,
 } from '../src/$.mjs';
+
+beforeEach(beforeTestCleanup);
+afterEach(afterTestCleanup);
 
 test('translated scripts preserve arguments, heredocs, stdin, and exit status', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'command-fy-'));
@@ -116,9 +120,10 @@ test('watch mode reloads package edits and stops watching on close', async () =>
   let installed;
   try {
     const file = join(dir, 'commands.mjs');
-    const definition = (value) =>
-      `export default {name:'watch-fixture',commands:{'watch-fixture':()=>({code:0,stdout:${JSON.stringify(value)}})}}`;
-    await writeFile(file, definition('before'));
+    await writeFile(
+      file,
+      "export default {name:'watch-fixture',commands:{'watch-fixture':()=>({code:0,stdout:'before'})}}"
+    );
     installed = await install(file);
     let done;
     const changed = new Promise((resolve) => {
@@ -134,7 +139,12 @@ test('watch mode reloads package edits and stops watching on close', async () =>
       onRestart: done,
     });
     await controller.ready;
-    await writeFile(file, definition('after-longer'));
+    await writeFile(
+      join(dir, 'next.tmp'),
+      "export default {name:'watch-fixture',commands:{'watch-fixture':()=>({code:0,stdout:'after-longer'})}}"
+    );
+    // Model an editor's atomic save so debounce:0 cannot read a partial write.
+    await rename(join(dir, 'next.tmp'), file);
     await changed;
     expect(await (await $({ mirror: false })`watch-fixture`).text()).toBe(
       'after-longer'
@@ -316,6 +326,22 @@ test('paused native pipelines apply backpressure in Node and Bun', async () => {
   }
 }, 10000);
 
+test('mixed pipeline cancellation terminates native stage trees in Node and Bun', async () => {
+  for (const runtime of ['node', process.execPath]) {
+    const result = await command(
+      runtime,
+      join(
+        import.meta.dir,
+        '../../experiments/issue-224/pipeline-cancellation.mjs'
+      )
+    );
+    expect(result.code).toBe(0);
+    if (process.platform !== 'win32') {
+      expect(JSON.parse(await result.text()).survived).toBe(false);
+    }
+  }
+}, 10000);
+
 test('capture:false emits regular virtual command output without retaining it', async () => {
   $.create('uncaptured-fixture', () => ({
     code: 0,
@@ -331,6 +357,15 @@ test('capture:false emits regular virtual command output without retaining it', 
     $.unregister('uncaptured-fixture');
   }
 });
+
+test('editor diagnostics finish scanning escaped text with an unclosed template', async () => {
+  const result = await command(
+    'node',
+    join(import.meta.dir, '../../experiments/issue-224/editor-escapes.mjs')
+  );
+  expect(result.code).toBe(0);
+  expect(await result.text()).toContain('editor escape scan completed');
+}, 5000);
 
 test('VS Code activation wires completion, docs, diagnostics, and the REPL command', () => {
   const extension = createRequire(import.meta.url)(

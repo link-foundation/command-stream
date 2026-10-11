@@ -1,5 +1,9 @@
-import { test, expect } from 'bun:test';
+import { test, expect, beforeEach, afterEach } from 'bun:test';
+import { beforeTestCleanup, afterTestCleanup } from './test-cleanup.mjs';
 import * as api from '../src/$.mjs';
+
+beforeEach(beforeTestCleanup);
+afterEach(afterTestCleanup);
 
 test('pull operators await transforms and retain partial batches', async () => {
   expect(typeof api.stream).toBe('function');
