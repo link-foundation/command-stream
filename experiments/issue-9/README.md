@@ -70,3 +70,25 @@ fresh snapshot. Dimension and scrollback bounds prevent unbounded allocations.
 The JavaScript renderer supplies faithful styled SVG/GIF; Rust's native artifact
 path supplies asciicast and text SVG. See
 [`VIRTUAL_TERMINAL.md`](../../js/docs/VIRTUAL_TERMINAL.md) for API usage and limits.
+
+## CI investigation
+
+The first pushed head was `cf8505f` (2026-10-12 05:02 UTC). Linux/macOS terminal
+tests and parity checks passed, but
+[dependency freshness run 38206214879](https://github.com/link-foundation/command-stream/actions/runs/38206214879)
+failed. Its downloaded log at `ci-logs/dependencies-38206214879.log` reports
+`Updating unicode-ident v1.0.26 -> v1.0.27` at line 712 and
+`rust/Cargo.toml has pending lockfile updates` at line 731. No direct dependency
+declaration was stale. Both main and benchmark Cargo lockfiles were refreshed
+using `cargo update`; the only change is this compatible patch dependency and
+its checksum. The full Rust suite and Clippy were rerun against the refreshed
+lockfile before pushing it.
+
+[JavaScript run 38206214894](https://github.com/link-foundation/command-stream/actions/runs/38206214894)
+also exposed two new fixture failures on Windows Bun. The downloaded log at
+`ci-logs/js-38206214894.log` reports `Error: File not found` at lines 18826 and
+18873: ConPTY cannot launch the bare `node` fixture name used by the new tests.
+The existing portable PTY tests use the running executable's absolute
+`process.execPath`. The new tests now follow that pattern and compare the
+normalized transcript for TERM assertions, accounting for ConPTY's terminal
+control output. These tests still run on Windows rather than being skipped.

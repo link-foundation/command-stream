@@ -91,7 +91,7 @@ test(
     process.on('SIGWINCH', () => process.stdout.write('SIZE:' + process.stdout.columns + 'x' + process.stdout.rows));
   `;
     const session = await openTerminal({
-      file: 'node',
+      file: process.execPath,
       args: ['-e', program],
       cols: 33,
       rows: 7,
@@ -129,43 +129,47 @@ test('invalid PTY dimensions are rejected before starting a child', async () => 
   }
 });
 
-test('a virtual PTY uses its own TERM unless explicitly configured', async () => {
-  const inheritedTerm = process.env.TERM;
-  process.env.TERM = 'dumb';
-  try {
-    const options = {
-      file: 'node',
-      args: ['-e', 'console.log(process.env.TERM)'],
-      timeoutMilliseconds: 2000,
-    };
-    assert.equal(
-      (await captureTerminal(options)).output.trim(),
-      'xterm-256color'
-    );
-    assert.equal(
-      (
-        await captureTerminal({
-          ...options,
-          env: { ...process.env, TERM: 'vt100' },
-        })
-      ).output.trim(),
-      'vt100'
-    );
-  } finally {
-    if (inheritedTerm === undefined) {
-      delete process.env.TERM;
-    } else {
-      process.env.TERM = inheritedTerm;
+test(
+  'a virtual PTY uses its own TERM unless explicitly configured',
+  { timeout: 10000 },
+  async () => {
+    const inheritedTerm = process.env.TERM;
+    process.env.TERM = 'dumb';
+    try {
+      const options = {
+        file: process.execPath,
+        args: ['-e', 'console.log(process.env.TERM)'],
+        timeoutMilliseconds: 2000,
+      };
+      assert.equal(
+        (await captureTerminal(options)).transcript.trim(),
+        'xterm-256color'
+      );
+      assert.equal(
+        (
+          await captureTerminal({
+            ...options,
+            env: { ...process.env, TERM: 'vt100' },
+          })
+        ).transcript.trim(),
+        'vt100'
+      );
+    } finally {
+      if (inheritedTerm === undefined) {
+        delete process.env.TERM;
+      } else {
+        process.env.TERM = inheritedTerm;
+      }
     }
   }
-});
+);
 
 test(
   'streams finish on natural exit without retaining a recording',
   { timeout: 5000 },
   async () => {
     const session = await openTerminal({
-      file: 'node',
+      file: process.execPath,
       args: ['-e', "setTimeout(() => process.stdout.write('done'), 50)"],
       recording: false,
       frameMode: 'writes',
