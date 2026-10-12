@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.4.0
+
+### Minor Changes
+
+- 9607caa: Add compact virtual terminal changes, bounded frame/change streams and live PTY subscriptions, snapshots and colored text. Support terminal query replies, per-write frames and validated PTY dimensions.
+
 ## 2.3.0
 
 ### Minor Changes
