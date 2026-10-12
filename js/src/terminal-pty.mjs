@@ -15,22 +15,54 @@ const parseMessages = (stream, receive) => {
   });
 };
 
-// Process exit can precede buffered status delivery. Observe pipe drain directly
-// because some Bun/Windows exits do not emit the child-process close event.
+// Process exit can precede buffered status delivery. Bun/Windows can also omit
+// stdout end and process close. After exit, allow buffered data to drain until
+// 100 ms of silence (at most 1 s), then release pipes even when EOF never arrives.
 const watchHostExit = (host, receive) => {
   let exitCode;
   let stdoutEnded = false;
   let stderrEnded = false;
+  let finished = false;
+  let quietTimer;
+  let deadlineTimer;
+  const finish = (code) => {
+    if (finished) {
+      return;
+    }
+    finished = true;
+    clearTimeout(quietTimer);
+    clearTimeout(deadlineTimer);
+    host.stdin.destroy();
+    host.stdout.destroy();
+    host.stderr.destroy();
+    receive(code);
+  };
+  const finishWithoutEof = () => {
+    trace('PTY', 'host pipes did not signal EOF; releasing drained pipes');
+    finish(exitCode);
+  };
+  const deferUntilQuiet = () => {
+    if (exitCode !== undefined && !finished) {
+      clearTimeout(quietTimer);
+      quietTimer = setTimeout(finishWithoutEof, 100);
+    }
+  };
   const drained = () => {
     if (exitCode !== undefined && stdoutEnded && stderrEnded) {
-      receive(exitCode);
+      finish(exitCode);
     }
   };
   host.on('exit', (code) => {
     trace('PTY', `host exit: ${code}`);
     exitCode = code;
+    if (!finished) {
+      deadlineTimer = setTimeout(finishWithoutEof, 1000);
+      deferUntilQuiet();
+    }
     drained();
   });
+  host.stdout.on('data', deferUntilQuiet);
+  host.stderr.on('data', deferUntilQuiet);
   host.stdout.on('end', () => {
     trace('PTY', 'host stdout drained');
     stdoutEnded = true;
@@ -43,7 +75,7 @@ const watchHostExit = (host, receive) => {
   });
   host.on('close', (code) => {
     trace('PTY', `host close: ${code}`);
-    receive(code);
+    finish(code);
   });
 };
 

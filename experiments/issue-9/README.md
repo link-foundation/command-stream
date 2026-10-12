@@ -113,3 +113,14 @@ and stderr `end` events. A second deterministic regression reproduces a missing
 off by default and is enabled with `COMMAND_STREAM_TRACE=true`. CI runs the
 focused terminal suites with tracing before the full suite, with a two-minute
 step deadline so any lifecycle regression produces diagnostics promptly.
+
+That focused step in
+[run 38209214639](https://github.com/link-foundation/command-stream/actions/runs/38209214639/job/114679661430)
+identified the remaining Windows sequence: stderr drained (line 840) and the host
+exited (line 841), but stdout never ended. The session-exit test then timed out
+(lines 846–847) in `ci-logs/js-windows-114679661430.log`. Two further deterministic
+regressions reproduce this missing EOF, including a delayed buffered child status.
+After host exit the bridge now drains buffered messages until 100 ms of silence,
+with a one-second upper bound, and destroys the pipes if EOF is missing. Normal
+EOF/close completes immediately. This preserves late child status and prevents an
+already dead host's open pipe from keeping the session or test process alive.

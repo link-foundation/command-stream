@@ -12,11 +12,8 @@ const mockPtyHost = () => {
   const host = new EventEmitter();
   host.stdout = new PassThrough();
   host.stderr = new PassThrough();
-  host.stdin = {
-    write() {
-      host.stdout.write('{"type":"ready"}\n');
-    },
-  };
+  host.stdin = new PassThrough();
+  host.stdin.on('data', () => host.stdout.write('{"type":"ready"}\n'));
   return host;
 };
 
@@ -68,6 +65,52 @@ test(
       result.error.message,
       /PTY host exited with code 0: host diagnostic/
     );
+  }
+);
+
+test(
+  'an exited PTY host with an open stdout pipe still finishes and releases pipes',
+  { timeout: 1000 },
+  async () => {
+    const host = mockPtyHost();
+    const terminal = await spawnTerminalPty(
+      'fixture',
+      [],
+      {},
+      { spawn: () => host }
+    );
+    const status = new Promise((resolve) => terminal.onExit(resolve));
+    host.emit('exit', 0);
+    host.stderr.end('host diagnostic');
+    const result = await status;
+    assert.match(result.error.message, /host diagnostic/);
+    assert.equal(host.stdin.destroyed, true);
+    assert.equal(host.stdout.destroyed, true);
+    assert.equal(host.stderr.destroyed, true);
+  }
+);
+
+test(
+  'a late buffered terminal status survives a host exit without stdout end',
+  { timeout: 1000 },
+  async () => {
+    const host = mockPtyHost();
+    const terminal = await spawnTerminalPty(
+      'fixture',
+      [],
+      {},
+      { spawn: () => host }
+    );
+    const statuses = [];
+    terminal.onExit((status) => statuses.push(status));
+    const closed = new Promise((resolve) => host.stdout.on('close', resolve));
+    host.emit('exit', 0);
+    host.stderr.end();
+    setTimeout(() => {
+      host.stdout.write('{"type":"exit","exitCode":3,"signal":0}\n');
+    }, 10);
+    await closed;
+    assert.deepEqual(statuses, [{ type: 'exit', exitCode: 3, signal: 0 }]);
   }
 );
 
