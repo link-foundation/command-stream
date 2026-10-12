@@ -186,6 +186,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [1.9.0] - 2026-10-12
+
+### Added
+
+- Replayable ANSI buffer deltas, bounded live session subscriptions, snapshots and per-write frames.
+- Validated terminal dimensions and consistent initial COLUMNS/LINES settings for PTY children.
+
 ## [1.8.0] - 2026-10-11
 
 ### Added
