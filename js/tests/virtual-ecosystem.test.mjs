@@ -52,7 +52,16 @@ test('configured tags and valid custom command names still work', async () => {
 
 test('invalid names and handlers fail without registering partial commands', () => {
   const original = listCommands();
-  for (const name of ['', 'two words', '7command', 'command;echo']) {
+  for (const name of [
+    '',
+    'two words',
+    '7command',
+    'command;echo',
+    'écho',
+    'ecosystem-newline\n',
+    'ecosystem-newline\r',
+    'ecosystem-newline\r\n',
+  ]) {
     expect(() => $.create(name, handler)).toThrow(TypeError);
   }
   expect(() => $.create('ecosystem-invalid', null)).toThrow(TypeError);

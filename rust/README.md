@@ -17,6 +17,9 @@ The shared advanced APIs include `CommandBuilder`, `DataStream`,
 `terminal::TerminalBuffer`, and `CommandEnvironment`. See the
 [advanced workflows guide](../js/docs/ADVANCED-WORKFLOWS.md#rust-equivalents) and
 `examples/language_features.rs` for executable examples.
+The [virtual command ecosystem guide](docs/VIRTUAL-COMMAND-ECOSYSTEM.md) covers
+typed and npm/manifest packages, registry discovery, streaming middleware,
+composition, hot reload, and the Rust ecosystem/enterprise examples.
 `command-stream fy input.sh output.mjs` generates an interpreter-backed Node module
 using `sh` and refuses to overwrite existing output.
 

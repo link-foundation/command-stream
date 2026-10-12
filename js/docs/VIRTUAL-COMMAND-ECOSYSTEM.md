@@ -3,6 +3,8 @@
 Virtual commands are JavaScript handlers registered in command-stream's shared
 registry. They participate in shell templates and pipelines alongside built-in
 and system commands. All APIs below are available through ESM and CommonJS.
+The [Rust ecosystem guide](../../rust/docs/VIRTUAL-COMMAND-ECOSYSTEM.md) documents
+the equivalent typed, manifest/npm, streaming, discovery and hot-reload APIs.
 
 ## Create, inherit, and compose
 
@@ -168,14 +170,20 @@ package definitions and handles in ESM and CommonJS. In TypeScript, use
 `CommandPackage` or `satisfies CommandPackage` to validate package exports. Runtime
 validation remains necessary for ordinary JavaScript and dynamically loaded
 packages. Rust uses typed closures and JSON manifests through
-`CommandEnvironment` and `CommandPackage`; npm and JavaScript modules belong to
-the JavaScript implementation.
+`CommandEnvironment` and `CommandPackage`; JavaScript modules are loaded by
+the JavaScript implementation. Rust also installs npm packages shipping a
+`command-stream.json` manifest, discovers registry packages with `Marketplace`,
+and watches manifests in-process with `watch_package`. A provider can ship
+both a JavaScript entry and a Rust manifest in the same npm package. JavaScript
+module handlers need corresponding Rust closures or executable commands.
 
 Run the offline demonstrations from the repository root:
 
 ```sh
 node js/examples/virtual-ecosystem-demo.mjs
 bun js/examples/enterprise-virtual-commands.mjs
+cargo run --manifest-path rust/Cargo.toml --example virtual_ecosystem
+cargo run --manifest-path rust/Cargo.toml --example enterprise_virtual_commands
 ```
 
 The first combines real local packages, inheritance, middleware, and composition;
@@ -193,6 +201,11 @@ environment and streams a deployment plan with audit middleware. The
 | Hot reload                                        | [Watcher, symlink and shutdown tests](../tests/advanced-integration.test.mjs), [atomic invalid reload tests](../tests/command-packages.test.mjs)                           |
 | `$.create`, `$.extend`, marketplace search        | [Ecosystem acceptance tests](../tests/virtual-ecosystem.test.mjs), [registry transport test](../tests/command-packages.test.mjs)                                           |
 | Git, colored ls, deployment, enterprise use cases | [Ten packages](../examples/packages/README.md), [color middleware](../examples/ls-color-middleware.mjs), [enterprise workflow](../examples/enterprise-workflow.mjs)        |
+
+The [Rust requirement-to-test matrix](../../rust/docs/VIRTUAL-COMMAND-ECOSYSTEM.md#examples-and-acceptance-coverage)
+covers the same planned capabilities. CI executes the expanded command-package
+feature in Node, Bun and Rust, comparing name validation, streamed composition,
+atomic reload, middleware/inheritance and registry discovery observations.
 
 Ten example packages are ready for independent publication. Ten published
 packages, external adoption, and enterprise usage are post-release success

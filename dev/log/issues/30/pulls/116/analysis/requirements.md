@@ -31,10 +31,13 @@ fix; the exact output is saved as name-validation-before.log.gz. Finite experime
 in experiments/issue-30/name-validation.mjs verify ESM/CommonJS in Node and Bun.
 
 The source fix addresses JavaScript overloads and coercion. Rust accepts &str
-names and typed closures, so it cannot express these invalid calls. The repository's
-parity-exempt label is appropriate for this JavaScript-specific validation fix;
-portable ecosystem behavior remains covered by main's Rust tests and executable
-language parity checks.
+names and typed closures, so non-string calls cannot compile. The October 12
+follow-up explicitly rejects the parity exemption and requires full support in
+both languages. The follow-up adds compile-fail interface tests, Rust acceptance
+tests, real marketplace discovery, manifest/npm installation and hot reload,
+ten typed example packages, and both Rust demonstrations. It fixes reproduced
+Rust built-in collisions and composition cancellation/output isolation. CI runs
+without the parity-exempt label and compares expanded package observations.
 
 Ten standalone command packages are included and installable. Independent npm
 publication, external adoption, and enterprise usage remain post-release success

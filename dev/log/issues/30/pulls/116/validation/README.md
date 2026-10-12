@@ -1,4 +1,4 @@
-# Local validation
+# Initial local validation (87e931f)
 
 - Full Bun suite with CI=true and jq installed: 2,753 passed, 10 skipped,
   0 failed (173 test files, 224.33 seconds).
@@ -19,7 +19,35 @@
 - All 34 executable feature comparisons passed in Rust, Node and Bun.
 - Generated documentation checks passed for all 36 generated files.
 
-The source fix is JavaScript-specific overload/coercion validation. Rust source
-is unchanged; its portable packages, inheritance, middleware and composition
-remain included from main. Rust tests and executable cross-language examples
-passed separately with one build job and reduced debug data.
+The initial source fix addressed JavaScript overload/coercion validation, with
+Rust's existing portable behavior tested separately. The follow-up review
+requires removing the exemption and expanding Rust support and coverage; see
+the Rust ecosystem guide and the follow-up validation recorded below.
+
+## Language parity follow-up
+
+- Full Bun suite: 2,753 passed, 10 skipped, 0 failed; 66,515 assertions across
+  173 files. `follow-up-js-all.log.gz` preserves the output.
+- Full Rust all-features suite: 876 passed, 7 ignored, 0 failed across 56 suites,
+  including compile-fail interface doctests. `follow-up-rust-all.log.gz` preserves
+  the output. Builds used one Cargo job and disabled compiler debug data.
+- Focused Rust ecosystem suites: 21 passed, 0 failed. Coverage includes bounded
+  middleware/inheritance, streamed composition, manifest ownership/reload,
+  actual curl HTTP requests, real offline npm installation, watching/shutdown,
+  ten example packages, split UTF-8 and paused-consumer cancellation.
+- Rust formatting, all-target/all-feature Clippy with warnings denied, and API
+  documentation with rustdoc warnings denied passed.
+- JavaScript ESLint, strict declaration checks, Prettier and duplication checks
+  passed; duplicated source remains 2.51%.
+- Finite Node/Bun ESM/CommonJS validation and the offline npm installation
+  experiment passed. Existing JavaScript APIs and Rust typed handlers are retained.
+- All 34 executable feature comparisons passed in Rust, Node and Bun; package
+  comparisons now cover five shared observations. Generated documentation was
+  current for all 36 files, and 227 documentation validation checks passed.
+- Both new Rust ecosystem/enterprise demonstrations completed successfully.
+
+The first final Rust run encountered an existing graceful-shutdown test failure:
+`follow-up-rust-first-final.log.gz`, lines 401–404, expected status 0 but received
+-1. That unchanged test passed in isolation and the complete suite passed on
+rerun. The initial failure and focused rerun are preserved; no timeout increase,
+test weakening, or unrelated process-runner change was made.
