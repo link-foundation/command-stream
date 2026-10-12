@@ -1,0 +1,537 @@
+diff --git a/.github/workflows/js.yml b/.github/workflows/js.yml
+index 2ac86e0..69ec1ae 100644
+--- a/.github/workflows/js.yml
++++ b/.github/workflows/js.yml
+@@ -70,7 +70,7 @@ permissions:
+ jobs:
+   changeset-check:
+     name: Check for JavaScript changesets
+-    runs-on: ubuntu-latest
++    runs-on: ubuntu-24.04
+     timeout-minutes: 10
+     if: github.event_name == 'pull_request'
+     concurrency:
+@@ -89,7 +89,7 @@ jobs:
+ 
+       - name: Install dependencies
+         working-directory: js
+-        run: bun install
++        run: bun install --frozen-lockfile
+ 
+       - name: Check for changesets
+         working-directory: js
+@@ -97,26 +97,21 @@ jobs:
+           GITHUB_BASE_REF: ${{ github.base_ref }}
+           GITHUB_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+           GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+-          # Read through the environment rather than expanded into the script:
+-          # a branch name is attacker-controlled on a fork PR, and the expanded
+-          # form also made shellcheck compare two literals (SC2193).
+-          HEAD_REF: ${{ github.head_ref }}
+         run: |
+-          if [[ "$HEAD_REF" == changeset-release/* ]]; then
+-            echo "Skipping changeset check for automated release PR"
+-            exit 0
+-          fi
+-
++          bun scripts/check-version.mjs
+           bun scripts/validate-changeset.mjs
+ 
+   lint:
+     name: Lint and format JavaScript
+-    runs-on: ubuntu-latest
++    runs-on: ubuntu-24.04
+     timeout-minutes: 10
++    permissions:
++      contents: read
++      id-token: write
+     needs: [changeset-check]
+     # `!cancelled()` rather than `always()`: a cancelled changeset-check must not
+     # leave this job running.
+-    if: ${{ !cancelled() && (github.event_name == 'push' || needs.changeset-check.result == 'success') }}
++    if: ${{ !cancelled() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changeset-check.result == 'success') }}
+     concurrency:
+       group: check-${{ github.workflow }}-${{ github.ref }}-lint
+       cancel-in-progress: true
+@@ -137,6 +132,10 @@ jobs:
+           BASE_REF: ${{ github.base_ref }}
+         run: bash .github/scripts/simulate-fresh-merge.sh
+ 
++      - name: Check registry publish credentials
++        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
++        run: node .github/scripts/publish-preflight.mjs npm
++
+       - name: Setup Bun
+         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+         with:
+@@ -144,7 +143,7 @@ jobs:
+ 
+       - name: Install dependencies
+         working-directory: js
+-        run: bun install
++        run: bun install --frozen-lockfile
+ 
+       - name: Run ESLint
+         working-directory: js
+@@ -165,12 +164,12 @@ jobs:
+   test:
+     # The Node entries differ only by version, so the version has to be part of
+     # the name; without it three jobs shared the name "Test JavaScript (node on
+-    # ubuntu-latest)" and a required-check rule could not name a single one.
++    # ubuntu-24.04)" and a required-check rule could not name a single one.
+     name: Test JavaScript (${{ matrix.runtime }}${{ matrix.node-version && format(' {0}', matrix.node-version) || '' }} on ${{ matrix.os }})
+     runs-on: ${{ matrix.os }}
+     timeout-minutes: 30
+-    needs: [changeset-check]
+-    if: ${{ !cancelled() && (github.event_name == 'push' || needs.changeset-check.result == 'success') }}
++    needs: [lint]
++    if: ${{ !cancelled() && needs.lint.result == 'success' }}
+     # The matrix values are part of the group so the entries stay parallel and
+     # only a superseded run of the *same* entry is cancelled.
+     concurrency:
+@@ -179,16 +178,16 @@ jobs:
+     strategy:
+       fail-fast: false
+       matrix:
+-        os: [ubuntu-latest, macos-latest, windows-latest]
++        os: [ubuntu-24.04, macos-15, windows-2025]
+         runtime: [bun]
+         include:
+-          - os: ubuntu-latest
++          - os: ubuntu-24.04
+             runtime: node
+             node-version: 20
+-          - os: ubuntu-latest
++          - os: ubuntu-24.04
+             runtime: node
+             node-version: 22
+-          - os: ubuntu-latest
++          - os: ubuntu-24.04
+             runtime: node
+             node-version: 24
+     steps:
+@@ -221,17 +220,17 @@ jobs:
+           node-version: '24.x'
+ 
+       - name: Install system dependencies (Ubuntu)
+-        if: matrix.os == 'ubuntu-latest'
++        if: matrix.os == 'ubuntu-24.04'
+         run: |
+           sudo apt-get update
+           sudo apt-get install -y jq
+ 
+       - name: Install system dependencies (macOS)
+-        if: matrix.os == 'macos-latest'
++        if: matrix.os == 'macos-15'
+         run: brew install jq
+ 
+       - name: Install system dependencies (Windows)
+-        if: matrix.os == 'windows-latest'
++        if: matrix.os == 'windows-2025'
+         run: choco install jq -y
+ 
+       # The zx compatibility suite (issue #26) runs a Deno smoke test and a
+@@ -244,13 +243,27 @@ jobs:
+       - name: Install dependencies (Bun)
+         if: matrix.runtime == 'bun'
+         working-directory: js
+-        run: bun install
++        run: bun install --frozen-lockfile
+ 
+       - name: Run tests (Bun)
+         if: matrix.runtime == 'bun'
+-        run: bun test js/tests/ --timeout 10000
++        timeout-minutes: 15
++        shell: bash
+         env:
+           COMMAND_STREAM_TRACE: ${{ vars.COMMAND_STREAM_TRACE || 'false' }}
++          CI_SCRIPTS_DEBUG: ${{ vars.CI_SCRIPTS_DEBUG || 'false' }}
++        run: |
++          set -o pipefail
++          mkdir -p ci-test-logs
++          bun test js/tests/ --timeout 10000 --reporter=junit --reporter-outfile=ci-test-logs/junit.xml 2>&1 | tee ci-test-logs/bun.log
++
++      - name: Preserve Bun test diagnostics
++        if: ${{ always() && matrix.runtime == 'bun' }}
++        uses: actions/upload-artifact@v7
++        with:
++          name: bun-tests-${{ matrix.os }}
++          path: ci-test-logs/
++          retention-days: 7
+ 
+       - name: Setup Node.js
+         if: matrix.runtime == 'node'
+@@ -312,7 +325,7 @@ jobs:
+       github.event_name == 'push' &&
+       needs.lint.result == 'success' &&
+       needs.test.result == 'success'
+-    runs-on: ubuntu-latest
++    runs-on: ubuntu-24.04
+     timeout-minutes: 30
+     permissions:
+       contents: write
+@@ -347,7 +360,7 @@ jobs:
+ 
+       - name: Install dependencies
+         working-directory: js
+-        run: bun install
++        run: bun install --frozen-lockfile
+ 
+       - name: Update npm for OIDC trusted publishing
+         working-directory: js
+@@ -426,8 +439,12 @@ jobs:
+ 
+   instant-release:
+     name: Instant JavaScript release
+-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'instant'
+-    runs-on: ubuntu-latest
++    needs: [lint, test]
++    if: >-
++      !cancelled() && github.ref == 'refs/heads/main' &&
++      github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'instant' &&
++      needs.lint.result == 'success' && needs.test.result == 'success'
++    runs-on: ubuntu-24.04
+     timeout-minutes: 30
+     permissions:
+       contents: write
+@@ -459,7 +476,7 @@ jobs:
+ 
+       - name: Install dependencies
+         working-directory: js
+-        run: bun install
++        run: bun install --frozen-lockfile
+ 
+       - name: Update npm for OIDC trusted publishing
+         working-directory: js
+@@ -509,8 +526,8 @@ jobs:
+ 
+   changeset-pr:
+     name: Create JavaScript changeset PR
+-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'changeset-pr'
+-    runs-on: ubuntu-latest
++    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'changeset-pr'
++    runs-on: ubuntu-24.04
+     timeout-minutes: 10
+     permissions:
+       contents: write
+@@ -535,7 +552,7 @@ jobs:
+ 
+       - name: Install dependencies
+         working-directory: js
+-        run: bun install
++        run: bun install --frozen-lockfile
+ 
+       - name: Create changeset file
+         working-directory: js
+diff --git a/.github/workflows/parity.yml b/.github/workflows/parity.yml
+index cc2c05f..5e2a022 100644
+--- a/.github/workflows/parity.yml
++++ b/.github/workflows/parity.yml
+@@ -18,10 +18,8 @@ permissions:
+ jobs:
+   parity:
+     name: JS/Rust implementation parity
+-    runs-on: ubuntu-latest
++    runs-on: ubuntu-24.04
+     timeout-minutes: 10
+-    # Skip entirely when the PR is explicitly marked as a single-language change.
+-    if: ${{ !contains(github.event.pull_request.labels.*.name, 'parity-exempt') }}
+     concurrency:
+       group: check-${{ github.workflow }}-${{ github.ref }}-parity
+       cancel-in-progress: true
+@@ -29,14 +27,22 @@ jobs:
+       - uses: actions/checkout@v6
+         with:
+           fetch-depth: 0
+-          # Read-only job: the parity script only diffs the checked-out history.
++          # Read-only job: diff, merge simulation and executable feature checks.
+           persist-credentials: false
+ 
+       - name: Check JavaScript/Rust implementation parity
++        if: ${{ !contains(github.event.pull_request.labels.*.name, 'parity-exempt') }}
+         env:
+           BASE_REF: ${{ github.base_ref }}
+         run: bash .github/scripts/check-language-parity.sh
+ 
++      - name: Simulate a fresh merge with the base branch
++        if: github.event_name == 'pull_request'
++        shell: bash
++        env:
++          BASE_REF: ${{ github.base_ref }}
++        run: bash .github/scripts/simulate-fresh-merge.sh
++
+       - name: Setup Node.js
+         uses: actions/setup-node@v6
+         with:
+diff --git a/.github/workflows/rust.yml b/.github/workflows/rust.yml
+index f6000ac..b32fcba 100644
+--- a/.github/workflows/rust.yml
++++ b/.github/workflows/rust.yml
+@@ -64,7 +64,7 @@ env:
+ jobs:
+   changelog:
+     name: Rust changelog and version checks
+-    runs-on: ubuntu-latest
++    runs-on: ubuntu-24.04
+     timeout-minutes: 10
+     if: github.event_name == 'pull_request'
+     concurrency:
+@@ -82,7 +82,7 @@ jobs:
+           toolchain: stable
+ 
+       - name: Install rust-script
+-        run: cargo install rust-script
++        run: cargo install rust-script --version 0.35.0 --locked
+ 
+       - name: Check for changelog fragments
+         env:
+@@ -100,7 +100,7 @@ jobs:
+ 
+   lint:
+     name: Lint and format Rust
+-    runs-on: ubuntu-latest
++    runs-on: ubuntu-24.04
+     timeout-minutes: 10
+     needs: [changelog]
+     # `!cancelled()` rather than `always()`: a cancelled changelog check must not
+@@ -126,6 +126,12 @@ jobs:
+           BASE_REF: ${{ github.base_ref }}
+         run: bash .github/scripts/simulate-fresh-merge.sh
+ 
++      - name: Check registry publish credentials
++        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
++        env:
++          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN || secrets.CARGO_TOKEN }}
++        run: node .github/scripts/publish-preflight.mjs crates
++
+       - name: Setup Rust
+         uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-01
+         with:
+@@ -164,8 +170,8 @@ jobs:
+     name: Test Rust (${{ matrix.os }})
+     runs-on: ${{ matrix.os }}
+     timeout-minutes: 30
+-    needs: [changelog]
+-    if: ${{ !cancelled() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changelog.result == 'success') }}
++    needs: [lint]
++    if: ${{ !cancelled() && needs.lint.result == 'success' }}
+     # The matrix value is part of the group so the per-OS entries stay parallel
+     # and only a superseded run of the *same* entry is cancelled.
+     concurrency:
+@@ -174,7 +180,7 @@ jobs:
+     strategy:
+       fail-fast: false
+       matrix:
+-        os: [ubuntu-latest, macos-latest, windows-latest]
++        os: [ubuntu-24.04, macos-15, windows-2025]
+     steps:
+       - uses: actions/checkout@v6
+         with:
+@@ -218,10 +224,10 @@ jobs:
+ 
+   scripts:
+     name: Test Rust scripts and check sizes
+-    runs-on: ubuntu-latest
++    runs-on: ubuntu-24.04
+     timeout-minutes: 15
+-    needs: [changelog]
+-    if: ${{ !cancelled() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changelog.result == 'success') }}
++    needs: [lint]
++    if: ${{ !cancelled() && needs.lint.result == 'success' }}
+     concurrency:
+       group: check-${{ github.workflow }}-${{ github.ref }}-scripts
+       cancel-in-progress: true
+@@ -259,7 +265,7 @@ jobs:
+             ${{ runner.os }}-cargo-scripts-
+ 
+       - name: Install rust-script
+-        run: cargo install rust-script
++        run: cargo install rust-script --version 0.35.0 --locked
+ 
+       - name: Run release script unit tests
+         # Run the inline `#[cfg(test)]` suites for every rust-script under
+@@ -278,6 +284,9 @@ jobs:
+           done
+           exit $status
+ 
++      - name: Test PR guard regressions
++        run: python3 experiments/issue-209/check-rust-guards.py
++
+       - name: Check Rust file sizes
+         # Best practice: no source file over ~1000 lines. The JavaScript side
+         # enforces this through eslint's `max-lines`; the Rust side shipped
+@@ -295,7 +304,7 @@ jobs:
+ 
+   build:
+     name: Build Rust package
+-    runs-on: ubuntu-latest
++    runs-on: ubuntu-24.04
+     timeout-minutes: 10
+     needs: [lint, test]
+     if: ${{ !cancelled() && needs.lint.result == 'success' && needs.test.result == 'success' }}
+@@ -356,7 +365,7 @@ jobs:
+       needs.test.result == 'success' &&
+       needs.scripts.result == 'success' &&
+       needs.build.result == 'success'
+-    runs-on: ubuntu-latest
++    runs-on: ubuntu-24.04
+     timeout-minutes: 30
+     permissions:
+       contents: write
+@@ -385,7 +394,7 @@ jobs:
+           toolchain: stable
+ 
+       - name: Install rust-script
+-        run: cargo install rust-script
++        run: cargo install rust-script --version 0.35.0 --locked
+ 
+       - name: Determine bump type
+         id: bump
+@@ -432,8 +441,13 @@ jobs:
+ 
+   instant-release:
+     name: Instant Rust release
+-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'instant'
+-    runs-on: ubuntu-latest
++    needs: [lint, test, scripts, build]
++    if: >-
++      !cancelled() && github.ref == 'refs/heads/main' &&
++      github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'instant' &&
++      needs.lint.result == 'success' && needs.test.result == 'success' &&
++      needs.scripts.result == 'success' && needs.build.result == 'success'
++    runs-on: ubuntu-24.04
+     timeout-minutes: 30
+     permissions:
+       contents: write
+@@ -459,7 +473,7 @@ jobs:
+           toolchain: stable
+ 
+       - name: Install rust-script
+-        run: cargo install rust-script
++        run: cargo install rust-script --version 0.35.0 --locked
+ 
+       - name: Version Rust crate and commit to main
+         id: version
+@@ -489,8 +503,8 @@ jobs:
+ 
+   changelog-pr:
+     name: Create Rust changelog PR
+-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'changelog-pr'
+-    runs-on: ubuntu-latest
++    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'changelog-pr'
++    runs-on: ubuntu-24.04
+     timeout-minutes: 10
+     permissions:
+       contents: write
+@@ -514,7 +528,7 @@ jobs:
+           toolchain: stable
+ 
+       - name: Install rust-script
+-        run: cargo install rust-script
++        run: cargo install rust-script --version 0.35.0 --locked
+ 
+       - name: Create changelog fragment
+         env:
+diff --git a/.github/workflows/security.yml b/.github/workflows/security.yml
+index e254cde..faf0e37 100644
+--- a/.github/workflows/security.yml
++++ b/.github/workflows/security.yml
+@@ -28,7 +28,7 @@ permissions:
+ jobs:
+   codeql:
+     name: CodeQL (${{ matrix.language }})
+-    runs-on: ubuntu-latest
++    runs-on: ubuntu-24.04
+     timeout-minutes: 30
+     concurrency:
+       group: check-${{ github.workflow }}-${{ github.ref }}-codeql-${{ matrix.language }}
+@@ -71,7 +71,7 @@ jobs:
+     name: Dependency Review
+     # Reviews the diff of a pull request; there is no diff to review on push.
+     if: ${{ github.event_name == 'pull_request' }}
+-    runs-on: ubuntu-latest
++    runs-on: ubuntu-24.04
+     timeout-minutes: 10
+     concurrency:
+       group: check-${{ github.workflow }}-${{ github.ref }}-dependency-review
+@@ -88,41 +88,10 @@ jobs:
+         with:
+           persist-credentials: false
+ 
+-      # actions/dependency-review-action fails with "Dependency review is not
+-      # supported on this repository" when the dependency graph is off, which is
+-      # the state this repository is in: the graph is disabled at the
+-      # organisation level and cannot be turned on from a workflow. Shipping a
+-      # check that can only ever be red trains reviewers to ignore red, so probe
+-      # for the feature and skip with a warning when it is missing. Any other
+-      # HTTP status is still a hard failure, and the job starts reviewing by
+-      # itself the moment an admin enables the graph under
+-      # Settings -> Code security -> Dependency graph.
+-      - name: Check whether the dependency graph is enabled
+-        id: graph
+-        env:
+-          GH_TOKEN: ${{ github.token }}
+-          REPOSITORY: ${{ github.repository }}
+-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+-        run: |
+-          set -uo pipefail
+-          code="$(curl -sS -o /dev/null -w '%{http_code}' \
+-            -H "Authorization: Bearer $GH_TOKEN" \
+-            -H 'Accept: application/vnd.github+json' \
+-            "$GITHUB_API_URL/repos/$REPOSITORY/dependency-graph/compare/$BASE_SHA...$HEAD_SHA")"
+-          echo "Dependency graph compare endpoint answered HTTP $code"
+-          if [ "$code" = '200' ]; then
+-            echo 'enabled=true' >> "$GITHUB_OUTPUT"
+-          elif [ "$code" = '403' ]; then
+-            echo 'enabled=false' >> "$GITHUB_OUTPUT"
+-            echo "::warning::Dependency graph is disabled for $REPOSITORY, so dependency review cannot run. The npm, bun and cargo audit jobs still check the committed lockfiles. Enable the graph under Settings -> Code security to restore per-pull-request review."
+-          else
+-            echo "::error::Unexpected HTTP $code from the dependency-graph compare endpoint"
+-            exit 1
+-          fi
+-
++      # Dependency review is required. Enable the repository dependency graph
++      # before running this job (see DEPLOYMENT.md). Permission, network and
++      # configuration failures must remain failures rather than skipped reviews.
+       - name: Review dependency changes
+-        if: ${{ steps.graph.outputs.enabled == 'true' }}
+         uses: actions/dependency-review-action@v5
+         with:
+           fail-on-severity: high
+@@ -130,7 +99,7 @@ jobs:
+ 
+   npm-audit:
+     name: Audit npm lockfile
+-    runs-on: ubuntu-latest
++    runs-on: ubuntu-24.04
+     timeout-minutes: 10
+     concurrency:
+       group: check-${{ github.workflow }}-${{ github.ref }}-npm-audit
+@@ -166,7 +135,7 @@ jobs:
+ 
+   bun-audit:
+     name: Audit bun lockfile
+-    runs-on: ubuntu-latest
++    runs-on: ubuntu-24.04
+     timeout-minutes: 10
+     concurrency:
+       group: check-${{ github.workflow }}-${{ github.ref }}-bun-audit
+@@ -207,7 +176,7 @@ jobs:
+ 
+   cargo-audit:
+     name: Audit Cargo lockfile
+-    runs-on: ubuntu-latest
++    runs-on: ubuntu-24.04
+     timeout-minutes: 10
+     concurrency:
+       group: check-${{ github.workflow }}-${{ github.ref }}-cargo-audit
+@@ -241,7 +210,7 @@ jobs:
+ 
+   secret-scan:
+     name: Scan for committed secrets
+-    runs-on: ubuntu-latest
++    runs-on: ubuntu-24.04
+     timeout-minutes: 10
+     concurrency:
+       group: check-${{ github.workflow }}-${{ github.ref }}-secret-scan

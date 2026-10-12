@@ -1,0 +1,4 @@
+Virtual terminal
+Status: ready
+Status: running
+Status: complete

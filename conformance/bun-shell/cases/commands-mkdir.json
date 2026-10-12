@@ -1,0 +1,356 @@
+{
+  "source": "test/js/bun/shell/commands/mkdir.test.ts",
+  "units": [
+    {
+      "line": 10,
+      "upstream": "operands longer than the path buffers are reported, not a crash",
+      "disposition": "case",
+      "note": "upstream runs the $ calls inside a bun -e child (crash isolation) with cwd = temp dir; the observable behaviour is reproduced directly. mkdir reports a relative operand joined onto the cwd (absolute path) and an absolute operand as written. Windows variants are not validated by the Linux oracle run.",
+      "cases": [
+        {
+          "id": "commands-mkdir/long-relative",
+          "template": ["mkdir ", ""],
+          "values": [
+            {
+              "string": {
+                "repeat": "a",
+                "count": 5000
+              }
+            }
+          ],
+          "platforms": ["posix"],
+          "expect": {
+            "stderr": {
+              "concat": [
+                "mkdir: ",
+                "{{TEMP}}/",
+                {
+                  "repeat": "a",
+                  "count": 5000
+                },
+                ": File name too long\n"
+              ]
+            },
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "commands-mkdir/long-absolute",
+          "template": ["mkdir ", ""],
+          "values": [
+            {
+              "string": {
+                "concat": [
+                  "{{TEMP}}/",
+                  {
+                    "repeat": "a",
+                    "count": 5000
+                  }
+                ]
+              }
+            }
+          ],
+          "platforms": ["posix"],
+          "expect": {
+            "stderr": {
+              "concat": [
+                "mkdir: ",
+                "{{TEMP}}/",
+                {
+                  "repeat": "a",
+                  "count": 5000
+                },
+                ": File name too long\n"
+              ]
+            },
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "commands-mkdir/long-parents",
+          "template": ["mkdir -p ", ""],
+          "values": [
+            {
+              "string": {
+                "repeat": "a",
+                "count": 5000
+              }
+            }
+          ],
+          "platforms": ["posix"],
+          "expect": {
+            "stderr": {
+              "concat": [
+                "mkdir: ",
+                "{{TEMP}}/",
+                {
+                  "repeat": "a",
+                  "count": 5000
+                },
+                ": File name too long\n"
+              ]
+            },
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "commands-mkdir/huge",
+          "template": ["mkdir ", ""],
+          "values": [
+            {
+              "string": {
+                "repeat": "h",
+                "count": 100000
+              }
+            }
+          ],
+          "platforms": ["posix"],
+          "expect": {
+            "stderr": {
+              "concat": [
+                "mkdir: ",
+                "{{TEMP}}/",
+                {
+                  "repeat": "h",
+                  "count": 100000
+                },
+                ": File name too long\n"
+              ]
+            },
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "commands-mkdir/long-mixed",
+          "template": ["mkdir ", ""],
+          "values": [
+            {
+              "array": [
+                {
+                  "string": {
+                    "repeat": "a",
+                    "count": 5000
+                  }
+                },
+                {
+                  "string": "short"
+                }
+              ]
+            }
+          ],
+          "platforms": ["posix"],
+          "expect": {
+            "stderr": {
+              "concat": [
+                "mkdir: ",
+                "{{TEMP}}/",
+                {
+                  "repeat": "a",
+                  "count": 5000
+                },
+                ": File name too long\n"
+              ]
+            },
+            "exitCode": 1,
+            "exists": ["short"]
+          }
+        },
+        {
+          "id": "commands-mkdir/dot-slashes-normalized",
+          "template": ["mkdir ", ""],
+          "values": [
+            {
+              "string": {
+                "concat": [
+                  {
+                    "repeat": "./",
+                    "count": 3000
+                  },
+                  "normalized"
+                ]
+              }
+            }
+          ],
+          "expect": {
+            "exitCode": 0,
+            "exists": ["normalized"],
+            "types": {
+              "normalized": "dir"
+            }
+          },
+          "note": "a 6010-byte relative operand that normalizes down to one component succeeds"
+        },
+        {
+          "id": "commands-mkdir/absolute-dot-slashes-as-written",
+          "template": ["mkdir ", ""],
+          "values": [
+            {
+              "string": {
+                "concat": [
+                  "{{TEMP}}/",
+                  {
+                    "repeat": "./",
+                    "count": 3000
+                  },
+                  "as-written"
+                ]
+              }
+            }
+          ],
+          "platforms": ["posix"],
+          "expect": {
+            "stderr": {
+              "concat": [
+                "mkdir: ",
+                "{{TEMP}}/",
+                {
+                  "repeat": "./",
+                  "count": 3000
+                },
+                "as-written",
+                ": File name too long\n"
+              ]
+            },
+            "exitCode": 1,
+            "absent": ["as-written"]
+          },
+          "note": "an absolute operand is not normalized (like the kernel/coreutils) and is bounded as written"
+        },
+        {
+          "id": "commands-mkdir/absolute-dot-slashes-as-written-windows",
+          "template": ["mkdir ", ""],
+          "values": [
+            {
+              "string": {
+                "concat": [
+                  "{{TEMP}}/",
+                  {
+                    "repeat": "./",
+                    "count": 3000
+                  },
+                  "as-written"
+                ]
+              }
+            }
+          ],
+          "platforms": ["windows"],
+          "expect": {
+            "exitCode": 0,
+            "exists": ["as-written"]
+          },
+          "note": "Windows: fits the larger path buffer and is normalized by the fs layer, so it succeeds"
+        },
+        {
+          "id": "commands-mkdir/long-relative-windows",
+          "template": ["mkdir ", ""],
+          "values": [
+            {
+              "string": {
+                "repeat": "a",
+                "count": 5000
+              }
+            }
+          ],
+          "platforms": ["windows"],
+          "expect": {
+            "stderr": {
+              "startsWith": "mkdir: "
+            },
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "commands-mkdir/long-absolute-windows",
+          "template": ["mkdir ", ""],
+          "values": [
+            {
+              "string": {
+                "concat": [
+                  "{{TEMP}}/",
+                  {
+                    "repeat": "a",
+                    "count": 5000
+                  }
+                ]
+              }
+            }
+          ],
+          "platforms": ["windows"],
+          "expect": {
+            "stderr": {
+              "startsWith": "mkdir: "
+            },
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "commands-mkdir/long-parents-windows",
+          "template": ["mkdir -p ", ""],
+          "values": [
+            {
+              "string": {
+                "repeat": "a",
+                "count": 5000
+              }
+            }
+          ],
+          "platforms": ["windows"],
+          "expect": {
+            "stderr": {
+              "startsWith": "mkdir: "
+            },
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "commands-mkdir/huge-windows",
+          "template": ["mkdir ", ""],
+          "values": [
+            {
+              "string": {
+                "repeat": "h",
+                "count": 100000
+              }
+            }
+          ],
+          "platforms": ["windows"],
+          "expect": {
+            "stderr": {
+              "startsWith": "mkdir: ",
+              "endsWith": "hhhh: File name too long\n"
+            },
+            "exitCode": 1
+          },
+          "note": "upstream expects the exact message with the operand joined onto the cwd with the platform separator on Windows too"
+        },
+        {
+          "id": "commands-mkdir/long-mixed-windows",
+          "template": ["mkdir ", ""],
+          "values": [
+            {
+              "array": [
+                {
+                  "string": {
+                    "repeat": "a",
+                    "count": 5000
+                  }
+                },
+                {
+                  "string": "short"
+                }
+              ]
+            }
+          ],
+          "platforms": ["windows"],
+          "expect": {
+            "stderr": {
+              "startsWith": "mkdir: "
+            },
+            "exitCode": 1,
+            "exists": ["short"]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{"version":2,"width":24,"height":4,"timestamp":1791781097,"env":{"SHELL":"node","TERM":"xterm-256color"}}
+[0.051,"o","\u001b[2J\u001b[H\u001b[1;36mVirtual terminal\u001b[0m\r\r\nStatus: ready"]
+[0.084,"i","n"]
+[0.088,"o","\u001b[2;1HStatus: \u001b[33mrunning\u001b[0m"]
+[0.121,"i","q"]
+[0.124,"o","\u001b[2;1HStatus: \u001b[32mcomplete\u001b[0m"]

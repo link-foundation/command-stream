@@ -1,0 +1,29 @@
+# Decisive excerpt — run 27224046292 (the CI restart that 'failed to do any deploy')
+# Release job: 'Release JavaScript package'. Repo at 0.10.2, npm latest 0.9.5.
+# The version bump for 0.10.2 was already committed to remote main (5a582dd),
+# so the changeset was consumed and 'changeset version' found nothing to do.
+# Result: publish step gated off -> 0.10.2 stranded, never published to npm.
+
+## Check for changesets
+Found 1 JavaScript changeset file(s)
+
+## Version package and commit to main
+Checking for remote changes...
+Remote main has advanced (local: 6e9f63e72ff0b23a44c5c6d28f5c248f8670e966, remote: 5a582ddb5c8a4677f96346b92a428fab3b7309ff)
+This may indicate a previous attempt partially succeeded.
+🦋  warn No unreleased changesets found, exiting.
+No changes to commit
+
+## Steps that ran in the Release job (note: 'Publish to npm' never appears -> skipped)
+Check for changesets
+Complete job
+Install dependencies
+Post Run actions/checkout@v6
+Post Setup Bun
+Post Setup Node.js
+Run actions/checkout@v6
+Set up job
+Setup Bun
+Setup Node.js
+Update npm for OIDC trusted publishing
+Version package and commit to main

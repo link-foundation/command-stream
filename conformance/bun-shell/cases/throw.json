@@ -1,0 +1,75 @@
+{
+  "source": "test/js/bun/shell/throw.test.ts",
+  "units": [
+    {
+      "line": 9,
+      "upstream": "enabled globally",
+      "disposition": "js-api",
+      "api": "After calling the global toggle $.throws(true), `await $`ls ksjflkjfksjdflksdjflksdf`` (no per-command option) must reject (the caught error is defined; a ShellError with exitCode 1). Restore the global default afterwards.",
+      "cases": [
+        {
+          "id": "throw/enabled-globally",
+          "template": ["ls ksjflkjfksjdflksdjflksdf"],
+          "throws": true,
+          "expect": {
+            "error": "Failed with exit code 1",
+            "exitCode": 1,
+            "stdout": "",
+            "stderr": "ls: ksjflkjfksjdflksdjflksdf: No such file or directory\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 21,
+      "upstream": "enabled locally",
+      "disposition": "js-api",
+      "api": "With the global mode set to nothrow ($.nothrow() in beforeAll), `await $`ls ksjflkjfksjdflksdjflksdf`.throws(true)` must reject (per-command .throws(true) overrides the global nothrow).",
+      "cases": [
+        {
+          "id": "throw/enabled-locally",
+          "template": ["ls ksjflkjfksjdflksdjflksdf"],
+          "throws": true,
+          "expect": {
+            "error": "Failed with exit code 1",
+            "exitCode": 1,
+            "stdout": "",
+            "stderr": "ls: ksjflkjfksjdflksdjflksdf: No such file or directory\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 32,
+      "upstream": "disable globally",
+      "disposition": "js-api",
+      "api": "Calling $.throws(true) followed by $.nothrow() globally: `await $`ls ksjflkjfksjdflksdjflksdf`` must NOT reject (it resolves with exitCode 1); the later global call wins.",
+      "cases": [
+        {
+          "id": "throw/disabled-globally",
+          "template": ["ls ksjflkjfksjdflksdjflksdf"],
+          "expect": {
+            "exitCode": 1,
+            "stderr": "ls: ksjflkjfksjdflksdjflksdf: No such file or directory\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 42,
+      "upstream": "disable locally",
+      "disposition": "js-api",
+      "api": "With the global mode $.throws(true), `await $`ls ksjflkjfksjdflksdjflksdf`.nothrow()` must NOT reject (per-command .nothrow() overrides the global throws); it resolves with exitCode 1.",
+      "cases": [
+        {
+          "id": "throw/disabled-locally",
+          "template": ["ls ksjflkjfksjdflksdjflksdf"],
+          "expect": {
+            "exitCode": 1,
+            "stderr": "ls: ksjflkjfksjdflksdjflksdf: No such file or directory\n"
+          }
+        }
+      ]
+    }
+  ]
+}

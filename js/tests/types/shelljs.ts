@@ -1,0 +1,12 @@
+import { $, shelljs } from 'command-stream';
+import shell from 'command-stream/shelljs';
+const result: string = shelljs.head({ '-n': 2 }, ['file.txt']).stdout;
+const code: number = $.shelljs.cat('file.txt').code;
+const exists: boolean = shell.test('-f', 'file.txt');
+const errorCode: number | null = shell.errorCode();
+const error: string | null = shell.error();
+const temporaryDirectory: string = shell.tempdir();
+const noArguments = () => shell.cmd('git');
+shell.config.silent = true;
+shell.ShellString(result).to('out.txt');
+console.log(code, exists, errorCode, error, temporaryDirectory, noArguments);

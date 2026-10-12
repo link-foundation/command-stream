@@ -1,0 +1,53 @@
+{
+  "package": "command-stream@2.0.0",
+  "chain": [
+    "node_modules/@types/shelljs",
+    "node_modules/braces",
+    "node_modules/fast-glob",
+    "node_modules/micromatch",
+    "node_modules/shelljs"
+  ],
+  "vulnerabilities": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 6,
+    "critical": 0,
+    "total": 6
+  },
+  "braces": {
+    "name": "braces",
+    "severity": "high",
+    "isDirect": false,
+    "via": [
+      {
+        "source": 1240992,
+        "name": "braces",
+        "dependency": "braces",
+        "title": "braces vulnerable to stack-exhaustion denial of service through deeply nested patterns",
+        "url": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+        "severity": "high",
+        "cwe": [
+          "CWE-674"
+        ],
+        "cvss": {
+          "score": 7.5,
+          "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+        },
+        "range": "<=3.0.3"
+      }
+    ],
+    "effects": [
+      "micromatch"
+    ],
+    "range": "*",
+    "nodes": [
+      "node_modules/braces"
+    ],
+    "fixAvailable": {
+      "name": "command-stream",
+      "version": "1.5.0",
+      "isSemVerMajor": true
+    }
+  }
+}

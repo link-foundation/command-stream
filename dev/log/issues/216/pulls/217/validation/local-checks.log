@@ -1,0 +1,50 @@
+Local checks at 71f7c25 (+ uncommitted analysis docs only), 2026-10-07T07:06:10Z
+bun 1.4.2, node v26.10.0, cargo 1.98.1 (797e8a9bc 2026-08-05), git version 2.43.0
+
+js: bun run check (eslint --max-warnings 0, prettier --check, jscpd, tsc) -> exit 0
+js: check:parity, docs:check, check:dependencies -> exit 0
+actionlint on every .github/workflows/*.yml -> exit 0
+rust: cargo fmt --check -> exit 0
+rust: cargo clippy --all-targets --all-features --color never -- -D warnings -> exit 0, 0 warning lines
+rust: cargo test -> exit 0; 830 passed, 0 failed, 5 ignored
+rust-script --test:
+  == rust/scripts/check-changelog-fragment.rs
+  test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+  == rust/scripts/detect-code-changes.rs
+  test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+js: bun test js/tests/ --timeout 10000 -> exit 1:
+   2581 pass
+   15 skip
+   28 fail
+  Ran 2624 tests across 157 files. [203.71s]
+  every failure (listed below) is a jq test: jq is not installed in this sandbox; CI installs it (js.yml 'Install jq').
+  command -v jq: none
+  (fail) jq behavior - default mirror mode shows output automatically [6.66ms]
+  (fail) jq behavior - explicit color output contains ANSI codes [6.81ms]
+  (fail) jq behavior - monochrome output has no ANSI codes [3.99ms]
+  (fail) jq behavior - field extraction works correctly [15.82ms]
+  (fail) jq behavior - complex JSON processing [6.59ms]
+  (fail) jq behavior - mirror mode vs capture mode [7.07ms]
+  (fail) jq behavior - TTY detection and automatic coloring [4.62ms]
+  (fail) jq behavior - force colors work in any environment [4.49ms]
+  (fail) jq behavior - streaming with colors works [4.88ms]
+  (fail) jq streaming tests > stream of JSON objects through jq -c [24.10ms]
+  (fail) jq streaming tests > stream JSON objects with filtering through jq [26.39ms]
+  (fail) jq streaming tests > generate JSON stream using echo in loop [42.53ms]
+  (fail) jq streaming tests > transform JSON stream with jq [23.42ms]
+  (fail) jq streaming tests > generate and process array elements as stream [12.95ms]
+  (fail) jq streaming tests > combine multiple JSON sources into stream [27.10ms]
+  (fail) jq streaming with pipe | syntax > stream of JSON objects through jq -c using pipe syntax [5.83ms]
+  (fail) jq streaming with pipe | syntax > stream JSON with filtering using pipe syntax [8.14ms]
+  (fail) jq streaming with pipe | syntax > transform JSON stream with jq using pipe syntax [3.16ms]
+  (fail) jq streaming with pipe | syntax > process array elements as stream using pipe syntax [3.11ms]
+  (fail) jq streaming with pipe | syntax > multi-pipe JSON processing [3.87ms]
+  (fail) jq streaming with pipe | syntax > complex JSON stream manipulation with pipes [6.60ms]
+  (fail) realtime JSON streaming with delays > stream JSON with random delays between outputs [2.86ms]
+  (fail) realtime JSON streaming with delays > stream JSON with fixed delays using printf and sleep [2.67ms]
+  (fail) realtime JSON streaming with delays > simulate server logs with delayed JSON output [3.22ms]
+  (fail) realtime JSON streaming with delays > process streaming metrics with delays and aggregation [102.45ms]
+  (fail) realtime JSON streaming with delays > handle burst then delay pattern [2.27ms]
+  (fail) realtime JSON streaming with delays > stream with varying delay intervals [2.91ms]
+  (fail) realtime JSON streaming with delays > verify immediate streaming output from jq [5.11ms]

@@ -1,0 +1,5 @@
+(fail) the release job re-runs publishing when only the GitHub release is missing [0.81ms]
+(fail) workflow linting is itself wired into CI > zizmor runs with the repository policy at low confidence [0.68ms]
+(fail) external links are checked without gating pull requests > github.com is throttled by the configuration lychee loads [0.55ms]
+ 212 pass
+ 3 fail

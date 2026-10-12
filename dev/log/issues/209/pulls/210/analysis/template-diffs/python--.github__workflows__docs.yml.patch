@@ -1,0 +1,182 @@
+--- python-template/.github/workflows/docs.yml
++++ .github/workflows/docs.yml
+@@ -1,130 +1,78 @@
+-name: Docs
+-
+-# Builds Sphinx documentation on every push and PR that touches docs/, src/, or
+-# this workflow. On pushes to main the rendered site is published to GitHub
+-# Pages only after deployment is explicitly enabled. PRs only build to verify
+-# the docs still compile.
+-#
+-# One-time setup: in the repository's Settings -> Pages, set Source to
+-# "GitHub Actions", then set the DEPLOY_GITHUB_PAGES repository variable to
+-# "true". Without the variable, deployment is skipped with a notice. Without
+-# Pages configured, actions/deploy-pages fails with "Get Pages site failed".
+-# See README.md "Deploying API documentation".
++name: Feature documentation website
+ 
+ on:
+   push:
+     branches: [main]
+     paths:
+-      - 'docs/**'
+-      - 'src/**'
+-      - 'pyproject.toml'
+-      - '.github/workflows/docs.yml'
+-  pull_request:
+-    types: [opened, synchronize, reopened]
+-    paths:
+-      - 'docs/**'
+-      - 'src/**'
+-      - 'pyproject.toml'
++      - 'js/examples/features/**'
++      - 'js/src/**'
++      - 'rust/examples/**'
++      - 'rust/src/**'
++      - 'scripts/**'
++      - 'docs/features/**'
++      - 'docs/site/**'
++      - 'docs/README.md'
+       - '.github/workflows/docs.yml'
+   workflow_dispatch:
+ 
+-# Least-privilege default; the write scopes GitHub Pages needs are granted
+-# per job, to the two jobs that actually publish.
+ permissions:
+   contents: read
+ 
+-concurrency:
+-  group: ${{ github.workflow }}-${{ github.ref }}
+-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+-
+ jobs:
+-  build:
+-    name: Build docs
++  deploy:
++    name: Verify and deploy generated documentation
++    if: github.ref == 'refs/heads/main'
+     runs-on: ubuntu-24.04
+-    timeout-minutes: 10
++    timeout-minutes: 15
+     permissions:
+       contents: read
+-      # actions/configure-pages enables the Pages site on push to main.
+       pages: write
++      id-token: write
++    environment:
++      name: github-pages
++      url: ${{ steps.deployment.outputs.page_url }}
++    concurrency:
++      group: main-writer-${{ github.repository }}-main
++      cancel-in-progress: false
+     steps:
+       - uses: actions/checkout@v6
+         with:
+           persist-credentials: false
+ 
+-      - name: Setup Python
+-        uses: actions/setup-python@v6
+-        with:
+-          python-version: '3.13'
+-
+-      - name: Install package and docs dependencies
+-        run: |
+-          python -m pip install --upgrade pip
+-          pip install -e .
+-          pip install -r docs/requirements.txt
+-
+-      - name: Build Sphinx documentation
+-        run: sphinx-build -W --keep-going -b html docs _site
+-
+-      - name: Upload build artifact
+-        uses: actions/upload-artifact@v7
+-        with:
+-          name: docs-site
+-          path: _site
+-          if-no-files-found: error
+-
+-      - name: Report skipped GitHub Pages deployment
+-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_GITHUB_PAGES != 'true'
+-        run: echo "::notice::Skipping GitHub Pages deployment. To enable publishing, set Settings -> Pages -> Source = GitHub Actions, then add repository variable DEPLOY_GITHUB_PAGES=true."
+-
++      # Pages must be enabled before a GITHUB_TOKEN can deploy. Check the
++      # repository setting before installing or building dependencies.
+       - name: Configure GitHub Pages
+-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_GITHUB_PAGES == 'true'
+         uses: actions/configure-pages@v6
+ 
+-      - name: Upload GitHub Pages artifact
+-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_GITHUB_PAGES == 'true'
++      - name: Setup Node.js
++        uses: actions/setup-node@v6
++        with:
++          node-version: '24.x'
++
++      - name: Setup Bun
++        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
++        with:
++          bun-version: latest
++
++      - name: Setup Rust
++        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master @ 2026-10-01
++        with:
++          toolchain: stable
++
++      - name: Install JavaScript dependencies
++        working-directory: js
++        run: bun install --frozen-lockfile
++
++      - name: Verify feature parity and generated files
++        run: |
++          node scripts/check-parity.mjs
++          node scripts/generate-docs.mjs --check
++
++      - name: Upload website artifact
+         uses: actions/upload-pages-artifact@v5
+         with:
+-          path: _site
++          path: docs/site
+ 
+-  deploy:
+-    name: Deploy to GitHub Pages
+-    needs: [build]
+-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_GITHUB_PAGES == 'true'
+-    runs-on: ubuntu-24.04
+-    timeout-minutes: 10
+-    permissions:
+-      contents: read
+-      # actions/deploy-pages publishes the artifact using an OIDC token.
+-      pages: write
+-      id-token: write
+-    environment:
+-      name: github-pages
+-      url: ${{ steps.deployment.outputs.page_url }}
+-    steps:
+-      - name: Deploy Pages artifact
++      - name: Deploy to GitHub Pages
+         id: deployment
+         uses: actions/deploy-pages@v5
+-
+-  # Terminal status gate (issue #69): GitHub reports jobs killed by
+-  # timeout-minutes as cancelled. Observe every other job so a timeout on main
+-  # becomes a visible failure instead of a grey run, while a run that was
+-  # superseded by a newer commit is recognised as expected churn.
+-  pipeline-status:
+-    name: Pipeline Status
+-    needs:
+-      - build
+-      - deploy
+-    if: always()
+-    runs-on: ubuntu-24.04
+-    timeout-minutes: 5
+-    steps:
+-      - uses: actions/checkout@v6
+-        with:
+-          persist-credentials: false
+-
+-      - name: Check aggregate pipeline status
+-        env:
+-          NEEDS_JSON: ${{ toJSON(needs) }}
+-          RUN_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+-          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+-        run: bash scripts/check-pipeline-status.sh

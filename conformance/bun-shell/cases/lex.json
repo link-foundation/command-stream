@@ -1,0 +1,1044 @@
+{
+  "source": "test/js/bun/shell/lex.test.ts",
+  "units": [
+    {
+      "line": 12,
+      "upstream": "basic",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "lex/basic-verbatim",
+          "template": ["next dev"],
+          "note": "Verbatim upstream script: `next` is not installed, so the observable result is the command-not-found error for the first word.",
+          "expect": {
+            "stderr": "bun: command not found: next\n",
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "lex/basic-echo",
+          "template": ["echo next dev"],
+          "note": "`echo` prepended so the two lexed words are observable.",
+          "expect": {
+            "stdout": "next dev\n"
+          }
+        }
+      ],
+      "note": "The upstream test compares a private lexer token dump (shellInternals.lex); the token shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 18,
+      "upstream": "var edgecase",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "lex/var-edgecase-verbatim",
+          "template": ["$PWD/test.txt"],
+          "note": "Verbatim upstream script: the variable and trailing text form ONE word used as command name. On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes",
+          "expect": {
+            "stderr": "bun: command not found: {{TEMP_NATIVE}}/test.txt\n",
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "lex/var-edgecase-echo",
+          "template": ["echo $PWD/test.txt"],
+          "expect": {
+            "stdout": "{{TEMP_NATIVE}}/test.txt\n"
+          },
+          "note": "On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes"
+        }
+      ],
+      "note": "The upstream test compares a private lexer token dump (shellInternals.lex); the token shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 27,
+      "upstream": "vars",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "lex/vars",
+          "template": ["echo next dev $PORT"],
+          "env": {
+            "PORT": "3000"
+          },
+          "note": "`echo` prepended (upstream script runs `next`).",
+          "expect": {
+            "stdout": "next dev 3000\n"
+          }
+        },
+        {
+          "id": "lex/vars-no-word-splitting",
+          "template": ["echo next dev $PORT"],
+          "env": {
+            "PORT": "3000  x"
+          },
+          "note": "Bun does not word-split unquoted variable expansions: the value (with two spaces) is passed as one argument.",
+          "expect": {
+            "stdout": "next dev 3000  x\n"
+          }
+        }
+      ],
+      "note": "The upstream test compares a private lexer token dump (shellInternals.lex); the token shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 40,
+      "upstream": "quoted_var",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "lex/quoted-var",
+          "template": ["echo next dev \"$PORT\""],
+          "env": {
+            "PORT": "3000  x"
+          },
+          "note": "`echo` prepended (upstream script runs `next`).",
+          "expect": {
+            "stdout": "next dev 3000  x\n"
+          }
+        }
+      ],
+      "note": "The upstream test compares a private lexer token dump (shellInternals.lex); the token shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 53,
+      "upstream": "quoted_edge_case",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "lex/quoted-edge-case",
+          "template": ["echo next dev foo\"$PORT\""],
+          "env": {
+            "PORT": "3000"
+          },
+          "note": "`echo` prepended (upstream script runs `next`).",
+          "expect": {
+            "stdout": "next dev foo3000\n"
+          }
+        }
+      ],
+      "note": "The upstream test compares a private lexer token dump (shellInternals.lex); the token shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 67,
+      "upstream": "quote_multi",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "lex/quote-multi",
+          "template": ["echo foo\"$NICE\"good\"NICE\""],
+          "env": {
+            "NICE": "xyz"
+          },
+          "expect": {
+            "stdout": "fooxyzgoodNICE\n"
+          }
+        },
+        {
+          "id": "lex/quote-multi-unset",
+          "template": ["echo foo\"$NICE\"good\"NICE\""],
+          "note": "NICE is not set: the quoted empty expansion contributes nothing to the word.",
+          "expect": {
+            "stdout": "foogoodNICE\n"
+          }
+        }
+      ],
+      "note": "The upstream test compares a private lexer token dump (shellInternals.lex); the token shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 81,
+      "upstream": "semicolon",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "lex/semicolon",
+          "template": ["echo foo; bar baz; echo \"NICE;\""],
+          "note": "Verbatim upstream script: `bar` does not exist (command-not-found on stderr); the exit code is that of the last statement (0). The `;` inside double quotes is literal.",
+          "expect": {
+            "stdout": "foo\nNICE;\n",
+            "stderr": "bun: command not found: bar\n"
+          }
+        }
+      ],
+      "note": "The upstream test compares a private lexer token dump (shellInternals.lex); the token shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 102,
+      "upstream": "single_quote",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "lex/single-quote",
+          "template": ["echo next dev 'hello how is it going'"],
+          "note": "`echo` prepended (upstream script runs `next`).",
+          "expect": {
+            "stdout": "next dev hello how is it going\n"
+          }
+        }
+      ],
+      "note": "The upstream test compares a private lexer token dump (shellInternals.lex); the token shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 115,
+      "upstream": "env_vars",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "lex/env-vars",
+          "template": [
+            "NAME=zack FULLNAME=\"$NAME radisic\" LOL= ; echo $FULLNAME"
+          ],
+          "expect": {
+            "stdout": "zack radisic\n"
+          }
+        },
+        {
+          "id": "lex/env-vars-all",
+          "template": [
+            "NAME=zack FULLNAME=\"$NAME radisic\" LOL= ; echo $FULLNAME $NAME \"[$LOL]\""
+          ],
+          "note": "Extra probe: assignment-only statement sets shell vars left to right; `LOL=` assigns the empty string.",
+          "expect": {
+            "stdout": "zack radisic zack []\n"
+          }
+        }
+      ],
+      "note": "The upstream test compares a private lexer token dump (shellInternals.lex); the token shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 135,
+      "upstream": "env_vars2",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "lex/env-vars2-unset",
+          "template": ["NAME=zack foo=$bar echo $NAME"],
+          "note": "Prefix assignments apply to the command's environment only; $NAME in the arguments is expanded before the assignment (NAME unset -> empty argument, echo prints a newline).",
+          "expect": {
+            "stdout": "\n"
+          }
+        },
+        {
+          "id": "lex/env-vars2-outer",
+          "template": ["NAME=zack foo=$bar echo $NAME"],
+          "env": {
+            "NAME": "outer"
+          },
+          "expect": {
+            "stdout": "outer\n"
+          }
+        }
+      ],
+      "note": "The upstream test compares a private lexer token dump (shellInternals.lex); the token shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 167,
+      "upstream": "env_vars exported",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "lex/env-vars-exported",
+          "template": ["export NAME=zack FOO=bar export NICE=lmao"],
+          "expect": {}
+        },
+        {
+          "id": "lex/env-vars-exported-check",
+          "template": [
+            "export NAME=zack FOO=bar export NICE=lmao; echo $NAME $FOO $NICE"
+          ],
+          "note": "The second `export` word is just an (ignored) argument name for the export builtin; all three assignments are exported.",
+          "expect": {
+            "stdout": "zack bar lmao\n"
+          }
+        },
+        {
+          "id": "lex/env-vars-exported-no-export-var",
+          "template": [
+            "export NAME=zack FOO=bar export NICE=lmao; echo \"[$export]\""
+          ],
+          "expect": {
+            "stdout": "[]\n"
+          }
+        }
+      ],
+      "note": "The upstream test compares a private lexer token dump (shellInternals.lex); the token shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 208,
+      "upstream": "brace_expansion",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "lex/brace-expansion",
+          "template": ["echo {ts,tsx,js,jsx}"],
+          "expect": {
+            "stdout": "ts tsx js jsx\n"
+          }
+        }
+      ],
+      "note": "The upstream test compares a private lexer token dump (shellInternals.lex); the token shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 227,
+      "upstream": "op_and",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "lex/op-and",
+          "template": ["echo foo && echo bar"],
+          "expect": {
+            "stdout": "foo\nbar\n"
+          }
+        }
+      ],
+      "note": "The upstream test compares a private lexer token dump (shellInternals.lex); the token shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 244,
+      "upstream": "op_or",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "lex/op-or",
+          "template": ["echo foo || echo bar"],
+          "expect": {
+            "stdout": "foo\n"
+          }
+        }
+      ],
+      "note": "The upstream test compares a private lexer token dump (shellInternals.lex); the token shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 261,
+      "upstream": "op_pipe",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "lex/op-pipe",
+          "template": ["echo foo | echo bar"],
+          "expect": {
+            "stdout": "bar\n"
+          }
+        }
+      ],
+      "note": "The upstream test compares a private lexer token dump (shellInternals.lex); the token shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 278,
+      "upstream": "op_bg",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "lex/op-bg",
+          "template": ["echo foo & echo bar"],
+          "note": "The lexer accepts `&`, but executing the script throws because background commands are unsupported.",
+          "expect": {
+            "error": "Background commands \"&\" are not supported yet."
+          }
+        }
+      ],
+      "note": "The upstream test compares a private lexer token dump (shellInternals.lex); the token shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 295,
+      "upstream": "op_redirect",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "lex/redirect-stdout-then-new-command",
+          "template": ["echo foo > cat secrets.txt"],
+          "note": "Verbatim upstream script. Bun quirk (differs from POSIX): the word after the redirect target starts a NEW command rather than being another echo argument, so `cat` receives \"foo\\n\" and `secrets.txt` is run as a command.",
+          "expect": {
+            "stderr": "bun: command not found: secrets.txt\n",
+            "exitCode": 1,
+            "files": {
+              "cat": "foo\n"
+            }
+          }
+        },
+        {
+          "id": "lex/redirect-stdout-then-new-command-echo",
+          "template": ["echo foo > cat echo secrets.txt"],
+          "note": "Extra probe of the same quirk: `echo secrets.txt` after the redirect target runs as its own command.",
+          "expect": {
+            "stdout": "secrets.txt\n",
+            "files": {
+              "cat": "foo\n"
+            }
+          }
+        },
+        {
+          "id": "lex/redirect-0-gt-reads-stdin",
+          "template": ["cat 0> file.txt"],
+          "files": {
+            "file.txt": "content\n"
+          },
+          "note": "Upstream lexes `cmd1 0> file.txt` as a stdin redirect; cmd1 replaced by the cat builtin. `0>` opens the file as stdin (it is NOT truncated).",
+          "expect": {
+            "stdout": "content\n",
+            "files": {
+              "file.txt": "content\n"
+            }
+          }
+        },
+        {
+          "id": "lex/redirect-0-gt-missing-file",
+          "template": ["cat 0> file.txt"],
+          "note": "stdin redirect from a missing file: error message has no trailing newline in Bun 1.4.2.",
+          "expect": {
+            "stderr": "bun: No such file or directory: file.txt",
+            "exitCode": 1,
+            "absent": ["file.txt"]
+          }
+        },
+        {
+          "id": "lex/redirect-1-gt",
+          "template": ["echo hi 1> file.txt"],
+          "note": "cmd1 replaced by echo.",
+          "expect": {
+            "files": {
+              "file.txt": "hi\n"
+            }
+          }
+        },
+        {
+          "id": "lex/redirect-2-gt-echo",
+          "template": ["echo hi 2> file.txt"],
+          "note": "cmd1 replaced by echo: stderr redirect creates/truncates the file, stdout unaffected.",
+          "expect": {
+            "stdout": "hi\n",
+            "files": {
+              "file.txt": ""
+            }
+          }
+        },
+        {
+          "id": "lex/redirect-2-gt-ls",
+          "template": ["ls nope 2> file.txt"],
+          "note": "cmd1 replaced by ls of a missing path so stderr has content.",
+          "expect": {
+            "exitCode": 1,
+            "files": {
+              "file.txt": "ls: nope: No such file or directory\n"
+            }
+          }
+        },
+        {
+          "id": "lex/redirect-amp-gt-stdout",
+          "template": ["echo hi &> file.txt"],
+          "expect": {
+            "files": {
+              "file.txt": "hi\n"
+            }
+          }
+        },
+        {
+          "id": "lex/redirect-amp-gt-stderr",
+          "template": ["ls nope &> file.txt"],
+          "expect": {
+            "exitCode": 1,
+            "files": {
+              "file.txt": "ls: nope: No such file or directory\n"
+            }
+          }
+        },
+        {
+          "id": "lex/redirect-1-append",
+          "template": ["echo hi 1>> file.txt"],
+          "files": {
+            "file.txt": "pre\n"
+          },
+          "expect": {
+            "files": {
+              "file.txt": "pre\nhi\n"
+            }
+          }
+        },
+        {
+          "id": "lex/redirect-2-append",
+          "template": ["ls nope 2>> file.txt"],
+          "files": {
+            "file.txt": "pre\n"
+          },
+          "expect": {
+            "exitCode": 1,
+            "files": {
+              "file.txt": "pre\nls: nope: No such file or directory\n"
+            }
+          }
+        },
+        {
+          "id": "lex/redirect-amp-append-stdout",
+          "template": ["echo hi &>> file.txt"],
+          "files": {
+            "file.txt": "pre\n"
+          },
+          "expect": {
+            "files": {
+              "file.txt": "pre\nhi\n"
+            }
+          }
+        },
+        {
+          "id": "lex/redirect-amp-append-stderr",
+          "template": ["ls nope &>> file.txt"],
+          "files": {
+            "file.txt": "pre\n"
+          },
+          "expect": {
+            "exitCode": 1,
+            "files": {
+              "file.txt": "pre\nls: nope: No such file or directory\n"
+            }
+          }
+        }
+      ],
+      "note": "The upstream test compares a private lexer token dump (shellInternals.lex); the token shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour. The upstream `cmd1` placeholder command is replaced by builtins (echo/cat/ls) that make each redirect observable."
+    },
+    {
+      "line": 454,
+      "upstream": "obj_ref",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "lex/obj-ref",
+          "template": ["echo foo > ", " && echo lmao > ", ""],
+          "values": [
+            {
+              "outBuffer": {
+                "id": "b1",
+                "size": 1048576
+              }
+            },
+            {
+              "outBuffer": {
+                "id": "b2",
+                "size": 1048576
+              }
+            }
+          ],
+          "expect": {
+            "buffers": {
+              "b1": "foo\n",
+              "b2": "lmao\n"
+            }
+          }
+        }
+      ],
+      "note": "The upstream test compares a private lexer token dump (shellInternals.lex); the token shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 505,
+      "upstream": "cmd_sub_dollar",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "lex/cmd-sub-dollar",
+          "template": ["echo foo $(ls)"],
+          "files": {
+            "a.txt": "",
+            "b.txt": ""
+          },
+          "expect": {
+            "stdout": {
+              "oneOf": ["foo a.txt b.txt\n", "foo b.txt a.txt\n"]
+            }
+          },
+          "note": "`ls` lists entries in directory order, which differs between file systems."
+        }
+      ],
+      "note": "The upstream test compares a private lexer token dump (shellInternals.lex); the token shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 541,
+      "upstream": "cmd_sub_dollar_nested",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "lex/cmd-sub-dollar-nested",
+          "template": ["echo foo $(ls $(ls) $(ls))"],
+          "files": {
+            "a.txt": ""
+          },
+          "expect": {
+            "stdout": "foo a.txt a.txt\n"
+          }
+        }
+      ],
+      "note": "The upstream test compares a private lexer token dump (shellInternals.lex); the token shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 607,
+      "upstream": "cmd_sub_edgecase",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "lex/cmd-sub-edgecase-unset",
+          "template": ["echo $(FOO=bar $FOO)"],
+          "note": "$FOO is expanded before the prefix assignment; with FOO unset the substituted command is empty and produces no output.",
+          "expect": {
+            "stdout": "\n"
+          }
+        },
+        {
+          "id": "lex/cmd-sub-edgecase-set",
+          "template": ["echo $(FOO=bar $FOO)"],
+          "env": {
+            "FOO": "pwd"
+          },
+          "note": "With FOO=pwd in the environment the substitution runs `pwd` (the prefix assignment does not affect the expansion). On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes",
+          "expect": {
+            "stdout": "{{TEMP_NATIVE}}\n"
+          }
+        }
+      ],
+      "note": "The upstream test compares a private lexer token dump (shellInternals.lex); the token shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 643,
+      "upstream": "cmd_sub_combined_word",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "lex/cmd-sub-combined-word-unset",
+          "template": ["echo $(FOO=bar $FOO)NICE"],
+          "expect": {
+            "stdout": "NICE\n"
+          }
+        },
+        {
+          "id": "lex/cmd-sub-combined-word-set",
+          "template": ["echo $(FOO=bar $FOO)NICE"],
+          "env": {
+            "FOO": "pwd"
+          },
+          "expect": {
+            "stdout": "{{TEMP_NATIVE}}NICE\n"
+          },
+          "note": "On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes"
+        }
+      ],
+      "note": "The upstream test compares a private lexer token dump (shellInternals.lex); the token shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 679,
+      "upstream": "cmd_sub_backtick",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "lex/cmd-sub-backtick-escaped",
+          "template": ["echo foo \\`ls\\`"],
+          "files": {
+            "a.txt": ""
+          },
+          "note": "Upstream source `\\`ls\\`` gives raw backslash-backtick: escaped backticks are literal text, NOT a command substitution.",
+          "expect": {
+            "stdout": "foo `ls`\n"
+          }
+        },
+        {
+          "id": "lex/cmd-sub-backtick-unescaped",
+          "template": ["echo foo `ls`"],
+          "files": {
+            "a.txt": ""
+          },
+          "note": "Extra contrast probe (via {raw}-equivalent template): unescaped backticks do perform command substitution.",
+          "expect": {
+            "stdout": "foo a.txt\n"
+          }
+        }
+      ],
+      "note": "The upstream test compares a private lexer token dump (shellInternals.lex); the token shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour."
+    },
+    {
+      "line": 713,
+      "upstream": "delimit: %s (test.each, 13 rows)",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "lex/delimit-space-after-variable",
+          "template": ["echo $FOO bar"],
+          "env": {
+            "FOO": "foo"
+          },
+          "expect": {
+            "stdout": "foo bar\n"
+          }
+        },
+        {
+          "id": "lex/delimit-newline-after-variable",
+          "template": ["echo $FOO\npwd"],
+          "env": {
+            "FOO": "foo"
+          },
+          "note": "Template contains a real newline character (statement separator). `ls` replaced by `pwd` for deterministic output. On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes",
+          "expect": {
+            "stdout": "foo\n{{TEMP_NATIVE}}\n"
+          }
+        },
+        {
+          "id": "lex/delimit-escaped-newline-after-variable",
+          "template": ["echo $FOO\\\npwd"],
+          "env": {
+            "FOO": "foo"
+          },
+          "note": "Backslash + real newline is a line continuation that delimits the word: `pwd` becomes another echo argument. `ls` replaced by `pwd`.",
+          "expect": {
+            "stdout": "foo pwd\n"
+          }
+        },
+        {
+          "id": "lex/delimit-operator-after-variable",
+          "template": ["$FOO|b"],
+          "env": {
+            "FOO": "pwd"
+          },
+          "note": "Verbatim source; FOO=pwd. `b` does not exist so the pipeline fails with command-not-found (pwd output goes into the pipe).",
+          "expect": {
+            "stderr": "bun: command not found: b\n",
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "lex/delimit-operator-after-variable-cat",
+          "template": ["$FOO|cat"],
+          "env": {
+            "FOO": "pwd"
+          },
+          "note": "`b` replaced by the cat builtin. On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes",
+          "expect": {
+            "stdout": "{{TEMP_NATIVE}}\n"
+          }
+        },
+        {
+          "id": "lex/delimit-operator-after-space",
+          "template": ["$FOO | cat"],
+          "env": {
+            "FOO": "pwd"
+          },
+          "note": "`b` replaced by the cat builtin. On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes",
+          "expect": {
+            "stdout": "{{TEMP_NATIVE}}\n"
+          }
+        },
+        {
+          "id": "lex/delimit-space-after-closing-quote",
+          "template": ["\"a\" b"],
+          "note": "Verbatim source: the quoted word `a` is the command name.",
+          "expect": {
+            "stderr": "bun: command not found: a\n",
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "lex/delimit-space-after-closing-quote-echo",
+          "template": ["\"echo\" b"],
+          "note": "`a` replaced by echo.",
+          "expect": {
+            "stdout": "b\n"
+          }
+        },
+        {
+          "id": "lex/delimit-space-after-brace-group",
+          "template": ["{a,b} c"],
+          "note": "Verbatim source: brace expansion yields `a b c`, command `a` not found.",
+          "expect": {
+            "stderr": "bun: command not found: a\n",
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "lex/delimit-space-after-brace-group-echo",
+          "template": ["{echo,b} c"],
+          "note": "`a` replaced by echo: expands to `echo b c`.",
+          "expect": {
+            "stdout": "b c\n"
+          }
+        },
+        {
+          "id": "lex/delimit-semicolon-after-variable",
+          "template": ["$FOO;b"],
+          "env": {
+            "FOO": "echo"
+          },
+          "note": "Verbatim source; FOO=echo.",
+          "expect": {
+            "stdout": "\n",
+            "stderr": "bun: command not found: b\n",
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "lex/delimit-semicolon-after-variable-pwd",
+          "template": ["$FOO;pwd"],
+          "env": {
+            "FOO": "echo"
+          },
+          "note": "`b` replaced by pwd. On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes",
+          "expect": {
+            "stdout": "\n{{TEMP_NATIVE}}\n"
+          }
+        },
+        {
+          "id": "lex/delimit-semicolon-after-closing-quote",
+          "template": ["\"a\";b"],
+          "note": "Verbatim source.",
+          "expect": {
+            "stderr": "bun: command not found: a\nbun: command not found: b\n",
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "lex/delimit-semicolon-after-closing-quote-echo",
+          "template": ["\"echo\";pwd"],
+          "note": "`a` -> echo, `b` -> pwd. On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes",
+          "expect": {
+            "stdout": "\n{{TEMP_NATIVE}}\n"
+          }
+        },
+        {
+          "id": "lex/delimit-semicolon-after-brace-group",
+          "template": ["{a,b};c"],
+          "note": "Verbatim source.",
+          "expect": {
+            "stderr": "bun: command not found: a\nbun: command not found: c\n",
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "lex/delimit-semicolon-after-brace-group-echo",
+          "template": ["{echo,a};pwd"],
+          "note": "`a` -> echo, `c` -> pwd. On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes",
+          "expect": {
+            "stdout": "a\n{{TEMP_NATIVE}}\n"
+          }
+        },
+        {
+          "id": "lex/delimit-end-of-input-after-variable",
+          "template": ["$FOO"],
+          "env": {
+            "FOO": "pwd"
+          },
+          "expect": {
+            "stdout": "{{TEMP_NATIVE}}\n"
+          },
+          "note": "On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes"
+        },
+        {
+          "id": "lex/delimit-end-of-input-after-variable-unset",
+          "template": ["$FOO"],
+          "note": "FOO unset: the command word expands to nothing and nothing runs (exit 0).",
+          "expect": {}
+        },
+        {
+          "id": "lex/delimit-variable-inside-word",
+          "template": ["foo$BAR baz"],
+          "env": {
+            "BAR": "ho"
+          },
+          "note": "Verbatim source: `foo` and $BAR form one word.",
+          "expect": {
+            "stderr": "bun: command not found: fooho\n",
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "lex/delimit-variable-inside-word-echo",
+          "template": ["ec$BAR baz"],
+          "env": {
+            "BAR": "ho"
+          },
+          "note": "`foo` replaced by `ec` so the joined word is the echo command.",
+          "expect": {
+            "stdout": "baz\n"
+          }
+        },
+        {
+          "id": "lex/delimit-glob-inside-word",
+          "template": ["a*b c"],
+          "note": "Verbatim source in an empty dir: the glob word matches nothing.",
+          "expect": {
+            "stderr": "bun: no matches found: a*b\n",
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "lex/delimit-glob-inside-word-echo",
+          "template": ["echo a*b c"],
+          "files": {
+            "a1b": "",
+            "xb": ""
+          },
+          "note": "`echo` prepended; the glob `a*b` is one word that expands to the matching file.",
+          "expect": {
+            "stdout": "a1b c\n"
+          }
+        }
+      ],
+      "note": "The upstream test compares a private lexer token dump (shellInternals.lex); the token shape is Bun-internal and not reproduced. The cases run the same script through $ and assert its observable behaviour. Rows are passed upstream as lex({raw:[source]}); here the source is the single raw template string. Nonexistent command names are replaced with builtins (echo/pwd/cat) in additional cases, keeping the delimiting structure; verbatim variants are kept too."
+    },
+    {
+      "line": 827,
+      "upstream": "errors: JS object ref in quotes",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "lex/js-object-ref-in-quotes",
+          "template": ["FOO=bar ", " -e \"console.log(process.env) > ", "\""],
+          "values": [
+            {
+              "string": "{{NODE}}"
+            },
+            {
+              "outBuffer": {
+                "id": "b1",
+                "size": 1
+              }
+            }
+          ],
+          "requires": ["node"],
+          "note": "Upstream uses ${BUN}; {{NODE}} is equivalent (the error is thrown before anything runs).",
+          "expect": {
+            "error": "JS object reference not allowed in double quotes"
+          }
+        }
+      ]
+    },
+    {
+      "line": 835,
+      "upstream": "lone closing paren (runAsTest)",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "lex/lone-closing-paren",
+          "template": ["echo )"],
+          "expect": {
+            "error": "Unexpected ')'"
+          }
+        }
+      ]
+    },
+    {
+      "line": 836,
+      "upstream": "subshell in invalid position (runAsTest)",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "lex/subshell-in-invalid-position",
+          "template": ["echo (echo hi)"],
+          "expect": {
+            "error": "Unexpected token: `(`"
+          }
+        }
+      ]
+    },
+    {
+      "line": 837,
+      "upstream": "quoted parens (runAsTest)",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "lex/quoted-parens",
+          "template": ["echo \"()\""],
+          "expect": {
+            "stdout": "()\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 840,
+      "upstream": "Unexpected EOF",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "lex/unexpected-eof-pipe",
+          "template": ["echo hi |"],
+          "expect": {
+            "error": "Unexpected EOF"
+          }
+        },
+        {
+          "id": "lex/unexpected-eof-background",
+          "template": ["echo hi &"],
+          "expect": {
+            "error": "Background commands \"&\" are not supported yet."
+          }
+        }
+      ]
+    },
+    {
+      "line": 845,
+      "upstream": "Unclosed subshell",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "lex/unclosed-cmd-subst-dollar",
+          "template": ["echo hi && $(echo uh oh"],
+          "expect": {
+            "error": "Unclosed command substitution"
+          }
+        },
+        {
+          "id": "lex/closed-cmd-subst-dollar",
+          "template": ["echo hi && $(echo uh oh)"],
+          "expect": {
+            "stdout": "hi\n",
+            "stderr": "bun: command not found: uh\n",
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "lex/unclosed-cmd-subst-backtick",
+          "template": ["echo hi && ", ""],
+          "values": [
+            {
+              "raw": "`echo uh oh"
+            }
+          ],
+          "expect": {
+            "error": "Unclosed command substitution"
+          }
+        },
+        {
+          "id": "lex/closed-cmd-subst-backtick",
+          "template": ["echo hi && ", ""],
+          "values": [
+            {
+              "raw": "`echo uh oh`"
+            }
+          ],
+          "expect": {
+            "stdout": "hi\n",
+            "stderr": "bun: command not found: uh\n",
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "lex/unclosed-subshell",
+          "template": ["echo hi && (echo uh oh"],
+          "expect": {
+            "error": "Unclosed subshell"
+          }
+        }
+      ]
+    },
+    {
+      "line": 866,
+      "upstream": "multiple errors are newline separated (runAsTest)",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "lex/multiple-errors-newline-separated",
+          "template": ["(((( |||"],
+          "note": "Upstream checks err.message equality; exact message matched with an anchored regex. https://github.com/oven-sh/bun/issues/33235",
+          "expect": {
+            "error": {
+              "regex": "^Unexpected EOF\\nUnclosed subshell\\nUnclosed subshell\\nUnclosed subshell$"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
