@@ -51,3 +51,12 @@ The first final Rust run encountered an existing graceful-shutdown test failure:
 -1. That unchanged test passed in isolation and the complete suite passed on
 rerun. The initial failure and focused rerun are preserved; no timeout increase,
 test weakening, or unrelated process-runner change was made.
+
+## CI dependency freshness follow-up
+
+CI required a compatible syn update from 3.0.8 to 3.0.9 in both Rust lockfiles.
+After refreshing them, all 876 Rust tests passed again (7 ignored), all-target
+Clippy passed with warnings denied, and the benchmark crate compiled successfully.
+The dependency declaration check verified all 90 direct dependencies without
+stale or unverifiable entries. Updated-build logs are retained below this file;
+the failed CI log and precise error locations are retained with the investigation.

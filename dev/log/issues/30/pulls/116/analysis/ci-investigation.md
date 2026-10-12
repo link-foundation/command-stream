@@ -29,3 +29,22 @@ The documentation generator invokes cargo internally. Its first default parallel
 build was stopped when cgroup memory approached the container limit. Subsequent
 Rust validation uses CARGO_BUILD_JOBS=1 and CARGO_PROFILE_DEV_DEBUG=0 /
 CARGO_PROFILE_TEST_DEBUG=0. No OOM-killed compilation was repeated.
+
+## Follow-up CI on eff898c
+
+Fresh runs began October 12, 2026 at 15:42:21 UTC after commit
+eff898c1208676f4c340229268271914ecab9145. The parity check was superseded once
+when removal of `parity-exempt` triggered its label-change workflow; the replacement
+run checks both implementations without exemption.
+
+Dependency freshness run 38272183588 failed on a newly available compatible
+dependency. The downloaded `ci-logs/dependency-freshness-38272183588.log` shows
+`Updating syn v3.0.8 -> v3.0.9` at line 716 and
+`rust/Cargo.toml has pending lockfile updates` at line 778. JavaScript declarations
+and installed dependencies passed. The log is also retained as
+`dependency-freshness-38272183588.log.gz` alongside this investigation.
+
+Both Rust application and benchmark lockfiles were refreshed to syn 3.0.9,
+without changing dependency ranges or weakening freshness policy. Local Rust
+Clippy, full tests and benchmark compilation validate the compatible update before
+the follow-up commit. Fresh CI verifies the committed lockfiles.
