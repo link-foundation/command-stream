@@ -1,0 +1,101 @@
+{
+  "source": "test/js/bun/shell/shell-hang.test.ts",
+  "units": [
+    {
+      "line": 20,
+      "upstream": "fail > %s (shell-hang-error-fixture.js, shell-hang-success-and-error.js, shell-hang-first-works-second-fails.js)",
+      "disposition": "case",
+      "note": "upstream runs each fixture with bun (Bun.$.throws(true)) and asserts it does not hang (700ms) and exits non-zero (the ShellError is unhandled). Here the fixture's commands run with throws:true and must reject with a ShellError.",
+      "cases": [
+        {
+          "id": "shell-hang/error-fixture",
+          "throws": true,
+          "template": ["not-found-command-1234 || not-found-command-5678"],
+          "expect": {
+            "error": "Failed with exit code 1",
+            "exitCode": 1,
+            "stdout": "",
+            "stderr": "bun: command not found: not-found-command-1234\nbun: command not found: not-found-command-5678\n"
+          }
+        },
+        {
+          "id": "shell-hang/success-and-error",
+          "throws": true,
+          "template": ["echo 1 && not-found-command-1234"],
+          "expect": {
+            "error": "Failed with exit code 1",
+            "exitCode": 1,
+            "stdout": "1\n",
+            "stderr": "bun: command not found: not-found-command-1234\n"
+          }
+        },
+        {
+          "id": "shell-hang/first-works-second-fails-first",
+          "throws": true,
+          "template": ["which node"],
+          "requires": ["node"],
+          "expect": {
+            "stdout": {
+              "regex": "^.*node(\\.exe)?\\n$",
+              "flags": "i"
+            }
+          },
+          "note": "first await of the fixture succeeds"
+        },
+        {
+          "id": "shell-hang/first-works-second-fails-second",
+          "throws": true,
+          "template": ["which which bad-command-that-does-not-exist"],
+          "requires": ["which"],
+          "expect": {
+            "error": "Failed with exit code 1",
+            "exitCode": 1,
+            "stdout": {
+              "regex": "^.*which(\\.exe)?\\nwhich: bad-command-that-does-not-exist not found\\n$",
+              "flags": "i"
+            },
+            "stderr": ""
+          },
+          "note": "builtin which resolves `which` through PATH (prints the external which path, not a builtin marker); the not-found message goes to stdout"
+        }
+      ]
+    },
+    {
+      "line": 31,
+      "upstream": "pass > %s (shell-hang-error-or-success.js, shell-hang-fixture-success-and-success.js, shell-hang-success-fixture.js)",
+      "disposition": "case",
+      "note": "upstream asserts the bun fixture exits 0 without hanging (700ms); the fixture uses Bun.$.throws(true), so the command must resolve.",
+      "cases": [
+        {
+          "id": "shell-hang/error-or-success",
+          "throws": true,
+          "template": ["not-found-command-1234 || echo 42"],
+          "expect": {
+            "stdout": "42\n",
+            "stderr": "bun: command not found: not-found-command-1234\n"
+          }
+        },
+        {
+          "id": "shell-hang/success-and-success",
+          "throws": true,
+          "template": ["which node && which node"],
+          "requires": ["node"],
+          "expect": {
+            "stdout": {
+              "regex": "^(.*node(\\.exe)?\\n){2}$",
+              "flags": "i"
+            }
+          }
+        },
+        {
+          "id": "shell-hang/success-fixture",
+          "throws": true,
+          "template": ["echo 1 && echo 2"],
+          "expect": {
+            "stdout": "1\n2\n"
+          }
+        }
+      ]
+    }
+  ]
+}

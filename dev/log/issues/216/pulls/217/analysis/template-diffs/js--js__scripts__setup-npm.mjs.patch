@@ -1,0 +1,260 @@
+--- js-template/scripts/setup-npm.mjs
++++ js/scripts/setup-npm.mjs
+@@ -1,24 +1,44 @@
+-#!/usr/bin/env node
+-
+-import { resolve } from 'node:path';
+-import process from 'node:process';
+-import { fileURLToPath } from 'node:url';
+-
+-/**
+- * Update npm for OIDC trusted publishing
+- * npm trusted publishing requires npm >= 11.5.1
+- * Node.js 20.x ships with npm 10.x, so we need to update
++#!/usr/bin/env bun
++
++/**
++ * Update npm for OIDC trusted publishing.
++ *
++ * npm trusted publishing (the keyless, secret-free flow this repo relies on)
++ * requires npm >= 11.5.1. The Node.js runtimes used by GitHub Actions ship with
++ * older npm, so we must update before publishing. If npm cannot be brought to a
++ * version that supports OIDC, publishing would silently fall back to (missing)
++ * token auth and fail with an opaque E404 on PUT — one of the failure modes
++ * behind issue #166. So this script asserts the final npm version and fails
++ * loudly when OIDC is unsupported, instead of letting the publish step discover
++ * it later.
++ *
++ * Ported from the js pipeline template
++ * (link-foundation/js-ai-driven-development-pipeline-template,
++ * scripts/setup-npm.mjs), adapted to bun. The pure version helpers are exported
++ * so tests can exercise the gating logic without fetching dependencies or
++ * mutating the global npm install.
+  *
+  * Uses link-foundation libraries:
+  * - use-m: Dynamic package loading without package.json dependencies
+  * - command-stream: Modern shell command execution with streaming support
+  */
+ 
++import { resolve } from 'node:path';
++import process from 'node:process';
++import { fileURLToPath } from 'node:url';
++import { loadUseM } from './use-m-loader.mjs';
++import { runChecked } from './run-checked.mjs';
++
+ export const NPM_MIN_VERSION = '11.5.1';
+-export const NODE_MIN_VERSION = '22.14.0';
+-export const NPM_TARGET_MAJOR = 11;
++export const NODE_MIN_VERSION = '22.22.2';
++export const NPM_TARGET_MAJOR = 12;
+ export const NPM_REGISTRY_METADATA_URL = 'https://registry.npmjs.org/npm';
+ 
++/**
++ * Parse a semantic version string into numeric components.
++ * @param {string} version
++ * @returns {{major: number, minor: number, patch: number, prerelease: string}}
++ */
+ export function parseVersion(version) {
+   const match = String(version)
+     .trim()
+@@ -38,6 +58,12 @@
+   };
+ }
+ 
++/**
++ * Compare two semantic versions (-1, 0, 1).
++ * @param {string} leftVersion
++ * @param {string} rightVersion
++ * @returns {number}
++ */
+ export function compareVersions(leftVersion, rightVersion) {
+   const left = parseVersion(leftVersion);
+   const right = parseVersion(rightVersion);
+@@ -64,18 +90,45 @@
+   return left.prerelease > right.prerelease ? 1 : -1;
+ }
+ 
++/**
++ * Whether version >= minimumVersion.
++ * @param {string} version
++ * @param {string} minimumVersion
++ * @returns {boolean}
++ */
+ export function isVersionAtLeast(version, minimumVersion) {
+   return compareVersions(version, minimumVersion) >= 0;
+ }
+ 
++/**
++ * Whether the npm version supports OIDC trusted publishing.
++ * @param {string} version
++ * @returns {boolean}
++ */
+ export function isSupportedNpmVersion(version) {
+   return isVersionAtLeast(version, NPM_MIN_VERSION);
+ }
+ 
++/**
++ * Whether Node.js satisfies npm 12's supported runtime ranges.
++ * @param {string} version
++ * @returns {boolean}
++ */
+ export function isSupportedNodeVersion(version) {
+-  return isVersionAtLeast(version, NODE_MIN_VERSION);
+-}
+-
++  const { major } = parseVersion(version);
++  return (
++    (major === 22 && isVersionAtLeast(version, NODE_MIN_VERSION)) ||
++    (major === 24 && isVersionAtLeast(version, '24.15.0')) ||
++    isVersionAtLeast(version, '26.0.0')
++  );
++}
++
++/**
++ * Pick the newest stable npm 12.x release (at or above the OIDC minimum) from
++ * registry metadata.
++ * @param {{versions?: Object}} metadata
++ * @returns {{version: string, tarballUrl: string}}
++ */
+ export function selectLatestSupportedNpmRelease(metadata) {
+   const releases = Object.entries(metadata?.versions || {})
+     .filter(([version, release]) => {
+@@ -120,24 +173,24 @@
+   return selectLatestSupportedNpmRelease(metadata);
+ }
+ 
+-// Update npm for OIDC trusted publishing (requires >= 11.5.1)
+-// Pin to npm@11 to avoid breaking changes from future major versions
++// Update npm for OIDC trusted publishing (requires >= 11.5.1).
++// Pin to npm@12 to avoid breaking changes from future major versions.
+ //
+-// Known issue: Node.js 22.22.2 on GitHub Actions (ubuntu-24.04 image >= 20260329.72.1)
+-// ships with a broken npm 10.9.7 that is missing the 'promise-retry' module,
+-// causing `npm install -g` to fail with MODULE_NOT_FOUND.
++// Known issue: some GitHub Actions runner images ship a broken npm that is
++// missing the 'promise-retry' module, causing `npm install -g` to fail with
++// MODULE_NOT_FOUND.
+ // See: https://github.com/actions/runner-images/issues/13883
+ // See: https://github.com/nodejs/node/issues/62430
+ // See: https://github.com/npm/cli/issues/9151
+ //
+ // Workaround strategies in order of preference:
+-// 1. npm install -g npm@11 (standard approach)
++// 1. npm install -g npm@12 (standard approach)
+ // 2. curl tarball download (bypasses broken npm entirely)
+-// 3. npx npm@11 install (uses npx cache, bypasses arborist)
++// 3. npx npm@12 install (uses npx cache, bypasses arborist)
+ // 4. corepack as last resort
+ 
+ async function tryStandardInstall($) {
+-  await $`npm install -g npm@11`;
++  await runChecked($`npm install -g npm@12`);
+ }
+ 
+ async function tryCurlTarball($, fetchFn) {
+@@ -149,27 +202,20 @@
+   ).stdout.trim();
+   const globalNpmDir = `${nodeDir}/lib/node_modules/npm`;
+   const tempNpmDir = '/tmp/setup-npm-package';
+-  const tarball = '/tmp/setup-npm-package.tgz';
+-
+-  // Download to a file, not straight into the extractor: a mid-transfer
+-  // truncation (curl exit 18) must not leave a half-populated directory, and
+-  // a retried piped transfer can hand the extractor the head of the archive
+-  // twice. `--retry` alone does not cover exit 18; `--retry-all-errors` is
+-  // what retries it.
+-  await $`rm -f "${tarball}"`;
+-  await $`curl -fsSL --retry 3 --retry-delay 2 --retry-all-errors "${npmRelease.tarballUrl}" -o "${tarball}"`;
+-  await $`rm -rf "${tempNpmDir}" && mkdir -p "${tempNpmDir}"`;
+-  await $`tar xz --strip-components=1 -C "${tempNpmDir}" -f "${tarball}"`;
+-  await $`rm -rf "${globalNpmDir}" && mv "${tempNpmDir}" "${globalNpmDir}"`;
++
++  await runChecked($`rm -rf "${tempNpmDir}" && mkdir -p "${tempNpmDir}"`);
++  await runChecked(
++    $`curl -fsSL "${npmRelease.tarballUrl}" | tar xz --strip-components=1 -C "${tempNpmDir}" && rm -rf "${globalNpmDir}" && mv "${tempNpmDir}" "${globalNpmDir}"`
++  );
+ }
+ 
+ async function tryNpxInstall($) {
+-  await $`npx --yes npm@11 install -g npm@11`;
++  await runChecked($`npx --yes npm@12 install -g npm@12`);
+ }
+ 
+ async function tryCorepack($) {
+-  await $`corepack enable`;
+-  await $`corepack prepare npm@11 --activate`;
++  await runChecked($`corepack enable`);
++  await runChecked($`corepack prepare npm@12 --activate`);
+ }
+ 
+ async function tryStrategy(name, fn) {
+@@ -184,7 +230,7 @@
+ 
+ function failUnsupportedNodeVersion(nodeVersion) {
+   console.error(
+-    `ERROR: Node.js ${NODE_MIN_VERSION} or later is required for npm OIDC trusted publishing setup.`
++    `ERROR: npm 12 publishing setup requires Node.js ^${NODE_MIN_VERSION}, ^24.15.0, or >=26.0.0.`
+   );
+   console.error(`Current Node.js version is ${nodeVersion}.`);
+   process.exit(1);
+@@ -199,6 +245,12 @@
+   process.exit(1);
+ }
+ 
++/**
++ * Bring npm to an OIDC-capable version, trying multiple strategies, and assert
++ * the result. command-stream's `$` is passed in so this stays testable.
++ * @param {Function} $ - command-stream tagged template
++ * @param {Function} [fetchFn] - fetch implementation (overridable in tests)
++ */
+ export async function setupNpm($, fetchFn = fetch) {
+   const nodeVersion = process.version;
+   console.log(`Current Node.js version: ${nodeVersion}`);
+@@ -212,7 +264,7 @@
+   console.log(`Current npm version: ${currentVersion}`);
+ 
+   const strategies = [
+-    ['npm install -g npm@11', () => tryStandardInstall($)],
++    ['npm install -g npm@12', () => tryStandardInstall($)],
+     ['curl-based tarball download', () => tryCurlTarball($, fetchFn)],
+     ['npx-based install', () => tryNpxInstall($)],
+     ['corepack', () => tryCorepack($)],
+@@ -226,16 +278,12 @@
+       break;
+     }
+     console.warn(
+-      'This may be the Node.js 22.22.2 broken npm issue (actions/runner-images#13883).'
+-    );
+-  }
+-
+-  if (!success) {
+-    if (isSupportedNpmVersion(currentVersion)) {
+-      console.log(
+-        'Current npm version already supports OIDC trusted publishing'
+-      );
+-    }
++      'This may be a broken bundled-npm runner image (actions/runner-images#13883).'
++    );
++  }
++
++  if (!success && isSupportedNpmVersion(currentVersion)) {
++    console.log('Current npm version already supports OIDC trusted publishing');
+   }
+ 
+   const updatedResult = await $`npm --version`.run({ capture: true });
+@@ -259,11 +307,10 @@
+       failUnsupportedNodeVersion(process.version);
+     }
+ 
+-    // Load command-stream dynamically only for CLI execution, so tests can
+-    // import the pure version helpers without fetching dependencies or
+-    // mutating npm.
+-    const { loadCommandStream } = await import('./use-module.mjs');
+-    const { $ } = await loadCommandStream();
++    // Load use-m dynamically only for CLI execution, so tests can import the
++    // pure version helpers without fetching dependencies or mutating npm.
++    const use = await loadUseM();
++    const { $ } = await use('command-stream');
+ 
+     await setupNpm($);
+   } catch (error) {

@@ -1,0 +1,22 @@
+template commit: 1e43fdb4fb26d69376b8663674c170212eb01765
+files: .changeset .prettierignore .prettierrc CHANGELOG.md deno.json deno.lock node_modules package-lock.json package.json 
+devEngines: {"packageManager":{"name":"npm"}}
+config.format = "(unset: auto)"
+deno on PATH: none
+🦋 changeset v3.0.3
+
+Error: spawn deno ENOENT
+    at ChildProcess._handle.onexit (node:internal/child_process:315:19)
+    at onErrorNT (node:internal/child_process:553:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+🦋 Exited with code 1
+
+changeset version exit status: 1
+pending changesets left: 1
+# @link-foundation/example-package-name
+
+## 0.11.32
+
+### Patch Changes
+
+- Check the release versioning step.

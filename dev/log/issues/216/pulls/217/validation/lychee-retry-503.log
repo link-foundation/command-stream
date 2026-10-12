@@ -1,0 +1,4 @@
+503s before success=2 args=['--max-retries', '2'] -> exit=2 requests=1
+503s before success=2 args=['--max-retries', '3', '--retry-wait-time', '5'] -> exit=2 requests=1
+503s before success=3 args=['--max-retries', '2'] -> exit=2 requests=1
+503s before success=3 args=['--max-retries', '3', '--retry-wait-time', '5'] -> exit=2 requests=1

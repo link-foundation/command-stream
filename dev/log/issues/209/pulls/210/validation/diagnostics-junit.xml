@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="bun test" tests="6" assertions="28" failures="0" skipped="0" time="0.102276092">
+  <testsuite name="js/tests/ci-regressions.test.mjs" file="js/tests/ci-regressions.test.mjs" tests="6" assertions="28" failures="0" skipped="0" time="0.019932045" hostname="1bb024f7b33b">
+    <testcase name="issue #209: dependency review cannot turn an unavailable API into success" classname="" time="0.002143" file="js/tests/ci-regressions.test.mjs" line="13" assertions="2" />
+    <testcase name="issue #209: manual js releases require successful checks on main" classname="" time="0.001219" file="js/tests/ci-regressions.test.mjs" line="23" assertions="8" />
+    <testcase name="issue #209: manual rust releases require successful checks on main" classname="" time="0.000739" file="js/tests/ci-regressions.test.mjs" line="23" assertions="8" />
+    <testcase name="issue #209: a parity exemption only exempts paired changes, not executable checks" classname="" time="0.000483" file="js/tests/ci-regressions.test.mjs" line="37" assertions="4" />
+    <testcase name="issue #209: source changes trigger both language benchmark checks" classname="" time="0.001275" file="js/tests/ci-regressions.test.mjs" line="54" assertions="4" />
+    <testcase name="issue #209: Pages configuration fails before dependency installation" classname="" time="0.000314" file="js/tests/ci-regressions.test.mjs" line="61" assertions="2" />
+  </testsuite>
+</testsuites>

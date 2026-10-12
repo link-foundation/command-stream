@@ -1,0 +1,135 @@
+--- js-template/scripts/simulate-fresh-merge.sh
++++ .github/scripts/simulate-fresh-merge.sh
+@@ -1,90 +1,56 @@
+ #!/usr/bin/env bash
+-# simulate-fresh-merge.sh
+ #
+-# Simulates a fresh merge of the current PR branch with the latest base branch.
+-# This ensures CI checks run against the actual merge result, not a stale merge preview.
++# Fresh merge simulation.
+ #
+-# Usage:
+-#   BASE_REF=main bash scripts/simulate-fresh-merge.sh
++# A pull-request run checks out GitHub's merge preview, refs/pull/N/merge. That
++# ref is computed when the pull request is opened or synchronised, so a run that
++# starts after main has moved can still be validating an old merge base: the
++# checks pass, the merge lands, and main breaks on code no job ever saw
++# together. Merging the current base branch into the checkout before the checks
++# run removes that window, and a merge conflict fails the job with a clear
++# message instead of surfacing as a conflict at merge time.
+ #
+-# Environment variables:
+-#   BASE_REF  The base branch to merge with (e.g. "main"). Required.
++# This is principle #7 ("Validate the actual merge result") of
++# https://github.com/link-assistant/hive-mind/blob/main/docs/CI-CD-BEST-PRACTICES.md
+ #
+-# Exit code 0 = merge succeeded or not needed; non-zero = merge conflict detected.
++# The merge is local to the runner: nothing is pushed, and the jobs that call
++# this check out with persist-credentials: false.
+ #
+-# See docs/case-studies/issue-23 for why this is critical.
+-
++# Requirements: the calling job must check out with `fetch-depth: 0`, otherwise
++# the shallow clone has no merge base to work from.
++#
++# Environment:
++#   BASE_REF - the base branch to merge in (default: main). In GitHub Actions
++#              this is github.base_ref, which is set only for pull_request
++#              events; the calling step is guarded accordingly.
++#
++# Usage (locally, on a branch):
++#   BASE_REF=main bash .github/scripts/simulate-fresh-merge.sh
+ set -euo pipefail
+ 
+-echo "=== Synchronizing PR with latest $BASE_REF ==="
+-echo "This prevents stale merge preview issues (see docs/case-studies/issue-23)"
+-echo ""
++BASE_REF="${BASE_REF:-main}"
+ 
+-# Configure git for merge
+-# The 41898282+ prefix is what links the commit to the github-actions[bot]
+-# account. Without it the commit is "unattributed", and a ruleset with
+-# require_extra_approval_for_unattributed_changes will demand a human
+-# approval before an automated release pull request can be merged.
+-git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+-git config user.name "github-actions[bot]"
++# An identity is required for `git merge` to be able to write a merge commit.
++# The 41898282+ prefix is the one that attributes a commit to github-actions[bot];
++# the commit never leaves the runner, but using the right identity keeps it out
++# of the "unattributed" bucket if it ever does.
++git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
++git config user.name 'github-actions[bot]'
+ 
+-# Fetch the latest base branch
+-echo "Fetching latest $BASE_REF..."
++git fetch --no-tags origin "${BASE_REF}"
+ 
+-# A transient failure of this one fetch used to end the job under
+-# set -e (a runner-side DNS blip turned a required check red). Retry with
+-# backoff; a base branch that truly cannot be fetched must still fail,
+-# because silently skipping the merge simulation is the false negative this
+-# check exists to prevent.
+-fetch_with_retry() {
+-  local attempt=1
+-  local max_attempts=5
+-  local delay="${FRESH_MERGE_RETRY_DELAY_SECONDS:-5}"
++behind="$(git rev-list --count "HEAD..origin/${BASE_REF}")"
++if [ "${behind}" -eq 0 ]; then
++  echo "Merge preview already contains every commit on ${BASE_REF}; nothing to simulate."
++  exit 0
++fi
+ 
+-  while :; do
+-    if git fetch origin "$@"; then
+-      return 0
+-    fi
+-    if [ "$attempt" -ge "$max_attempts" ]; then
+-      echo "::error::git fetch origin $* failed $max_attempts times; the base branch could not be read" >&2
+-      return 1
+-    fi
+-    echo "git fetch origin $* failed (attempt $attempt/$max_attempts); retrying in $((delay * attempt))s" >&2
+-    sleep "$((delay * attempt))"
+-    attempt=$((attempt + 1))
+-  done
+-}
++echo "${BASE_REF} has ${behind} commit(s) that the merge preview does not contain."
++echo "Merging origin/${BASE_REF} so the checks below run against the real merge result."
+ 
+-fetch_with_retry "$BASE_REF"
++if ! git merge "origin/${BASE_REF}" --no-edit; then
++  echo "::error::Merge conflict with ${BASE_REF}. Update this branch before it can be merged."
++  exit 1
++fi
+ 
+-# Get current and base branch info
+-CURRENT_SHA=$(git rev-parse HEAD)
+-BASE_SHA=$(git rev-parse "origin/$BASE_REF")
+-
+-echo "Current checkout (merge preview): $CURRENT_SHA"
+-echo "Latest base branch ($BASE_REF): $BASE_SHA"
+-echo ""
+-
+-# Check if base branch has new commits not in the merge preview
+-BEHIND_COUNT=$(git rev-list --count "HEAD..origin/$BASE_REF")
+-
+-if [ "$BEHIND_COUNT" -eq 0 ]; then
+-  echo "Merge preview is up-to-date with $BASE_REF. No simulation needed."
+-else
+-  echo "Base branch has $BEHIND_COUNT new commit(s) since PR was opened/synced."
+-  echo "Simulating fresh merge to validate actual merge result..."
+-  echo ""
+-
+-  # Attempt to merge the latest base branch
+-  if git merge "origin/$BASE_REF" --no-edit; then
+-    echo ""
+-    echo "Fresh merge simulation successful!"
+-    echo "Checks will now run against the up-to-date merged state."
+-  else
+-    echo ""
+-    echo "::error::Merge conflict detected! PR needs to be rebased/updated before it can be merged."
+-    echo "The PR branch is out of sync with $BASE_REF and cannot be automatically merged."
+-    exit 1
+-  fi
+-fi
+-echo ""
++echo "Fresh merge succeeded; the checks below run against the merged tree."

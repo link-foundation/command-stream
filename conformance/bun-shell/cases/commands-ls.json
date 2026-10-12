@@ -1,0 +1,1098 @@
+{
+  "source": "test/js/bun/shell/commands/ls.test.ts",
+  "units": [
+    {
+      "line": 72,
+      "upstream": "recursive > node_modules",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-ls/recursive-node-modules",
+          "template": ["ls -RA ."],
+          "files": {
+            "package.json": "{\"name\":\"dummy\"}\n",
+            "node_modules/.package-lock.json": "{}\n",
+            "node_modules/.bin/tsc": {
+              "symlink": "../typescript/bin/tsc"
+            },
+            "node_modules/typescript/package.json": "{}\n",
+            "node_modules/typescript/bin/tsc": "#!/usr/bin/env node\n",
+            "node_modules/typescript/lib/typescript.js": "",
+            "node_modules/typescript/lib/tsc.js": "",
+            "node_modules/react/package.json": "{}\n",
+            "node_modules/react/index.js": "",
+            "node_modules/react/cjs/react.development.js": "",
+            "node_modules/react/cjs/react.production.min.js": "",
+            "node_modules/@types/react/index.d.ts": "",
+            "node_modules/@types/react/package.json": "{}\n",
+            "node_modules/esbuild/.npmignore": "",
+            "node_modules/esbuild/install.js": ""
+          },
+          "platforms": ["posix"],
+          "expect": {
+            "stdout": {
+              "sortedLines": [
+                "node_modules",
+                "package.json",
+                "./node_modules:",
+                ".bin",
+                ".package-lock.json",
+                "@types",
+                "esbuild",
+                "react",
+                "typescript",
+                "./node_modules/.bin:",
+                "tsc",
+                "./node_modules/@types:",
+                "react",
+                "./node_modules/@types/react:",
+                "index.d.ts",
+                "package.json",
+                "./node_modules/esbuild:",
+                ".npmignore",
+                "install.js",
+                "./node_modules/react:",
+                "cjs",
+                "index.js",
+                "package.json",
+                "./node_modules/react/cjs:",
+                "react.development.js",
+                "react.production.min.js",
+                "./node_modules/typescript:",
+                "bin",
+                "lib",
+                "package.json",
+                "./node_modules/typescript/bin:",
+                "tsc",
+                "./node_modules/typescript/lib:",
+                "tsc.js",
+                "typescript.js"
+              ]
+            }
+          },
+          "note": "upstream runs `bun install` of a real package.json (network) then checks `ls -RA .` lists every entry; reproduced with a synthetic node_modules tree (incl. dot entries and a symlink to a file, which is listed but not followed)"
+        }
+      ]
+    },
+    {
+      "line": 79,
+      "upstream": "recursive > basic",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-ls/recursive-basic",
+          "template": ["ls -RA ."],
+          "files": {
+            "a": "",
+            "b": "",
+            "c": "",
+            "foo/a": "",
+            "foo/b": "",
+            "foo/c": ""
+          },
+          "expect": {
+            "stdout": {
+              "sortedLines": [
+                ".{{SEP}}foo:",
+                "a",
+                "a",
+                "b",
+                "b",
+                "c",
+                "c",
+                "foo"
+              ]
+            }
+          },
+          "note": "Bun lists the top-level directory without a '.:' header; subdirectory headers are './foo:'. Entry order is readdir/concurrency dependent, hence sortedLines. `ls -R` joins directory headers with the native separator"
+        }
+      ]
+    },
+    {
+      "line": 87,
+      "upstream": "basic flags > no arguments (current directory)",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-ls/no-args",
+          "template": ["ls"],
+          "files": {
+            "a": "",
+            "b": "",
+            "c": "",
+            "foo/a": "",
+            "foo/b": "",
+            "foo/c": ""
+          },
+          "expect": {
+            "stdout": {
+              "sortedLines": ["a", "b", "c", "foo"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 94,
+      "upstream": "basic flags > -a flag shows all files including . and ..",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-ls/flag-a",
+          "template": ["ls -a"],
+          "files": {
+            ".hidden": "",
+            "regular": ""
+          },
+          "dirs": [".hidden-dir"],
+          "expect": {
+            "stdout": {
+              "sortedLines": [".", "..", ".hidden", ".hidden-dir", "regular"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 108,
+      "upstream": "basic flags > -A flag shows almost all (excludes . and ..)",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-ls/flag-A",
+          "template": ["ls -A"],
+          "files": {
+            ".hidden": "",
+            "regular": ""
+          },
+          "expect": {
+            "stdout": {
+              "sortedLines": [".hidden", "regular"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 120,
+      "upstream": "basic flags > -d flag lists directories themselves",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-ls/flag-d",
+          "template": ["ls -d foo"],
+          "files": {
+            "a": "",
+            "b": "",
+            "c": "",
+            "foo/a": "",
+            "foo/b": "",
+            "foo/c": ""
+          },
+          "expect": {
+            "stdout": "foo\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 133,
+      "upstream": "multiple arguments > multiple files",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-ls/multiple-files",
+          "template": ["ls a b c"],
+          "files": {
+            "a": "",
+            "b": "",
+            "c": "",
+            "foo/a": "",
+            "foo/b": "",
+            "foo/c": ""
+          },
+          "expect": {
+            "stdout": {
+              "sortedLines": ["a", "b", "c"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 140,
+      "upstream": "multiple arguments > multiple directories",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-ls/multiple-dirs",
+          "template": ["ls dir1 dir2"],
+          "files": {
+            "dir1/file1": "",
+            "dir2/file2": ""
+          },
+          "expect": {
+            "stdout": {
+              "sortedLines": ["dir1:", "dir2:", "file1", "file2"]
+            }
+          },
+          "note": "each directory operand is printed as '<dir>:' followed by its entries"
+        }
+      ]
+    },
+    {
+      "line": 149,
+      "upstream": "multiple arguments > mixed files and directories",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-ls/mixed-files-and-dirs",
+          "template": ["ls a foo"],
+          "files": {
+            "a": "",
+            "b": "",
+            "c": "",
+            "foo/a": "",
+            "foo/b": "",
+            "foo/c": ""
+          },
+          "expect": {
+            "stdout": {
+              "sortedLines": ["a", "foo:", "a", "b", "c"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 158,
+      "upstream": "edge cases > empty directory",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-ls/empty-dir",
+          "template": ["ls empty"],
+          "dirs": ["empty"],
+          "expect": {
+            "stdout": ""
+          }
+        }
+      ]
+    },
+    {
+      "line": 164,
+      "upstream": "edge cases > directory with only hidden files using -a",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-ls/hidden-only-a",
+          "template": ["ls -a hidden-only"],
+          "files": {
+            "hidden-only/.hidden1": "",
+            "hidden-only/.hidden2": ""
+          },
+          "expect": {
+            "stdout": {
+              "sortedLines": [".", "..", ".hidden1", ".hidden2"]
+            }
+          },
+          "note": "a single directory operand prints no '<dir>:' header"
+        }
+      ]
+    },
+    {
+      "line": 173,
+      "upstream": "edge cases > very long filename",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-ls/long-filename",
+          "template": ["ls"],
+          "setup": [
+            {
+              "template": ["touch ", ""],
+              "values": [
+                {
+                  "string": {
+                    "repeat": "a",
+                    "count": 100
+                  }
+                }
+              ]
+            }
+          ],
+          "expect": {
+            "stdout": {
+              "concat": [
+                {
+                  "repeat": "a",
+                  "count": 100
+                },
+                "\n"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 183,
+      "upstream": "edge cases > filename with spaces",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-ls/filename-with-spaces",
+          "template": ["ls"],
+          "setup": [
+            {
+              "template": ["touch \"file with spaces\""]
+            }
+          ],
+          "expect": {
+            "stdout": "file with spaces\n",
+            "exists": ["file with spaces"]
+          }
+        }
+      ]
+    },
+    {
+      "line": 192,
+      "upstream": "edge cases > filename with special characters",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-ls/filename-special-chars",
+          "template": ["ls"],
+          "setup": [
+            {
+              "template": ["touch \"file-with-!@#$%^&*()\""]
+            }
+          ],
+          "platforms": ["posix"],
+          "expect": {
+            "stdout": "file-with-!@#$%^&*()\n",
+            "exists": ["file-with-!@#$%^&*()"]
+          },
+          "note": "`$%` inside double quotes is not a variable expansion; the name is created literally"
+        }
+      ]
+    },
+    {
+      "line": 203,
+      "upstream": "flag combinations > -Ra flag (recursive + show all)",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-ls/flag-Ra",
+          "template": ["ls -Ra"],
+          "files": {
+            ".hidden": "",
+            "sub/.hidden-sub": ""
+          },
+          "expect": {
+            "stdout": {
+              "sortedLines": [
+                ".",
+                "..",
+                ".hidden",
+                "sub",
+                ".{{SEP}}sub:",
+                ".",
+                "..",
+                ".hidden-sub"
+              ]
+            }
+          },
+          "note": "-R with -a does not recurse into . and .. `ls -R` joins directory headers with the native separator"
+        }
+      ]
+    },
+    {
+      "line": 213,
+      "upstream": "flag combinations > -RA flag (recursive + almost all)",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-ls/flag-RA",
+          "template": ["ls -RA"],
+          "files": {
+            ".hidden": "",
+            "sub/.hidden-sub": ""
+          },
+          "expect": {
+            "stdout": {
+              "sortedLines": [".hidden", "sub", ".{{SEP}}sub:", ".hidden-sub"]
+            }
+          },
+          "note": "`ls -R` joins directory headers with the native separator"
+        }
+      ]
+    },
+    {
+      "line": 224,
+      "upstream": "flag combinations > -a and -A: last one wins (separate args)",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-ls/a-then-A-separate",
+          "template": ["ls -a -A"],
+          "files": {
+            ".hidden": "",
+            "visible": ""
+          },
+          "expect": {
+            "stdout": {
+              "sortedLines": [".hidden", "visible"]
+            }
+          }
+        },
+        {
+          "id": "commands-ls/A-then-a-separate",
+          "template": ["ls -A -a"],
+          "files": {
+            ".hidden": "",
+            "visible": ""
+          },
+          "expect": {
+            "stdout": {
+              "sortedLines": [".", "..", ".hidden", "visible"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 239,
+      "upstream": "flag combinations > -a and -A: last one wins (combined arg)",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-ls/aA-combined",
+          "template": ["ls -aA"],
+          "files": {
+            ".hidden": "",
+            "visible": ""
+          },
+          "expect": {
+            "stdout": {
+              "sortedLines": [".hidden", "visible"]
+            }
+          }
+        },
+        {
+          "id": "commands-ls/Aa-combined",
+          "template": ["ls -Aa"],
+          "files": {
+            ".hidden": "",
+            "visible": ""
+          },
+          "expect": {
+            "stdout": {
+              "sortedLines": [".", "..", ".hidden", "visible"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 254,
+      "upstream": "flag combinations > -d with multiple directories",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-ls/d-multiple-dirs",
+          "template": ["ls -d dir1 dir2"],
+          "dirs": ["dir1", "dir2"],
+          "expect": {
+            "stdout": {
+              "sortedLines": ["dir1", "dir2"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 268,
+      "upstream": "errors > ls -R lskdjflksdjf (runAsTest; command is `ls lskdjflksdjf`)",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-ls/nonexistent",
+          "template": ["ls lskdjflksdjf"],
+          "expect": {
+            "stderr": "ls: lskdjflksdjf: No such file or directory\n",
+            "exitCode": 1
+          }
+        }
+      ]
+    },
+    {
+      "line": 270,
+      "upstream": "errors > multiple non-existent files",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-ls/multiple-nonexistent",
+          "template": ["ls nonexistent1 nonexistent2"],
+          "expect": {
+            "stderr": {
+              "sortedLines": [
+                "ls: nonexistent1: No such file or directory",
+                "ls: nonexistent2: No such file or directory"
+              ]
+            },
+            "exitCode": 1
+          }
+        }
+      ]
+    },
+    {
+      "line": 281,
+      "upstream": "errors > mixed existent and non-existent files",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-ls/mixed-existent-nonexistent",
+          "template": ["ls a nonexistent"],
+          "files": {
+            "a": "",
+            "b": "",
+            "c": "",
+            "foo/a": "",
+            "foo/b": "",
+            "foo/c": ""
+          },
+          "expect": {
+            "stdout": "a\n",
+            "stderr": "ls: nonexistent: No such file or directory\n",
+            "exitCode": 1
+          }
+        }
+      ]
+    },
+    {
+      "line": 290,
+      "upstream": "errors > invalid flag",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-ls/invalid-flag",
+          "template": ["ls -z"],
+          "expect": {
+            "stderr": "ls: illegal option -- z\n",
+            "exitCode": 1
+          }
+        }
+      ]
+    },
+    {
+      "line": 297,
+      "upstream": "errors > invalid combined flags",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-ls/invalid-combined-flags",
+          "template": ["ls -az"],
+          "expect": {
+            "stderr": "ls: illegal option -- a\n",
+            "exitCode": 1
+          },
+          "note": "upstream only checks 'illegal option'. Bun 1.4.2 reports the FIRST character of the offending combined flag word ('-- a' for -az; `ls -za` reports '-- z', `ls --foo` reports '-- -')."
+        }
+      ]
+    },
+    {
+      "line": 304,
+      "upstream": "errors > permission denied directory",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-ls/permission-denied-dir",
+          "template": ["ls restricted"],
+          "dirs": ["restricted"],
+          "setup": [
+            {
+              "template": ["chmod 000 restricted"]
+            }
+          ],
+          "platforms": ["posix"],
+          "requires": ["chmod"],
+          "expect": {
+            "stderr": "ls: restricted: Permission denied\n",
+            "exitCode": 1
+          },
+          "note": "Relies on chmod 000 denying access: fails when the suite runs as root (root bypasses permission bits). Upstream checks stderr contains 'Permission denied'."
+        },
+        {
+          "id": "commands-ls/permission-denied-symlink-to-dir",
+          "template": ["ls link-to-restricted"],
+          "dirs": ["restricted"],
+          "files": {
+            "link-to-restricted": {
+              "symlink": "restricted"
+            }
+          },
+          "setup": [
+            {
+              "template": ["chmod 000 restricted"]
+            }
+          ],
+          "platforms": ["posix"],
+          "requires": ["chmod"],
+          "expect": {
+            "stdout": "",
+            "stderr": "ls: link-to-restricted: Permission denied\n",
+            "exitCode": 1
+          },
+          "note": "Relies on chmod 000 denying access: fails when the suite runs as root (root bypasses permission bits). A symlink to a directory that cannot be opened reports the open error instead of being listed by name."
+        }
+      ]
+    },
+    {
+      "line": 326,
+      "upstream": "errors > permission denied directory recursive",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-ls/permission-denied-recursive",
+          "template": ["ls -R level1"],
+          "files": {
+            "level1/file1": "",
+            "level1/file2": "",
+            "level1/file3": "",
+            "level1/level2/file4": "",
+            "level1/level2/file5": "",
+            "level1/level2/file6": "",
+            "level1/level2/level3/file7": "",
+            "level1/level2/level3/file8": "",
+            "level1/level2/level3/file9": ""
+          },
+          "setup": [
+            {
+              "template": ["chmod 000 level1/level2"]
+            }
+          ],
+          "platforms": ["posix"],
+          "requires": ["chmod"],
+          "expect": {
+            "stdout": {
+              "sortedLines": ["file1", "file2", "file3", "level2"]
+            },
+            "stderr": "ls: level1/level2: Permission denied\n",
+            "exitCode": 1
+          },
+          "note": "Relies on chmod 000 denying access: fails when the suite runs as root (root bypasses permission bits). The listing continues past the unreadable subdirectory and the exit code is 1. Runners should `chmod 755 level1/level2` before deleting the temp dir (upstream does this as cleanup)."
+        }
+      ]
+    },
+    {
+      "line": 352,
+      "upstream": "errors > broken symlink file",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-ls/broken-symlink-file",
+          "template": ["ls broken-link"],
+          "files": {
+            "will-remove": "",
+            "broken-link": {
+              "symlink": "will-remove"
+            }
+          },
+          "setup": [
+            {
+              "template": ["rm will-remove"]
+            }
+          ],
+          "platforms": ["posix"],
+          "expect": {
+            "stdout": "broken-link\n",
+            "exitCode": 0
+          }
+        },
+        {
+          "id": "commands-ls/broken-symlink-file-long",
+          "template": ["ls -l broken-link"],
+          "files": {
+            "will-remove": "",
+            "broken-link": {
+              "symlink": "will-remove"
+            }
+          },
+          "setup": [
+            {
+              "template": ["rm will-remove"]
+            }
+          ],
+          "platforms": ["posix"],
+          "expect": {
+            "stdout": {
+              "regex": "^lrwx[-rwxsStT]{6} +1 +\\S+ +\\S+ +11 .* broken-link\\n$"
+            },
+            "exitCode": 0
+          },
+          "note": "upstream: stdout starts with 'lrwx' and ends with ' broken-link\\n' (symlink perms differ Linux 0777 / macOS 0755). Size column is the link target length (11)."
+        }
+      ]
+    },
+    {
+      "line": 373,
+      "upstream": "errors > broken symlink directory",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-ls/broken-symlink-dir",
+          "template": ["ls broken-link"],
+          "dirs": ["will-remove"],
+          "files": {
+            "broken-link": {
+              "symlink": "will-remove"
+            }
+          },
+          "setup": [
+            {
+              "template": ["rm -rf will-remove"]
+            }
+          ],
+          "platforms": ["posix"],
+          "expect": {
+            "stdout": "broken-link\n",
+            "exitCode": 0,
+            "absent": ["will-remove"]
+          }
+        }
+      ]
+    },
+    {
+      "line": 384,
+      "upstream": "errors > symlink loop",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-ls/symlink-loop",
+          "template": ["ls loop"],
+          "files": {
+            "loop": {
+              "symlink": "loop"
+            }
+          },
+          "platforms": ["posix"],
+          "expect": {
+            "stdout": "loop\n",
+            "exitCode": 0
+          }
+        },
+        {
+          "id": "commands-ls/symlink-loop-child",
+          "template": ["ls loop/x"],
+          "files": {
+            "loop": {
+              "symlink": "loop"
+            }
+          },
+          "platforms": ["posix"],
+          "expect": {
+            "stdout": "",
+            "stderr": "ls: loop/x: Too many levels of symbolic links\n",
+            "exitCode": 1
+          }
+        }
+      ]
+    },
+    {
+      "line": 396,
+      "upstream": "errors > operand whose path goes through a regular file",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-ls/enotdir-f-x",
+          "template": ["ls f/x"],
+          "files": {
+            "f": "hello",
+            "sub/a": ""
+          },
+          "platforms": ["posix"],
+          "expect": {
+            "stdout": "",
+            "stderr": "ls: f/x: Not a directory\n",
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "commands-ls/enotdir-f-x-windows",
+          "template": ["ls f/x"],
+          "files": {
+            "f": "hello",
+            "sub/a": ""
+          },
+          "platforms": ["windows"],
+          "expect": {
+            "stdout": "",
+            "stderr": {
+              "startsWith": "ls: f/x: "
+            },
+            "exitCode": 1
+          },
+          "note": "upstream only checks the 'ls: <operand>: ' prefix on Windows"
+        },
+        {
+          "id": "commands-ls/enotdir-l-f-x",
+          "template": ["ls -l f/x"],
+          "files": {
+            "f": "hello",
+            "sub/a": ""
+          },
+          "platforms": ["posix"],
+          "expect": {
+            "stdout": "",
+            "stderr": "ls: f/x: Not a directory\n",
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "commands-ls/enotdir-l-f-x-windows",
+          "template": ["ls -l f/x"],
+          "files": {
+            "f": "hello",
+            "sub/a": ""
+          },
+          "platforms": ["windows"],
+          "expect": {
+            "stdout": "",
+            "stderr": {
+              "startsWith": "ls: f/x: "
+            },
+            "exitCode": 1
+          },
+          "note": "upstream only checks the 'ls: <operand>: ' prefix on Windows"
+        },
+        {
+          "id": "commands-ls/enotdir-d-f-x",
+          "template": ["ls -d f/x"],
+          "files": {
+            "f": "hello",
+            "sub/a": ""
+          },
+          "platforms": ["posix"],
+          "expect": {
+            "stdout": "",
+            "stderr": "ls: f/x: Not a directory\n",
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "commands-ls/enotdir-d-f-x-windows",
+          "template": ["ls -d f/x"],
+          "files": {
+            "f": "hello",
+            "sub/a": ""
+          },
+          "platforms": ["windows"],
+          "expect": {
+            "stdout": "",
+            "stderr": {
+              "startsWith": "ls: f/x: "
+            },
+            "exitCode": 1
+          },
+          "note": "upstream only checks the 'ls: <operand>: ' prefix on Windows"
+        },
+        {
+          "id": "commands-ls/enotdir-f-x-y-z",
+          "template": ["ls f/x/y/z"],
+          "files": {
+            "f": "hello",
+            "sub/a": ""
+          },
+          "platforms": ["posix"],
+          "expect": {
+            "stdout": "",
+            "stderr": "ls: f/x/y/z: Not a directory\n",
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "commands-ls/enotdir-f-x-y-z-windows",
+          "template": ["ls f/x/y/z"],
+          "files": {
+            "f": "hello",
+            "sub/a": ""
+          },
+          "platforms": ["windows"],
+          "expect": {
+            "stdout": "",
+            "stderr": {
+              "startsWith": "ls: f/x/y/z: "
+            },
+            "exitCode": 1
+          },
+          "note": "upstream only checks the 'ls: <operand>: ' prefix on Windows"
+        },
+        {
+          "id": "commands-ls/enotdir-sub-and-f-x",
+          "template": ["ls sub f/x"],
+          "files": {
+            "f": "hello",
+            "sub/a": ""
+          },
+          "platforms": ["posix"],
+          "expect": {
+            "stdout": {
+              "sortedLines": ["a", "sub:"]
+            },
+            "stderr": "ls: f/x: Not a directory\n",
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "commands-ls/enotdir-sub-and-f-x-windows",
+          "template": ["ls sub f/x"],
+          "files": {
+            "f": "hello",
+            "sub/a": ""
+          },
+          "platforms": ["windows"],
+          "expect": {
+            "stdout": {
+              "sortedLines": ["a", "sub:"]
+            },
+            "stderr": {
+              "startsWith": "ls: f/x: "
+            },
+            "exitCode": 1
+          },
+          "note": "upstream only checks the 'ls: <operand>: ' prefix on Windows"
+        },
+        {
+          "id": "commands-ls/enotdir-f-and-f-x",
+          "template": ["ls f f/x"],
+          "files": {
+            "f": "hello",
+            "sub/a": ""
+          },
+          "platforms": ["posix"],
+          "expect": {
+            "stdout": "f\n",
+            "stderr": "ls: f/x: Not a directory\n",
+            "exitCode": 1
+          }
+        },
+        {
+          "id": "commands-ls/enotdir-f-and-f-x-windows",
+          "template": ["ls f f/x"],
+          "files": {
+            "f": "hello",
+            "sub/a": ""
+          },
+          "platforms": ["windows"],
+          "expect": {
+            "stdout": "f\n",
+            "stderr": {
+              "startsWith": "ls: f/x: "
+            },
+            "exitCode": 1
+          },
+          "note": "upstream only checks the 'ls: <operand>: ' prefix on Windows"
+        }
+      ]
+    },
+    {
+      "line": 441,
+      "upstream": "errors > operand starting with a dot is not hidden",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-ls/dot-operand-hidden",
+          "template": ["ls .hidden"],
+          "files": {
+            ".hidden": "",
+            "f": "hello"
+          },
+          "expect": {
+            "stdout": ".hidden\n"
+          }
+        },
+        {
+          "id": "commands-ls/dot-operand-hidden-d",
+          "template": ["ls -d .hidden"],
+          "files": {
+            ".hidden": "",
+            "f": "hello"
+          },
+          "expect": {
+            "stdout": ".hidden\n"
+          }
+        },
+        {
+          "id": "commands-ls/dot-operand-dot-slash",
+          "template": ["ls ./f"],
+          "files": {
+            ".hidden": "",
+            "f": "hello"
+          },
+          "expect": {
+            "stdout": "./f\n"
+          }
+        },
+        {
+          "id": "commands-ls/dot-operand-dot-slash-long",
+          "template": ["ls -l ./f"],
+          "files": {
+            ".hidden": "",
+            "f": "hello"
+          },
+          "expect": {
+            "stdout": {
+              "allOf": [
+                {
+                  "endsWith": " ./f\n"
+                },
+                {
+                  "regex": "^-[-rwxsStT]{9} +1 +\\S+ +\\S+ +5 .* \\./f\\n$"
+                }
+              ]
+            }
+          },
+          "note": "upstream only checks the ' ./f\\n' suffix; Bun 1.4.2 -l format is '<mode>   1  <uid>  <gid>  <size> <Mon DD HH:MM> <name>' (numeric uid/gid)"
+        }
+      ]
+    },
+    {
+      "line": 464,
+      "upstream": "errors > broken symlink directory recursive",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-ls/broken-symlink-dir-recursive",
+          "template": ["ls -RA ."],
+          "files": {
+            "foo/a": "",
+            "foo/b": "",
+            "foo/c": "",
+            "foo/broken-link": {
+              "symlink": "will-remove"
+            }
+          },
+          "dirs": ["foo/will-remove"],
+          "setup": [
+            {
+              "template": ["rm -rf foo/will-remove"]
+            }
+          ],
+          "platforms": ["posix"],
+          "expect": {
+            "stdout": {
+              "sortedLines": ["./foo:", "a", "b", "broken-link", "c", "foo"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "nonUnitSites": [
+    {
+      "line": 124,
+      "reason": "commented-out test (-1 flag)"
+    }
+  ]
+}

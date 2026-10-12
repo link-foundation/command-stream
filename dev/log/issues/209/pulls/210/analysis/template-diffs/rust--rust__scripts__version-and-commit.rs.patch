@@ -1,0 +1,1119 @@
+--- rust-template/scripts/version-and-commit.rs
++++ rust/scripts/version-and-commit.rs
+@@ -24,8 +24,10 @@
+ //! ```
+ 
+ // `rust-script --test` builds this file as a test harness, where `main` is not
+-// the entry point, so every helper reachable only from `main` looks unused.
+-// The real (non-test) build still denies dead code.
++// the entry point. Everything reachable only from `main` -- most of the file --
++// is therefore unreferenced, and the pipeline's RUSTFLAGS=-Dwarnings turns that
++// into a build failure. The imports below were already gated on `not(test)` for
++// the same reason. The real, non-test build still denies dead code.
+ #![cfg_attr(test, allow(dead_code))]
+ 
+ #[cfg(not(test))]
+@@ -37,14 +39,55 @@
+ use std::fs;
+ use std::io::Write;
+ use std::path::{Path, PathBuf};
++use std::process::Command;
+ #[cfg(not(test))]
+ use std::process::exit;
+-use std::process::Command;
+-
+-#[path = "release-naming.rs"]
+-mod release_naming;
++
+ #[path = "rust-paths.rs"]
+ mod rust_paths;
++
++#[path = "release-git.rs"]
++mod release_git;
++
++const REPOSITORY_RULE_PATTERNS: &[&str] = &[
++    "gh006",
++    "gh013",
++    "repository rule violations",
++    "changes must be made through a pull request",
++    "protected branch",
++    "push declined",
++];
++
++const NON_FAST_FORWARD_PATTERNS: &[&str] =
++    &["non-fast-forward", "fetch first", "updates were rejected"];
++
++#[derive(Debug, PartialEq, Eq)]
++enum PushFailure {
++    /// A repository ruleset refuses the push; retrying cannot fix policy.
++    RepositoryRules,
++    /// The remote branch moved; rebase onto it and try again.
++    LostRace,
++    /// Anything else: report the real error instead of masking it.
++    Other,
++}
++
++fn classify_push_failure(raw_output: &str) -> PushFailure {
++    let haystack = raw_output.to_lowercase();
++    // Rules first: a ruleset rejection also contains the word "rejected".
++    if REPOSITORY_RULE_PATTERNS
++        .iter()
++        .any(|pattern| haystack.contains(pattern))
++    {
++        return PushFailure::RepositoryRules;
++    }
++    if NON_FAST_FORWARD_PATTERNS
++        .iter()
++        .any(|pattern| haystack.contains(pattern))
++    {
++        return PushFailure::LostRace;
++    }
++    PushFailure::Other
++}
+ 
+ fn get_arg(name: &str) -> Option<String> {
+     let args: Vec<String> = env::args().collect();
+@@ -94,17 +137,8 @@
+             if output.status.success() {
+                 Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+             } else {
+-                // Both streams: git writes push rejections to stderr but some
+-                // helpers log to stdout, and classifying a failure (issue #162)
+-                // must see everything the command printed.
+-                let stdout = String::from_utf8_lossy(&output.stdout);
+                 let stderr = String::from_utf8_lossy(&output.stderr);
+-                Err(format!(
+-                    "Command `{}` failed.\nstdout: {}\nstderr: {}",
+-                    command,
+-                    stdout.trim(),
+-                    stderr.trim()
+-                ))
++                Err(format!("Command failed: {}", stderr))
+             }
+         }
+         Err(e) => Err(format!("Failed to execute: {}", e)),
+@@ -117,54 +151,6 @@
+         .output()
+         .map(|o| o.status.success())
+         .unwrap_or(false)
+-}
+-
+-/// Not every failed `git push` is a lost race (issue #162). A repository
+-/// ruleset rejection arrives shaped like a non-fast-forward, and rebasing
+-/// against a policy refusal three times burns the job's budget before dying
+-/// with a misleading "conflict" error, so the failure is classified first.
+-const REPOSITORY_RULE_PATTERNS: &[&str] = &[
+-    "gh006",
+-    "gh013",
+-    "repository rule violations",
+-    "changes must be made through a pull request",
+-    "protected branch",
+-    "push declined",
+-];
+-
+-const NON_FAST_FORWARD_PATTERNS: &[&str] = &[
+-    "[rejected]",
+-    "non-fast-forward",
+-    "fetch first",
+-    "updates were rejected",
+-];
+-
+-#[derive(Debug, PartialEq, Eq)]
+-enum PushFailure {
+-    /// A repository ruleset refuses the push; retrying cannot fix policy.
+-    RepositoryRules,
+-    /// The remote branch moved; rebase onto it and try again.
+-    LostRace,
+-    /// Anything else: report the real error instead of masking it.
+-    Other,
+-}
+-
+-fn classify_push_failure(raw_output: &str) -> PushFailure {
+-    let haystack = raw_output.to_lowercase();
+-    // Rules first: a ruleset rejection also contains the word "rejected".
+-    if REPOSITORY_RULE_PATTERNS
+-        .iter()
+-        .any(|pattern| haystack.contains(pattern))
+-    {
+-        return PushFailure::RepositoryRules;
+-    }
+-    if NON_FAST_FORWARD_PATTERNS
+-        .iter()
+-        .any(|pattern| haystack.contains(pattern))
+-    {
+-        return PushFailure::LostRace;
+-    }
+-    PushFailure::Other
+ }
+ 
+ struct Version {
+@@ -256,6 +242,28 @@
+     Ok(true)
+ }
+ 
++/// The benchmarks crate depends on this package by path and CI checks it with
++/// `--locked`, so a release must bump the package version in its lock file too.
++fn get_benchmarks_cargo_lock_path(rust_root: &str) -> PathBuf {
++    Path::new(rust_root).join("benchmarks").join("Cargo.lock")
++}
++
++/// Sync the package version in every given lock file, returning the paths of
++/// the lock files that were changed and therefore need to be staged.
++fn update_cargo_locks(
++    cargo_lock_paths: &[&Path],
++    crate_name: &str,
++    new_version: &str,
++) -> Result<Vec<String>, String> {
++    let mut updated = Vec::new();
++    for cargo_lock_path in cargo_lock_paths {
++        if update_cargo_lock(cargo_lock_path, crate_name, new_version)? {
++            updated.push(cargo_lock_path.to_string_lossy().to_string());
++        }
++    }
++    Ok(updated)
++}
++
+ #[cfg(not(test))]
+ #[derive(Deserialize)]
+ struct CratesIoCrate {
+@@ -294,7 +302,11 @@
+         .call()
+     {
+         Ok(response) => response.status() == 200,
+-        Err(_) => false,
++        Err(ureq::Error::Status(404, _)) => false,
++        Err(error) => {
++            eprintln!("::error::crates.io availability is unknown: {}", error);
++            exit(1);
++        }
+     }
+ }
+ 
+@@ -338,9 +350,14 @@
+                     }
+                 }
+             }
+-            None
+-        }
+-        Err(_) => None,
++            eprintln!("::error::Invalid crates.io package metadata; refusing to guess a version");
++            exit(1)
++        }
++        Err(ureq::Error::Status(404, _)) => None,
++        Err(error) => {
++            eprintln!("::error::crates.io versions are unknown: {}", error);
++            exit(1);
++        }
+     }
+ }
+ 
+@@ -369,9 +386,15 @@
+         if (major, minor, patch) <= (pub_major, pub_minor, pub_patch) {
+             println!(
+                 "Version {}.{}.{} is not greater than max published {}.{}.{}, adjusting to {}.{}.{}",
+-                major, minor, patch,
+-                pub_major, pub_minor, pub_patch,
+-                pub_major, pub_minor, pub_patch + 1
++                major,
++                minor,
++                patch,
++                pub_major,
++                pub_minor,
++                pub_patch,
++                pub_major,
++                pub_minor,
++                pub_patch + 1
+             );
+             major = pub_major;
+             minor = pub_minor;
+@@ -411,26 +434,8 @@
+     }
+ }
+ 
+-fn remove_changelog_fragments(files: &[PathBuf]) {
+-    for file in files {
+-        fs::remove_file(file)
+-            .unwrap_or_else(|e| panic!("Failed to remove {}: {}", file.display(), e));
+-        println!("Removed {}", file.display());
+-    }
+-}
+-
+ #[cfg(not(test))]
+ fn collect_changelog(changelog_dir: &str, changelog_file: &str, version: &str) {
+-    let date_str = Utc::now().format("%Y-%m-%d").to_string();
+-    collect_changelog_with_date(changelog_dir, changelog_file, version, &date_str);
+-}
+-
+-fn collect_changelog_with_date(
+-    changelog_dir: &str,
+-    changelog_file: &str,
+-    version: &str,
+-    date_str: &str,
+-) {
+     let dir_path = Path::new(changelog_dir);
+     if !dir_path.exists() {
+         return;
+@@ -465,6 +470,7 @@
+         return;
+     }
+ 
++    let date_str = Utc::now().format("%Y-%m-%d").to_string();
+     let new_entry = format!(
+         "\n## [{}] - {}\n\n{}\n",
+         version,
+@@ -472,550 +478,55 @@
+         fragments.join("\n\n")
+     );
+ 
+-    if !Path::new(changelog_file).exists() {
+-        return;
+-    }
+-
+-    let mut content = fs::read_to_string(changelog_file).unwrap_or_default();
+-    let lines: Vec<&str> = content.lines().collect();
+-    let mut insert_index = None;
+-
+-    for (i, line) in lines.iter().enumerate() {
+-        if line.starts_with("## [") {
+-            insert_index = Some(i);
+-            break;
+-        }
+-    }
+-
+-    if let Some(idx) = insert_index {
+-        let mut new_lines: Vec<String> = lines[..idx].iter().map(|s| s.to_string()).collect();
+-        new_lines.push(new_entry.clone());
+-        new_lines.extend(lines[idx..].iter().map(|s| s.to_string()));
+-        content = new_lines.join("\n");
+-    } else {
+-        content.push_str(&new_entry);
+-    }
+-
+-    fs::write(changelog_file, content).expect("Failed to write changelog");
+-    remove_changelog_fragments(&files);
++    if Path::new(changelog_file).exists() {
++        let mut content = fs::read_to_string(changelog_file).unwrap_or_default();
++        let lines: Vec<&str> = content.lines().collect();
++        let mut insert_index = None;
++
++        for (i, line) in lines.iter().enumerate() {
++            if line.starts_with("## [") {
++                insert_index = Some(i);
++                break;
++            }
++        }
++
++        if let Some(idx) = insert_index {
++            let mut new_lines: Vec<String> = lines[..idx].iter().map(|s| s.to_string()).collect();
++            new_lines.push(new_entry.clone());
++            new_lines.extend(lines[idx..].iter().map(|s| s.to_string()));
++            content = new_lines.join("\n");
++        } else {
++            content.push_str(&new_entry);
++        }
++
++        fs::write(changelog_file, content).expect("Failed to write changelog");
++    }
++
+     println!("Collected {} changelog fragment(s)", files.len());
+-}
+-
+-/// Number of unconsumed changelog fragments (.md files other than README.md).
+-fn count_changelog_fragments(changelog_dir: &str) -> usize {
+-    let dir_path = Path::new(changelog_dir);
+-    if !dir_path.exists() {
+-        return 0;
+-    }
+-    fs::read_dir(dir_path)
+-        .map(|entries| {
+-            entries
+-                .filter_map(|entry| entry.ok())
+-                .map(|entry| entry.path())
+-                .filter(|path| {
+-                    path.extension().map_or(false, |ext| ext == "md")
+-                        && path.file_name().map_or(false, |name| name != "README.md")
+-                })
+-                .count()
+-        })
+-        .unwrap_or(0)
+-}
+-
+-/// Verify the release write before it becomes a commit (issue #159).
+-///
+-/// The version commit is pushed straight to the default branch by GITHUB_TOKEN,
+-/// and a push made with GITHUB_TOKEN does not trigger any workflow -- nothing
+-/// ever lints, formats or tests this commit. Whatever is wrong here ships
+-/// unreviewed, so the write itself is verified: the changelog actually gained
+-/// the new version (when fragments were collected), no fragment leaked past
+-/// this release, and Cargo.lock agrees with the bumped Cargo.toml.
+-fn verify_release_write(
+-    changelog_file: &str,
+-    changelog_dir: &str,
+-    cargo_lock_path: &Path,
+-    crate_name: &str,
+-    new_version: &str,
+-    expect_new_entry: bool,
+-) -> Result<(), String> {
+-    if expect_new_entry {
+-        let changelog = fs::read_to_string(changelog_file).map_err(|e| {
+-            format!(
+-                "CHANGELOG verification failed: cannot read {}: {}",
+-                changelog_file, e
+-            )
+-        })?;
+-        let entry = Regex::new(&format!(
+-            r"(?m)^## \[{}\] - \d{{4}}-\d{{2}}-\d{{2}}\s*$",
+-            regex::escape(new_version)
+-        ))
+-        .map_err(|e| format!("Failed to build changelog verification regex: {}", e))?;
+-        if !entry.is_match(&changelog) {
+-            return Err(format!(
+-                "CHANGELOG verification failed: {} does not contain a well-formed \
+-                 '## [{}] - YYYY-MM-DD' entry after collecting the fragments",
+-                changelog_file, new_version
+-            ));
+-        }
+-    }
+-
+-    let leftover: Vec<String> = {
+-        let dir_path = Path::new(changelog_dir);
+-        match fs::read_dir(dir_path) {
+-            Ok(entries) => entries
+-                .filter_map(|entry| entry.ok())
+-                .map(|entry| entry.path())
+-                .filter(|path| {
+-                    path.extension().map_or(false, |ext| ext == "md")
+-                        && path.file_name().map_or(false, |name| name != "README.md")
+-                })
+-                .map(|path| path.to_string_lossy().to_string())
+-                .collect(),
+-            Err(_) => Vec::new(),
+-        }
+-    };
+-    if !leftover.is_empty() {
+-        return Err(format!(
+-            "CHANGELOG verification failed: fragments were not consumed and would \
+-             leak into the next release: {}. Empty or malformed fragments must be \
+-             fixed or removed, not left behind.",
+-            leftover.join(", ")
+-        ));
+-    }
+-
+-    if cargo_lock_path.exists() {
+-        let lock = fs::read_to_string(cargo_lock_path).map_err(|e| {
+-            format!(
+-                "Cargo.lock verification failed: cannot read {}: {}",
+-                cargo_lock_path.display(),
++
++    for file in files {
++        if let Err(e) = fs::remove_file(&file) {
++            eprintln!(
++                "Warning: could not remove consumed changelog fragment {}: {}",
++                file.display(),
+                 e
+-            )
+-        })?;
+-        let entry = Regex::new(&format!(
+-            r#"(?m)\[\[package\]\]\s*\nname\s*=\s*"{}"\s*\nversion\s*=\s*"([^"]+)""#,
+-            regex::escape(crate_name),
+-        ))
+-        .map_err(|e| format!("Failed to build Cargo.lock verification regex: {}", e))?;
+-        if let Some(caps) = entry.captures(&lock) {
+-            let locked_version = caps.get(1).map_or("", |m| m.as_str());
+-            if locked_version != new_version {
+-                return Err(format!(
+-                    "Cargo.lock verification failed: {} has `{}` at version `{}` but \
+-                     Cargo.toml was bumped to `{}` -- the lock file disagrees with the \
+-                     manifest, so the published crate would not match its lock entry",
+-                    cargo_lock_path.display(),
+-                    crate_name,
+-                    locked_version,
+-                    new_version
+-                ));
+-            }
+-        } else {
+-            println!(
+-                "Warning: {} has no [[package]] entry for `{}`; skipping lock agreement check",
+-                cargo_lock_path.display(),
+-                crate_name
+             );
+         }
+     }
+-
+-    Ok(())
+ }
+ 
+ #[cfg(test)]
+-mod tests {
+-    use super::{
+-        classify_push_failure, collect_changelog_with_date, count_changelog_fragments,
+-        update_cargo_lock, verify_release_write, PushFailure,
+-    };
+-    use std::fs;
+-    use std::path::PathBuf;
+-    use std::process::Command;
+-    use std::time::{SystemTime, UNIX_EPOCH};
+-
+-    fn temp_dir(name: &str) -> PathBuf {
+-        let nanos = SystemTime::now()
+-            .duration_since(UNIX_EPOCH)
+-            .unwrap()
+-            .as_nanos();
+-        let path = std::env::temp_dir().join(format!("version-and-commit-{name}-{nanos}"));
+-        fs::create_dir_all(&path).unwrap();
+-        path
+-    }
+-
+-    #[test]
+-    fn cargo_lock_update_scopes_to_named_package_entry() {
+-        let repo = temp_dir("lock-update");
+-        let cargo_lock = repo.join("Cargo.lock");
+-        fs::write(
+-            &cargo_lock,
+-            r#"[[package]]
+-name = "example-sum-package-name-helper"
+-version = "9.9.9"
+-
+-[[package]]
+-name = "example-sum-package-name"
+-version = "0.13.0"
+-dependencies = [
+- "clap",
+-]
+-
+-[[package]]
+-name = "regex"
+-version = "1.12.3"
+-"#,
+-        )
+-        .unwrap();
+-
+-        assert!(update_cargo_lock(&cargo_lock, "example-sum-package-name", "0.14.0").unwrap());
+-
+-        let updated = fs::read_to_string(&cargo_lock).unwrap();
+-        assert!(updated.contains("name = \"example-sum-package-name\"\nversion = \"0.14.0\""));
+-        assert!(updated.contains("name = \"example-sum-package-name-helper\"\nversion = \"9.9.9\""));
+-        assert!(updated.contains("name = \"regex\"\nversion = \"1.12.3\""));
+-    }
+-
+-    #[test]
+-    fn cargo_lock_update_is_idempotent_when_version_already_matches() {
+-        let repo = temp_dir("lock-idempotent");
+-        let cargo_lock = repo.join("Cargo.lock");
+-        let content = r#"[[package]]
+-name = "example-sum-package-name"
+-version = "0.14.0"
+-"#;
+-        fs::write(&cargo_lock, content).unwrap();
+-
+-        assert!(!update_cargo_lock(&cargo_lock, "example-sum-package-name", "0.14.0").unwrap());
+-        assert_eq!(fs::read_to_string(&cargo_lock).unwrap(), content);
+-    }
+-
+-    #[test]
+-    fn cargo_lock_update_returns_false_when_lock_file_is_absent() {
+-        let repo = temp_dir("lock-absent");
+-        let cargo_lock = repo.join("Cargo.lock");
+-
+-        assert!(!update_cargo_lock(&cargo_lock, "example-sum-package-name", "0.14.0").unwrap());
+-        assert!(!cargo_lock.exists());
+-    }
+-
+-    #[test]
+-    fn cargo_lock_update_returns_false_when_package_entry_is_absent() {
+-        let repo = temp_dir("lock-entry-absent");
+-        let cargo_lock = repo.join("Cargo.lock");
+-        let content = r#"[[package]]
+-name = "regex"
+-version = "1.12.3"
+-"#;
+-        fs::write(&cargo_lock, content).unwrap();
+-
+-        assert!(!update_cargo_lock(&cargo_lock, "example-sum-package-name", "0.14.0").unwrap());
+-        assert_eq!(fs::read_to_string(&cargo_lock).unwrap(), content);
+-    }
+-
+-    #[test]
+-    fn changelog_collection_removes_consumed_fragments_and_keeps_readme() {
+-        let repo = temp_dir("changelog-cleanup");
+-        let changelog_dir = repo.join("changelog.d");
+-        fs::create_dir_all(&changelog_dir).unwrap();
+-
+-        let first_fragment = changelog_dir.join("20260608_fix_release_loop.md");
+-        let second_fragment = changelog_dir.join("20260608_note_release_loop.md");
+-        fs::write(
+-            &first_fragment,
+-            r#"---
+-bump: patch
+----
+-
+-### Fixed
+-- Prevent already-collected changelog fragments from triggering another release.
+-"#,
+-        )
+-        .unwrap();
+-        fs::write(
+-            &second_fragment,
+-            r#"### Changed
+-- Keep release commits from leaving stale changelog fragments behind.
+-"#,
+-        )
+-        .unwrap();
+-        fs::write(changelog_dir.join("README.md"), "Fragment instructions\n").unwrap();
+-
+-        let changelog = repo.join("CHANGELOG.md");
+-        fs::write(
+-            &changelog,
+-            r#"# Changelog
+-
+-## [0.1.0] - 2026-01-01
+-
+-### Added
+-- Initial release
+-"#,
+-        )
+-        .unwrap();
+-
+-        collect_changelog_with_date(
+-            changelog_dir.to_str().unwrap(),
+-            changelog.to_str().unwrap(),
+-            "0.2.0",
+-            "2026-06-08",
+-        );
+-
+-        let updated = fs::read_to_string(&changelog).unwrap();
+-        assert!(updated.contains("## [0.2.0] - 2026-06-08"));
+-        assert!(updated.contains("Prevent already-collected changelog fragments"));
+-        assert!(updated.contains("Keep release commits from leaving stale changelog fragments"));
+-        assert!(!updated.contains("bump: patch"));
+-        assert!(!first_fragment.exists());
+-        assert!(!second_fragment.exists());
+-        assert!(changelog_dir.join("README.md").exists());
+-    }
+-
+-    /// Regression test for issue #67: the Rust release job failed with
+-    /// "cannot rebase: Your index contains uncommitted changes." because the
+-    /// script staged the version bump (`git add`) and only afterwards ran
+-    /// `git rebase origin/<branch>`. `git rebase` refuses to run with a dirty
+-    /// index, so the release must rebase onto the remote BEFORE staging.
+-    ///
+-    /// This test reproduces both orderings against a real temporary repository
+-    /// and asserts the buggy order fails while the fixed order succeeds.
+-    #[test]
+-    fn rebase_must_run_before_staging_the_version_bump() {
+-        let repo = temp_dir("rebase-order");
+-        let git = |args: &[&str]| -> std::process::Output {
+-            Command::new("git")
+-                .args(args)
+-                .current_dir(&repo)
+-                .output()
+-                .expect("failed to run git")
+-        };
+-
+-        // Some CI images default to `master`; force the initial branch to main.
+-        git(&["init", "-q", "."]);
+-        git(&["checkout", "-q", "-b", "main"]);
+-        git(&["config", "user.email", "ci@example.com"]);
+-        git(&["config", "user.name", "ci"]);
+-
+-        // Commit A: the state the release job checks out.
+-        fs::write(repo.join("Cargo.toml"), "version = \"0.1.0\"\n").unwrap();
+-        git(&["add", "Cargo.toml"]);
+-        git(&["commit", "-qm", "A: initial"]);
+-
+-        // Commit B on a parallel ref simulates origin/main advancing while the
+-        // release job was running (e.g. a concurrent release pushed to main).
+-        git(&["checkout", "-q", "-b", "upstream"]);
+-        fs::write(repo.join("remote.txt"), "remote change\n").unwrap();
+-        git(&["add", "remote.txt"]);
+-        git(&["commit", "-qm", "B: remote advanced"]);
+-        git(&["checkout", "-q", "main"]);
+-
+-        // BUGGY ORDER: stage the bump first, then rebase -> git rejects the
+-        // dirty index. This is exactly what broke the release job.
+-        fs::write(repo.join("Cargo.toml"), "version = \"0.1.1\"\n").unwrap();
+-        git(&["add", "Cargo.toml"]);
+-        let buggy = git(&["rebase", "upstream"]);
+-        assert!(
+-            !buggy.status.success(),
+-            "rebase unexpectedly succeeded with a dirty index"
+-        );
+-        let buggy_err = String::from_utf8_lossy(&buggy.stderr);
+-        assert!(
+-            buggy_err.contains("cannot rebase") || buggy_err.contains("uncommitted changes"),
+-            "unexpected rebase error: {buggy_err}"
+-        );
+-
+-        // Reset back to a clean tree at commit A.
+-        let _ = git(&["rebase", "--abort"]);
+-        git(&["reset", "-q", "--hard", "HEAD"]);
+-
+-        // FIXED ORDER: rebase while the tree is clean, THEN stage and commit.
+-        let fixed = git(&["rebase", "upstream"]);
+-        assert!(
+-            fixed.status.success(),
+-            "rebase with a clean tree failed: {}",
+-            String::from_utf8_lossy(&fixed.stderr)
+-        );
+-        fs::write(repo.join("Cargo.toml"), "version = \"0.1.1\"\n").unwrap();
+-        git(&["add", "Cargo.toml"]);
+-        let commit = git(&["commit", "-qm", "chore: release 0.1.1"]);
+-        assert!(
+-            commit.status.success(),
+-            "commit after clean rebase failed: {}",
+-            String::from_utf8_lossy(&commit.stderr)
+-        );
+-
+-        // The bump rides on top of the upstream commit, proving no work was lost.
+-        let log = git(&["log", "--oneline"]);
+-        let log_out = String::from_utf8_lossy(&log.stdout);
+-        assert!(log_out.contains("release 0.1.1"));
+-        assert!(log_out.contains("B: remote advanced"));
+-    }
+-
+-    // --- issue #162: classify push failures before retrying -------------------
+-
+-    #[test]
+-    fn repository_rules_are_classified_before_the_rebase_retry() {
+-        // A ruleset rejection also contains the word "rejected"; policy must
+-        // win over the retry heuristic.
+-        let ruleset = concat!(
+-            "Command `git` failed.\n",
+-            "stdout: To github.com:org/repo.git\n",
+-            "stderr: ! [remote rejected] main -> main (GH006: Protected branch update failed)\n",
+-            "error: GH013: Repository rule violations found for refs/heads/main.\n",
+-            "The push was rejected because changes must be made through a pull request.\n"
+-        );
+-        assert_eq!(
+-            classify_push_failure(ruleset),
+-            PushFailure::RepositoryRules,
+-            "a ruleset refusal must never be treated as a rebaseable race"
+-        );
+-
+-        let lowercase_rules = "remote: error: push declined due to repository rule violations";
+-        assert_eq!(
+-            classify_push_failure(lowercase_rules),
+-            PushFailure::RepositoryRules
+-        );
+-    }
+-
+-    #[test]
+-    fn a_lost_race_is_classified_for_the_rebase_retry() {
+-        let raced = concat!(
+-            "Command `git` failed.\n",
+-            "stderr: To github.com:org/repo.git\n",
+-            " ! [rejected]        main -> main (fetch first)\n",
+-            "error: failed to push some refs to 'github.com:org/repo.git'\n",
+-            "hint: Updates were rejected because the remote contains work that you do not have locally.\n"
+-        );
+-        assert_eq!(classify_push_failure(raced), PushFailure::LostRace);
+-    }
+-
+-    #[test]
+-    fn an_unknown_push_failure_is_not_masked_as_a_race() {
+-        for real_error in [
+-            "ssh: connect to host github.com port 22: Connection timed out",
+-            "fatal: unable to access 'https://github.com/': Could not resolve host: github.com",
+-            "fatal: Authentication failed for 'https://github.com/org/repo.git/'",
+-        ] {
+-            assert_eq!(
+-                classify_push_failure(&format!("Command `git` failed.\nstderr: {real_error}")),
+-                PushFailure::Other,
+-                "{real_error} must surface as a real error, not trigger a rebase"
+-            );
+-        }
+-    }
+-
+-    // --- issue #159: verify the release write before committing ---------------
+-
+-    fn write_changelog(repo: &std::path::Path, body: &str) {
+-        fs::write(repo.join("CHANGELOG.md"), body).unwrap();
+-    }
+-
+-    /// The verification paths must be anchored inside the temporary repo --
+-    /// relative paths would silently read the real repository's CHANGELOG.md.
+-    fn anchored(repo: &std::path::Path) -> (String, String, PathBuf) {
+-        (
+-            repo.join("CHANGELOG.md").to_string_lossy().to_string(),
+-            repo.join("changelog.d").to_string_lossy().to_string(),
+-            repo.join("Cargo.lock"),
+-        )
+-    }
+-
+-    #[test]
+-    fn verification_accepts_a_consistent_release_write() {
+-        let repo = temp_dir("verify-ok");
+-        fs::create_dir_all(repo.join("changelog.d")).unwrap();
+-        write_changelog(
+-            &repo,
+-            "# Changelog\n\n## [0.2.0] - 2026-09-09\n\n### Fixed\n\n- something\n",
+-        );
+-        fs::write(
+-            repo.join("Cargo.lock"),
+-            "[[package]]\nname = \"crate\"\nversion = \"0.2.0\"\n",
+-        )
+-        .unwrap();
+-        let (changelog, dir, lock) = anchored(&repo);
+-
+-        verify_release_write(&changelog, &dir, &lock, "crate", "0.2.0", true)
+-            .unwrap_or_else(|error| panic!("consistent write should verify: {error}"));
+-    }
+-
+-    #[test]
+-    fn verification_requires_the_changelog_entry_only_when_fragments_were_collected() {
+-        let repo = temp_dir("verify-optional-entry");
+-        fs::create_dir_all(repo.join("changelog.d")).unwrap();
+-        // A version-only release (docs-only changes) legitimately collects no
+-        // fragments, so the changelog gains no entry.
+-        write_changelog(&repo, "# Changelog\n\n## [0.1.0] - 2026-01-01\n");
+-        let (changelog, dir, lock) = anchored(&repo);
+-
+-        verify_release_write(&changelog, &dir, &lock, "crate", "0.2.0", false)
+-            .unwrap_or_else(|error| panic!("fragment-free release should verify: {error}"));
+-
+-        // The same state with fragments collected must fail: the entry is missing.
+-        let error =
+-            verify_release_write(&changelog, &dir, &lock, "crate", "0.2.0", true).unwrap_err();
+-        assert!(
+-            error.contains("0.2.0"),
+-            "the failure must name the missing version entry, got: {error}"
+-        );
+-    }
+-
+-    #[test]
+-    fn verification_fails_when_a_fragment_leaks_past_the_release() {
+-        let repo = temp_dir("verify-leftover");
+-        fs::create_dir_all(repo.join("changelog.d")).unwrap();
+-        write_changelog(&repo, "# Changelog\n\n## [0.2.0] - 2026-09-09\n");
+-        fs::write(
+-            repo.join("changelog.d/20260909_unconsumed.md"),
+-            "leftover\n",
+-        )
+-        .unwrap();
+-        let (changelog, dir, lock) = anchored(&repo);
+-
+-        let error =
+-            verify_release_write(&changelog, &dir, &lock, "crate", "0.2.0", true).unwrap_err();
+-        assert!(
+-            error.contains("20260909_unconsumed.md"),
+-            "the failure must name the leaked fragment, got: {error}"
+-        );
+-    }
+-
+-    #[test]
+-    fn verification_fails_when_the_lock_disagrees_with_the_manifest() {
+-        let repo = temp_dir("verify-lock");
+-        fs::create_dir_all(repo.join("changelog.d")).unwrap();
+-        write_changelog(&repo, "# Changelog\n\n## [0.2.0] - 2026-09-09\n");
+-        fs::write(
+-            repo.join("Cargo.lock"),
+-            "[[package]]\nname = \"crate\"\nversion = \"0.1.9\"\n",
+-        )
+-        .unwrap();
+-        let (changelog, dir, lock) = anchored(&repo);
+-
+-        let error =
+-            verify_release_write(&changelog, &dir, &lock, "crate", "0.2.0", true).unwrap_err();
+-        assert!(
+-            error.contains("Cargo.lock verification failed") && error.contains("0.1.9"),
+-            "the failure must show the disagreement, got: {error}"
+-        );
+-    }
+-
+-    #[test]
+-    fn fragment_counting_ignores_the_readme() {
+-        let repo = temp_dir("count-fragments");
+-        let dir = repo.join("changelog.d");
+-        fs::create_dir_all(&dir).unwrap();
+-        fs::write(dir.join("README.md"), "explanatory\n").unwrap();
+-        assert_eq!(count_changelog_fragments(dir.to_str().unwrap()), 0);
+-        fs::write(dir.join("20260909_a.md"), "a\n").unwrap();
+-        fs::write(dir.join("20260909_b.md"), "b\n").unwrap();
+-        assert_eq!(count_changelog_fragments(dir.to_str().unwrap()), 2);
+-    }
+-}
++#[path = "version-and-commit/tests.rs"]
++mod tests;
+ 
+ #[cfg(not(test))]
+ fn main() {
+     let bump_type = match get_arg("bump-type") {
+         Some(bt) => bt,
+         None => {
+-            eprintln!("Usage: rust-script scripts/version-and-commit.rs --bump-type <major|minor|patch> [--description <desc>] [--rust-root <path>] [--tag-prefix <prefix>] [--release-label <label>]");
++            eprintln!(
++                "Usage: rust-script scripts/version-and-commit.rs --bump-type <major|minor|patch> [--description <desc>] [--rust-root <path>] [--tag-prefix <prefix>] [--release-label <label>]"
++            );
+             exit(1);
+         }
+     };
+@@ -1028,6 +539,9 @@
+         exit(1);
+     }
+ 
++    let description = get_arg("description");
++    let tag_prefix = get_arg("tag-prefix").unwrap_or_else(|| "v".to_string());
++    let release_label = get_arg("release-label");
+     let rust_root = match rust_paths::get_rust_root(None, true) {
+         Ok(root) => root,
+         Err(e) => {
+@@ -1035,10 +549,6 @@
+             exit(1);
+         }
+     };
+-    let description = get_arg("description");
+-    let tag_prefix = get_arg("tag-prefix")
+-        .unwrap_or_else(|| release_naming::tag_prefix_for_rust_root(&rust_root).to_string());
+-    let release_label = get_arg("release-label");
+     let cargo_toml = rust_paths::get_cargo_toml_path(&rust_root);
+     let package_manifest = match rust_paths::get_package_manifest_path(&cargo_toml) {
+         Ok(path) => path,
+@@ -1051,15 +561,22 @@
+     let changelog_file = get_changelog_path(&rust_root);
+ 
+     // Configure git
+-    let _ = exec("git", &["config", "user.name", "github-actions[bot]"]);
+-    let _ = exec(
++    exec("git", &["config", "user.name", "github-actions[bot]"]).unwrap_or_else(|e| {
++        eprintln!("Git configuration failed: {}", e);
++        exit(1)
++    });
++    exec(
+         "git",
+         &[
+             "config",
+             "user.email",
+-            "github-actions[bot]@users.noreply.github.com",
++            "41898282+github-actions[bot]@users.noreply.github.com",
+         ],
+-    );
++    )
++    .unwrap_or_else(|e| {
++        eprintln!("Git configuration failed: {}", e);
++        exit(1)
++    });
+ 
+     // Sync with the latest remote state BEFORE touching any files.
+     //
+@@ -1069,29 +586,28 @@
+     // broke the release job. Rebasing first also means the version bump is
+     // computed from the most recent state of the branch (matches the JS
+     // version-and-commit.mjs ordering).
+-    let current_branch =
+-        exec("git", &["rev-parse", "--abbrev-ref", "HEAD"]).unwrap_or_else(|_| "main".to_string());
++    let current_branch = exec("git", &["rev-parse", "--abbrev-ref", "HEAD"]).unwrap_or_else(|e| {
++        eprintln!("Branch detection failed: {}", e);
++        exit(1)
++    });
+     if let Err(e) = exec("git", &["fetch", "origin", &current_branch]) {
+-        eprintln!("Warning: Could not fetch origin/{}: {}", current_branch, e);
++        eprintln!(
++            "::error::Could not refresh origin/{}: {}",
++            current_branch, e
++        );
++        exit(1);
+     } else {
+-        // Count the commits origin/<branch> has that HEAD does not. Being merely
+-        // ahead of the remote is not being behind, and needs no rebase.
+-        let behind: u32 = exec(
+-            "git",
+-            &[
+-                "rev-list",
+-                "--count",
+-                &format!("HEAD..origin/{}", current_branch),
+-            ],
+-        )
+-        .ok()
+-        .and_then(|out| out.trim().parse().ok())
+-        .unwrap_or(0);
+-        if behind > 0 {
+-            println!(
+-                "Local branch is behind origin/{} by {} commit(s), rebasing...",
+-                current_branch, behind
+-            );
++        let local = exec("git", &["rev-parse", "HEAD"]).unwrap_or_else(|e| {
++            eprintln!("Local revision lookup failed: {}", e);
++            exit(1)
++        });
++        let remote = exec("git", &["rev-parse", &format!("origin/{}", current_branch)])
++            .unwrap_or_else(|e| {
++                eprintln!("Remote revision lookup failed: {}", e);
++                exit(1)
++            });
++        if !local.is_empty() && !remote.is_empty() && local != remote {
++            println!("Local branch is behind remote, rebasing...");
+             if let Err(e) = exec("git", &["rebase", &format!("origin/{}", current_branch)]) {
+                 eprintln!("Error rebasing onto origin/{}: {}", current_branch, e);
+                 let _ = exec("git", &["rebase", "--abort"]);
+@@ -1161,8 +677,17 @@
+     }
+ 
+     let cargo_lock_path = rust_paths::get_cargo_lock_path(&rust_root);
+-    let lock_updated = match update_cargo_lock(&cargo_lock_path, &crate_name, &new_version) {
+-        Ok(updated) => updated,
++    let benchmarks_lock_path = get_benchmarks_cargo_lock_path(&rust_root);
++    match update_cargo_locks(
++        &[cargo_lock_path.as_path(), benchmarks_lock_path.as_path()],
++        &crate_name,
++        &new_version,
++    ) {
++        Ok(updated) => {
++            for path in updated {
++                println!("Updated lockfile {}", path);
++            }
++        }
+         Err(e) => {
+             eprintln!("Error updating Cargo.lock: {}", e);
+             exit(1);
+@@ -1170,64 +695,17 @@
+     };
+ 
+     // Collect changelog fragments
+-    let fragments_before = count_changelog_fragments(&changelog_dir);
+     collect_changelog(&changelog_dir, &changelog_file, &new_version);
+ 
+-    // The release commit is never re-checked by CI, so the write is verified
+-    // before it is staged (issue #159).
+-    if let Err(e) = verify_release_write(
+-        &changelog_file,
+-        &changelog_dir,
+-        &cargo_lock_path,
+-        &crate_name,
+-        &new_version,
+-        fragments_before > 0,
+-    ) {
+-        eprintln!("::error title=Release write verification failed::{}", e);
+-        exit(1);
+-    }
+-
+-    // Stage Cargo.toml, Cargo.lock if changed, CHANGELOG.md, and consumed changelog fragments.
+-    let package_manifest_str = package_manifest.to_string_lossy().to_string();
+-    let cargo_lock_str = cargo_lock_path.to_string_lossy().to_string();
+-    let mut add_args = vec!["add", &package_manifest_str, &changelog_file];
+-    if lock_updated {
+-        add_args.push(&cargo_lock_str);
+-    }
+-    if let Err(e) = exec("git", &add_args) {
+-        eprintln!("Error staging release files: {}", e);
+-        exit(1);
+-    }
+-    if Path::new(&changelog_dir).exists() {
+-        if let Err(e) = exec("git", &["add", "-A", &changelog_dir]) {
+-            eprintln!("Error staging changelog fragments: {}", e);
+-            exit(1);
+-        }
+-    }
+-
+-    // Nothing downstream will lint this commit, so the staged tree is checked
+-    // here (issue #159): the lint job's `cargo fmt --check` equivalent runs on
+-    // whatever source files the release commit carries.
+-    let staged_files = match exec("git", &["diff", "--cached", "--name-only"]) {
+-        Ok(files) => files,
+-        Err(e) => {
+-            eprintln!("Error listing staged files: {}", e);
+-            exit(1);
+-        }
+-    };
+-    let staged_rust_source = staged_files.lines().any(|file| file.ends_with(".rs"));
+-    if staged_rust_source {
+-        if let Err(e) = exec("cargo", &["fmt", "--all", "--", "--check"]) {
+-            eprintln!(
+-                "::error title=Release commit is not rustfmt-clean::The staged \
+-                 release commit fails `cargo fmt --all -- --check`. This commit is \
+-                 pushed by the release job and no workflow is triggered for it, so \
+-                 it must already be clean when it is created.\n{}",
+-                e
+-            );
+-            exit(1);
+-        }
+-    }
++    // Stage Cargo.toml, Cargo.lock files if changed, CHANGELOG.md, and consumed fragments
++    let release_repo = env::current_dir().unwrap_or_else(|e| {
++        eprintln!("Working directory lookup failed: {}", e);
++        exit(1)
++    });
++    release_git::stage_release_metadata(&release_repo, &rust_root).unwrap_or_else(|e| {
++        eprintln!("Release staging failed: {}", e);
++        exit(1)
++    });
+ 
+     // Check if there are changes to commit
+     if exec_check("git", &["diff", "--cached", "--quiet"]) {
+@@ -1259,73 +737,18 @@
+     }
+     println!("Committed version {}", new_version);
+ 
+-    // Push changes with retry -- but only a genuine race is retried (issue
+-    // #162): a lost non-fast-forward is fixed by rebasing onto the new remote
+-    // tip, while a repository-ruleset refusal or any other failure is reported
+-    // as what it is instead of being masked as a merge conflict.
+-    let max_push_attempts = 3;
+-    for attempt in 1..=max_push_attempts {
+-        match exec("git", &["push"]) {
+-            Ok(_) => break,
+-            Err(push_error) => match classify_push_failure(&push_error) {
+-                PushFailure::RepositoryRules => {
+-                    eprintln!(
+-                        "::error title=Push declined by repository rules::The push to branch '{}' was declined by a repository rule (a GH006/GH013-class rejection, e.g. 'changes must be made through a pull request' or a protected-branch ruleset). Rebasing and retrying cannot change repository policy: release this change through a pull request, or adjust the ruleset so the release bot may push.\n--- git output ---\n{}",
+-                        current_branch, push_error
+-                    );
+-                    exit(1);
+-                }
+-                PushFailure::Other => {
+-                    eprintln!("Error pushing: {}", push_error);
+-                    exit(1);
+-                }
+-                PushFailure::LostRace => {
+-                    if attempt < max_push_attempts {
+-                        eprintln!(
+-                            "Push rejected as non-fast-forward (attempt {}/{}); the remote branch moved. Pulling with rebase and retrying...",
+-                            attempt, max_push_attempts
+-                        );
+-                        if let Err(rebase_err) =
+-                            exec("git", &["pull", "--rebase", "origin", &current_branch])
+-                        {
+-                            eprintln!("Error during pull --rebase: {}", rebase_err);
+-                            let _ = exec("git", &["rebase", "--abort"]);
+-                            exit(1);
+-                        }
+-                    } else {
+-                        eprintln!(
+-                            "Error pushing after {} attempts: {}",
+-                            max_push_attempts, push_error
+-                        );
+-                        exit(1);
+-                    }
+-                }
+-            },
+-        }
+-    }
+-
+-    // Create tag only after the release commit is on the remote, so that a
+-    // `pull --rebase` retry above can never leave the tag on an orphaned
+-    // pre-rebase commit (see issue #94).
++    // Prepare the tag; create it only after all push/rebase retries finish.
+     let tag_name = format!("{}{}", tag_prefix, new_version);
+     let tag_msg = match &description {
+         Some(desc) => format!("Release {}{}\n\n{}", tag_name, label_suffix, desc),
+         None => format!("Release {}{}", tag_name, label_suffix),
+     };
+ 
+-    if let Err(e) = exec("git", &["tag", "-a", &tag_name, "-m", &tag_msg]) {
+-        eprintln!("Error creating tag: {}", e);
++    if let Err(e) = release_git::push_release(&release_repo, &current_branch, &tag_name, &tag_msg) {
++        eprintln!("Error pushing release: {}", e);
+         exit(1);
+     }
+-    println!("Created tag {}", tag_name);
+-
+-    // Push exactly the release tag: `push --tags` would publish every local
+-    // tag, including unrelated ones left behind by other jobs or retries.
+-    if let Err(e) = exec("git", &["push", "origin", &tag_name]) {
+-        eprintln!("Error pushing tag {}: {}", tag_name, e);
+-        exit(1);
+-    }
+-    println!("Pushed changes and tag {}", tag_name);
++    println!("Pushed changes and tags");
+ 
+     set_output("version_committed", "true");
+     set_output("new_version", &new_version);

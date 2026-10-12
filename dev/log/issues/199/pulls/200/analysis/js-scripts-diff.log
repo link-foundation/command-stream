@@ -1,0 +1,2950 @@
+########## changeset-version.mjs ##########
+--- js/scripts/changeset-version.mjs	2026-09-04 20:28:25.871207709 +0000
++++ /tmp/tmpl/js-tmpl/scripts/changeset-version.mjs	2026-09-04 20:31:16.597474164 +0000
+@@ -5,36 +5,64 @@
+  * with package.json after version bumps.
+  *
+  * This script:
+- * 1. Runs `changeset version` to update the JavaScript package version
+- * 2. Runs `npm install` to synchronize package-lock.json with the new version
++ * 1. Detects the JavaScript package root (supports both single-language and multi-language repos)
++ * 2. Runs `changeset version` to update package versions
++ * 3. Runs `npm install` to synchronize package-lock.json with the new versions
++ *
++ * Configuration:
++ * - CLI: --js-root <path> to explicitly set JavaScript root
++ * - Environment: JS_ROOT=<path>
+  *
+  * Uses link-foundation libraries:
+  * - use-m: Dynamic package loading without package.json dependencies
+  * - command-stream: Modern shell command execution with streaming support
++ *
++ * Addresses issues documented in:
++ * - Issue #21: Supporting both single and multi-language repository structures
++ * - Reference: link-assistant/agent PR #112 (--legacy-peer-deps fix)
++ * - Reference: link-assistant/agent PR #114 (configurable package root)
+  */
+ 
+-// Load use-m dynamically
+-const { use } = eval(
+-  await (await fetch('https://unpkg.com/use-m/use.js')).text()
+-);
++import { getJsRoot, needsCd, parseJsRootConfig } from './js-paths.mjs';
++import { loadCommandStream } from './use-module.mjs';
+ 
+ // Import command-stream for shell command execution
+-const { $ } = await use('command-stream');
++const { $ } = await loadCommandStream();
++
++// Store the original working directory to restore after cd commands
++// IMPORTANT: command-stream's cd is a virtual command that calls process.chdir()
++const originalCwd = process.cwd();
+ 
+ try {
++  // Get JavaScript package root (auto-detect or use explicit config)
++  const jsRootConfig = parseJsRootConfig();
++  const jsRoot = getJsRoot({ jsRoot: jsRootConfig, verbose: true });
++
+   console.log('Running changeset version...');
+-  await $`bunx changeset version`;
++
++  // IMPORTANT: cd is a virtual command that calls process.chdir(), so we restore after
++  if (needsCd({ jsRoot })) {
++    await $`cd ${jsRoot} && npx changeset version`;
++    process.chdir(originalCwd);
++  } else {
++    await $`npx changeset version`;
++  }
+ 
+   console.log('\nSynchronizing package-lock.json...');
+-  try {
+-    await $`npm install --package-lock-only`;
+-  } catch {
+-    // No package-lock.json or npm not available, skip
+-    console.log('Skipping package-lock.json sync (not applicable)');
++
++  // Use --legacy-peer-deps to handle peer dependency conflicts
++  // This addresses npm ERESOLVE errors documented in issue #111 / PR #112
++  if (needsCd({ jsRoot })) {
++    await $`cd ${jsRoot} && npm install --package-lock-only --legacy-peer-deps`;
++    process.chdir(originalCwd);
++  } else {
++    await $`npm install --package-lock-only --legacy-peer-deps`;
+   }
+ 
+   console.log('\n✅ Version bump complete with synchronized package-lock.json');
+ } catch (error) {
++  // Restore cwd on error
++  process.chdir(originalCwd);
+   console.error('Error during version bump:', error.message);
+   if (process.env.DEBUG) {
+     console.error('Stack trace:', error.stack);
+########## check-release-needed.mjs ##########
+--- js/scripts/check-release-needed.mjs	2026-09-04 20:28:25.871207709 +0000
++++ /tmp/tmpl/js-tmpl/scripts/check-release-needed.mjs	2026-09-04 20:31:16.598474154 +0000
+@@ -1,153 +1,118 @@
+-#!/usr/bin/env bun
++#!/usr/bin/env node
+ 
+ /**
+- * Check if a release is needed based on changesets and npm registry state.
++ * Check if a release is needed based on changesets and npm registry state
+  *
+  * This script checks:
+- *   1. If there are changeset files to process, and
+- *   2. If the current package.json version has already been published to npm.
++ * 1. If there are changeset files to process
++ * 2. If the current version has already been published to npm
+  *
+- * IMPORTANT: This checks npm (the source of truth for JS packages), NOT git
+- * tags / GitHub releases. This is critical because:
+- *   - Git tags and GitHub releases can exist without the package being on npm
+- *     (exactly what produced the false-positive `js-v0.10.1` release in #166),
+- *   - Only npm publication means users can actually `npm install` the package.
+- *
+- * Self-healing: if a previous release attempt bumped the version and committed
+- * it to main but the npm publish failed or was skipped, the repo version is
+- * left permanently ahead of npm. By comparing package.json against the
+- * registry, the next push to main detects the unpublished version and triggers
+- * a catch-up publish.
+- *
+- * IMPORTANT — this is a deliberate improvement over the upstream template
+- * (link-foundation/js-ai-driven-development-pipeline-template,
+- * scripts/check-release-needed.mjs, issue #36). The template only probes npm
+- * when `has_changesets` is false. But issue #166's "failed to do any deploy"
+- * restart (run 27224046292) had `has_changesets=true` *locally* while the
+- * version bump had already been consumed on `origin/main` by a prior run — so
+- * `changeset version` found nothing, the version step committed nothing, and
+- * the publish was gated off, leaving v0.10.2 stranded (npm was still at 0.9.5).
+- * To close that gap we ALWAYS probe npm and emit `current_unpublished`, which
+- * the workflow uses to publish the current version whether or not a changeset
+- * is present. See docs/case-studies/issue-166/.
+- *
+- * command-stream's `$` does NOT throw on a non-zero exit code (errexit is off
+- * by default — see issue #156), so the registry probe checks the captured exit
+- * code explicitly instead of relying on a thrown error.
++ * IMPORTANT: This script checks npm (the source of truth for JS packages),
++ * NOT git tags. This is critical because:
++ * - Git tags can exist without the package being published
++ * - GitHub releases create tags but don't publish to npm
++ * - Only npm publication means users can actually install the package
++ *
++ * This provides a self-healing mechanism: if a previous release attempt
++ * failed or was skipped, the next push to main will detect the unpublished
++ * version and trigger a release without requiring a changeset.
++ *
++ * Analogous to check-release-needed.rs in the Rust template.
++ *
++ * Supports both single-language and multi-language repository structures:
++ * - Single-language: package.json in repository root
++ * - Multi-language: package.json in js/ subfolder
+  *
+- * Usage: bun scripts/check-release-needed.mjs
+- *   (run with working-directory: js, so ./package.json is the JS package)
++ * Usage: node scripts/check-release-needed.mjs [--js-root <path>]
+  *
+  * Environment variables:
+- *   - HAS_CHANGESETS: 'true' if changeset files exist (from the changeset check)
++ *   - HAS_CHANGESETS: 'true' if changeset files exist (from check-changesets.mjs)
+  *
+  * Outputs (written to GITHUB_OUTPUT):
+  *   - should_release: 'true' if a release should be created
+- *   - skip_bump: 'true' if the version bump should be skipped (version already
+- *                bumped but not yet published — self-healing path)
+- *   - current_unpublished: 'true' if the current package.json version is NOT on
+- *                npm. This is the authoritative publish trigger: it is true
+- *                whenever the committed version still needs to reach the
+- *                registry, regardless of whether a changeset is present, which
+- *                is what makes the self-heal cover the #166 restart case.
++ *   - skip_bump: 'true' if version bump should be skipped (version not yet published)
++ *
++ * Addresses issues documented in:
++ * - Issue #36: Release job silently skips when PRs merge without changesets
+  */
+ 
+-import { readFileSync, appendFileSync } from 'fs';
++import { appendFileSync } from 'fs';
+ 
+-// Load use-m dynamically (matches the other release scripts in this folder).
+-const { use } = eval(
+-  await (await fetch('https://unpkg.com/use-m/use.js')).text()
+-);
++import { getJsRoot, parseJsRootConfig } from './js-paths.mjs';
++import { isPackageVersionPublished } from './npm-registry.mjs';
++import { readPackageInfo } from './package-info.mjs';
+ 
+-const { $ } = await use('command-stream');
++const jsRootConfig = parseJsRootConfig();
++const jsRoot = getJsRoot({ jsRoot: jsRootConfig, verbose: true });
+ 
+ /**
+- * Append to the GitHub Actions output file (and echo for the run log).
+- * @param {string} key
+- * @param {string} value
++ * Write output to GitHub Actions output file
++ * @param {string} name - Output name
++ * @param {string} value - Output value
+  */
+-function setOutput(key, value) {
++function setOutput(name, value) {
+   const outputFile = process.env.GITHUB_OUTPUT;
+   if (outputFile) {
+-    appendFileSync(outputFile, `${key}=${value}\n`);
++    appendFileSync(outputFile, `${name}=${value}\n`);
+   }
+-  console.log(`Output: ${key}=${value}`);
++  console.log(`Output: ${name}=${value}`);
+ }
+ 
+ /**
+- * Read the package name and version from the local package.json.
++ * Get the package name and version from package.json
+  * @returns {{ name: string, version: string }}
+  */
+ function getPackageInfo() {
+-  const packageJson = JSON.parse(readFileSync('./package.json', 'utf8'));
+-  return { name: packageJson.name, version: packageJson.version };
++  return readPackageInfo({ jsRoot });
+ }
+ 
+ /**
+- * Check whether a specific version is published on npm.
+- *
+- * command-stream's `$` does not throw on non-zero exit, so we inspect the
+- * captured exit code: `npm view <pkg>@<version> version` exits 0 and prints the
+- * version when it exists, and exits non-zero (E404) when it does not.
+- *
++ * Check if a specific version is published on npm
+  * @param {string} packageName
+  * @param {string} version
+  * @returns {Promise<boolean>}
+  */
+-async function checkVersionOnNpm(packageName, version) {
+-  const result = await $`npm view "${packageName}@${version}" version`.run({
+-    capture: true,
+-  });
+-  return result.code === 0 && result.stdout.trim().includes(version);
++function checkVersionOnNpm(packageName, version) {
++  return isPackageVersionPublished(packageName, version);
+ }
+ 
+ async function main() {
+-  try {
+-    const hasChangesets = process.env.HAS_CHANGESETS === 'true';
+-    const { name: packageName, version: currentVersion } = getPackageInfo();
+-
+-    console.log(`Package: ${packageName}`);
+-    console.log(`Current version: ${currentVersion}`);
+-    console.log(`Has changesets: ${hasChangesets}`);
++  const hasChangesets = process.env.HAS_CHANGESETS === 'true';
++  const { name: packageName, version: currentVersion } = getPackageInfo();
++
++  console.log(`Package: ${packageName}`);
++  console.log(`Current version: ${currentVersion}`);
++  console.log(`Has changesets: ${hasChangesets}`);
++
++  if (hasChangesets) {
++    console.log('Found changesets, proceeding with release');
++    setOutput('should_release', 'true');
++    setOutput('skip_bump', 'false');
++    return;
++  }
++
++  console.log(
++    `Checking if ${packageName}@${currentVersion} is published on npm...`
++  );
++  const isPublished = await checkVersionOnNpm(packageName, currentVersion);
++  console.log(`Published on npm: ${isPublished}`);
+ 
+-    // Always probe npm — even with changesets — so a committed-but-unpublished
+-    // version is detected no matter how the release got into that state (#166).
++  if (isPublished) {
++    console.log(
++      `No changesets and v${currentVersion} already published on npm — no release needed`
++    );
++    setOutput('should_release', 'false');
++    setOutput('skip_bump', 'false');
++  } else {
+     console.log(
+-      `Checking if ${packageName}@${currentVersion} is published on npm...`
++      `No changesets but v${currentVersion} not yet published to npm — release needed (self-healing)`
+     );
+-    const isPublished = await checkVersionOnNpm(packageName, currentVersion);
+-    console.log(`Published on npm: ${isPublished}`);
+-    setOutput('current_unpublished', isPublished ? 'false' : 'true');
+-
+-    if (hasChangesets) {
+-      // A changeset normally produces a NEW version via the bump step, so let
+-      // the bump run (skip_bump=false). If the changeset turns out to be already
+-      // consumed on the remote, the bump is a no-op and `current_unpublished`
+-      // (emitted above) still drives the catch-up publish of the current
+-      // version — the #166 restart case the template's design missed.
+-      console.log('Found changesets, proceeding with release');
+-      setOutput('should_release', 'true');
+-      setOutput('skip_bump', 'false');
+-      return;
+-    }
+-
+-    if (isPublished) {
+-      console.log(
+-        `No changesets and v${currentVersion} already published on npm — no release needed`
+-      );
+-      setOutput('should_release', 'false');
+-      setOutput('skip_bump', 'false');
+-    } else {
+-      console.log(
+-        `No changesets but v${currentVersion} not yet published to npm — release needed (self-healing)`
+-      );
+-      setOutput('should_release', 'true');
+-      setOutput('skip_bump', 'true');
+-    }
+-  } catch (error) {
+-    console.error('Error:', error.message);
+-    process.exit(1);
++    setOutput('should_release', 'true');
++    setOutput('skip_bump', 'true');
+   }
+ }
+ 
+-main();
++main().catch((error) => {
++  console.error('Error:', error.message);
++  process.exit(1);
++});
+########## create-github-release.mjs ##########
+--- js/scripts/create-github-release.mjs	2026-09-04 20:28:25.871207709 +0000
++++ /tmp/tmpl/js-tmpl/scripts/create-github-release.mjs	2026-09-04 20:31:16.598474154 +0000
+@@ -1,183 +1,309 @@
+ #!/usr/bin/env bun
+ 
+ /**
+- * Create a JavaScript GitHub Release from CHANGELOG.md
+- * Usage: bun scripts/create-github-release.mjs --release-version <version> --repository <repository> [--tag-prefix js-v]
++ * Create GitHub Release from CHANGELOG.md
++ * Usage: node scripts/create-github-release.mjs --release-version <version> --repository <repository> [--tag-prefix <prefix>] [--language <language>] [--js-root <path>]
+  *   release-version: Version number (e.g., 1.0.0)
+  *   repository: GitHub repository (e.g., owner/repo)
+- *
+- * Uses link-foundation libraries:
+- * - use-m: Dynamic package loading without package.json dependencies
+- * - command-stream: Modern shell command execution with streaming support
+- * - lino-arguments: Unified configuration from CLI args, env vars, and .lenv files
++ *   tag-prefix: Prefix for the git tag (default: auto-detect from layout)
++ *   language: Human-readable language name for the release title (default: "JavaScript")
++ *   js-root: JavaScript package root directory (auto-detected if not specified)
+  */
+ 
+-import { readFileSync } from 'fs';
++import { spawnSync } from 'node:child_process';
++import { readFileSync } from 'node:fs';
++import path from 'node:path';
++import { fileURLToPath } from 'node:url';
++
++import { getJsRoot } from './js-paths.mjs';
++import { readPackageInfo } from './package-info.mjs';
++import {
++  buildReleaseTag,
++  buildReleaseTitle,
++  normalizeReleaseVersion,
++} from './release-naming.mjs';
++
++const USAGE =
++  'Usage: node scripts/create-github-release.mjs --release-version <version> --repository <repository> [--tag-prefix <prefix>] [--language <language>] [--js-root <path>]';
++const OPTION_CONFIG_KEYS = new Map([
++  ['--release-version', 'releaseVersion'],
++  ['--repository', 'repository'],
++  ['--tag-prefix', 'tagPrefix'],
++  ['--language', 'language'],
++  ['--js-root', 'jsRoot'],
++]);
+ 
+-// Load use-m dynamically
+-const { use } = eval(
+-  await (await fetch('https://unpkg.com/use-m/use.js')).text()
+-);
+-
+-// Import link-foundation libraries
+-const { $ } = await use('command-stream');
+-const { makeConfig } = await use('lino-arguments');
+-
+-// Parse CLI arguments using lino-arguments
+-// Note: Using --release-version instead of --version to avoid conflict with yargs' built-in --version flag
+-const config = makeConfig({
+-  yargs: ({ yargs, getenv }) =>
+-    yargs
+-      .option('release-version', {
+-        type: 'string',
+-        default: getenv('VERSION', ''),
+-        describe: 'Version number (e.g., 1.0.0)',
+-      })
+-      .option('repository', {
+-        type: 'string',
+-        default: getenv('REPOSITORY', ''),
+-        describe: 'GitHub repository (e.g., owner/repo)',
+-      })
+-      .option('tag-prefix', {
+-        type: 'string',
+-        default: getenv('TAG_PREFIX', 'js-v'),
+-        describe: 'Git tag prefix for JavaScript releases',
+-      }),
+-});
+-
+-const { releaseVersion: version, repository, tagPrefix } = config;
+-
+-if (!version || !repository) {
+-  console.error('Error: Missing required arguments');
+-  console.error(
+-    'Usage: bun scripts/create-github-release.mjs --release-version <version> --repository <repository>'
+-  );
+-  process.exit(1);
++// Keep comfortably below GitHub's observed 125000-character release body limit.
++export const GITHUB_RELEASE_BODY_MAX_BYTES = 120_000;
++const textEncoder = new globalThis.TextEncoder();
++
++export function parseArgs(argv, env = process.env) {
++  const config = {
++    jsRoot: env.JS_ROOT ?? '',
++    language: env.LANGUAGE ?? 'JavaScript',
++    releaseVersion: env.VERSION ?? '',
++    repository: env.REPOSITORY ?? '',
++    tagPrefix: env.TAG_PREFIX,
++  };
++
++  for (let index = 0; index < argv.length; index++) {
++    const arg = argv[index];
++    const inlineValueIndex = arg.indexOf('=');
++
++    if (inlineValueIndex !== -1) {
++      assignOptionValue(
++        config,
++        arg.slice(0, inlineValueIndex),
++        arg.slice(inlineValueIndex + 1)
++      );
++      continue;
++    }
++
++    if (OPTION_CONFIG_KEYS.has(arg)) {
++      assignOptionValue(config, arg, readOptionValue(argv, index, arg));
++      index++;
++    }
++  }
++
++  return config;
+ }
+ 
+-const tag = `${tagPrefix}${version}`;
++function assignOptionValue(config, optionName, value) {
++  const configKey = OPTION_CONFIG_KEYS.get(optionName);
+ 
+-// Keep comfortably below GitHub's observed ~125000-character release-body limit.
+-// A long CHANGELOG section would otherwise make the release API return 422 and
+-// fail the (now correctly exit-code-checked) step even though npm already
+-// published — turning a successful publish into a red job. Mirrors the js
+-// pipeline template's limitReleaseNotesBytes().
+-const GITHUB_RELEASE_BODY_MAX_BYTES = 120_000;
+-const textEncoder = new globalThis.TextEncoder();
++  if (configKey) {
++    config[configKey] = value;
++  }
++}
++
++function readOptionValue(argv, index, optionName) {
++  const value = argv[index + 1];
++
++  if (value === undefined || value.startsWith('--')) {
++    throw new Error(`Missing value for ${optionName}`);
++  }
++
++  return value;
++}
++
++function escapeRegex(value) {
++  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
++}
++
++export function extractReleaseNotes(changelog, version) {
++  // Read from CHANGELOG.md between this version header and the next version header.
++  const versionHeaderRegex = new RegExp(
++    `## ${escapeRegex(version)}(?=\\s|$)[\\s\\S]*?(?=## \\d|$)`
++  );
++  const match = changelog.match(versionHeaderRegex);
++
++  if (!match) {
++    return `Release ${version}`;
++  }
++
++  const releaseNotes = match[0].replace(`## ${version}`, '').trim();
++
++  return releaseNotes || `Release ${version}`;
++}
+ 
+-/**
+- * UTF-8 byte length of a string.
+- * @param {string} value
+- * @returns {number}
+- */
+ function getUtf8ByteLength(value) {
+   return textEncoder.encode(value).byteLength;
+ }
+ 
+-/**
+- * Truncate a string so its UTF-8 encoding does not exceed maxBytes, never
+- * splitting a multi-byte character.
+- * @param {string} value
+- * @param {number} maxBytes
+- * @returns {string}
+- */
+ function truncateToUtf8Bytes(value, maxBytes) {
+   const chunks = [];
+   let usedBytes = 0;
++
+   for (const character of value) {
+     const characterBytes = getUtf8ByteLength(character);
++
+     if (usedBytes + characterBytes > maxBytes) {
+       break;
+     }
++
+     chunks.push(character);
+     usedBytes += characterBytes;
+   }
++
+   return chunks.join('');
+ }
+ 
+-/**
+- * Cap release notes to the GitHub body limit, appending a pointer to the full
+- * tagged CHANGELOG when truncation happens.
+- * @param {string} releaseNotes
+- * @returns {string}
+- */
+-function limitReleaseNotesBytes(releaseNotes) {
+-  if (getUtf8ByteLength(releaseNotes) <= GITHUB_RELEASE_BODY_MAX_BYTES) {
++function buildTaggedChangelogUrl(repository, tag) {
++  return `https://github.com/${repository}/blob/${tag}/CHANGELOG.md`;
++}
++
++function buildTruncatedReleaseNotesNotice({ repository, tag }) {
++  const changelogUrl = buildTaggedChangelogUrl(repository, tag);
++
++  return `Release notes were shortened to fit GitHub's release body limit. See the full tagged CHANGELOG.md: ${changelogUrl}`;
++}
++
++export function limitReleaseNotesBytes({
++  maxBytes = GITHUB_RELEASE_BODY_MAX_BYTES,
++  releaseNotes,
++  repository,
++  tag,
++}) {
++  if (getUtf8ByteLength(releaseNotes) <= maxBytes) {
+     return releaseNotes;
+   }
+-  const changelogUrl = `https://github.com/${repository}/blob/${tag}/CHANGELOG.md`;
+-  const suffix = `\n\n...\n\nRelease notes were shortened to fit GitHub's release body limit. See the full tagged CHANGELOG.md: ${changelogUrl}`;
+-  const availableBytes = Math.max(
+-    0,
+-    GITHUB_RELEASE_BODY_MAX_BYTES - getUtf8ByteLength(suffix)
+-  );
+-  const shortened = truncateToUtf8Bytes(releaseNotes, availableBytes).trimEnd();
+-  const limited = `${shortened}${suffix}`;
+-  return getUtf8ByteLength(limited) <= GITHUB_RELEASE_BODY_MAX_BYTES
+-    ? limited
+-    : truncateToUtf8Bytes(limited, GITHUB_RELEASE_BODY_MAX_BYTES);
+-}
+-
+-console.log(`Creating JavaScript GitHub release for ${tag}...`);
+-
+-try {
+-  // Read CHANGELOG.md
+-  const changelog = readFileSync('./CHANGELOG.md', 'utf8');
+-
+-  // Extract changelog entry for this version
+-  // Read from CHANGELOG.md between this version header and the next version header
+-  const versionHeaderRegex = new RegExp(`## ${version}[\\s\\S]*?(?=## \\d|$)`);
+-  const match = changelog.match(versionHeaderRegex);
+ 
+-  let releaseNotes = '';
+-  if (match) {
+-    // Remove the version header itself and trim
+-    releaseNotes = match[0].replace(`## ${version}`, '').trim();
+-  }
++  const suffix = `\n\n...\n\n${buildTruncatedReleaseNotesNotice({
++    repository,
++    tag,
++  })}`;
++  const suffixBytes = getUtf8ByteLength(suffix);
++  const availableBytes = Math.max(0, maxBytes - suffixBytes);
++  const shortenedNotes = truncateToUtf8Bytes(
++    releaseNotes,
++    availableBytes
++  ).trimEnd();
++  const limitedNotes = `${shortenedNotes}${suffix}`;
+ 
+-  if (!releaseNotes) {
+-    releaseNotes = `Release ${version}`;
++  if (getUtf8ByteLength(limitedNotes) <= maxBytes) {
++    return limitedNotes;
+   }
+ 
+-  // Create release using GitHub API with JSON input
+-  // This avoids shell escaping issues that occur when passing text via command-line arguments
+-  // (Previously caused apostrophes like "didn't" to appear as "didn'''" in releases)
+-  const payload = JSON.stringify({
++  return truncateToUtf8Bytes(limitedNotes, maxBytes);
++}
++
++export function buildReleasePayload({
++  changelog,
++  jsRoot = '.',
++  language,
++  packageName,
++  repository,
++  tag,
++  version,
++}) {
++  const normalizedVersion = normalizeReleaseVersion(version);
++  const releaseNotes = extractReleaseNotes(changelog, normalizedVersion);
++
++  return JSON.stringify({
+     tag_name: tag,
+-    name: `JavaScript ${version}`,
+-    body: limitReleaseNotesBytes(releaseNotes),
++    name: buildReleaseTitle(tag, {
++      jsRoot,
++      language: language ?? 'JavaScript',
++      packageName,
++    }),
++    body: limitReleaseNotesBytes({ releaseNotes, repository, tag }),
+   });
++}
++
++function formatGhOutput(result) {
++  return [result.stderr, result.stdout]
++    .filter((output) => typeof output === 'string' && output.trim())
++    .map((output) => output.trim())
++    .join('\n');
++}
++
++function getGhExitDescription(result) {
++  if (result.signal) {
++    return `signal ${result.signal}`;
++  }
++
++  if (typeof result.status === 'number') {
++    return `code ${result.status}`;
++  }
++
++  return 'unknown exit status';
++}
++
++export function createRelease({ payload, repository, spawn = spawnSync }) {
++  const result = spawn(
++    'gh',
++    ['api', `repos/${repository}/releases`, '-X', 'POST', '--input', '-'],
++    {
++      encoding: 'utf8',
++      input: payload,
++    }
++  );
+ 
+-  // command-stream's `$` does NOT throw on a non-zero exit (errexit is off by
+-  // default — see issue #156), so we must inspect the result code explicitly.
+-  // Otherwise a failed `gh api` call would be silently reported as a created
+-  // release (the same false-positive class that produced #166).
+-  const result =
+-    await $`gh api repos/${repository}/releases -X POST --input -`.run({
+-      stdin: payload,
+-      capture: true,
++  if (result.error) {
++    throw new Error(`gh api failed to start: ${result.error.message}`);
++  }
++
++  if (result.status === 0) {
++    return { alreadyExists: false };
++  }
++
++  const output = formatGhOutput(result);
++
++  if (/already_exists/i.test(output)) {
++    return { alreadyExists: true };
++  }
++
++  const details = output ? `:\n${output}` : '';
++  throw new Error(
++    `gh api failed with ${getGhExitDescription(result)}${details}`
++  );
++}
++
++export function main({
++  argv = process.argv.slice(2),
++  cwd = process.cwd(),
++  env = process.env,
++  spawn = spawnSync,
++  stderr = console.error,
++  stdout = console.log,
++} = {}) {
++  try {
++    const {
++      language,
++      jsRoot: configuredJsRoot,
++      releaseVersion: version,
++      repository,
++      tagPrefix,
++    } = parseArgs(argv, env);
++
++    if (!version || !repository) {
++      stderr('Error: Missing required arguments');
++      stderr(USAGE);
++      return 1;
++    }
++
++    const jsRoot = getJsRoot({ jsRoot: configuredJsRoot || undefined });
++    const tag = buildReleaseTag(version, { jsRoot, tagPrefix });
++    const normalizedVersion = normalizeReleaseVersion(version);
++    const { name: packageName } = readPackageInfo({ jsRoot });
++
++    stdout(`Creating GitHub release for ${tag}...`);
++
++    const changelogPath =
++      jsRoot === '.' ? 'CHANGELOG.md' : path.join(jsRoot, 'CHANGELOG.md');
++    const changelog = readFileSync(path.join(cwd, changelogPath), 'utf8');
++    const payload = buildReleasePayload({
++      changelog,
++      jsRoot,
++      language,
++      packageName,
++      repository,
++      tag,
++      version: normalizedVersion,
+     });
++    const result = createRelease({ payload, repository, spawn });
+ 
+-  if (result.code !== 0) {
+-    // Idempotency: a self-healing re-run (or a retried job) may try to create a
+-    // release whose tag already exists. GitHub returns 422 already_exists; that
+-    // is a success for our purposes, not a failure — so the publish does not
+-    // get turned into a red job on re-run. Mirrors the template's behaviour.
+-    const combinedOutput =
+-      `${result.stderr || ''}\n${result.stdout || ''}`.trim();
+-    if (/already_exists/i.test(combinedOutput)) {
+-      console.log(
+-        `JavaScript GitHub release already exists: ${tag}. Skipping creation.`
+-      );
+-    } else {
+-      throw new Error(
+-        `gh api failed to create release ${tag} (exit code ${result.code}): ${result.stderr?.trim() || 'no stderr'}`
+-      );
++    if (result.alreadyExists) {
++      stdout(`GitHub release already exists: ${tag}. Skipping creation.`);
++      return 0;
+     }
+-  } else {
+-    console.log(`Created JavaScript GitHub release: ${tag}`);
++
++    stdout(`\u2705 Created GitHub release: ${tag}`);
++    return 0;
++  } catch (error) {
++    stderr(`Error creating release: ${error.message}`);
++    return 1;
+   }
+-} catch (error) {
+-  console.error('Error creating release:', error.message);
+-  process.exit(1);
++}
++
++function isCliEntryPoint() {
++  return (
++    typeof process !== 'undefined' &&
++    process.argv?.[1] &&
++    fileURLToPath(import.meta.url) === path.resolve(process.argv[1])
++  );
++}
++
++if (isCliEntryPoint()) {
++  process.exitCode = main();
+ }
+########## create-manual-changeset.mjs ##########
+--- js/scripts/create-manual-changeset.mjs	2026-09-04 20:28:25.871207709 +0000
++++ /tmp/tmpl/js-tmpl/scripts/create-manual-changeset.mjs	2026-09-04 20:31:16.598474154 +0000
+@@ -2,9 +2,7 @@
+ 
+ /**
+  * Create a changeset file for manual releases
+- * Usage: bun scripts/create-manual-changeset.mjs --bump-type <major|minor|patch> [--description <description>]
+- *
+- * IMPORTANT: Update the PACKAGE_NAME constant below to match your package.json
++ * Usage: node scripts/create-manual-changeset.mjs --bump-type <major|minor|patch> [--description <description>] [--js-root <path>]
+  *
+  * Uses link-foundation libraries:
+  * - use-m: Dynamic package loading without package.json dependencies
+@@ -12,19 +10,17 @@
+  * - lino-arguments: Unified configuration from CLI args, env vars, and .lenv files
+  */
+ 
+-import { writeFileSync } from 'fs';
++import { mkdirSync, writeFileSync } from 'fs';
+ import { randomBytes } from 'crypto';
++import { join } from 'path';
+ 
+-const PACKAGE_NAME = 'command-stream';
+-
+-// Load use-m dynamically
+-const { use } = eval(
+-  await (await fetch('https://unpkg.com/use-m/use.js')).text()
+-);
++import { getChangesetDir, getJsRoot, parseJsRootConfig } from './js-paths.mjs';
++import { formatChangesetHeader, readPackageInfo } from './package-info.mjs';
++import { loadCommandStream, loadLinoArguments } from './use-module.mjs';
+ 
+ // Import link-foundation libraries
+-const { $ } = await use('command-stream');
+-const { makeConfig } = await use('lino-arguments');
++const { $ } = await loadCommandStream();
++const { makeConfig } = await loadLinoArguments();
+ 
+ // Parse CLI arguments using lino-arguments
+ const config = makeConfig({
+@@ -40,34 +36,46 @@
+         type: 'string',
+         default: getenv('DESCRIPTION', ''),
+         describe: 'Description for the changeset',
++      })
++      .option('js-root', {
++        type: 'string',
++        default: getenv('JS_ROOT', ''),
++        describe:
++          'JavaScript package root directory (auto-detected if not specified)',
+       }),
+ });
+ 
+ try {
+-  const { bumpType, description: descriptionArg } = config;
++  const { bumpType, description: descriptionArg, jsRoot: jsRootArg } = config;
+ 
+   // Use provided description or default based on bump type
+   const description = descriptionArg || `Manual ${bumpType} release`;
+ 
+   if (!bumpType || !['major', 'minor', 'patch'].includes(bumpType)) {
+     console.error(
+-      'Usage: bun scripts/create-manual-changeset.mjs --bump-type <major|minor|patch> [--description <description>]'
++      'Usage: node scripts/create-manual-changeset.mjs --bump-type <major|minor|patch> [--description <description>]'
+     );
+     process.exit(1);
+   }
+ 
++  const jsRootConfig = jsRootArg || parseJsRootConfig();
++  const jsRoot = getJsRoot({ jsRoot: jsRootConfig, verbose: true });
++  const changesetDir = getChangesetDir({ jsRoot });
++  const { name: packageName } = readPackageInfo({ jsRoot });
++
+   // Generate a random changeset ID
+   const changesetId = randomBytes(4).toString('hex');
+-  const changesetFile = `.changeset/manual-release-${changesetId}.md`;
++  const changesetFile = join(changesetDir, `manual-release-${changesetId}.md`);
+ 
+   // Create the changeset file with single quotes to match Prettier config
+   const content = `---
+-'${PACKAGE_NAME}': ${bumpType}
++${formatChangesetHeader(packageName, bumpType)}
+ ---
+ 
+ ${description}
+ `;
+ 
++  mkdirSync(changesetDir, { recursive: true });
+   writeFileSync(changesetFile, content, 'utf-8');
+ 
+   console.log(`Created changeset: ${changesetFile}`);
+@@ -76,7 +84,7 @@
+ 
+   // Format with Prettier
+   console.log('\nFormatting with Prettier...');
+-  await $`bunx prettier --write "${changesetFile}"`;
++  await $`npx prettier --write "${changesetFile}"`;
+ 
+   console.log('\n✅ Changeset created and formatted successfully');
+ } catch (error) {
+########## format-github-release.mjs ##########
+--- js/scripts/format-github-release.mjs	2026-09-04 20:28:25.871207709 +0000
++++ /tmp/tmpl/js-tmpl/scripts/format-github-release.mjs	2026-09-04 20:31:16.598474154 +0000
+@@ -1,11 +1,13 @@
+ #!/usr/bin/env bun
+ 
+ /**
+- * Format JavaScript GitHub release notes using the format-release-notes.mjs script
+- * Usage: bun scripts/format-github-release.mjs --release-version <version> --repository <repository> --commit-sha <commit_sha> [--tag-prefix js-v]
++ * Format GitHub release notes using the format-release-notes.mjs script
++ * Usage: node scripts/format-github-release.mjs --release-version <version> --repository <repository> --commit-sha <commit_sha> [--tag-prefix <prefix>] [--js-root <path>]
+  *   release-version: Version number (e.g., 1.0.0)
+  *   repository: GitHub repository (e.g., owner/repo)
+  *   commit_sha: Commit SHA for PR detection
++ *   tag-prefix: Prefix for the git tag (default: auto-detect from layout)
++ *   js-root: JavaScript package root directory (auto-detected if not specified)
+  *
+  * Uses link-foundation libraries:
+  * - use-m: Dynamic package loading without package.json dependencies
+@@ -13,14 +15,13 @@
+  * - lino-arguments: Unified configuration from CLI args, env vars, and .lenv files
+  */
+ 
+-// Load use-m dynamically
+-const { use } = eval(
+-  await (await fetch('https://unpkg.com/use-m/use.js')).text()
+-);
++import { getJsRoot, parseJsRootConfig } from './js-paths.mjs';
++import { buildReleaseTag, normalizeReleaseVersion } from './release-naming.mjs';
++import { loadCommandStream, loadLinoArguments } from './use-module.mjs';
+ 
+ // Import link-foundation libraries
+-const { $ } = await use('command-stream');
+-const { makeConfig } = await use('lino-arguments');
++const { $ } = await loadCommandStream();
++const { makeConfig } = await loadLinoArguments();
+ 
+ // Parse CLI arguments using lino-arguments
+ // Note: Using --release-version instead of --version to avoid conflict with yargs' built-in --version flag
+@@ -44,22 +45,41 @@
+       })
+       .option('tag-prefix', {
+         type: 'string',
+-        default: getenv('TAG_PREFIX', 'js-v'),
+-        describe: 'Git tag prefix for JavaScript releases',
++        default: getenv('TAG_PREFIX', ''),
++        describe: 'Prefix for the git tag (auto-detected when omitted)',
++      })
++      .option('js-root', {
++        type: 'string',
++        default: getenv('JS_ROOT', ''),
++        describe:
++          'JavaScript package root directory (auto-detected if not specified)',
+       }),
+ });
+ 
+-const { releaseVersion: version, repository, commitSha, tagPrefix } = config;
++const {
++  releaseVersion: version,
++  repository,
++  commitSha,
++  tagPrefix: configuredTagPrefix,
++  jsRoot: configuredJsRoot,
++} = config;
+ 
+ if (!version || !repository || !commitSha) {
+   console.error('Error: Missing required arguments');
+   console.error(
+-    'Usage: bun scripts/format-github-release.mjs --release-version <version> --repository <repository> --commit-sha <commit_sha>'
++    'Usage: node scripts/format-github-release.mjs --release-version <version> --repository <repository> --commit-sha <commit_sha> [--tag-prefix <prefix>] [--js-root <path>]'
+   );
+   process.exit(1);
+ }
+ 
+-const tag = `${tagPrefix}${version}`;
++const jsRoot = getJsRoot({
++  jsRoot: configuredJsRoot || parseJsRootConfig() || undefined,
++});
++const tag = buildReleaseTag(version, {
++  jsRoot,
++  tagPrefix: configuredTagPrefix || undefined,
++});
++const normalizedVersion = normalizeReleaseVersion(version);
+ 
+ try {
+   // Get the release ID for this version
+@@ -76,11 +96,11 @@
+   }
+ 
+   if (releaseId) {
+-    console.log(`Formatting JavaScript release notes for ${tag}...`);
++    console.log(`Formatting release notes for ${tag}...`);
+     // Pass the trigger commit SHA for PR detection
+     // This allows proper PR lookup even if the changelog doesn't have a commit hash
+-    await $`bun scripts/format-release-notes.mjs --release-id "${releaseId}" --release-version "${tag}" --repository "${repository}" --commit-sha "${commitSha}"`;
+-    console.log(`Formatted JavaScript release notes for ${tag}`);
++    await $`node scripts/format-release-notes.mjs --release-id "${releaseId}" --release-version "${normalizedVersion}" --repository "${repository}" --commit-sha "${commitSha}"`;
++    console.log(`\u2705 Formatted release notes for ${tag}`);
+   }
+ } catch (error) {
+   console.error('Error formatting release:', error.message);
+########## format-release-notes.mjs ##########
+--- js/scripts/format-release-notes.mjs	2026-09-04 20:28:25.871207709 +0000
++++ /tmp/tmpl/js-tmpl/scripts/format-release-notes.mjs	2026-09-04 20:31:16.598474154 +0000
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bun
++#!/usr/bin/env node
+ 
+ /**
+  * Script to format GitHub release notes with proper formatting:
+@@ -7,8 +7,6 @@
+  * - Add shields.io NPM version badge
+  * - Format nicely with proper markdown
+  *
+- * IMPORTANT: Update the PACKAGE_NAME constant below to match your package.json
+- *
+  * PR Detection Logic:
+  * 1. Extract commit hash from changelog entry (if present)
+  * 2. Fall back to --commit-sha argument (passed from workflow)
+@@ -23,16 +21,17 @@
+  * Note: Uses --release-version instead of --version to avoid conflict with yargs' built-in --version flag.
+  */
+ 
+-const PACKAGE_NAME = 'command-stream';
+-
+-// Load use-m dynamically
+-const { use } = eval(
+-  await (await fetch('https://unpkg.com/use-m/use.js')).text()
+-);
++import { getJsRoot, parseJsRootConfig } from './js-paths.mjs';
++import { readPackageInfo } from './package-info.mjs';
++import {
++  buildNpmVersionBadge,
++  normalizeReleaseVersionForBadge,
++} from './format-release-notes-helpers.mjs';
++import { loadCommandStream, loadLinoArguments } from './use-module.mjs';
+ 
+ // Import link-foundation libraries
+-const { $ } = await use('command-stream');
+-const { makeConfig } = await use('lino-arguments');
++const { $ } = await loadCommandStream();
++const { makeConfig } = await loadLinoArguments();
+ 
+ // Parse CLI arguments using lino-arguments
+ // Note: Using --release-version instead of --version to avoid conflict with yargs' built-in --version flag
+@@ -58,6 +57,12 @@
+         type: 'string',
+         default: getenv('COMMIT_SHA', ''),
+         describe: 'Commit SHA for PR detection',
++      })
++      .option('js-root', {
++        type: 'string',
++        default: getenv('JS_ROOT', ''),
++        describe:
++          'JavaScript package root directory (auto-detected if not specified)',
+       }),
+ });
+ 
+@@ -65,6 +70,9 @@
+ const version = config.releaseVersion;
+ const repository = config.repository;
+ const passedCommitSha = config.commitSha;
++const jsRootConfig = config.jsRoot || parseJsRootConfig();
++const jsRoot = getJsRoot({ jsRoot: jsRootConfig, verbose: true });
++const { name: packageName } = readPackageInfo({ jsRoot });
+ 
+ if (!releaseId || !version || !repository) {
+   console.error(
+@@ -188,8 +196,8 @@
+   }
+ 
+   // Build formatted release notes
+-  const versionWithoutV = version.replace(/^js-v/, '').replace(/^v/, '');
+-  const npmBadge = `[![npm version](https://img.shields.io/badge/npm-${versionWithoutV}-blue.svg)](https://www.npmjs.com/package/${PACKAGE_NAME}/v/${versionWithoutV})`;
++  const versionWithoutV = normalizeReleaseVersionForBadge(version);
++  const npmBadge = buildNpmVersionBadge(packageName, version);
+ 
+   let formattedBody = `${cleanDescription}`;
+ 
+########## instant-version-bump.mjs ##########
+--- js/scripts/instant-version-bump.mjs	2026-09-04 20:28:25.872207699 +0000
++++ /tmp/tmpl/js-tmpl/scripts/instant-version-bump.mjs	2026-09-04 20:31:16.598474154 +0000
+@@ -4,24 +4,37 @@
+  * Instant version bump script for manual releases
+  * Bypasses the changeset workflow and directly updates version and changelog
+  *
+- * Usage: bun scripts/instant-version-bump.mjs --bump-type <major|minor|patch> [--description <description>]
++ * Usage: node scripts/instant-version-bump.mjs --bump-type <major|minor|patch> [--description <description>] [--js-root <path>]
++ *
++ * Configuration:
++ * - CLI: --js-root <path> to explicitly set JavaScript root
++ * - Environment: JS_ROOT=<path>
+  *
+  * Uses link-foundation libraries:
+  * - use-m: Dynamic package loading without package.json dependencies
+  * - command-stream: Modern shell command execution with streaming support
+  * - lino-arguments: Unified configuration from CLI args, env vars, and .lenv files
++ *
++ * Addresses issues documented in:
++ * - Issue #21: Supporting both single and multi-language repository structures
++ * - Reference: link-assistant/agent PR #112 (--legacy-peer-deps fix)
++ * - Reference: link-assistant/agent PR #114 (configurable package root)
+  */
+ 
+ import { readFileSync, writeFileSync } from 'fs';
++import { join } from 'path';
+ 
+-// Load use-m dynamically
+-const { use } = eval(
+-  await (await fetch('https://unpkg.com/use-m/use.js')).text()
+-);
++import {
++  getJsRoot,
++  getPackageJsonPath,
++  needsCd,
++  parseJsRootConfig,
++} from './js-paths.mjs';
++import { loadCommandStream, loadLinoArguments } from './use-module.mjs';
+ 
+ // Import link-foundation libraries
+-const { $ } = await use('command-stream');
+-const { makeConfig } = await use('lino-arguments');
++const { $ } = await loadCommandStream();
++const { makeConfig } = await loadLinoArguments();
+ 
+ // Parse CLI arguments using lino-arguments
+ const config = makeConfig({
+@@ -37,16 +50,31 @@
+         type: 'string',
+         default: getenv('DESCRIPTION', ''),
+         describe: 'Description for the version bump',
++      })
++      .option('js-root', {
++        type: 'string',
++        default: getenv('JS_ROOT', ''),
++        describe:
++          'JavaScript package root directory (auto-detected if not specified)',
+       }),
+ });
+ 
++// Store the original working directory to restore after cd commands
++// IMPORTANT: command-stream's cd is a virtual command that calls process.chdir()
++const originalCwd = process.cwd();
++
+ try {
+-  const { bumpType, description } = config;
++  const { bumpType, description, jsRoot: jsRootArg } = config;
++
++  // Get JavaScript package root (auto-detect or use explicit config)
++  const jsRootConfig = jsRootArg || parseJsRootConfig();
++  const jsRoot = getJsRoot({ jsRoot: jsRootConfig, verbose: true });
++
+   const finalDescription = description || `Manual ${bumpType} release`;
+ 
+   if (!bumpType || !['major', 'minor', 'patch'].includes(bumpType)) {
+     console.error(
+-      'Usage: bun scripts/instant-version-bump.mjs --bump-type <major|minor|patch> [--description <description>]'
++      'Usage: node scripts/instant-version-bump.mjs --bump-type <major|minor|patch> [--description <description>] [--js-root <path>]'
+     );
+     process.exit(1);
+   }
+@@ -54,21 +82,29 @@
+   console.log(`\nBumping version (${bumpType})...`);
+ 
+   // Get current version
+-  const packageJson = JSON.parse(readFileSync('package.json', 'utf-8'));
++  const packageJsonPath = getPackageJsonPath({ jsRoot });
++  const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
+   const oldVersion = packageJson.version;
+   console.log(`Current version: ${oldVersion}`);
+ 
+   // Bump version using npm version (doesn't create git tag)
+-  await $`npm version ${bumpType} --no-git-tag-version`;
++  // IMPORTANT: cd is a virtual command that calls process.chdir(), so we restore after
++  if (needsCd({ jsRoot })) {
++    await $`cd ${jsRoot} && npm version ${bumpType} --no-git-tag-version`;
++    process.chdir(originalCwd);
++  } else {
++    await $`npm version ${bumpType} --no-git-tag-version`;
++  }
+ 
+   // Get new version
+-  const updatedPackageJson = JSON.parse(readFileSync('package.json', 'utf-8'));
++  const updatedPackageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
+   const newVersion = updatedPackageJson.version;
+   console.log(`New version: ${newVersion}`);
+ 
+   // Update CHANGELOG.md
+   console.log('\nUpdating CHANGELOG.md...');
+-  const changelogPath = 'CHANGELOG.md';
++  const changelogPath =
++    jsRoot === '.' ? 'CHANGELOG.md' : join(jsRoot, 'CHANGELOG.md');
+   let changelog = readFileSync(changelogPath, 'utf-8');
+ 
+   // Create new changelog entry
+@@ -106,18 +142,24 @@
+   writeFileSync(changelogPath, changelog, 'utf-8');
+   console.log('✅ CHANGELOG.md updated');
+ 
+-  // Synchronize package-lock.json if it exists
+-  try {
+-    console.log('\nSynchronizing package-lock.json...');
+-    await $`npm install --package-lock-only`;
+-  } catch {
+-    // No package-lock.json or npm not available, skip
+-    console.log('Skipping package-lock.json sync (not applicable)');
++  // Synchronize package-lock.json
++  console.log('\nSynchronizing package-lock.json...');
++
++  // Use --legacy-peer-deps to handle peer dependency conflicts
++  // This addresses npm ERESOLVE errors documented in issue #111 / PR #112
++  // IMPORTANT: cd is a virtual command that calls process.chdir(), so we restore after
++  if (needsCd({ jsRoot })) {
++    await $`cd ${jsRoot} && npm install --package-lock-only --legacy-peer-deps`;
++    process.chdir(originalCwd);
++  } else {
++    await $`npm install --package-lock-only --legacy-peer-deps`;
+   }
+ 
+   console.log('\n✅ Instant version bump complete');
+   console.log(`Version: ${oldVersion} → ${newVersion}`);
+ } catch (error) {
++  // Restore cwd on error
++  process.chdir(originalCwd);
+   console.error('Error during instant version bump:', error.message);
+   if (process.env.DEBUG) {
+     console.error('Stack trace:', error.stack);
+########## merge-changesets.mjs ##########
+--- js/scripts/merge-changesets.mjs	2026-09-04 20:28:25.872207699 +0000
++++ /tmp/tmpl/js-tmpl/scripts/merge-changesets.mjs	2026-09-04 20:31:16.600474133 +0000
+@@ -9,11 +9,10 @@
+  * - Preserves all descriptions in chronological order (by file modification time)
+  * - Removes the individual changeset files after merging
+  * - Does nothing if there's only one or no changesets
++ * - Fails if any changeset cannot be parsed
+  *
+  * This script is run before `changeset version` to ensure a clean release
+  * even when multiple PRs have merged before a release cycle.
+- *
+- * IMPORTANT: Update the package name below to match your package.json
+  */
+ 
+ import {
+@@ -25,8 +24,12 @@
+ } from 'fs';
+ import { join } from 'path';
+ 
+-const PACKAGE_NAME = 'command-stream';
+-const CHANGESET_DIR = '.changeset';
++import { getChangesetDir, getJsRoot, parseJsRootConfig } from './js-paths.mjs';
++import {
++  formatChangesetHeader,
++  getChangesetVersionTypeRegex,
++  readPackageInfo,
++} from './package-info.mjs';
+ 
+ // Version bump type priority (higher number = higher priority)
+ const BUMP_PRIORITY = {
+@@ -112,41 +115,45 @@
+ /**
+  * Parse a changeset file and extract its metadata
+  * @param {string} filePath
+- * @returns {{type: string, description: string, mtime: Date} | null}
++ * @param {string} packageName
++ * @returns {{type: string, description: string, mtime: Date}}
+  */
+-function parseChangeset(filePath) {
++function parseChangeset(filePath, packageName) {
++  let content;
++  let stats;
++
+   try {
+-    const content = readFileSync(filePath, 'utf-8');
+-    const stats = statSync(filePath);
++    content = readFileSync(filePath, 'utf-8');
++    stats = statSync(filePath);
++  } catch (error) {
++    throw new Error(`Failed to read ${filePath}: ${error.message}`);
++  }
+ 
+-    // Extract version type - support both quoted and unquoted package names
+-    const versionTypeRegex = new RegExp(
+-      `^['"]?${PACKAGE_NAME.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"]?:\\s+(major|minor|patch)`,
+-      'm'
++  // Extract version type - support both quoted and unquoted package names
++  const versionTypeRegex = getChangesetVersionTypeRegex(packageName, {
++    requireQuotes: false,
++  });
++  const versionTypeMatch = content.match(versionTypeRegex);
++
++  if (!versionTypeMatch) {
++    throw new Error(
++      `Could not parse version type from ${filePath}. Expected a changeset header like ${formatChangesetHeader(
++        packageName,
++        'patch'
++      )} with version type major, minor, or patch.`
+     );
+-    const versionTypeMatch = content.match(versionTypeRegex);
+-
+-    if (!versionTypeMatch) {
+-      console.warn(
+-        `Warning: Could not parse version type from ${filePath}, skipping`
+-      );
+-      return null;
+-    }
+-
+-    // Extract description
+-    const parts = content.split('---');
+-    const description =
+-      parts.length >= 3 ? parts.slice(2).join('---').trim() : '';
+-
+-    return {
+-      type: versionTypeMatch[1],
+-      description,
+-      mtime: stats.mtime,
+-    };
+-  } catch (error) {
+-    console.warn(`Warning: Failed to parse ${filePath}: ${error.message}`);
+-    return null;
+   }
++
++  // Extract description
++  const parts = content.split('---');
++  const description =
++    parts.length >= 3 ? parts.slice(2).join('---').trim() : '';
++
++  return {
++    type: versionTypeMatch[1],
++    description,
++    mtime: stats.mtime,
++  };
+ }
+ 
+ /**
+@@ -168,13 +175,14 @@
+  * Create a merged changeset file
+  * @param {string} type
+  * @param {string[]} descriptions
++ * @param {string} packageName
+  * @returns {string}
+  */
+-function createMergedChangeset(type, descriptions) {
++function createMergedChangeset(type, descriptions, packageName) {
+   const combinedDescription = descriptions.join('\n\n');
+ 
+   return `---
+-'${PACKAGE_NAME}': ${type}
++${formatChangesetHeader(packageName, type)}
+ ---
+ 
+ ${combinedDescription}
+@@ -183,9 +191,14 @@
+ 
+ function main() {
+   console.log('Checking for multiple changesets to merge...');
++  const jsRootConfig = parseJsRootConfig();
++  const jsRoot = getJsRoot({ jsRoot: jsRootConfig, verbose: true });
++  const changesetDir = getChangesetDir({ jsRoot });
++  const { name: packageName } = readPackageInfo({ jsRoot });
++  console.log(`Package: ${packageName}`);
+ 
+   // Get all changeset files
+-  const changesetFiles = readdirSync(CHANGESET_DIR).filter(
++  const changesetFiles = readdirSync(changesetDir).filter(
+     (file) => file.endsWith('.md') && file !== 'README.md'
+   );
+ 
+@@ -203,8 +216,8 @@
+   // Parse all changesets
+   const parsedChangesets = [];
+   for (const file of changesetFiles) {
+-    const filePath = join(CHANGESET_DIR, file);
+-    const parsed = parseChangeset(filePath);
++    const filePath = join(changesetDir, file);
++    const parsed = parseChangeset(filePath, packageName);
+     if (parsed) {
+       parsedChangesets.push({
+         file,
+@@ -238,11 +251,15 @@
+   console.log(`  Descriptions to merge: ${descriptions.length}`);
+ 
+   // Create merged changeset content
+-  const mergedContent = createMergedChangeset(highestBumpType, descriptions);
++  const mergedContent = createMergedChangeset(
++    highestBumpType,
++    descriptions,
++    packageName
++  );
+ 
+   // Generate a unique name for the merged changeset
+   const mergedFileName = `merged-${generateChangesetName()}.md`;
+-  const mergedFilePath = join(CHANGESET_DIR, mergedFileName);
++  const mergedFilePath = join(changesetDir, mergedFileName);
+ 
+   // Write the merged changeset
+   writeFileSync(mergedFilePath, mergedContent);
+@@ -259,4 +276,12 @@
+   console.log(`\nMerged changeset content:\n${mergedContent}`);
+ }
+ 
+-main();
++try {
++  main();
++} catch (error) {
++  console.error(`::error::${error.message}`);
++  if (process.env.DEBUG) {
++    console.error('Stack trace:', error.stack);
++  }
++  process.exit(1);
++}
+########## publish-to-npm.mjs ##########
+--- js/scripts/publish-to-npm.mjs	2026-09-04 20:28:25.872207699 +0000
++++ /tmp/tmpl/js-tmpl/scripts/publish-to-npm.mjs	2026-09-04 20:31:16.600474133 +0000
+@@ -2,86 +2,108 @@
+ 
+ /**
+  * Publish to npm using OIDC trusted publishing
+- * Usage: bun scripts/publish-to-npm.mjs [--should-pull]
++ * Usage: node scripts/publish-to-npm.mjs [--should-pull] [--js-root <path>]
+  *   should_pull: Optional flag to pull latest changes before publishing (for release job)
+  *
+- * IMPORTANT: Update the PACKAGE_NAME constant below to match your package.json
+- *
+- * Reliable success detection (prevents false-positive releases):
+- *   command-stream's `$` does NOT throw on a non-zero exit code (errexit is
+- *   off by default — see issue #156). A bare `await $`cmd`` therefore never
+- *   rejects, so a try/catch around it can never observe a failure. The previous
+- *   version of this script relied on that catch, so a failed `changeset publish`
+- *   (e.g. npm E404) was silently reported as a success — which created a
+- *   GitHub release (`js-v0.10.1`) for a version that never reached npm (#166).
+- *
+- *   This version mirrors the multi-layer detection used by the pipeline
+- *   template (link-foundation/js-ai-driven-development-pipeline-template,
+- *   originally link-assistant/agent PR #116):
+- *     1. scan the captured output for known failure patterns,
+- *     2. check the captured exit code, and
+- *     3. verify the version is actually visible on npm with `npm view`.
+- *   A publish is only reported when all three layers pass.
++ * Configuration:
++ * - CLI: --js-root <path> to explicitly set JavaScript root
++ * - Environment: JS_ROOT=<path>
+  *
+  * Uses link-foundation libraries:
+  * - use-m: Dynamic package loading without package.json dependencies
+  * - command-stream: Modern shell command execution with streaming support
+  * - lino-arguments: Unified configuration from CLI args, env vars, and .lenv files
++ *
++ * Supports both single and multi-language repository structures via a
++ * configurable package root.
+  */
+ 
+-import { readFileSync, appendFileSync } from 'fs';
++import { appendFileSync } from 'fs';
+ 
+-const PACKAGE_NAME = 'command-stream';
+-
+-// Load use-m dynamically
+-const { use } = eval(
+-  await (await fetch('https://unpkg.com/use-m/use.js')).text()
+-);
++import { getJsRoot, needsCd, parseJsRootConfig } from './js-paths.mjs';
++import { isPackageVersionPublished } from './npm-registry.mjs';
++import { readPackageInfo } from './package-info.mjs';
++import {
++  buildAuthFailureGuidance,
++  isNonRetryableFailure,
++} from './publish-failure-classifier.mjs';
++import {
++  isAlreadyPublishedError,
++  publishWithRetry,
++  sleep,
++} from './publish-retry.mjs';
++import { loadCommandStream, loadLinoArguments } from './use-module.mjs';
+ 
+ // Import link-foundation libraries
+-const { $ } = await use('command-stream');
+-const { makeConfig } = await use('lino-arguments');
++const { $ } = await loadCommandStream();
++const { makeConfig } = await loadLinoArguments();
+ 
+ // Parse CLI arguments using lino-arguments
+ const config = makeConfig({
+   yargs: ({ yargs, getenv }) =>
+-    yargs.option('should-pull', {
+-      type: 'boolean',
+-      default: getenv('SHOULD_PULL', false),
+-      describe: 'Pull latest changes before publishing',
+-    }),
++    yargs
++      .option('should-pull', {
++        type: 'boolean',
++        default: getenv('SHOULD_PULL', false),
++        describe: 'Pull latest changes before publishing',
++      })
++      .option('js-root', {
++        type: 'string',
++        default: getenv('JS_ROOT', ''),
++        describe:
++          'JavaScript package root directory (auto-detected if not specified)',
++      }),
+ });
+ 
+-const { shouldPull } = config;
++const { shouldPull, jsRoot: jsRootArg } = config;
++
++// Get JavaScript package root (auto-detect or use explicit config)
++const jsRootConfig = jsRootArg || parseJsRootConfig();
++const jsRoot = getJsRoot({ jsRoot: jsRootConfig, verbose: true });
++
+ const MAX_RETRIES = 3;
+-// Configurable so tests can run the retry loop without waiting (see
+-// tests/publish-to-npm.test.mjs). Defaults to 10s for real CI runs.
+-const RETRY_DELAY = Number(process.env.PUBLISH_RETRY_DELAY ?? 10000); // ms
+-// Wait for the npm registry to propagate before verifying a fresh publish.
+-const VERIFY_DELAY = Number(process.env.PUBLISH_VERIFY_DELAY ?? 2000); // ms
+-
+-// Patterns that indicate a publish failure in the changeset/npm output.
+-// `changeset publish` can print these and still exit 0 in some npm versions,
+-// so output scanning is the most reliable first line of defense.
+-// Reference: link-assistant/agent PR #116 — prevent false positives in CI/CD.
++const RETRY_DELAY = 10000; // 10 seconds
++
++// Store the original working directory to restore after cd commands
++// IMPORTANT: command-stream's cd is a virtual command that calls process.chdir()
++const originalCwd = process.cwd();
++
++// Patterns that indicate publish failure in changeset output
++// Guards against false positives in CI/CD output parsing.
+ const FAILURE_PATTERNS = [
+   'packages failed to publish',
+   'error occurred while publishing',
+-  'npm error code e',
++  'npm error code E',
+   'npm error 404',
+   'npm error 401',
+   'npm error 403',
+-  'access token expired',
+-  'eneedauth',
+-  'exited with code 1',
++  'Access token expired',
++  'ENEEDAUTH',
+ ];
+ 
+ /**
+- * Sleep for specified milliseconds
+- * @param {number} ms
++ * Check if the output contains any failure patterns
++ * @param {string} output - Combined stdout and stderr
++ * @returns {string|null} - The matched failure pattern or null if no failure detected
+  */
+-function sleep(ms) {
+-  return new Promise((resolve) => globalThis.setTimeout(resolve, ms));
++function detectPublishFailure(output) {
++  const lowerOutput = output.toLowerCase();
++  for (const pattern of FAILURE_PATTERNS) {
++    if (lowerOutput.includes(pattern.toLowerCase())) {
++      return pattern;
++    }
++  }
++  return null;
++}
++
++/**
++ * Verify that a package version is published on npm
++ * @param {string} packageName
++ * @param {string} version
++ * @returns {Promise<boolean>}
++ */
++function verifyPublished(packageName, version) {
++  return isPackageVersionPublished(packageName, version);
+ }
+ 
+ /**
+@@ -97,78 +119,107 @@
+ }
+ 
+ /**
+- * Check if the combined output contains any known failure pattern.
+- * @param {string} output - Combined stdout and stderr
+- * @returns {string|null} - The matched failure pattern, or null when clean
++ * Run changeset:publish command with output capture
++ * @param {Function} shell
++ * @param {string} jsRoot
++ * @param {string} originalCwd
++ * @returns {Promise<{result: object|null, error: Error|null}>}
+  */
+-function detectPublishFailure(output) {
+-  const lowerOutput = output.toLowerCase();
+-  for (const pattern of FAILURE_PATTERNS) {
+-    if (lowerOutput.includes(pattern)) {
+-      return pattern;
++async function runChangesetPublish(shell, jsRoot, originalCwd) {
++  try {
++    // Run changeset:publish from the js directory where package.json with this script exists
++    // IMPORTANT: Use .run({ capture: true }) to capture output for failure detection
++    // IMPORTANT: cd is a virtual command that calls process.chdir(), so we restore after
++    if (needsCd({ jsRoot })) {
++      const result = await shell`cd ${jsRoot} && npm run changeset:publish`.run(
++        {
++          capture: true,
++        }
++      );
++      process.chdir(originalCwd);
++      return { result, error: null };
++    }
++    const result = await shell`npm run changeset:publish`.run({
++      capture: true,
++    });
++    return { result, error: null };
++  } catch (error) {
++    // Restore cwd on error before retry
++    if (needsCd({ jsRoot })) {
++      process.chdir(originalCwd);
+     }
++    return { result: null, error };
+   }
+-  return null;
+ }
+ 
+ /**
+- * Verify a package version is actually published on npm.
+- * @param {string} packageName
+- * @param {string} version
+- * @returns {Promise<boolean>}
++ * Analyze publish result for failures using multi-layer detection
++ * @param {object|null} publishResult - The result from runChangesetPublish
++ * @param {Error|null} commandError - Error thrown by the command
++ * @returns {Error|null} - Error if failure detected, null otherwise
+  */
+-async function verifyPublished(packageName, version) {
+-  const result = await $`npm view "${packageName}@${version}" version`.run({
+-    capture: true,
+-  });
+-  return result.code === 0 && result.stdout.trim().includes(version);
++function analyzePublishResult(publishResult, commandError) {
++  if (commandError) {
++    return commandError;
++  }
++
++  const combinedOutput = publishResult
++    ? `${publishResult.stdout || ''}\n${publishResult.stderr || ''}`
++    : '';
++
++  // Log the output for debugging
++  if (combinedOutput.trim()) {
++    console.log('Changeset output:', combinedOutput);
++  }
++
++  // Check for failure patterns in output (most reliable for changeset)
++  const failurePattern = detectPublishFailure(combinedOutput);
++  if (failurePattern) {
++    console.error(`Detected publish failure: "${failurePattern}"`);
++    return new Error(`Publish failed: detected "${failurePattern}" in output`);
++  }
++
++  // Check exit code (if available and non-zero)
++  if (publishResult && publishResult.code !== 0) {
++    console.error(`Changeset exited with code ${publishResult.code}`);
++    return new Error(`Publish failed with exit code ${publishResult.code}`);
++  }
++
++  return null;
+ }
+ 
+ /**
+- * Run `changeset:publish` once and decide whether it really succeeded.
+- *
+- * command-stream does not throw on non-zero exits, so we capture the output
+- * and apply three independent checks before trusting the result.
+- *
+- * @param {string} packageName
+- * @param {string} version
+- * @returns {Promise<{success: boolean, error: Error|null}>}
++ * Run a single publish command invocation (no verification).
++ * Verification is a separate failure domain handled by publishWithRetry.
++ * @param {Function} shell
++ * @param {string} jsRoot
++ * @param {string} originalCwd
++ * @returns {Promise<{success: boolean, error: Error|null, output: string}>}
+  */
+-async function attemptPublish(packageName, version) {
+-  // IMPORTANT: capture:true mirrors output to the console *and* returns it,
+-  // so CI logs stay readable while we still get the text and exit code.
+-  const result = await $`bun run changeset:publish`.run({ capture: true });
+-
+-  const combinedOutput = `${result.stdout || ''}\n${result.stderr || ''}`;
++async function runPublishCommand(shell, jsRoot, originalCwd) {
++  const { result, error } = await runChangesetPublish(
++    shell,
++    jsRoot,
++    originalCwd
++  );
++  const analysisError = analyzePublishResult(result, error);
++  const output = [
++    analysisError?.message || '',
++    result?.stdout || '',
++    result?.stderr || '',
++  ].join('\n');
++
++  if (analysisError) {
++    // Mark authentication / registry-configuration failures as non-retryable so
++    // the retry loop can fail fast with actionable guidance without burning
++    // through MAX_RETRIES.
++    if (!isAlreadyPublishedError(output) && isNonRetryableFailure(output)) {
++      analysisError.nonRetryable = true;
++    }
++    return { success: false, error: analysisError, output };
++  }
+ 
+-  // Layer 1: scan output for known failure signatures.
+-  const failurePattern = detectPublishFailure(combinedOutput);
+-  if (failurePattern) {
+-    return {
+-      success: false,
+-      error: new Error(`detected "${failurePattern}" in publish output`),
+-    };
+-  }
+-
+-  // Layer 2: trust the exit code when it is non-zero.
+-  if (result.code !== 0) {
+-    return {
+-      success: false,
+-      error: new Error(`changeset publish exited with code ${result.code}`),
+-    };
+-  }
+-
+-  // Layer 3: confirm the version is really on npm (the ultimate check).
+-  console.log('Verifying package was published to npm...');
+-  await sleep(VERIFY_DELAY);
+-  if (await verifyPublished(packageName, version)) {
+-    return { success: true, error: null };
+-  }
+-
+-  return {
+-    success: false,
+-    error: new Error('version not found on npm after publish attempt'),
+-  };
++  return { success: true, error: null, output };
+ }
+ 
+ async function main() {
+@@ -179,74 +230,68 @@
+     }
+ 
+     // Get current version
+-    const packageJson = JSON.parse(readFileSync('./package.json', 'utf8'));
+-    const currentVersion = packageJson.version;
++    const { name: packageName, version: currentVersion } = readPackageInfo({
++      jsRoot,
++    });
++    console.log(`Package to publish: ${packageName}`);
+     console.log(`Current version to publish: ${currentVersion}`);
+ 
+     // Check if this version is already published on npm
+     console.log(
+       `Checking if version ${currentVersion} is already published...`
+     );
+-    const checkResult =
+-      await $`npm view "${PACKAGE_NAME}@${currentVersion}" version`.run({
+-        capture: true,
+-      });
+-
+-    // command-stream returns { code: 0 } on success, { code: 1 } on failure (e.g., E404)
+-    // Exit code 0 means version exists, non-zero means version not found
+-    if (checkResult.code === 0) {
++    const isAlreadyPublished = await isPackageVersionPublished(
++      packageName,
++      currentVersion
++    );
++
++    if (isAlreadyPublished) {
+       console.log(`Version ${currentVersion} is already published to npm`);
+       setOutput('published', 'true');
+       setOutput('published_version', currentVersion);
+       setOutput('already_published', 'true');
+       return;
+-    } else {
+-      // Version not found on npm (E404), proceed with publish
+-      console.log(
+-        `Version ${currentVersion} not found on npm, proceeding with publish...`
+-      );
+     }
+ 
+-    // Publish to npm using OIDC trusted publishing with retry logic.
+-    // Multi-layer failure detection prevents false-positive releases (#166).
+-    for (let i = 1; i <= MAX_RETRIES; i++) {
+-      console.log(`Publish attempt ${i} of ${MAX_RETRIES}...`);
+-      const { success, error } = await attemptPublish(
+-        PACKAGE_NAME,
+-        currentVersion
+-      );
+-
+-      if (success) {
+-        setOutput('published', 'true');
+-        setOutput('published_version', currentVersion);
+-        console.log(`✅ Published ${PACKAGE_NAME}@${currentVersion} to npm`);
+-        return;
+-      }
+-
+-      if (i < MAX_RETRIES) {
+-        console.log(
+-          `Publish failed: ${error.message}, waiting ${RETRY_DELAY / 1000}s before retry...`
+-        );
+-        await sleep(RETRY_DELAY);
+-      } else {
+-        console.error(`Publish attempt ${i} failed: ${error.message}`);
+-      }
+-    }
+-
+-    console.error(`❌ Failed to publish after ${MAX_RETRIES} attempts`);
+-    console.error(
+-      'Hint: an npm E404 on PUT usually means OIDC trusted publishing is not ' +
+-        'configured for this workflow file. npm allows only one workflow file ' +
+-        'as a trusted publisher; if the release workflow was renamed (e.g. ' +
+-        'release.yml -> js.yml), update the trusted publisher on npmjs.com. ' +
+-        'See docs/case-studies/issue-166/README.md.'
++    // Version not found on npm (E404), proceed with publish
++    console.log(
++      `Version ${currentVersion} not found on npm, proceeding with publish...`
+     );
+-    // Ensure no false-positive output leaks to the release job.
+-    setOutput('published', 'false');
++
++    // Publish to npm using OIDC trusted publishing with retry logic
++    // Multi-layer failure detection guards against a publish command that
++    // reports success without actually publishing.
++    //
++    // The publish command is retried only when the publish itself failed.
++    // A verification miss is handled by bounded polling and never triggers a
++    // republish.
++    const { success, error } = await publishWithRetry({
++      publish: () => runPublishCommand($, jsRoot, originalCwd),
++      verify: () => verifyPublished(packageName, currentVersion),
++      maxRetries: MAX_RETRIES,
++      retryDelay: RETRY_DELAY,
++      sleepFn: sleep,
++      log: (message) => console.log(message),
++    });
++
++    if (success) {
++      setOutput('published', 'true');
++      setOutput('published_version', currentVersion);
++      console.log(`\u2705 Published ${packageName}@${currentVersion} to npm`);
++      return;
++    }
++
++    console.error(`\u274C Publish failed: ${error.message}`);
++    // Authentication / registry-configuration errors will not be fixed by
++    // retrying, so print actionable guidance for the operator.
++    if (error?.nonRetryable && !error?.verificationFailed) {
++      console.error(buildAuthFailureGuidance(packageName));
++    }
+     process.exit(1);
+   } catch (error) {
++    // Restore cwd on error
++    process.chdir(originalCwd);
+     console.error('Error:', error.message);
+-    setOutput('published', 'false');
+     process.exit(1);
+   }
+ }
+########## setup-npm.mjs ##########
+--- js/scripts/setup-npm.mjs	2026-09-04 20:28:25.872207699 +0000
++++ /tmp/tmpl/js-tmpl/scripts/setup-npm.mjs	2026-09-04 20:31:16.601474123 +0000
+@@ -1,42 +1,24 @@
+-#!/usr/bin/env bun
++#!/usr/bin/env node
++
++import { resolve } from 'node:path';
++import process from 'node:process';
++import { fileURLToPath } from 'node:url';
+ 
+ /**
+- * Update npm for OIDC trusted publishing.
+- *
+- * npm trusted publishing (the keyless, secret-free flow this repo relies on)
+- * requires npm >= 11.5.1. The Node.js runtimes used by GitHub Actions ship with
+- * older npm, so we must update before publishing. If npm cannot be brought to a
+- * version that supports OIDC, publishing would silently fall back to (missing)
+- * token auth and fail with an opaque E404 on PUT — one of the failure modes
+- * behind issue #166. So this script asserts the final npm version and fails
+- * loudly when OIDC is unsupported, instead of letting the publish step discover
+- * it later.
+- *
+- * Ported from the js pipeline template
+- * (link-foundation/js-ai-driven-development-pipeline-template,
+- * scripts/setup-npm.mjs), adapted to bun. The pure version helpers are exported
+- * so tests can exercise the gating logic without fetching dependencies or
+- * mutating the global npm install.
++ * Update npm for OIDC trusted publishing
++ * npm trusted publishing requires npm >= 11.5.1
++ * Node.js 20.x ships with npm 10.x, so we need to update
+  *
+  * Uses link-foundation libraries:
+  * - use-m: Dynamic package loading without package.json dependencies
+  * - command-stream: Modern shell command execution with streaming support
+  */
+ 
+-import { resolve } from 'node:path';
+-import process from 'node:process';
+-import { fileURLToPath } from 'node:url';
+-
+ export const NPM_MIN_VERSION = '11.5.1';
+ export const NODE_MIN_VERSION = '22.14.0';
+ export const NPM_TARGET_MAJOR = 11;
+ export const NPM_REGISTRY_METADATA_URL = 'https://registry.npmjs.org/npm';
+ 
+-/**
+- * Parse a semantic version string into numeric components.
+- * @param {string} version
+- * @returns {{major: number, minor: number, patch: number, prerelease: string}}
+- */
+ export function parseVersion(version) {
+   const match = String(version)
+     .trim()
+@@ -56,12 +38,6 @@
+   };
+ }
+ 
+-/**
+- * Compare two semantic versions (-1, 0, 1).
+- * @param {string} leftVersion
+- * @param {string} rightVersion
+- * @returns {number}
+- */
+ export function compareVersions(leftVersion, rightVersion) {
+   const left = parseVersion(leftVersion);
+   const right = parseVersion(rightVersion);
+@@ -88,40 +64,18 @@
+   return left.prerelease > right.prerelease ? 1 : -1;
+ }
+ 
+-/**
+- * Whether version >= minimumVersion.
+- * @param {string} version
+- * @param {string} minimumVersion
+- * @returns {boolean}
+- */
+ export function isVersionAtLeast(version, minimumVersion) {
+   return compareVersions(version, minimumVersion) >= 0;
+ }
+ 
+-/**
+- * Whether the npm version supports OIDC trusted publishing.
+- * @param {string} version
+- * @returns {boolean}
+- */
+ export function isSupportedNpmVersion(version) {
+   return isVersionAtLeast(version, NPM_MIN_VERSION);
+ }
+ 
+-/**
+- * Whether the Node.js version is new enough for the OIDC setup path.
+- * @param {string} version
+- * @returns {boolean}
+- */
+ export function isSupportedNodeVersion(version) {
+   return isVersionAtLeast(version, NODE_MIN_VERSION);
+ }
+ 
+-/**
+- * Pick the newest stable npm 11.x release (at or above the OIDC minimum) from
+- * registry metadata.
+- * @param {{versions?: Object}} metadata
+- * @returns {{version: string, tarballUrl: string}}
+- */
+ export function selectLatestSupportedNpmRelease(metadata) {
+   const releases = Object.entries(metadata?.versions || {})
+     .filter(([version, release]) => {
+@@ -166,12 +120,12 @@
+   return selectLatestSupportedNpmRelease(metadata);
+ }
+ 
+-// Update npm for OIDC trusted publishing (requires >= 11.5.1).
+-// Pin to npm@11 to avoid breaking changes from future major versions.
++// Update npm for OIDC trusted publishing (requires >= 11.5.1)
++// Pin to npm@11 to avoid breaking changes from future major versions
+ //
+-// Known issue: some GitHub Actions runner images ship a broken npm that is
+-// missing the 'promise-retry' module, causing `npm install -g` to fail with
+-// MODULE_NOT_FOUND.
++// Known issue: Node.js 22.22.2 on GitHub Actions (ubuntu-24.04 image >= 20260329.72.1)
++// ships with a broken npm 10.9.7 that is missing the 'promise-retry' module,
++// causing `npm install -g` to fail with MODULE_NOT_FOUND.
+ // See: https://github.com/actions/runner-images/issues/13883
+ // See: https://github.com/nodejs/node/issues/62430
+ // See: https://github.com/npm/cli/issues/9151
+@@ -236,12 +190,6 @@
+   process.exit(1);
+ }
+ 
+-/**
+- * Bring npm to an OIDC-capable version, trying multiple strategies, and assert
+- * the result. command-stream's `$` is passed in so this stays testable.
+- * @param {Function} $ - command-stream tagged template
+- * @param {Function} [fetchFn] - fetch implementation (overridable in tests)
+- */
+ export async function setupNpm($, fetchFn = fetch) {
+   const nodeVersion = process.version;
+   console.log(`Current Node.js version: ${nodeVersion}`);
+@@ -269,12 +217,16 @@
+       break;
+     }
+     console.warn(
+-      'This may be a broken bundled-npm runner image (actions/runner-images#13883).'
++      'This may be the Node.js 22.22.2 broken npm issue (actions/runner-images#13883).'
+     );
+   }
+ 
+-  if (!success && isSupportedNpmVersion(currentVersion)) {
+-    console.log('Current npm version already supports OIDC trusted publishing');
++  if (!success) {
++    if (isSupportedNpmVersion(currentVersion)) {
++      console.log(
++        'Current npm version already supports OIDC trusted publishing'
++      );
++    }
+   }
+ 
+   const updatedResult = await $`npm --version`.run({ capture: true });
+@@ -298,12 +250,11 @@
+       failUnsupportedNodeVersion(process.version);
+     }
+ 
+-    // Load use-m dynamically only for CLI execution, so tests can import the
+-    // pure version helpers without fetching dependencies or mutating npm.
+-    const { use } = eval(
+-      await (await fetch('https://unpkg.com/use-m/use.js')).text()
+-    );
+-    const { $ } = await use('command-stream');
++    // Load command-stream dynamically only for CLI execution, so tests can
++    // import the pure version helpers without fetching dependencies or
++    // mutating npm.
++    const { loadCommandStream } = await import('./use-module.mjs');
++    const { $ } = await loadCommandStream();
+ 
+     await setupNpm($);
+   } catch (error) {
+########## validate-changeset.mjs ##########
+--- js/scripts/validate-changeset.mjs	2026-09-04 20:28:25.872207699 +0000
++++ /tmp/tmpl/js-tmpl/scripts/validate-changeset.mjs	2026-09-04 20:31:16.602474113 +0000
+@@ -8,19 +8,17 @@
+  * - Uses git diff to compare PR head against base branch
+  * - Validates that the PR adds exactly one changeset with proper format
+  * - Falls back to checking all changesets for local development
+- *
+- * IMPORTANT: Update the package name below to match your package.json
+  */
+ 
+ import { execSync } from 'child_process';
+ import { readFileSync, readdirSync, existsSync } from 'fs';
+ import { join } from 'path';
+ 
+-const PACKAGE_NAME = 'command-stream';
+-const CHANGESET_DIR = '.changeset';
+-const GIT_CHANGESET_DIR = existsSync('../.git')
+-  ? 'js/.changeset'
+-  : CHANGESET_DIR;
++import { getChangesetDir, getJsRoot, parseJsRootConfig } from './js-paths.mjs';
++import {
++  getChangesetVersionTypeRegex,
++  readPackageInfo,
++} from './package-info.mjs';
+ 
+ /**
+  * Ensure a git commit is available locally, fetching if necessary
+@@ -42,10 +40,14 @@
+ /**
+  * Parse git diff output and extract added changeset files
+  * @param {string} diffOutput Output from git diff --name-status
++ * @param {string} changesetDir Path to the changeset directory
+  * @returns {string[]} Array of added changeset file names
+  */
+-function parseAddedChangesets(diffOutput) {
++function parseAddedChangesets(diffOutput, changesetDir) {
+   const addedChangesets = [];
++  const changesetGitPath = changesetDir
++    .replace(/\\/g, '/')
++    .replace(/^\.\//, '');
+   for (const line of diffOutput.trim().split('\n')) {
+     if (!line) {
+       continue;
+@@ -53,16 +55,11 @@
+     const [status, filePath] = line.split('\t');
+     if (
+       status === 'A' &&
+-      (filePath.startsWith(`${CHANGESET_DIR}/`) ||
+-        filePath.startsWith(`${GIT_CHANGESET_DIR}/`)) &&
++      filePath.startsWith(`${changesetGitPath}/`) &&
+       filePath.endsWith('.md') &&
+       !filePath.endsWith('README.md')
+     ) {
+-      addedChangesets.push(
+-        filePath
+-          .replace(`${GIT_CHANGESET_DIR}/`, '')
+-          .replace(`${CHANGESET_DIR}/`, '')
+-      );
++      addedChangesets.push(filePath.replace(`${changesetGitPath}/`, ''));
+     }
+   }
+   return addedChangesets;
+@@ -72,9 +69,10 @@
+  * Try to get changesets using explicit SHA comparison
+  * @param {string} baseSha Base commit SHA
+  * @param {string} headSha Head commit SHA
++ * @param {string} changesetDir Path to the changeset directory
+  * @returns {string[] | null} Array of changeset files or null if failed
+  */
+-function tryExplicitShaComparison(baseSha, headSha) {
++function tryExplicitShaComparison(baseSha, headSha, changesetDir) {
+   console.log(`Comparing ${baseSha}...${headSha}`);
+   try {
+     ensureCommitAvailable(baseSha);
+@@ -82,7 +80,7 @@
+       `git diff --name-status ${baseSha} ${headSha}`,
+       { encoding: 'utf-8' }
+     );
+-    return parseAddedChangesets(diffOutput);
++    return parseAddedChangesets(diffOutput, changesetDir);
+   } catch (error) {
+     console.log(`Git diff with explicit SHAs failed: ${error.message}`);
+     return null;
+@@ -92,9 +90,10 @@
+ /**
+  * Try to get changesets using base branch comparison
+  * @param {string} prBase Base branch name
++ * @param {string} changesetDir Path to the changeset directory
+  * @returns {string[] | null} Array of changeset files or null if failed
+  */
+-function tryBaseBranchComparison(prBase) {
++function tryBaseBranchComparison(prBase, changesetDir) {
+   console.log(`Comparing against base branch: ${prBase}`);
+   try {
+     try {
+@@ -106,7 +105,7 @@
+       `git diff --name-status origin/${prBase}...HEAD`,
+       { encoding: 'utf-8' }
+     );
+-    return parseAddedChangesets(diffOutput);
++    return parseAddedChangesets(diffOutput, changesetDir);
+   } catch (error) {
+     console.log(`Git diff with base ref failed: ${error.message}`);
+     return null;
+@@ -115,31 +114,33 @@
+ 
+ /**
+  * Fallback: get all changesets in directory
++ * @param {string} changesetDir Path to the changeset directory
+  * @returns {string[]} Array of all changeset file names
+  */
+-function getAllChangesets() {
++function getAllChangesets(changesetDir) {
+   console.log(
+     'Warning: Could not determine PR diff, checking all changesets in directory'
+   );
+-  if (!existsSync(CHANGESET_DIR)) {
++  if (!existsSync(changesetDir)) {
+     return [];
+   }
+-  return readdirSync(CHANGESET_DIR).filter(
++  return readdirSync(changesetDir).filter(
+     (file) => file.endsWith('.md') && file !== 'README.md'
+   );
+ }
+ 
+ /**
+  * Get changeset files added in the current PR using git diff
++ * @param {string} changesetDir Path to the changeset directory
+  * @returns {string[]} Array of added changeset file names
+  */
+-function getAddedChangesetFiles() {
++function getAddedChangesetFiles(changesetDir) {
+   const baseSha = process.env.GITHUB_BASE_SHA || process.env.BASE_SHA;
+   const headSha = process.env.GITHUB_HEAD_SHA || process.env.HEAD_SHA;
+ 
+   // Try explicit SHAs first
+   if (baseSha && headSha) {
+-    const result = tryExplicitShaComparison(baseSha, headSha);
++    const result = tryExplicitShaComparison(baseSha, headSha, changesetDir);
+     if (result !== null) {
+       return result;
+     }
+@@ -148,36 +149,34 @@
+   // Try base branch comparison
+   const prBase = process.env.GITHUB_BASE_REF;
+   if (prBase) {
+-    const result = tryBaseBranchComparison(prBase);
++    const result = tryBaseBranchComparison(prBase, changesetDir);
+     if (result !== null) {
+       return result;
+     }
+   }
+ 
+   // Fallback to checking all changesets
+-  return getAllChangesets();
++  return getAllChangesets(changesetDir);
+ }
+ 
+ /**
+  * Validate a single changeset file
+  * @param {string} filePath Full path to the changeset file
++ * @param {string} packageName
+  * @returns {{valid: boolean, type?: string, description?: string, error?: string}}
+  */
+-function validateChangesetFile(filePath) {
++function validateChangesetFile(filePath, packageName) {
+   try {
+     const content = readFileSync(filePath, 'utf-8');
+ 
+     // Check if changeset has a valid type (major, minor, or patch)
+-    const versionTypeRegex = new RegExp(
+-      `^['"]${PACKAGE_NAME.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"]:\\s+(major|minor|patch)`,
+-      'm'
+-    );
++    const versionTypeRegex = getChangesetVersionTypeRegex(packageName);
+     const versionTypeMatch = content.match(versionTypeRegex);
+ 
+     if (!versionTypeMatch) {
+       return {
+         valid: false,
+-        error: `Changeset must specify a version type: major, minor, or patch\nExpected format:\n---\n'${PACKAGE_NAME}': patch\n---\n\nYour description here`,
++        error: `Changeset must specify a version type: major, minor, or patch\nExpected format:\n---\n'${packageName}': patch\n---\n\nYour description here`,
+       };
+     }
+ 
+@@ -214,9 +213,14 @@
+ 
+ try {
+   console.log('Validating changesets added by this PR...');
++  const jsRootConfig = parseJsRootConfig();
++  const jsRoot = getJsRoot({ jsRoot: jsRootConfig, verbose: true });
++  const changesetDir = getChangesetDir({ jsRoot });
++  const { name: packageName } = readPackageInfo({ jsRoot });
++  console.log(`Package: ${packageName}`);
+ 
+   // Get changeset files added in this PR
+-  const addedChangesetFiles = getAddedChangesetFiles();
++  const addedChangesetFiles = getAddedChangesetFiles(changesetDir);
+   const changesetCount = addedChangesetFiles.length;
+ 
+   console.log(`Found ${changesetCount} changeset file(s) added by this PR`);
+@@ -228,7 +232,7 @@
+   // Ensure exactly one changeset file was added
+   if (changesetCount === 0) {
+     console.error(
+-      "::error::No changeset found in this PR. Please add a changeset by running 'bun run changeset' and commit the result."
++      "::error::No changeset found in this PR. Please add a changeset by running 'npm run changeset' and commit the result."
+     );
+     process.exit(1);
+   } else if (changesetCount > 1) {
+@@ -244,10 +248,10 @@
+   }
+ 
+   // Validate the single changeset file
+-  const changesetFile = join(CHANGESET_DIR, addedChangesetFiles[0]);
++  const changesetFile = join(changesetDir, addedChangesetFiles[0]);
+   console.log(`Validating changeset: ${changesetFile}`);
+ 
+-  const validation = validateChangesetFile(changesetFile);
++  const validation = validateChangesetFile(changesetFile, packageName);
+ 
+   if (!validation.valid) {
+     console.error(`::error::${validation.error}`);
+########## version-and-commit.mjs ##########
+--- js/scripts/version-and-commit.mjs	2026-09-04 20:28:25.872207699 +0000
++++ /tmp/tmpl/js-tmpl/scripts/version-and-commit.mjs	2026-09-04 20:31:16.603474103 +0000
+@@ -1,11 +1,15 @@
+ #!/usr/bin/env bun
+ 
+ /**
+- * Version the JavaScript package and commit to main
+- * Usage: bun scripts/version-and-commit.mjs --mode <changeset|instant> [--bump-type <type>] [--description <desc>]
++ * Version packages and commit to main
++ * Usage: node scripts/version-and-commit.mjs --mode <changeset|instant> [--bump-type <type>] [--description <desc>] [--js-root <path>]
+  *   changeset: Run changeset version
+  *   instant: Run instant version bump with bump_type (patch|minor|major) and optional description
+  *
++ * Configuration:
++ * - CLI: --js-root <path> to explicitly set JavaScript root
++ * - Environment: JS_ROOT=<path>
++ *
+  * Uses link-foundation libraries:
+  * - use-m: Dynamic package loading without package.json dependencies
+  * - command-stream: Modern shell command execution with streaming support
+@@ -14,14 +18,18 @@
+ 
+ import { readFileSync, appendFileSync, readdirSync } from 'fs';
+ 
+-// Load use-m dynamically
+-const { use } = eval(
+-  await (await fetch('https://unpkg.com/use-m/use.js')).text()
+-);
++import {
++  getJsRoot,
++  getPackageJsonPath,
++  getChangesetDir,
++  needsCd,
++  parseJsRootConfig,
++} from './js-paths.mjs';
++import { loadCommandStream, loadLinoArguments } from './use-module.mjs';
+ 
+ // Import link-foundation libraries
+-const { $ } = await use('command-stream');
+-const { makeConfig } = await use('lino-arguments');
++const { $ } = await loadCommandStream();
++const { makeConfig } = await loadLinoArguments();
+ 
+ // Parse CLI arguments using lino-arguments
+ const config = makeConfig({
+@@ -42,16 +50,27 @@
+         type: 'string',
+         default: getenv('DESCRIPTION', ''),
+         describe: 'Description for instant version bump',
++      })
++      .option('js-root', {
++        type: 'string',
++        default: getenv('JS_ROOT', ''),
++        describe:
++          'JavaScript package root directory (auto-detected if not specified)',
+       }),
+ });
+ 
+-const { mode, bumpType, description } = config;
++const { mode, bumpType, description, jsRoot: jsRootArg } = config;
++
++// Get JavaScript package root (auto-detect or use explicit config)
++const jsRootConfig = jsRootArg || parseJsRootConfig();
++const jsRoot = getJsRoot({ jsRoot: jsRootConfig, verbose: true });
+ 
+ // Debug: Log parsed configuration
+ console.log('Parsed configuration:', {
+   mode,
+   bumpType,
+   description: description || '(none)',
++  jsRoot,
+ });
+ 
+ // Detect if positional arguments were used (common mistake)
+@@ -61,21 +80,26 @@
+   console.error('Command line arguments:', args);
+   console.error('');
+   console.error(
+-    'This script requires named arguments (--mode, --bump-type, --description).'
++    'This script requires named arguments (--mode, --bump-type, --description, --js-root).'
+   );
+   console.error('Usage:');
+   console.error('  Changeset mode:');
+-  console.error('    bun scripts/version-and-commit.mjs --mode changeset');
++  console.error(
++    '    node scripts/version-and-commit.mjs --mode changeset [--js-root <path>]'
++  );
+   console.error('  Instant mode:');
+   console.error(
+-    '    bun scripts/version-and-commit.mjs --mode instant --bump-type <major|minor|patch> [--description <desc>]'
++    '    node scripts/version-and-commit.mjs --mode instant --bump-type <major|minor|patch> [--description <desc>] [--js-root <path>]'
+   );
+   console.error('');
+   console.error('Examples:');
+   console.error(
+-    '  bun scripts/version-and-commit.mjs --mode instant --bump-type patch --description "Fix bug"'
++    '  node scripts/version-and-commit.mjs --mode instant --bump-type patch --description "Fix bug"'
++  );
++  console.error('  node scripts/version-and-commit.mjs --mode changeset');
++  console.error(
++    '  node scripts/version-and-commit.mjs --mode changeset --js-root js'
+   );
+-  console.error('  bun scripts/version-and-commit.mjs --mode changeset');
+   process.exit(1);
+ }
+ 
+@@ -90,11 +114,15 @@
+ if (mode === 'instant' && !bumpType) {
+   console.error('Error: --bump-type is required for instant mode');
+   console.error(
+-    'Usage: bun scripts/version-and-commit.mjs --mode instant --bump-type <major|minor|patch> [--description <desc>]'
++    'Usage: node scripts/version-and-commit.mjs --mode instant --bump-type <major|minor|patch> [--description <desc>] [--js-root <path>]'
+   );
+   process.exit(1);
+ }
+ 
++// Store the original working directory to restore after cd commands
++// IMPORTANT: command-stream's cd is a virtual command that calls process.chdir()
++const originalCwd = process.cwd();
++
+ /**
+  * Append to GitHub Actions output file
+  * @param {string} key
+@@ -112,7 +140,7 @@
+  */
+ function countChangesets() {
+   try {
+-    const changesetDir = '.changeset';
++    const changesetDir = getChangesetDir({ jsRoot });
+     const files = readdirSync(changesetDir);
+     return files.filter((f) => f.endsWith('.md') && f !== 'README.md').length;
+   } catch {
+@@ -125,20 +153,25 @@
+  * @param {string} source - 'local' or 'remote'
+  */
+ async function getVersion(source = 'local') {
++  const packageJsonPath = getPackageJsonPath({ jsRoot });
+   if (source === 'remote') {
+-    const result = await $`git show origin/main:js/package.json`.run({
++    const result = await $`git show origin/main:${packageJsonPath}`.run({
+       capture: true,
+     });
+     return JSON.parse(result.stdout).version;
+   }
+-  return JSON.parse(readFileSync('./package.json', 'utf8')).version;
++  return JSON.parse(readFileSync(packageJsonPath, 'utf8')).version;
+ }
+ 
+ async function main() {
+   try {
+     // Configure git
++    // The 41898282+ prefix is what links the commit to the github-actions[bot]
++    // account. Without it the commit is "unattributed", and a ruleset with
++    // require_extra_approval_for_unattributed_changes will demand a human
++    // approval before an automated release pull request can be merged.
+     await $`git config user.name "github-actions[bot]"`;
+-    await $`git config user.email "github-actions[bot]@users.noreply.github.com"`;
++    await $`git config user.email "41898282+github-actions[bot]@users.noreply.github.com"`;
+ 
+     // Check if remote main has advanced (handles re-runs after partial success)
+     console.log('Checking for remote changes...');
+@@ -187,16 +220,23 @@
+     if (mode === 'instant') {
+       console.log('Running instant version bump...');
+       // Run instant version bump script
++      // Pass --js-root to ensure consistent path handling
+       // Rely on command-stream's auto-quoting for proper argument handling
+       if (description) {
+-        await $`bun scripts/instant-version-bump.mjs --bump-type ${bumpType} --description ${description}`;
++        await $`node scripts/instant-version-bump.mjs --bump-type ${bumpType} --description ${description} --js-root ${jsRoot}`;
+       } else {
+-        await $`bun scripts/instant-version-bump.mjs --bump-type ${bumpType}`;
++        await $`node scripts/instant-version-bump.mjs --bump-type ${bumpType} --js-root ${jsRoot}`;
+       }
+     } else {
+       console.log('Running changeset version...');
+       // Run changeset version to bump versions and update CHANGELOG
+-      await $`bun run changeset:version`;
++      // IMPORTANT: cd is a virtual command that calls process.chdir(), so we restore after
++      if (needsCd({ jsRoot })) {
++        await $`cd ${jsRoot} && npm run changeset:version`;
++        process.chdir(originalCwd);
++      } else {
++        await $`npm run changeset:version`;
++      }
+     }
+ 
+     // Get new version after bump
+@@ -219,26 +259,34 @@
+       const escapedMessage = commitMessage.replace(/"/g, '\\"');
+       await $`git commit -m "${escapedMessage}"`;
+ 
+-      // Push directly to main.
+-      // command-stream's `$` does NOT throw on a non-zero exit (errexit is off
+-      // by default, see issue #156), so we check the result code explicitly.
+-      // A silently-failed push would otherwise report version_committed=true and
+-      // let the release job publish/release a version that is not on main (the
+-      // same false-positive class that produced #166).
+-      const pushResult = await $`git push origin main`.run({ capture: true });
++      // Push directly to main, rebasing and retrying if another main writer won
++      // the race between this commit and the push, and landing the commit
++      // through a pull request when a repository ruleset declines direct
++      // pushes to main (link-foundation/js-ai-driven-development-pipeline-template#143).
++      //
++      // command-stream's `$` resolves (it does not throw) on a non-zero exit
++      // code, so the exit code is checked explicitly: reporting
++      // version_committed=true for a push that never landed would let the
++      // publish job work from a version that exists only in the runner.
++      const pushResult =
++        await $`node scripts/push-main-with-rebase-retry.mjs origin main --label ${newVersion}`.run(
++          { capture: true, mirror: true }
++        );
+       if (pushResult.code !== 0) {
+         throw new Error(
+-          `git push origin main failed (exit code ${pushResult.code}): ${pushResult.stderr?.trim() || 'no stderr'}`
++          `Failed to push version ${newVersion} to main (exit ${pushResult.code})`
+         );
+       }
+ 
+-      console.log('✅ Version bump committed and pushed to main');
++      console.log('\u2705 Version bump committed and pushed to main');
+       setOutput('version_committed', 'true');
+     } else {
+       console.log('No changes to commit');
+       setOutput('version_committed', 'false');
+     }
+   } catch (error) {
++    // Restore cwd on error
++    process.chdir(originalCwd);
+     console.error('Error:', error.message);
+     process.exit(1);
+   }
+########## wait-for-npm.mjs ##########
+--- js/scripts/wait-for-npm.mjs	2026-09-04 20:28:25.872207699 +0000
++++ /tmp/tmpl/js-tmpl/scripts/wait-for-npm.mjs	2026-09-04 20:31:16.603474103 +0000
+@@ -1,44 +1,236 @@
+-#!/usr/bin/env bun
++#!/usr/bin/env node
+ 
+ /**
+  * Wait for a package version to become available on npm.
+  *
+- * Issue #166 was a *false-positive* release: a git tag and GitHub release
+- * existed for js-v0.10.1, but the package was never installable from npm. This
+- * step closes that gap by asserting, after publish, that the exact version is
+- * actually queryable on the registry (npm visibility can lag a few seconds
+- * after a successful publish). If it never appears, the job fails loudly
+- * instead of leaving behind a release nobody can `npm install`.
+- *
+- * Ported from the js pipeline template
+- * (link-foundation/js-ai-driven-development-pipeline-template,
+- * scripts/wait-for-npm.mjs), adapted to command-stream's `$` and bun. The pure
+- * polling logic is exported so it can be unit-tested without hitting npm.
+- *
+- * Uses link-foundation libraries:
+- * - use-m: Dynamic package loading without package.json dependencies
+- * - command-stream: Modern shell command execution with streaming support
+- * - lino-arguments: Unified configuration from CLI args, env vars, and .lenv files
+- *
+- * Usage: bun scripts/wait-for-npm.mjs --release-version <version> [--package-name <name>]
+- *        [--max-attempts <count>] [--sleep-seconds <count>]
++ * The Docker publish job runs after npm publishing, but npm registry visibility
++ * can lag briefly. Waiting here keeps Docker tags tied to an installable npm
++ * version.
+  */
+ 
+-import { appendFileSync, readFileSync } from 'node:fs';
++import { appendFileSync } from 'node:fs';
+ import path from 'node:path';
+-import process from 'node:process';
+ import { fileURLToPath } from 'node:url';
+ 
+-export const DEFAULT_MAX_ATTEMPTS = 30;
+-export const DEFAULT_SLEEP_SECONDS = 10;
++import { buildPackageMetadataUrl } from './npm-registry.mjs';
++import { formatNpmPackageVersion, readPackageInfo } from './package-info.mjs';
++
++const DEFAULT_MAX_ATTEMPTS = 30;
++const NPM_REGISTRY_USER_AGENT =
++  'js-ai-driven-development-pipeline-template wait-for-npm';
++const DEFAULT_SLEEP_SECONDS = 10;
++const USAGE =
++  'Usage: node scripts/wait-for-npm.mjs --release-version <version> [--package-name <name>] [--max-attempts <count>] [--sleep-seconds <count>] [--js-root <path>]';
++
++function parsePositiveInteger(value, optionName) {
++  const parsed = Number(value);
++  if (!Number.isInteger(parsed) || parsed < 1) {
++    throw new Error(`${optionName} must be a positive integer`);
++  }
++  return parsed;
++}
++
++function readCliOptions(argv) {
++  const options = {};
++
++  for (let index = 0; index < argv.length; index++) {
++    const arg = argv[index];
++    if (!arg.startsWith('--')) {
++      continue;
++    }
++
++    const inlineValueIndex = arg.indexOf('=');
++    if (inlineValueIndex !== -1) {
++      options[arg.slice(2, inlineValueIndex)] = arg.slice(inlineValueIndex + 1);
++      continue;
++    }
++
++    const value = argv[index + 1];
++    if (value === undefined || value.startsWith('--')) {
++      throw new Error(`Missing value for ${arg}`);
++    }
++
++    options[arg.slice(2)] = value;
++    index++;
++  }
++
++  return options;
++}
++
++export function parseArgs(argv, env = process.env) {
++  const cliOptions = readCliOptions(argv);
++
++  const config = {
++    jsRoot: cliOptions['js-root'] ?? env.JS_ROOT ?? '',
++    maxAttempts: parsePositiveInteger(
++      cliOptions['max-attempts'] ||
++        env.MAX_ATTEMPTS ||
++        String(DEFAULT_MAX_ATTEMPTS),
++      '--max-attempts'
++    ),
++    packageName: cliOptions['package-name'] ?? env.PACKAGE_NAME ?? '',
++    releaseVersion: cliOptions['release-version'] ?? env.VERSION ?? '',
++    sleepSeconds: parsePositiveInteger(
++      cliOptions['sleep-seconds'] ||
++        env.SLEEP_SECONDS ||
++        String(DEFAULT_SLEEP_SECONDS),
++      '--sleep-seconds'
++    ),
++  };
++
++  return config;
++}
++
++/**
++ * Build the registry URL for a single package version document.
++ * @param {string} packageName
++ * @param {string} version
++ * @param {string} [registryUrl]
++ * @returns {string}
++ */
++export function buildPackageVersionUrl(packageName, version, registryUrl) {
++  return `${buildPackageMetadataUrl(packageName, registryUrl)}/${encodeURIComponent(version)}`;
++}
+ 
+ /**
+- * Append a step output (and echo for the run log).
+- * @param {string} name
+- * @param {string} value
++ * Normalize a check result so callers always see the same shape.
++ * A boolean from an injected `checkAvailability` is also accepted.
++ * @param {boolean|object} result
++ * @returns {{available: boolean, status: string, error?: string, url?: string, httpStatus?: number}}
+  */
++export function normalizeCheckResult(result) {
++  if (typeof result === 'boolean') {
++    return { available: result, status: result ? 'ok' : 'not-published' };
++  }
++
++  return {
++    available: Boolean(result?.available),
++    status: result?.status ?? 'unknown',
++    ...(result?.error === undefined ? {} : { error: result.error }),
++    ...(result?.url === undefined ? {} : { url: result.url }),
++    ...(result?.httpStatus === undefined
++      ? {}
++      : { httpStatus: result.httpStatus }),
++  };
++}
++
++/**
++ * Describe a check result for a per-attempt log line.
++ * @param {{status: string, httpStatus?: number, error?: string}} result
++ * @returns {string}
++ */
++export function describeCheckResult(result) {
++  const httpStatus =
++    result.httpStatus === undefined ? '' : `HTTP ${result.httpStatus}`;
++
++  if (result.status === 'ok') {
++    return result.available
++      ? `available${httpStatus ? ` (${httpStatus})` : ''}`
++      : `version mismatch${httpStatus ? ` (${httpStatus})` : ''}`;
++  }
++
++  if (result.status === 'not-published') {
++    return `not published yet${httpStatus ? ` (${httpStatus})` : ''}`;
++  }
++
++  return `check failed: ${[httpStatus, result.error].filter(Boolean).join(' ')}`;
++}
++
++/**
++ * Ask the npm registry whether a package version exists.
++ *
++ * Queries the registry over HTTP so the real status code is available: a
++ * genuine "not published" (404) is reported separately from "we could not get
++ * an answer" (5xx, rate limits, DNS, proxy errors), which says nothing about
++ * whether the publish succeeded.
++ *
++ * @param {string} packageName
++ * @param {string} version
++ * @param {object} [options]
++ * @param {Function} [options.fetchFn]
++ * @param {string} [options.registryUrl]
++ * @returns {Promise<{available: boolean, status: 'ok'|'not-published'|'unknown', httpStatus?: number, url: string, error?: string}>}
++ */
++export async function checkNpmVersion(
++  packageName,
++  version,
++  { fetchFn = fetch, registryUrl } = {}
++) {
++  let url;
++  try {
++    url = buildPackageVersionUrl(packageName, version, registryUrl);
++  } catch (error) {
++    return { available: false, status: 'unknown', error: error.message };
++  }
++
++  try {
++    const response = await fetchFn(url, {
++      headers: {
++        accept: 'application/json',
++        // Some registries reject requests without a User-Agent with 403.
++        'user-agent': NPM_REGISTRY_USER_AGENT,
++      },
++    });
++
++    if (response.status === 404) {
++      return {
++        available: false,
++        status: 'not-published',
++        httpStatus: 404,
++        url,
++      };
++    }
++
++    if (!response.ok) {
++      return {
++        available: false,
++        status: 'unknown',
++        httpStatus: response.status,
++        url,
++        error: `${response.status} ${response.statusText ?? ''}`.trim(),
++      };
++    }
++
++    const metadata = await response.json();
++    return {
++      available: metadata?.version === version,
++      status: 'ok',
++      httpStatus: response.status,
++      url,
++    };
++  } catch (error) {
++    // `fetch` reports transport failures as a bare "fetch failed"; the cause
++    // holds the actual reason (ECONNREFUSED, EAI_AGAIN, certificate errors).
++    const cause = error?.cause?.message;
++    const message = error?.message ?? String(error);
++
++    return {
++      available: false,
++      status: 'unknown',
++      url,
++      error: cause && cause !== message ? `${message}: ${cause}` : message,
++    };
++  }
++}
++
++function sleep(seconds) {
++  return new Promise((resolve) =>
++    globalThis.setTimeout(resolve, seconds * 1000)
++  );
++}
++
++function readGithubOutputPath() {
++  try {
++    return process.env.GITHUB_OUTPUT || '';
++  } catch {
++    // Runtimes with restricted environment access (Deno without --allow-env)
++    // throw here; step outputs are simply unavailable then.
++    return '';
++  }
++}
++
+ function setOutput(name, value) {
+-  const outputFile = process.env.GITHUB_OUTPUT;
++  const outputFile = readGithubOutputPath();
+   if (outputFile) {
+     appendFileSync(outputFile, `${name}=${value}\n`);
+   }
+@@ -46,38 +238,37 @@
+ }
+ 
+ /**
+- * Poll until a specific package version is visible on npm, or attempts run out.
+- *
+- * The availability check and sleep are injectable so the loop can be unit-tested
+- * deterministically without network access or real delays.
+- *
+- * @param {object} options
+- * @param {string} options.packageName
+- * @param {string} options.version
+- * @param {(packageName: string, version: string) => (boolean | Promise<boolean>)} options.checkAvailability
+- * @param {number} [options.maxAttempts]
+- * @param {number} [options.sleepSeconds]
+- * @param {(seconds: number) => Promise<void>} [options.sleepFn]
+- * @param {(message: string) => void} [options.stdout]
+- * @returns {Promise<boolean>}
++ * Poll the registry until the version shows up or attempts run out.
++ * @returns {Promise<{available: boolean, status: string, error?: string, url?: string, httpStatus?: number, attempts: number}>}
+  */
+ export async function waitForNpmVersion({
+-  packageName,
+-  version,
+-  checkAvailability,
++  checkAvailability = checkNpmVersion,
+   maxAttempts = DEFAULT_MAX_ATTEMPTS,
++  packageName,
++  registryUrl,
++  sleepFn = sleep,
+   sleepSeconds = DEFAULT_SLEEP_SECONDS,
+-  sleepFn = (seconds) =>
+-    new Promise((resolve) => globalThis.setTimeout(resolve, seconds * 1000)),
+   stdout = console.log,
++  version,
+ }) {
++  let lastResult = {
++    available: false,
++    status: 'unknown',
++    error: 'no attempts were made',
++  };
++
+   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
++    lastResult = normalizeCheckResult(
++      await checkAvailability(packageName, version, { registryUrl })
++    );
++
+     stdout(
+-      `Checking npm for ${packageName}@${version} (attempt ${attempt}/${maxAttempts})`
++      `Checking npm for ${formatNpmPackageVersion(packageName, version)} ` +
++        `(attempt ${attempt}/${maxAttempts}): ${describeCheckResult(lastResult)}`
+     );
+ 
+-    if (await checkAvailability(packageName, version)) {
+-      return true;
++    if (lastResult.available) {
++      return { ...lastResult, attempts: attempt };
+     }
+ 
+     if (attempt < maxAttempts) {
+@@ -85,7 +276,29 @@
+     }
+   }
+ 
+-  return false;
++  return { ...lastResult, attempts: maxAttempts };
++}
++
++/**
++ * Build the failure message for an exhausted wait.
++ * @param {string} packageSpecifier
++ * @param {{status: string, error?: string, url?: string}} result
++ * @param {number} maxAttempts
++ * @returns {string}
++ */
++export function formatFailureMessage(packageSpecifier, result, maxAttempts) {
++  if (result.status !== 'unknown') {
++    return `${packageSpecifier} did not become available on npm`;
++  }
++
++  const reason = result.error ? ` The last error was: ${result.error}.` : '';
++  const where = result.url ? ` Check ${result.url} directly.` : '';
++
++  return (
++    `Could not determine whether ${packageSpecifier} is on npm: ` +
++    `all ${maxAttempts} attempts failed to reach the registry.${reason} ` +
++    `This does NOT mean the publish failed.${where}`
++  );
+ }
+ 
+ function isCliEntryPoint() {
+@@ -96,85 +309,57 @@
+   );
+ }
+ 
+-async function runCli() {
+-  // Load use-m dynamically (matches the other release scripts in this folder).
+-  const { use } = eval(
+-    await (await fetch('https://unpkg.com/use-m/use.js')).text()
+-  );
+-  const { $ } = await use('command-stream');
+-  const { makeConfig } = await use('lino-arguments');
+-
+-  const config = makeConfig({
+-    yargs: ({ yargs, getenv }) =>
+-      yargs
+-        .option('release-version', {
+-          type: 'string',
+-          default: getenv('VERSION', ''),
+-          describe: 'Version number to wait for (e.g., 1.0.0)',
+-        })
+-        .option('package-name', {
+-          type: 'string',
+-          default: getenv('PACKAGE_NAME', ''),
+-          describe: 'npm package name (defaults to ./package.json name)',
+-        })
+-        .option('max-attempts', {
+-          type: 'number',
+-          default: Number(getenv('MAX_ATTEMPTS', String(DEFAULT_MAX_ATTEMPTS))),
+-          describe: 'Maximum number of polling attempts',
+-        })
+-        .option('sleep-seconds', {
+-          type: 'number',
+-          default: Number(
+-            getenv('SLEEP_SECONDS', String(DEFAULT_SLEEP_SECONDS))
+-          ),
+-          describe: 'Seconds to wait between attempts',
+-        }),
+-  });
+-
+-  const version = config.releaseVersion;
+-  if (!version) {
+-    console.error('Error: Missing required --release-version');
+-    return 1;
+-  }
++export async function main({
++  argv = process.argv.slice(2),
++  env = process.env,
++  stderr = console.error,
++  stdout = console.log,
++} = {}) {
++  try {
++    const config = parseArgs(argv, env);
++    if (!config.releaseVersion) {
++      stderr('Error: Missing required --release-version');
++      stderr(USAGE);
++      return 1;
++    }
+ 
+-  const packageName =
+-    config.packageName ||
+-    JSON.parse(readFileSync('./package.json', 'utf8')).name;
+-
+-  // command-stream's `$` does NOT throw on non-zero exit (errexit off by
+-  // default — see issue #156); `npm view <pkg>@<version> version` exits 0 and
+-  // prints the version when published, non-zero (E404) otherwise.
+-  const checkAvailability = async (name, ver) => {
+-    const result = await $`npm view "${name}@${ver}" version`.run({
+-      capture: true,
++    const packageInfo = config.packageName
++      ? { name: config.packageName }
++      : readPackageInfo({ jsRoot: config.jsRoot || undefined });
++
++    const result = await waitForNpmVersion({
++      maxAttempts: config.maxAttempts,
++      packageName: packageInfo.name,
++      registryUrl:
++        env.NPM_CONFIG_REGISTRY || env.npm_config_registry || undefined,
++      sleepSeconds: config.sleepSeconds,
++      stdout,
++      version: config.releaseVersion,
+     });
+-    return result.code === 0 && result.stdout.trim() === ver;
+-  };
+ 
+-  const available = await waitForNpmVersion({
+-    packageName,
+-    version,
+-    checkAvailability,
+-    maxAttempts: config.maxAttempts,
+-    sleepSeconds: config.sleepSeconds,
+-  });
++    const packageSpecifier = formatNpmPackageVersion(
++      packageInfo.name,
++      config.releaseVersion
++    );
++
++    setOutput('npm_available', result.available ? 'true' : 'false');
++    setOutput('npm_check_status', result.status);
+ 
+-  setOutput('npm_available', available ? 'true' : 'false');
++    if (!result.available) {
++      stderr(
++        formatFailureMessage(packageSpecifier, result, config.maxAttempts)
++      );
++      return 1;
++    }
+ 
+-  if (!available) {
+-    console.error(`${packageName}@${version} did not become available on npm`);
++    stdout(`${packageSpecifier} is available on npm`);
++    return 0;
++  } catch (error) {
++    stderr(`Error: ${error.message}`);
+     return 1;
+   }
+-
+-  console.log(`${packageName}@${version} is available on npm`);
+-  return 0;
+ }
+ 
+ if (isCliEntryPoint()) {
+-  try {
+-    process.exitCode = await runCli();
+-  } catch (error) {
+-    console.error(`Error: ${error.message}`);
+-    process.exitCode = 1;
+-  }
++  process.exitCode = await main();
+ }
