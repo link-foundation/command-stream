@@ -102,3 +102,14 @@ A deterministic mock reproduces that ordering and initially delivered a false
 host failure followed by the real terminal status. The bridge now waits for
 `close`, after pipes drain, before reporting a missing terminal status. The new
 regression runs on Node and Bun; the existing missing-handshake test remains.
+
+The following run (`29f3ba9`) passed macOS, but Windows Bun's session-exit test
+timed out at line 4587 of `ci-logs/js-windows-114675469744.log`. The run was
+cancelled after eight minutes to retrieve partial logs: it stopped progressing
+after that timeout. Waiting exclusively for the child-process `close` event was
+insufficient on this path. The bridge now also observes process exit plus stdout
+and stderr `end` events. A second deterministic regression reproduces a missing
+`close` event and preserves the final stderr diagnostic. Lifecycle tracing stays
+off by default and is enabled with `COMMAND_STREAM_TRACE=true`. CI runs the
+focused terminal suites with tracing before the full suite, with a two-minute
+step deadline so any lifecycle regression produces diagnostics promptly.

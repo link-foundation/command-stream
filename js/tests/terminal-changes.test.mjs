@@ -8,7 +8,7 @@ import { PassThrough } from 'node:stream';
 import { TerminalBuffer, openTerminal, captureTerminal } from '../src/$.mjs';
 import { spawnTerminalPty } from '../src/terminal-pty.mjs';
 
-test('PTY host exit waits for the terminal status still buffered on stdout', async () => {
+const mockPtyHost = () => {
   const host = new EventEmitter();
   host.stdout = new PassThrough();
   host.stderr = new PassThrough();
@@ -17,6 +17,11 @@ test('PTY host exit waits for the terminal status still buffered on stdout', asy
       host.stdout.write('{"type":"ready"}\n');
     },
   };
+  return host;
+};
+
+test('PTY host exit waits for the terminal status still buffered on stdout', async () => {
+  const host = mockPtyHost();
   const terminal = await spawnTerminalPty(
     'fixture',
     [],
@@ -41,6 +46,30 @@ test('PTY host exit waits for the terminal status still buffered on stdout', asy
   assert.deepEqual(statuses, [{ type: 'exit', exitCode: 3, signal: 0 }]);
   assert.deepEqual(output, ['bye']);
 });
+
+test(
+  'missing PTY status is reported after pipe drain even without close',
+  { timeout: 1000 },
+  async () => {
+    const host = mockPtyHost();
+    const terminal = await spawnTerminalPty(
+      'fixture',
+      [],
+      {},
+      { spawn: () => host }
+    );
+    const status = new Promise((resolve) => terminal.onExit(resolve));
+    host.emit('exit', 0);
+    host.stdout.end();
+    host.stderr.end('host diagnostic');
+    const result = await status;
+    assert.equal(result.exitCode, 0);
+    assert.match(
+      result.error.message,
+      /PTY host exited with code 0: host diagnostic/
+    );
+  }
+);
 
 test('compact changes preserve colors, cursor movement, clearing and resize', async () => {
   const buffer = new TerminalBuffer({ cols: 8, rows: 2, frameInterval: 0 });

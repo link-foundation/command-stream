@@ -1,3 +1,5 @@
+import { trace } from './$.trace.mjs';
+
 const parseMessages = (stream, receive) => {
   let pending = '';
   stream.setEncoding('utf8');
@@ -10,6 +12,38 @@ const parseMessages = (stream, receive) => {
         receive(JSON.parse(line));
       }
     }
+  });
+};
+
+// Process exit can precede buffered status delivery. Observe pipe drain directly
+// because some Bun/Windows exits do not emit the child-process close event.
+const watchHostExit = (host, receive) => {
+  let exitCode;
+  let stdoutEnded = false;
+  let stderrEnded = false;
+  const drained = () => {
+    if (exitCode !== undefined && stdoutEnded && stderrEnded) {
+      receive(exitCode);
+    }
+  };
+  host.on('exit', (code) => {
+    trace('PTY', `host exit: ${code}`);
+    exitCode = code;
+    drained();
+  });
+  host.stdout.on('end', () => {
+    trace('PTY', 'host stdout drained');
+    stdoutEnded = true;
+    drained();
+  });
+  host.stderr.on('end', () => {
+    trace('PTY', 'host stderr drained');
+    stderrEnded = true;
+    drained();
+  });
+  host.on('close', (code) => {
+    trace('PTY', `host close: ${code}`);
+    receive(code);
   });
 };
 
@@ -95,9 +129,7 @@ export const spawnTerminalPty = async (
       }
     }
   });
-  // The exit status message may still be buffered when the host exits. Close
-  // follows stdout/stderr draining, so only then is a missing handshake real.
-  host.on('close', (exitCode) => {
+  watchHostExit(host, (exitCode) => {
     if (!terminalExitReceived && !exited) {
       exited = true;
       const error = new Error(

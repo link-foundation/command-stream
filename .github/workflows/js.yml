@@ -258,6 +258,17 @@ jobs:
         working-directory: js
         run: bun install --frozen-lockfile
 
+      - name: Verify terminal lifecycle with diagnostics (Bun)
+        if: matrix.runtime == 'bun'
+        timeout-minutes: 2
+        shell: bash
+        env:
+          COMMAND_STREAM_TRACE: 'true'
+        run: |
+          set -o pipefail
+          mkdir -p ci-test-logs
+          bun test js/tests/terminal-capture.test.mjs js/tests/terminal-changes.test.mjs --timeout 10000 2>&1 | tee ci-test-logs/lifecycle.log
+
       - name: Run tests (Bun)
         if: matrix.runtime == 'bun'
         timeout-minutes: 15
