@@ -48,3 +48,22 @@ Both Rust application and benchmark lockfiles were refreshed to syn 3.0.9,
 without changing dependency ranges or weakening freshness policy. Local Rust
 Clippy, full tests and benchmark compilation validate the compatible update before
 the follow-up commit. Fresh CI verifies the committed lockfiles.
+
+## Linux offline npm fixture on b35a19a
+
+Rust run 38274443983, created at 16:01:15 UTC for
+b35a19aea61a9d20227b67293452bae674efb48b, passed macOS and Windows but failed Linux.
+The downloaded `ci-logs/rust-38274443983.log` reports the offline npm fixture's
+fifteen-second deadline at lines 3585–3593. Dependency freshness passed after
+the lockfile update; this is a separate integration-test failure.
+
+The same Linux fixture passed on eff898c, and local focused/full reruns passed.
+The timed-out run did not retain npm's debug log, so the exact npm stall is not
+established. The fixture previously inherited npm's shared cache and enabled
+update-notifier setting. It now uses a private cache/log directory, disables
+update checks and retries, and prints verbose npm diagnostics on deadline. The
+real named installation, offline local dependency, scripts-disabled assertion and
+fifteen-second deadline are unchanged. The reusable experiment uses the same
+isolated configuration. Clippy and all 876 Rust tests passed with this fixture.
+
+The failed CI log is retained as `rust-38274443983.log.gz` alongside this file.

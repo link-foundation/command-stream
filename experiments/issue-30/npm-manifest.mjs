@@ -36,7 +36,7 @@ try {
   );
   await writeFile(
     join(directory, '.npmrc'),
-    'offline=true\nregistry=http://127.0.0.1:9\n'
+    `offline=true\nregistry=http://127.0.0.1:9\ncache=${join(directory, 'npm-cache').replaceAll('\\', '/')}\nlogs-dir=${join(directory, 'npm-logs').replaceAll('\\', '/')}\nloglevel=verbose\nupdate-notifier=false\nfetch-retries=0\n`
   );
   await promisify(execFile)(
     'npm',

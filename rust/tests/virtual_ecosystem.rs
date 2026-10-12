@@ -163,8 +163,8 @@ async fn npm_manifests_resolve_scoped_names_and_versions_without_installing() {
 
 #[tokio::test]
 async fn npm_installation_uses_real_local_packages_and_disables_lifecycle_scripts() {
-    tokio::time::timeout(Duration::from_secs(15), async {
-        let directory = tempfile::tempdir().unwrap();
+    let directory = tempfile::tempdir().unwrap();
+    let outcome = tokio::time::timeout(Duration::from_secs(15), async {
         let source = directory.path().join("source");
         tokio::fs::create_dir_all(&source).await.unwrap();
         tokio::fs::write(source.join("package.json"), json!({
@@ -175,12 +175,28 @@ async fn npm_installation_uses_real_local_packages_and_disables_lifecycle_script
         tokio::fs::write(directory.path().join("package.json"), json!({
             "name":"offline-consumer", "version":"1.0.0", "dependencies":{"@example/tools":"file:./source"}
         }).to_string()).await.unwrap();
-        tokio::fs::write(directory.path().join(".npmrc"), "offline=true\nregistry=http://127.0.0.1:9\n").await.unwrap();
+        // Keep the offline fixture independent of the runner's shared npm cache
+        // and update notifier. Preserve verbose diagnostics if its deadline fires.
+        let npm_path = |name| directory.path().join(name).to_string_lossy().replace('\\', "/");
+        tokio::fs::write(directory.path().join(".npmrc"), format!(
+            "offline=true\nregistry=http://127.0.0.1:9\ncache={}\nlogs-dir={}\nloglevel=verbose\nupdate-notifier=false\nfetch-retries=0\n",
+            npm_path("npm-cache"), npm_path("npm-logs")
+        )).await.unwrap();
         let mut environment = CommandEnvironment::new();
         assert_eq!(environment.install_npm("@example/tools", directory.path(), true).await.unwrap(), "reload-demo");
         assert_eq!(environment.list(), vec!["offline-npm"]);
         assert!(directory.path().join("node_modules/@example/tools/command-stream.json").exists());
-    }).await.expect("offline npm installation exceeded fifteen seconds");
+    }).await;
+    if outcome.is_err() {
+        if let Ok(mut logs) = tokio::fs::read_dir(directory.path().join("npm-logs")).await {
+            while let Ok(Some(log)) = logs.next_entry().await {
+                if let Ok(content) = tokio::fs::read_to_string(log.path()).await {
+                    eprintln!("npm diagnostic {}:\n{content}", log.path().display());
+                }
+            }
+        }
+    }
+    outcome.expect("offline npm installation exceeded fifteen seconds");
 }
 
 #[tokio::test]

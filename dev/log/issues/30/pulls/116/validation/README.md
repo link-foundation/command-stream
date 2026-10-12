@@ -60,3 +60,10 @@ Clippy passed with warnings denied, and the benchmark crate compiled successfull
 The dependency declaration check verified all 90 direct dependencies without
 stale or unverifiable entries. Updated-build logs are retained below this file;
 the failed CI log and precise error locations are retained with the investigation.
+
+The Linux offline npm fixture subsequently hit its unchanged fifteen-second
+deadline in CI while macOS, Windows and prior Linux/local runs passed. Its private
+cache, disabled update checks, and retained verbose failure diagnostics now make
+the offline integration independent of shared npm state and failures reviewable.
+After that isolation, focused tests and the reusable experiment passed, Clippy
+passed, and all 876 Rust tests passed again. No deadline was increased.
