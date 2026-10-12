@@ -3,7 +3,44 @@ import { test } from 'node:test';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { EventEmitter } from 'node:events';
+import { PassThrough } from 'node:stream';
 import { TerminalBuffer, openTerminal, captureTerminal } from '../src/$.mjs';
+import { spawnTerminalPty } from '../src/terminal-pty.mjs';
+
+test('PTY host exit waits for the terminal status still buffered on stdout', async () => {
+  const host = new EventEmitter();
+  host.stdout = new PassThrough();
+  host.stderr = new PassThrough();
+  host.stdin = {
+    write() {
+      host.stdout.write('{"type":"ready"}\n');
+    },
+  };
+  const terminal = await spawnTerminalPty(
+    'fixture',
+    [],
+    {},
+    {
+      spawn: () => host,
+    }
+  );
+  const statuses = [];
+  const output = [];
+  terminal.onExit((status) => statuses.push(status));
+  terminal.onData((data) => output.push(data));
+
+  // Child-process exit can precede pipe delivery. Close follows drained streams.
+  host.emit('exit', 0);
+  host.stdout.write('{"type":"data","data":"bye"}\n');
+  host.stdout.write('{"type":"exit","exitCode":3,"signal":0}\n');
+  host.stdout.end();
+  host.stderr.end();
+  host.emit('close', 0);
+
+  assert.deepEqual(statuses, [{ type: 'exit', exitCode: 3, signal: 0 }]);
+  assert.deepEqual(output, ['bye']);
+});
 
 test('compact changes preserve colors, cursor movement, clearing and resize', async () => {
   const buffer = new TerminalBuffer({ cols: 8, rows: 2, frameInterval: 0 });

@@ -17,7 +17,11 @@ export const spawnTerminalPty = async (
   file,
   args,
   options,
-  { hostPath: hostPathOverride, nodeBinary: nodeBinaryOverride } = {}
+  {
+    hostPath: hostPathOverride,
+    nodeBinary: nodeBinaryOverride,
+    spawn: spawnOverride,
+  } = {}
 ) => {
   const [{ spawn }, { dirname }, { fileURLToPath }] = await Promise.all([
     import('node:child_process'),
@@ -29,7 +33,7 @@ export const spawnTerminalPty = async (
     fileURLToPath(new URL('./terminal-pty-host.mjs', import.meta.url));
   const nodeBinary =
     nodeBinaryOverride ?? process.env.COMMAND_STREAM_NODE_BINARY ?? 'node';
-  const host = spawn(nodeBinary, [hostPath], {
+  const host = (spawnOverride ?? spawn)(nodeBinary, [hostPath], {
     cwd: dirname(hostPath),
     env: process.env,
     stdio: ['pipe', 'pipe', 'pipe'],
@@ -91,7 +95,9 @@ export const spawnTerminalPty = async (
       }
     }
   });
-  host.on('exit', (exitCode) => {
+  // The exit status message may still be buffered when the host exits. Close
+  // follows stdout/stderr draining, so only then is a missing handshake real.
+  host.on('close', (exitCode) => {
     if (!terminalExitReceived && !exited) {
       exited = true;
       const error = new Error(

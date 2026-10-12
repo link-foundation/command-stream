@@ -92,3 +92,13 @@ The existing portable PTY tests use the running executable's absolute
 `process.execPath`. The new tests now follow that pattern and compare the
 normalized transcript for TERM assertions, accounting for ConPTY's terminal
 control output. These tests still run on Windows rather than being skipped.
+
+[JavaScript run 38207102785](https://github.com/link-foundation/command-stream/actions/runs/38207102785)
+then exposed a PTY host race on macOS Bun. The downloaded job log at
+`ci-logs/js-macos-114673144059.log` reports `PTY host exited with code 0` instead
+of the child's expected exit code 3 at lines 6775–6776. The host's process `exit`
+event can precede delivery of its buffered stdout terminal-status message.
+A deterministic mock reproduces that ordering and initially delivered a false
+host failure followed by the real terminal status. The bridge now waits for
+`close`, after pipes drain, before reporting a missing terminal status. The new
+regression runs on Node and Bun; the existing missing-handshake test remains.
