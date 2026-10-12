@@ -2,63 +2,13 @@ import { performance } from 'node:perf_hooks';
 import xterm from '@xterm/headless';
 import { EventEmitter } from 'node:events';
 import { terminalFrame, sameFrame } from './terminal-capture.mjs';
+import {
+  terminalChange,
+  terminalDimensions,
+  terminalEventStream,
+} from './terminal-events.mjs';
 
-function dimensions(cols, rows) {
-  if (
-    ![cols, rows].every((n) => Number.isSafeInteger(n) && n > 0) ||
-    cols * rows > 1_000_000
-  ) {
-    throw new RangeError(
-      'Terminal dimensions must be positive and at most 1,000,000 cells'
-    );
-  }
-}
-
-function coloredLine(cells, length) {
-  let text = '';
-  let offset = 0;
-  for (const cell of cells) {
-    if (offset >= length) {
-      break;
-    }
-    if (!cell.width) {
-      continue;
-    }
-    const codes = [];
-    for (const [attribute, code] of [
-      ['bold', 1],
-      ['dim', 2],
-      ['italic', 3],
-      ['underline', 4],
-      ['reverse', 7],
-      ['invisible', 8],
-      ['strikethrough', 9],
-    ]) {
-      if (cell[attribute]) {
-        codes.push(code);
-      }
-    }
-    for (const [color, code] of [
-      ['fg', 38],
-      ['bg', 48],
-    ]) {
-      if (cell[color]) {
-        codes.push(
-          `${code};2;${cell[color]
-            .slice(1)
-            .match(/../g)
-            .map((hex) => parseInt(hex, 16))
-            .join(';')}`
-        );
-      }
-    }
-    text += codes.length
-      ? `\x1b[${codes.join(';')}m${cell.chars}\x1b[0m`
-      : cell.chars;
-    offset += cell.chars.length;
-  }
-  return text;
-}
+import { terminalText } from './terminal-text.mjs';
 
 /** Writable emulator with coalesced frame events and demand-driven text snapshots. */
 export class TerminalBuffer extends EventEmitter {
@@ -69,7 +19,7 @@ export class TerminalBuffer extends EventEmitter {
     frameInterval = 16,
   } = {}) {
     super();
-    dimensions(cols, rows);
+    terminalDimensions(cols, rows);
     if (
       !Number.isSafeInteger(scrollback) ||
       scrollback < 0 ||
@@ -90,6 +40,8 @@ export class TerminalBuffer extends EventEmitter {
     this.pending = Promise.resolve();
     this.previous = this.snapshot();
     this.disposed = false;
+    this.sequence = 0;
+    this.terminal.onData((data) => this.emit('input', data));
   }
   snapshot() {
     return terminalFrame(
@@ -98,12 +50,7 @@ export class TerminalBuffer extends EventEmitter {
     );
   }
   text({ color = false } = {}) {
-    const frame = this.snapshot();
-    return frame.screen
-      .map((line, index) =>
-        color ? coloredLine(frame.cells[index], line.length) : line
-      )
-      .join('\n');
+    return terminalText(this.snapshot(), { color });
   }
   write(data) {
     if (this.disposed) {
@@ -127,7 +74,7 @@ export class TerminalBuffer extends EventEmitter {
     return this.pending.then(() => this.schedule());
   }
   resize(cols, rows) {
-    dimensions(cols, rows);
+    terminalDimensions(cols, rows);
     if (this.terminal.options.scrollback * cols > 1_000_000) {
       throw new RangeError('Resized scrollback exceeds 1,000,000 cells');
     }
@@ -138,6 +85,10 @@ export class TerminalBuffer extends EventEmitter {
     this.schedule();
   }
   schedule() {
+    if (this.frameInterval === 0) {
+      this.publish();
+      return;
+    }
     if (this.disposed || this.timer) {
       return;
     }
@@ -153,8 +104,10 @@ export class TerminalBuffer extends EventEmitter {
     }
     const frame = this.snapshot();
     if (!sameFrame(this.previous, frame)) {
+      const change = terminalChange(this.previous, frame, ++this.sequence);
       this.previous = frame;
       this.emit('frame', frame);
+      this.emit('change', change);
     }
   }
   async flush() {
@@ -163,34 +116,11 @@ export class TerminalBuffer extends EventEmitter {
     this.timer = null;
     this.publish();
   }
-  async *frames() {
-    let latest;
-    let wake;
-    const listener = (frame) => {
-      latest = frame;
-      wake?.();
-    };
-    const close = () => wake?.();
-    this.on('frame', listener);
-    this.on('dispose', close);
-    try {
-      while (!this.disposed) {
-        if (!latest) {
-          await new Promise((resolve) => {
-            wake = resolve;
-          });
-          wake = null;
-        }
-        if (latest) {
-          const frame = latest;
-          latest = null;
-          yield frame;
-        }
-      }
-    } finally {
-      this.off('frame', listener);
-      this.off('dispose', close);
-    }
+  frames(options) {
+    return terminalEventStream(this, 'frame', options);
+  }
+  changes(options) {
+    return terminalEventStream(this, 'change', options);
   }
   dispose() {
     if (this.disposed) {

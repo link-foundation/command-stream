@@ -8,6 +8,8 @@ import type {
   VirtualCommandResult,
   VirtualCommandChunk,
   TerminalFrame,
+  TerminalChange,
+  TerminalStreamOptions,
 } from './api.cjs';
 import type { REPLServer } from 'node:repl';
 import type { Readable, Writable } from 'node:stream';
@@ -155,7 +157,8 @@ export class TerminalBuffer extends EventEmitter {
   write(data: string | Uint8Array): Promise<void>;
   resize(cols: number, rows: number): void;
   flush(): Promise<void>;
-  frames(): AsyncGenerator<TerminalFrame>;
+  frames(options?: TerminalStreamOptions): AsyncGenerator<TerminalFrame>;
+  changes(options?: TerminalStreamOptions): AsyncGenerator<TerminalChange>;
   dispose(): void;
 }
 export type CommandHandler = (

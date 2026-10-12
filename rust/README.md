@@ -554,6 +554,13 @@ cargo run -- echo hello
 
 ## TUI Capture
 
+Independent buffers and live sessions support full frame subscriptions and
+replayable ANSI change subscriptions with sequence numbers. Sessions expose
+`snapshot()`, `text(color)` and `poll()`; capture options include
+`frames_on_write` and `recording`. See the
+[virtual terminal guide](../js/docs/VIRTUAL_TERMINAL.md#rust) for receiver lag
+handling and using the synchronous session driver with an async consumer.
+
 `capture_terminal` runs an interactive program in a real pseudoterminal and
 uses `vt100` to retain settled terminal states:
 

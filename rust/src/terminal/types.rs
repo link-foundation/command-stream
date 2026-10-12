@@ -62,6 +62,10 @@ pub struct TerminalCaptureOptions {
     pub cols: u16,
     pub rows: u16,
     pub settle_duration: Duration,
+    /// Retain a frame after every parsed PTY write instead of waiting for idle.
+    pub frames_on_write: bool,
+    /// Disable recording history; keep the latest frame and last 1MB of output.
+    pub recording: bool,
     pub interactions: Vec<TerminalInteraction>,
     pub stop_marker: Option<String>,
     pub stop_marker_grace: Duration,
@@ -81,6 +85,8 @@ impl Default for TerminalCaptureOptions {
             cols: 80,
             rows: 24,
             settle_duration: Duration::from_millis(35),
+            frames_on_write: false,
+            recording: true,
             interactions: Vec::new(),
             stop_marker: None,
             stop_marker_grace: Duration::from_millis(250),

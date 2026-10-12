@@ -860,7 +860,7 @@ function isGitAvailable() {
 }
 ```
 
-### TUI Capture
+### [TUI Capture](docs/VIRTUAL_TERMINAL.md)
 
 `captureTerminal()` runs a command in a real pseudoterminal and uses xterm's
 terminal model to capture settled screen states. It can send text and control

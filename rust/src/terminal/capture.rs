@@ -1,4 +1,8 @@
 use super::artifacts::{unroll_terminal_frames, write_terminal_artifacts};
+use super::buffer::{
+    take_terminal_input, terminal_parser, valid_dimensions, BufferChange, BufferFrame,
+    BufferPublisher, TerminalParser,
+};
 use super::types::{
     Asciicast, AsciicastEvent, AsciicastHeader, TerminalCapture, TerminalCaptureError,
     TerminalCaptureOptions, TerminalCursor, TerminalFrame, TerminalInteraction, TerminalResize,
@@ -23,7 +27,7 @@ fn trim_trailing_blank(mut lines: Vec<String>) -> Vec<String> {
     lines
 }
 
-fn frame(parser: &vt100::Parser, started: Instant) -> TerminalFrame {
+fn frame(parser: &TerminalParser, started: Instant) -> TerminalFrame {
     let screen = parser.screen();
     let (rows, cols) = screen.size();
     let (cursor_y, cursor_x) = screen.cursor_position();
@@ -50,7 +54,7 @@ fn same_frame(left: &TerminalFrame, right: &TerminalFrame) -> bool {
         && left.lines == right.lines
 }
 
-fn append_frame(frames: &mut Vec<TerminalFrame>, parser: &vt100::Parser, started: Instant) {
+fn append_frame(frames: &mut Vec<TerminalFrame>, parser: &TerminalParser, started: Instant) {
     let next = frame(parser, started);
     if frames
         .last()
@@ -121,7 +125,7 @@ fn apply_interaction(
     interaction: &TerminalInteraction,
     writer: &mut dyn Write,
     master: &dyn MasterPty,
-    parser: &mut vt100::Parser,
+    parser: &mut TerminalParser,
     asciicast: &mut Asciicast,
     started: Instant,
 ) -> Result<(), TerminalCaptureError> {
@@ -158,9 +162,15 @@ fn apply_interaction(
 
 fn resize_terminal(
     master: &dyn MasterPty,
-    parser: &mut vt100::Parser,
+    parser: &mut TerminalParser,
     resize: TerminalResize,
 ) -> Result<(), TerminalCaptureError> {
+    if !valid_dimensions(resize.rows, resize.cols) {
+        return Err(TerminalCaptureError::new(
+            "invalid terminal dimensions",
+            None,
+        ));
+    }
     master
         .resize(PtySize {
             rows: resize.rows,
@@ -262,6 +272,7 @@ impl TerminalPattern {
 /// A pseudoterminal that stays open until the caller closes it, so input may be
 /// sent long after the process started.
 pub struct TerminalSession {
+    publisher: BufferPublisher,
     options: TerminalCaptureOptions,
     interaction_regexes: Vec<Option<Regex>>,
     master: Box<dyn MasterPty + Send>,
@@ -269,7 +280,7 @@ pub struct TerminalSession {
     child: Box<dyn Child + Send + Sync>,
     receiver: mpsc::Receiver<Vec<u8>>,
     started: Instant,
-    parser: vt100::Parser,
+    parser: TerminalParser,
     recording: Asciicast,
     output: String,
     frames: Vec<TerminalFrame>,
@@ -289,6 +300,12 @@ impl TerminalSession {
         if options.file.is_empty() {
             return Err(TerminalCaptureError::new(
                 "open_terminal requires a file",
+                None,
+            ));
+        }
+        if !valid_dimensions(options.rows, options.cols) {
+            return Err(TerminalCaptureError::new(
+                "invalid terminal dimensions",
                 None,
             ));
         }
@@ -336,6 +353,8 @@ impl TerminalSession {
         for (name, value) in &options.env {
             command.env(name, value);
         }
+        command.env("COLUMNS", options.cols.to_string());
+        command.env("LINES", options.rows.to_string());
         let child = pty
             .slave
             .spawn_command(command)
@@ -351,8 +370,10 @@ impl TerminalSession {
             .map_err(|error| TerminalCaptureError::new(error.to_string(), None))?;
         let receiver = spawn_reader(reader);
         let recording = asciicast(&options);
-        let parser = vt100::Parser::new(options.rows, options.cols, 100_000);
+        let parser = terminal_parser(options.rows, options.cols, 100_000);
+        let publisher = BufferPublisher::new(parser.screen());
         Ok(Self {
+            publisher,
             interaction_regexes,
             master: pty.master,
             writer,
@@ -386,6 +407,27 @@ impl TerminalSession {
         &self.frames
     }
 
+    pub fn snapshot(&self) -> BufferFrame {
+        BufferPublisher::frame(self.parser.screen())
+    }
+
+    pub fn text(&self, color: bool) -> String {
+        if color {
+            String::from_utf8_lossy(&self.parser.screen().contents_formatted()).into_owned()
+        } else {
+            self.parser.screen().contents()
+        }
+    }
+
+    /// Notifications advance when `poll`, `wait_for`, `send` or `finish` runs.
+    pub fn subscribe(&self) -> tokio::sync::broadcast::Receiver<BufferFrame> {
+        self.publisher.frames.subscribe()
+    }
+
+    pub fn subscribe_changes(&self) -> tokio::sync::broadcast::Receiver<BufferChange> {
+        self.publisher.changes.subscribe()
+    }
+
     /// Unrolled transcript of the states retained so far.
     pub fn transcript(&self) -> String {
         unroll_terminal_frames(&self.frames)
@@ -394,6 +436,23 @@ impl TerminalSession {
     /// Whether the child is still alive.
     pub fn running(&self) -> bool {
         self.status.is_none()
+    }
+
+    fn trim_recording(&mut self) {
+        if self.options.recording {
+            return;
+        }
+        if self.frames.len() > 1 {
+            self.frames.drain(..self.frames.len() - 1);
+        }
+        self.recording.events.clear();
+        if self.output.len() > 1_000_000 {
+            let mut start = self.output.len() - 1_000_000;
+            while !self.output.is_char_boundary(start) {
+                start += 1;
+            }
+            self.output.drain(..start);
+        }
     }
 
     fn read_available(&mut self) {
@@ -411,8 +470,20 @@ impl TerminalSession {
                 }
                 for (index, segment) in segments.into_iter().enumerate() {
                     self.parser.process(segment);
+                    let response = take_terminal_input(&mut self.parser);
+                    if !response.is_empty() {
+                        let _ = self.writer.write_all(&response);
+                        let _ = self.writer.flush();
+                        record(
+                            &mut self.recording,
+                            self.started,
+                            "i",
+                            String::from_utf8_lossy(&response).into_owned(),
+                        );
+                    }
+                    self.publisher.publish(self.parser.screen());
                     self.terminal_has_output |= !segment.is_empty();
-                    if index + 1 < segment_count {
+                    if self.options.frames_on_write || index + 1 < segment_count {
                         append_frame(&mut self.frames, &self.parser, self.started);
                     }
                 }
@@ -432,6 +503,7 @@ impl TerminalSession {
             Err(mpsc::RecvTimeoutError::Disconnected) => self.reader_closed = true,
             Err(mpsc::RecvTimeoutError::Timeout) => {}
         }
+        self.trim_recording();
     }
 
     fn idle_for(&self) -> Duration {
@@ -469,15 +541,17 @@ impl TerminalSession {
                 &mut self.recording,
                 self.started,
             )?;
+            self.publisher.publish(self.parser.screen());
             self.interaction_index += 1;
         }
+        self.trim_recording();
         Ok(())
     }
 
     /// Advance the capture by one step: read pending output, apply any scripted
     /// interaction whose readiness condition became true, retain settled states,
     /// and enforce the optional deadline.
-    fn poll(&mut self) -> Result<(), TerminalCaptureError> {
+    pub fn poll(&mut self) -> Result<(), TerminalCaptureError> {
         self.read_available();
         self.apply_scripted_interactions()?;
 
@@ -593,7 +667,10 @@ impl TerminalSession {
             &mut self.parser,
             &mut self.recording,
             self.started,
-        )
+        )?;
+        self.publisher.publish(self.parser.screen());
+        self.trim_recording();
+        Ok(())
     }
 
     /// Wait for a child that exits on its own, then produce the capture.
@@ -620,6 +697,7 @@ impl TerminalSession {
         let pending = std::mem::take(&mut self.pending_render);
         self.parser.process(&pending);
         append_frame(&mut self.frames, &self.parser, self.started);
+        self.trim_recording();
         let capture = capture_result(
             self.status
                 .clone()

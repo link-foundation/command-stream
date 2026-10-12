@@ -91,6 +91,7 @@ declare namespace $ {
   export type TerminalCaptureError = CommandStream.TerminalCaptureError;
   export type TerminalCaptureResult = CommandStream.TerminalCaptureResult;
   export type TerminalCell = CommandStream.TerminalCell;
+  export type TerminalChange = CommandStream.TerminalChange;
   export type TerminalCloseOptions = CommandStream.TerminalCloseOptions;
   export type TerminalDisposable = CommandStream.TerminalDisposable;
   export type TerminalExitStatus = CommandStream.TerminalExitStatus;
@@ -101,6 +102,7 @@ declare namespace $ {
   export type TerminalProcess = CommandStream.TerminalProcess;
   export type TerminalSession = CommandStream.TerminalSession;
   export type TerminalSize = CommandStream.TerminalSize;
+  export type TerminalStreamOptions = CommandStream.TerminalStreamOptions;
   export type TerminalTraceEvent = CommandStream.TerminalTraceEvent;
   export type TerminalWaitOptions = CommandStream.TerminalWaitOptions;
   export type VirtualCommandChunk = CommandStream.VirtualCommandChunk;

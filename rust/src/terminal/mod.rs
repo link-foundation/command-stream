@@ -4,7 +4,7 @@ mod capture;
 mod types;
 
 pub use artifacts::{read_asciicast, serialize_asciicast, unroll_terminal_frames};
-pub use buffer::{BufferFrame, TerminalBuffer};
+pub use buffer::{BufferChange, BufferFrame, TerminalBuffer};
 pub use capture::{
     capture_terminal, capture_terminal_async, open_terminal, TerminalPattern, TerminalSession,
 };

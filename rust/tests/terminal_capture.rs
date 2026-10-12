@@ -21,6 +21,51 @@ fn shell_options(script: &str) -> TerminalCaptureOptions {
 }
 
 #[test]
+fn live_subscriptions_and_streaming_without_recording() {
+    let mut options = shell_options(
+        "printf 'ready'; IFS= read -r answer; printf '\\033[2J\\033[Hdone:%s' \"$answer\"",
+    );
+    options.frames_on_write = true;
+    options.recording = false;
+    let mut session = open_terminal(options).unwrap();
+    let mut changes = session.subscribe_changes();
+    let mut frames = session.subscribe();
+    session
+        .wait_for(
+            &TerminalPattern::text("ready"),
+            Duration::ZERO,
+            Some(Duration::from_secs(2)),
+        )
+        .unwrap();
+    assert_eq!(frames.try_recv().unwrap().text, "ready");
+    assert_eq!(changes.try_recv().unwrap().sequence, 1);
+    assert_eq!(session.text(false), "ready");
+    session
+        .send(&TerminalInteraction {
+            text: Some("hello".into()),
+            key: Some(TerminalKey::Enter),
+            ..TerminalInteraction::default()
+        })
+        .unwrap();
+    let capture = session.finish().unwrap();
+    assert_eq!(capture.frames.len(), 1);
+    assert!(capture.frames[0].screen.join("\n").contains("done:hello"));
+    assert!(capture.asciicast.events.is_empty());
+    assert!(changes.try_recv().is_ok());
+}
+
+#[test]
+fn invalid_dimensions_are_rejected_before_spawning() {
+    let mut options = shell_options("exit 0");
+    options.cols = 0;
+    assert!(open_terminal(options)
+        .err()
+        .unwrap()
+        .to_string()
+        .contains("dimensions"));
+}
+
+#[test]
 fn drives_input_control_keys_and_terminal_resize() {
     let script = r#"
 printf '\033[2J\033[Hready:'

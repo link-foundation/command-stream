@@ -236,7 +236,7 @@ jobs:
         if: matrix.os == 'ubuntu-24.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y jq
+          sudo apt-get install -y jq tmux screen openssh-server
 
       - name: Install system dependencies (macOS)
         if: matrix.os == 'macos-15'
@@ -278,6 +278,12 @@ jobs:
           path: ci-test-logs/
           retention-days: 7
 
+      - name: Verify interactive shells, multiplexers and SSH
+        if: matrix.os == 'ubuntu-24.04' && matrix.runtime == 'bun'
+        run: |
+          node experiments/issue-9/check-transports.mjs
+          node experiments/issue-9/check-ssh.mjs
+
       - name: Setup Node.js
         if: matrix.runtime == 'node'
         uses: actions/setup-node@v7.0.0
@@ -309,6 +315,7 @@ jobs:
           console.log('CommonJS entry loads successfully in Node.js ' + process.version);
           "
           node --test js/tests/node-terminal-artifacts.mjs
+          node --test js/tests/terminal-changes.test.mjs
           node --test js/tests/node-commonjs-entry.mjs
           node --test js/tests/node-process-regressions.mjs
           node --test js/tests/windows-tree-kill.test.mjs
