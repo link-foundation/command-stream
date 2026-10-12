@@ -646,13 +646,106 @@ async fn command_packages() -> ExampleResult {
             CommandResult::success(format!("{}!", result.stdout))
         })
     })?;
-    Ok(vec![observation(
+    let inherited = observation(
         "inherited middleware",
         environment
             .run("package-greet", CommandContext::new(vec!["world".into()]))
             .await
             .stdout,
-    )])
+    );
+    let mut rejected = 0;
+    for name in [
+        "",
+        "two words",
+        "7command",
+        "command;echo",
+        "écho",
+        "line\n",
+    ] {
+        if environment
+            .create(name, |_| async { CommandResult::success_empty() })
+            .is_err()
+        {
+            rejected += 1;
+        }
+    }
+    environment.create("package-generator", |context| async move {
+        let tx = context.output_tx.unwrap();
+        for chunk in ["one\n", "two\n"] {
+            tx.send(command_stream::commands::StreamChunk::Stdout(chunk.into()))
+                .await
+                .unwrap();
+        }
+        CommandResult::success_empty()
+    })?;
+    environment.create("package-fail", |context| async move {
+        CommandResult::new(context.stdin.unwrap().to_uppercase(), "stop", 7)
+    })?;
+    environment.create("package-unreachable", |_| async {
+        panic!("continued after failure")
+    })?;
+    environment.compose(
+        "package-pipeline",
+        &["package-generator", "package-fail", "package-unreachable"],
+    )?;
+    let result = environment
+        .run("package-pipeline", CommandContext::new(vec![]))
+        .await;
+    let directory = tempfile::tempdir()?;
+    let file = directory.path().join("commands.json");
+    let definition = |version: &str, commands: Value| {
+        json!({"name":"parity-package","version":version,"commands":commands}).to_string()
+    };
+    tokio::fs::write(
+        &file,
+        definition(
+            "1",
+            json!({"package-installed":{"file":"echo","args":["one"]}}),
+        ),
+    )
+    .await?;
+    environment.install_file(&file).await?;
+    let idempotent = environment.install_file(&file).await? == "parity-package";
+    tokio::fs::write(
+        &file,
+        definition("bad", json!({"bad name":{"file":"echo"}})),
+    )
+    .await?;
+    assert!(environment.reload_file(&file).await.is_err());
+    let retained = environment.installed("parity-package").unwrap().version == "1"
+        && environment.get("package-installed").is_some();
+    tokio::fs::write(
+        &file,
+        definition("2", json!({"package-reloaded":{"file":"echo"}})),
+    )
+    .await?;
+    environment.reload_file(&file).await?;
+    let reload = json!([
+        idempotent,
+        retained,
+        environment.installed("parity-package").unwrap().version,
+        !environment.list().contains(&"package-installed".into())
+    ]);
+    environment.uninstall("parity-package");
+    use command_stream::command_packages::{Marketplace, SearchOptions};
+    let discovered = Marketplace::search_with("git & deploy", SearchOptions::default(), |url| async move {
+        assert!(url.contains("text=keywords%3Acommand-stream-command%20git%20%26%20deploy"));
+        Ok(json!({"objects":[{"package":{"name":"tools","version":"1","description":"Git helpers"}}]}))
+    }).await?;
+    Ok(vec![
+        inherited,
+        observation("invalid names rejected", rejected),
+        observation(
+            "streamed composition",
+            json!([
+                result.code,
+                result.stdout.to_string(),
+                result.stderr.to_string()
+            ]),
+        ),
+        observation("atomic package reload", reload),
+        observation("registry discovery", discovered),
+    ])
 }
 // endfeature:command-packages
 

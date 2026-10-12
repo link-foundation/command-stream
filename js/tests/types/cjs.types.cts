@@ -56,6 +56,10 @@ export async function commonJsBun(): Promise<void> {
 }
 
 export async function commonJsAdvanced(): Promise<void> {
+  // @ts-expect-error command names must be strings when a handler is supplied
+  $.create(42, () => ({ code: 0 }));
+  // @ts-expect-error composition accepts handlers rather than command names
+  $.compose('typed');
   const code: number = await $.command('node', '-e', 'process.exit(0)')
     .pipe($.command.stdout('ignore'), $.command.exitCode)
     .run();
