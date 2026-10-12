@@ -4,6 +4,13 @@ import {
   writeTerminalArtifacts,
 } from './terminal-artifacts.mjs';
 import { spawnTerminalPty } from './terminal-pty.mjs';
+import { EventEmitter } from 'node:events';
+import {
+  terminalChange,
+  terminalDimensions,
+  terminalSubscriptions,
+  validateFrameMode,
+} from './terminal-events.mjs';
 
 const KEY_SEQUENCES = {
   BACKSPACE: '\u007f',
@@ -237,13 +244,15 @@ const createAsciicast = ({ cols, rows, file, environment }) => ({
   events: [],
 });
 
-const createCaptureRecorder = (asciicast, onTrace) => {
+const createCaptureRecorder = (asciicast, onTrace, recording) => {
   const startedAt = Date.now();
   const elapsed = () => Number(((Date.now() - startedAt) / 1000).toFixed(6));
   return {
     elapsed,
     record: (code, data) => {
-      asciicast.events.push({ time: elapsed(), code, data });
+      if (recording) {
+        asciicast.events.push({ time: elapsed(), code, data });
+      }
     },
     trace: (type, details = {}) => {
       onTrace?.({ time: elapsed(), type, ...details });
@@ -274,6 +283,9 @@ const formatInteraction = (interaction) => {
 };
 
 const validateInteraction = (interaction) => {
+  if (interaction?.resize !== undefined) {
+    terminalDimensions(interaction.resize.cols, interaction.resize.rows);
+  }
   const hasAction =
     interaction !== null &&
     typeof interaction === 'object' &&
@@ -309,6 +321,7 @@ const applyInteraction = ({ interaction, process, terminal, record }) => {
   }
   if (interaction.resize !== undefined) {
     const { cols, rows } = interaction.resize;
+    terminalDimensions(cols, rows);
     process.resize(cols, rows);
     terminal.resize(cols, rows);
     record('r', `${cols}x${rows}`);
@@ -340,6 +353,7 @@ const createInteractionCoordinator = ({
         terminal,
         record,
       });
+      appendFrame();
       index += 1;
       scheduled = false;
       advance();
@@ -384,6 +398,8 @@ const startTerminal = async ({ file, args, cwd, env, cols, rows }) => {
   const environment = captureEnvironment({
     ...env,
     TERM: env.TERM ?? 'xterm-256color',
+    COLUMNS: String(cols),
+    LINES: String(rows),
   });
   const terminal = new Terminal({
     cols,
@@ -436,7 +452,7 @@ const persistArtifacts = async ({
 };
 
 const resolveTerminalRows = ({ cols, rows, aspectRatio, label }) => {
-  if (!(aspectRatio > 0)) {
+  if (!Number.isFinite(aspectRatio) || !(aspectRatio > 0)) {
     throw new TypeError(`${label} aspectRatio must be greater than zero`);
   }
   return rows ?? Math.max(1, Math.round(cols / (2 * aspectRatio)));
@@ -532,6 +548,9 @@ const watchTerminal = ({
       interactionCoordinator.outputArrived();
       trace('output', { data });
       state.output += data;
+      if (!state.recording) {
+        state.output = state.output.slice(-1_000_000);
+      }
       record('o', data);
       outputWriter.write(data);
       outputWriter.after(settle);
@@ -566,6 +585,25 @@ const watchTerminal = ({
   });
 };
 
+const stopTerminalSession =
+  ({ child, state, completion, finalize }) =>
+  async ({ signal = 'SIGTERM', timeoutMilliseconds = 5_000 } = {}) => {
+    if (!state.exitStatus) {
+      child.kill(signal);
+      let timer;
+      const stopped = await Promise.race([
+        completion.then(() => true),
+        new Promise((resolve) => {
+          timer = setTimeout(() => resolve(false), timeoutMilliseconds);
+        }),
+      ]).finally(() => clearTimeout(timer));
+      if (!stopped) {
+        child.kill('SIGKILL');
+      }
+    }
+    return finalize();
+  };
+
 const createTerminalSessionApi = ({
   child,
   terminal,
@@ -584,6 +622,7 @@ const createTerminalSessionApi = ({
   completion,
   artifactDirectory,
   artifactOptions,
+  events,
 }) => {
   let finalized;
 
@@ -600,6 +639,9 @@ const createTerminalSessionApi = ({
         clearSettle();
         appendFrame();
       } finally {
+        events.closed = true;
+        events.emit('dispose');
+        events.removeAllListeners();
         markDisposed();
         terminal.dispose();
       }
@@ -633,6 +675,8 @@ const createTerminalSessionApi = ({
     }
     return capture;
   };
+  // Finish readers even when the caller only consumes a live stream.
+  completion.then(finalize).catch(() => undefined);
 
   const currentTranscript = () => {
     if (isDisposed()) {
@@ -666,29 +710,18 @@ const createTerminalSessionApi = ({
       await outputWriter.after(() => {
         appendFrame();
         applyInteraction({ interaction, process: child, terminal, record });
+        appendFrame();
       });
     }
     return currentTranscript();
   };
 
-  const stop = async ({
-    signal = 'SIGTERM',
-    timeoutMilliseconds: killTimeout = 5_000,
-  } = {}) => {
-    if (!state.exitStatus) {
-      child.kill(signal);
-      const stopped = await Promise.race([
-        completion.then(() => true),
-        new Promise((resolve) => setTimeout(() => resolve(false), killTimeout)),
-      ]);
-      if (!stopped) {
-        child.kill('SIGKILL');
-      }
-    }
-    return finalize();
-  };
+  const stop = stopTerminalSession({ child, state, completion, finalize });
 
   return {
+    ...terminalSubscriptions(events, () =>
+      isDisposed() ? frames.at(-1) : terminalFrame(terminal, elapsed)
+    ),
     get output() {
       return state.output;
     },
@@ -734,11 +767,13 @@ export const openTerminal = async ({
   file,
   args = [],
   cwd = process.cwd(),
-  env = process.env,
+  env = { ...process.env, TERM: 'xterm-256color' },
   cols = 80,
   rows,
   aspectRatio = 4 / 3,
   settleMilliseconds = 35,
+  frameMode = 'settled',
+  recording = true,
   interactions = [],
   stopMarker,
   stopMarkerGraceMilliseconds = 250,
@@ -755,6 +790,8 @@ export const openTerminal = async ({
     validateInteraction(interaction);
   }
   const terminalRows = resolveTerminalRows({ cols, rows, aspectRatio, label });
+  terminalDimensions(cols, terminalRows);
+  validateFrameMode(frameMode);
 
   const { child, environment, terminal } = await startTerminal({
     file,
@@ -774,21 +811,44 @@ export const openTerminal = async ({
     elapsed,
     record,
     trace: traceCapture,
-  } = createCaptureRecorder(asciicast, onTrace);
+  } = createCaptureRecorder(asciicast, onTrace, recording);
   const frames = [];
-  const state = { output: '', error: undefined, exitStatus: undefined };
+  const events = new EventEmitter();
+  terminal.onData((data) => {
+    if (!state.exitStatus) {
+      child.write(data);
+      record('i', data);
+    }
+  });
+  const state = {
+    output: '',
+    error: undefined,
+    exitStatus: undefined,
+    recording,
+  };
   let settleTimer;
   let disposed = false;
+  let sequence = 0;
   const appendFrame = () => {
     if (disposed) {
       return;
     }
     const frame = terminalFrame(terminal, elapsed);
     if (!frames.at(-1) || !sameFrame(frames.at(-1), frame)) {
+      const change = terminalChange(frames.at(-1), frame, ++sequence);
+      if (!recording) {
+        frames.length = 0;
+      }
       frames.push(frame);
+      events.emit('frame', frame);
+      events.emit('change', change);
     }
   };
   const settle = () => {
+    if (frameMode === 'writes') {
+      appendFrame();
+      return;
+    }
     clearTimeout(settleTimer);
     settleTimer = setTimeout(appendFrame, settleMilliseconds);
   };
@@ -840,6 +900,7 @@ export const openTerminal = async ({
     completion,
     artifactDirectory,
     artifactOptions,
+    events,
   });
 };
 

@@ -773,6 +773,10 @@ export interface TerminalOptions {
   aspectRatio?: number;
   /** Default: `35`. */
   settleMilliseconds?: number;
+  /** `settled` coalesces redraws; `writes` publishes each completed PTY write. */
+  frameMode?: 'settled' | 'writes';
+  /** Disable history: keep one frame, no cast events, and the last 1M output characters. */
+  recording?: boolean;
   interactions?: TerminalInteraction[];
   stopMarker?: string | RegExp;
   /** Default: `250`. */
@@ -810,6 +814,25 @@ export interface TerminalFrame {
   lines: string[];
   screen: string[];
   cells: TerminalCell[][];
+}
+
+/** Changes relative to the previous sequence; row replacements include styles. */
+export interface TerminalChange extends TerminalSize {
+  sequence: number;
+  time: number;
+  cursor: { x: number; y: number };
+  alternate: boolean;
+  /** Clear the receiving screen and history before applying this change. */
+  reset: boolean;
+  updates: Array<{ y: number; text: string; cells: TerminalCell[] }>;
+  history: { start: number; deleteCount: number; lines: string[] };
+}
+
+export interface TerminalStreamOptions {
+  /** Default: 64. Overflow rejects the iterator; take a fresh snapshot. */
+  capacity?: number;
+  /** End a pending read and release listeners. */
+  signal?: AbortSignal;
 }
 
 /** Asciicast v2 recording held in memory. */
@@ -880,6 +903,12 @@ export interface TerminalProcess {
 
 /** A live pseudoterminal session returned by `openTerminal()`. */
 export interface TerminalSession {
+  snapshot(): TerminalFrame;
+  text(options?: { color?: boolean }): string;
+  onFrame(listener: (frame: TerminalFrame) => void): () => void;
+  onChange(listener: (change: TerminalChange) => void): () => void;
+  frameStream(options?: TerminalStreamOptions): AsyncGenerator<TerminalFrame>;
+  changes(options?: TerminalStreamOptions): AsyncGenerator<TerminalChange>;
   readonly output: string;
   readonly transcript: string;
   readonly frames: TerminalFrame[];

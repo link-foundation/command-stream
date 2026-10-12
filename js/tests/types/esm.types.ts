@@ -365,6 +365,13 @@ export async function terminal(): Promise<void> {
 
   const session = await openTerminal({ file: 'bash', rows: 24 });
   expectType<Equal<typeof session, TerminalSession>>();
+  session.onChange((change) => {
+    const rows: number = change.rows;
+    void rows;
+  });
+  session.frameStream({ capacity: 8 });
+  session.changes({ signal: new AbortController().signal });
+  session.text({ color: true });
   await session.waitFor('$ ');
   await session.send([{ text: 'exit\n' }]);
   const closed = await session.close({ signal: 'SIGTERM' });
@@ -430,6 +437,11 @@ export async function advancedFeatures(): Promise<void> {
   await controller.ready;
   await controller.close();
   const terminal = new TerminalBuffer();
+  const delta = terminal.changes({
+    capacity: 8,
+    signal: new AbortController().signal,
+  });
+  void delta;
   await terminal.write('hello');
   terminal.dispose();
   const debug = new PipelineDebugger();
