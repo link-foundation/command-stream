@@ -13,8 +13,13 @@
   duplication checks passed (2.51% duplicated lines).
 - Documentation validation passed: 221 checks, 0 failed. New documentation
   is included in the tracked-file checks.
+- Rust all-features suite: 855 passed, 7 ignored, 0 failed across 53 suites,
+  including documentation examples. The single-job build used reduced debug
+  data and completed in 4 minutes 52 seconds; peak process RSS was 619 MiB.
+- All 34 executable feature comparisons passed in Rust, Node and Bun.
+- Generated documentation checks passed for all 36 generated files.
 
 The source fix is JavaScript-specific overload/coercion validation. Rust source
 is unchanged; its portable packages, inheritance, middleware and composition
 remain included from main. Rust tests and executable cross-language examples
-are validated separately with one build job and reduced debug data.
+passed separately with one build job and reduced debug data.
