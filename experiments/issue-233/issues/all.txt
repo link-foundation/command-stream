@@ -1,0 +1,250 @@
+=== #226 Publish command-stream to crates.io through trusted publishing (remove CARGO_TOKEN) comments: 1
+## Goal
+Publish `command-stream` to crates.io through **trusted publishing (OIDC)** instead of the long-lived `CARGO_TOKEN` / `CARGO_REGISTRY_TOKEN` secrets. The organization `CARGO_TOKEN` is being retired and its current token expires soon.
+
+## Why this repository needs review
+`package-registry-manager setup --registry crates-io --migrate` (0.23.0) stopped here:
+
+> token is also read by a non-publishing job; preserve that consumer before migration
+
+`rust.yml` reads `CARGO_REGISTRY_TOKEN` in the **Check registry publish credentials** step (`node .github/scripts/publish-preflight.mjs crates`) and again in the release jobs.
+
+## Plan
+1. Change the credential preflight to check that OIDC is available (`ACTIONS_ID_TOKEN_REQUEST_URL` set, `id-token: write`) instead of a token. Alternatively, drop its token env.
+1. In the release jobs, add `id-token: write` and `rust-lang/crates-io-auth-action` (pinned to v1.0.5's commit, `c6f97d42243bad5fab37ca0427f495c86d5b1a18`) before `rust-script rust/scripts/publish-crate.rs`, and pass `steps.<id>.outputs.token` as `CARGO_REGISTRY_TOKEN`.
+1. Merge the converted workflow, then run `package-registry-manager setup --repository . --registry crates-io --migrate --execute`. It registers the trusted publisher (top-level workflow and environment) and deletes the token secrets after the first OIDC release.
+
+Tool gap tracked in link-foundation/package-registry-manager#60. Once that issue is fixed, `--migrate` should do all of this automatically.
+
+=== #227 $({ timeout }) is silently ignored: the command is never bounded (only signal works) comments: 0
+## Problem
+
+`$({ timeout: <ms> })` is accepted without any error, but the timeout is never applied. The command runs to the end. Callers who expect the command to be bounded get no warning, and a hung `docker` or `gh` process keeps their event loop waiting forever. Only `signal: AbortSignal.timeout(<ms>)` bounds a command.
+
+Found while adding a lint rule to link-assistant/hive-mind that requires every `$` call in its Telegram bot to be bounded (link-assistant/hive-mind#3278).
+
+## Reproduction
+
+```js
+// probe.mjs
+import { $ } from 'command-stream';
+
+const time = async (label, run) => {
+  const started = Date.now();
+  const result = await run();
+  console.log(`${label}: finished after ${Date.now() - started} ms, code ${result.code}`);
+};
+
+await time('timeout: 500', () => $({ mirror: false, timeout: 500 })`sleep 3`);
+await time('signal: AbortSignal.timeout(500)', () => $({ mirror: false, signal: AbortSignal.timeout(500) })`sleep 3`);
+process.exit(0);
+```
+
+Output with command-stream 2.4.0 (current `latest`) and 0.17.2, Node.js on Linux:
+
+```
+timeout: 500: finished after 3009 ms, code 0
+signal: AbortSignal.timeout(500): finished after 503 ms, code 143
+```
+
+## Expected
+
+One of these:
+
+1. Support `timeout` (in milliseconds) as a shorthand for `signal: AbortSignal.timeout(timeout)`, combined with any `signal` the caller also passes (`AbortSignal.any`). The result should make the cause visible, for example `timedOut: true`, the way `child_process.execFile` sets `killed` and `signal`.
+2. Or reject unknown options such as `timeout` with a clear error, so the mistake is caught at the first run.
+
+Option 1 matches what callers expect from `child_process.exec`/`execFile`/`spawnSync`, which all accept `timeout`.
+
+## Workaround
+
+Pass `signal: AbortSignal.timeout(<ms>)` instead of `timeout`.
+
+=== #228 $ runs commands in a login shell (sh -l -c): profile reorders the caller's PATH (macOS path_helper) and prints into stdout comments: 0
+## Summary
+
+`$` runs every simple command as a **login shell** (`/bin/sh -l -c`, see `src/$.shell.mjs` lines 238–246 in 2.4.0). A login shell reads `/etc/profile` and `~/.profile`. That has two visible effects on the caller:
+
+1. **The caller's `PATH` is reordered.** On macOS, `/etc/profile` runs `path_helper`, which moves the system directories (`/usr/local/bin`, `/usr/bin`, …) in front of the entries the caller put first. So `$({ env: { PATH: '/my/fake/bin:' + PATH } })` still runs the *system* binary.
+2. **Anything the profile prints ends up in `result.stdout`.**
+
+Pipelines already avoid this: `src/$.process-runner-pipeline.mjs:277` filters out `-l`. As a result, `` $`cmd` `` and `` $`cmd | cat` `` run in different environments.
+
+## Impact (real case)
+
+In link-foundation/start, a test put a fake `npm` first on `PATH` and ran `` $`npm …` ``. It passed on Linux and Windows. On `macos-15` GitHub runners it ran the **real** npm against the real registry, because `path_helper` reordered `PATH` (https://github.com/link-foundation/start/issues/234, run https://github.com/link-foundation/start/actions/runs/39269658765).
+
+## Reproduction (Linux, no macOS needed)
+
+A `~/.profile` that prepends `/usr/bin` and prints a line stands in for macOS's `/etc/profile` and `path_helper`:
+
+```js
+// probe.mjs
+import { $ } from 'command-stream';
+const env = { ...process.env, PATH: `/caller-first:${process.env.PATH}` };
+const $env = $({ env, mirror: false });
+const simple = await $env`printenv PATH`;
+const piped = await $env`printenv PATH | cat`;
+console.log('simple  stdout:', JSON.stringify(simple.stdout.slice(0, 60)));
+console.log('pipeline stdout:', JSON.stringify(piped.stdout.slice(0, 60)));
+```
+
+```sh
+HOME=$(mktemp -d) sh -c 'printf "echo profile-noise\nPATH=/usr/bin:\$PATH\n" > "$HOME/.profile"; bun probe.mjs'
+```
+
+Output with command-stream 2.4.0 (identical with 0.9.4):
+
+```
+simple  stdout: "profile-noise\n/usr/bin:/caller-first:/home/box/.local/bin:/h"
+pipeline stdout: "/caller-first:/home/box/.local/bin:/home/box/.perl5/bin:/hom"
+```
+
+**Expected:** both forms print `/caller-first:…`, and nothing from the profile appears in stdout.
+
+## Workaround
+
+Call the binary by absolute path instead of relying on `PATH` order. For a tagged template, rewrite `strings[0]`:
+
+```js
+const run = (strings, ...values) =>
+  $env([strings[0].replace(/^npm(?= )/, `'${fakeNpm}'`), ...strings.slice(1)], ...values);
+```
+
+This is what link-foundation/start now does in `js/test/npm-publish.mjs`.
+
+## Suggested fix
+
+Use `-c`, not `-l -c`, for the default shells in `src/$.shell.mjs`, matching what the pipeline runner already does. If some users depend on the login environment, make it opt-in, e.g. `$({ loginShell: true })`, rather than the default. A regression test can use the `HOME`/`.profile` trick above to assert that `PATH[0]` and stdout are unchanged for a simple command.
+
+=== #229 Rust: no way to remove a single inherited environment variable (`StreamingRunner`, `RunOptions`, `TerminalCaptureOptions`) comments: 0
+## Summary
+
+The Rust crate (1.9.0) can only **add** environment variables to a child process, or clear the whole inherited environment. There is no per-variable removal (the `std::process::Command::env_remove` / `env -u NAME` equivalent):
+
+| API | Add | Clear all | Remove one |
+| --- | --- | --- | --- |
+| `StreamingRunner` (`src/stream.rs:156` `env`, `:180` `clear_env`) | yes | yes | **no** |
+| `RunOptions.env` (`src/run_options.rs:82`) | yes | no | **no** |
+| `terminal::TerminalCaptureOptions.env` (`src/terminal/types.rs:61`, applied in `src/terminal/capture.rs:346-355` with `CommandBuilder::env`) | yes | **no** | **no** |
+
+For `StreamingRunner` a caller can work around this by calling `clear_env(true)` and passing the full parent environment minus the unwanted keys. `TerminalCaptureOptions` has no clear option, so a PTY child **always** inherits every parent variable. `portable_pty::CommandBuilder` has `env_remove` and `env_clear`, so the capability is already available in the dependency.
+
+## Why it matters
+
+Agent CLIs change behaviour based on inherited variables. For example, an inherited `ANTHROPIC_API_KEY` switches `claude` from subscription to API billing, and `CLAUDECODE`, `CODEX_HOME` and `OPENCODE_*` change session and nesting behaviour. Orchestrators such as [Hive Mind](https://github.com/link-assistant/hive-mind) and [agent-commander](https://github.com/link-assistant/agent-commander) need to launch a child with *"the parent env, minus these names"*. The JS side can already do this by passing a spread of `process.env` with keys deleted.
+
+## Reproduction
+
+```rust
+use command_stream::terminal::{capture_terminal, TerminalCaptureOptions};
+use std::collections::HashMap;
+
+std::env::set_var("SECRET_TOKEN", "leaked");
+let capture = capture_terminal(TerminalCaptureOptions {
+    file: "sh".into(),
+    args: vec!["-c".into(), "echo token=${SECRET_TOKEN:-unset}".into()],
+    env: HashMap::new(), // no way to express "remove SECRET_TOKEN"
+    ..TerminalCaptureOptions::default()
+})?;
+assert!(capture.transcript.contains("token=leaked")); // cannot be prevented
+```
+
+## Suggested API
+
+- `StreamingRunner::env_remove(name)` / `.env_remove_all(names)`.
+- `RunOptions.env_remove: Vec<String>` (or `env_unset`).
+- `TerminalCaptureOptions.env_remove: Vec<String>` and `env_clear: bool`, forwarded to `portable_pty::CommandBuilder::env_remove` / `env_clear`.
+- On the JS side, document that `env` replaces the environment (it already does for `captureTerminal`) or accept `undefined` values as "remove", for symmetry.
+
+## Current workaround in agent-commander
+
+The launch is wrapped in `env -u NAME ... <tool> <args>`: see `rust/src/tui.rs` (`unset_env`) and the `unset_env` / `unsetEnv` option of the command builders. This needs an `env` binary on PATH, and it moves `argv[0]` of the PTY child to `env`.
+
+Found while syncing agent-commander with Hive Mind 2.39.5 (link-assistant/agent-commander#55).
+
+=== #230 Rust: `StreamingRunner` / `OutputStream` has no live stdin pipe (argv + streaming + interactive input) comments: 0
+## Summary
+
+The Rust crate (1.9.0) has no runner that combines **exact argv**, **streamed output**, and **stdin written while the process runs**:
+
+| Runner | Exact argv | Streams chunks | Live stdin |
+| --- | --- | --- | --- |
+| `StreamingRunner::from_argv` (`src/stream.rs:123`) → `OutputStream` | yes | yes | **no**: only one-shot `.stdin(content)` / `.stdin_bytes(content)` (`:168-176`), which is written and then shut down (`:537-545`) |
+| `ProcessRunner` (`src/lib.rs`) `write_stdin` / `close_stdin` | **no**: shell string through `/bin/sh -c`, plus virtual-command interception and the `export PWD` prefix | via `run(&mut self)` | yes |
+
+The JS package already supports this combination: `new ProcessRunner({ mode: 'exec', file, args }, { stdin: 'pipe' })` with `runner.stdin.write(...)`.
+
+## Why it matters
+
+Agent CLIs used by [agent-commander](https://github.com/link-assistant/agent-commander) and [Hive Mind](https://github.com/link-assistant/hive-mind) talk NDJSON over stdin while they stream NDJSON on stdout. For example, `claude --input-format stream-json` takes follow-up user messages and permission responses (`control_response`) as stdin frames, sent in reaction to events read from stdout. A fixed stdin buffer cannot express this, and `ProcessRunner`'s `/bin/sh` path changes quoting and command resolution.
+
+Because of this gap, agent-commander's Rust executor keeps a hand-rolled tokio spawn with `process_group(0)`, drain tasks and a `kill -TERM -- -<pid>` shell-out. It cannot use `StreamingRunner`'s kill grace, SIGKILL escalation and `exit_pump_grace_ms`.
+
+## Suggested API
+
+```rust
+let mut stream = StreamingRunner::from_argv("claude", ["-p", "--input-format", "stream-json"])
+    .stdin_pipe()            // keep stdin open instead of Stdio::null()
+    .kill_grace_ms(3000)
+    .stream();
+while let Some(chunk) = stream.next().await {
+    if needs_answer(&chunk) {
+        stream.write_stdin(b"{\"type\":\"control_response\",...}\n").await?;
+    }
+}
+stream.close_stdin().await?;
+```
+
+You could also add `ProcessRunner::from_argv(program, args)` with the existing `write_stdin` / `close_stdin`, provided it skips the shell and virtual commands.
+
+Related: #19 (closed, asked for real stream wrappers on the JS side) and #190 (closed, Windows argv for the streaming runner). Neither covers live stdin for the Rust `OutputStream`.
+
+Found while syncing agent-commander with Hive Mind 2.39.5 (link-assistant/agent-commander#55).
+
+=== #231 Terminal capture: no way to choose which artifacts are written (GIF always rendered in JS) comments: 0
+## Summary
+
+`captureTerminal({ artifactDirectory })` (JS 2.4.0) always renders and writes every artifact: `transcript.txt`, `frames.json`, `session.cast`, `snapshot.svg`, `recording.svg` and `recording.gif` (`js/src/terminal-artifacts.mjs:493-530`). The GIF step (resvg rasterisation + gifenc, `:424-469`) is by far the most expensive one. The Rust `write_terminal_artifacts` (`rust/src/terminal/artifacts.rs:174`) likewise always writes its five files. Neither side has an `artifacts` / `formats` option. The 1.9.0 / 2.4.0 `recording: false` flag skips the recording work but does not select files.
+
+## Why it matters
+
+[agent-commander](https://github.com/link-assistant/agent-commander) exposes `captureAgentTui({ artifacts: ['transcript', 'snapshot'] })` for CI runs that only need a transcript. Today it captures everything and then deletes the unrequested files (`selectArtifacts` in `js/src/tui.mjs`), which still pays for the GIF render on every capture.
+
+## Suggested API
+
+```js
+await captureTerminal({ ..., artifactDirectory, artifacts: ['transcript', 'snapshot'] });
+```
+
+```rust
+TerminalCaptureOptions { artifacts: Some(vec![TerminalArtifact::Transcript, TerminalArtifact::Snapshot]), .. }
+```
+
+The option should default to all artifacts, for backward compatibility. Each renderer should be skipped when its artifact is not requested.
+
+## Related parity gaps (Rust vs JS)
+
+The Rust `TerminalCaptureOptions` has no `aspect_ratio` (JS `aspectRatio`, which makes the JS default rows 30 for 80 columns vs Rust 24), no `on_trace` callback (JS `onTrace`), and no `recording.gif`.
+
+Found while syncing agent-commander with Hive Mind 2.39.5 (link-assistant/agent-commander#55).
+
+=== #232 Fire-and-forget detached spawn (JS + Rust): start a command that outlives the caller and get its pid comments: 0
+## Summary
+
+command-stream (JS 2.4.0, Rust 1.9.0, `main` at `6ccdc2da`) cannot start a background command that keeps running after the caller returns or exits:
+
+| API                      | Why it is not fire-and-forget                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| JS `$` / `ProcessRunner` | The child is already spawned with `detached` off Windows, and `stdout`/`stderr` options reach `spawn` (`js/src/$.process-runner-execution.mjs:161-167`, `:912-915`). But stdin is always a pipe (`:166`), the child is never `unref()`'d and the runner keeps exit listeners, so the caller's event loop stays alive until the command ends. There is no option that resolves with the pid as soon as the process has started. |
+| Rust `StreamingRunner`   | `spawn` sets `kill_on_drop(true)` (`rust/src/stream.rs:499`), so dropping the `OutputStream` kills the child.                                                                                                                                                                                                                                                                                                                  |
+| Rust `ProcessRunner`     | `pid()` (`rust/src/lib.rs:270`) and `child()` (`:483`) exist, but stdout and stderr are piped or inherited, never null (`:400-405`), and the runner expects to be awaited.                                                                                                                                                                                                                                                     |
+
+## Why it matters
+
+[agent-commander](https://github.com/link-assistant/agent-commander) starts agents in the background (`--detached`, and the `screen`/`docker` launchers) and only needs the pid back. It keeps its own helpers for this:
+
+- JS `executeDetached` (`js/src/executor.mjs:309`): `spawn('bash', ['-c', command], { detached: true, stdio: 'ignore' })`, then `child.unref()` and resolve with `{ pid }`.
+- Rust `execute_detached` (`rust/src/executor.rs`): `bash -c` with null stdio and `process_group(0)`, returning `child.id()`.
+
+While writing these we found a parity bug in our own Rust helper (the ch
