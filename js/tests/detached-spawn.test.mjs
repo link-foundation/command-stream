@@ -73,18 +73,19 @@ describe('spawnDetached()', () => {
   test.skipIf(isWindows)('the child leads a new session', async () => {
     const { pid } = await spawnDetached(['sleep', '5']);
     try {
-      const [group, session] = execFileSync('ps', [
+      // macOS ps has no `sid` keyword; on both procps and BSD ps an `s` in
+      // the state column marks a session leader.
+      const [group, state] = execFileSync('ps', [
         '-o',
-        'pgid=,sid=',
+        'pgid=,stat=',
         '-p',
         String(pid),
       ])
         .toString()
         .trim()
-        .split(/\s+/)
-        .map(Number);
-      expect(group).toBe(pid);
-      expect(session).toBe(pid);
+        .split(/\s+/);
+      expect(Number(group)).toBe(pid);
+      expect(state).toContain('s');
     } finally {
       process.kill(pid, 'SIGKILL');
     }
