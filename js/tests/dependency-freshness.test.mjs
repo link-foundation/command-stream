@@ -315,6 +315,16 @@ describe('installed npm dependencies', () => {
     expect(outdatedFailures(outdated, blockers)).toEqual([]);
   });
 
+  test('fails closed when npm reports an error instead of packages', () => {
+    const error = { error: { code: 'ENOTFOUND', summary: 'getaddrinfo' } };
+    expect(outdatedFailures(error, blockers)).toEqual([
+      'npm outdated: getaddrinfo',
+    ]);
+    expect(
+      outdatedFailures({ execa: { current: '10.1.1' } }, blockers)
+    ).toHaveLength(1);
+  });
+
   test('a blocker never excuses a lockfile behind its declaration', () => {
     const outdated = {
       execa: row('10.1.0', '10.1.1', '10.2.0'),

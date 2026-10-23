@@ -231,14 +231,19 @@ export async function checkDependencies(deps, options = {}) {
 /**
  * Failures in `npm outdated --json` output. The lockfile must always match the
  * declaration; a newer release is tolerated only for a package with a blocker,
- * whose issue the declaration check has already verified as open.
+ * whose issue the declaration check has already verified as open. Errors
+ * reported by npm, and rows without a latest version, fail as well.
  */
 export function outdatedFailures(outdated, blockers = {}) {
+  if (outdated.error) {
+    return [`npm outdated: ${outdated.error.summary ?? outdated.error.code}`];
+  }
   return Object.entries(outdated).flatMap(([name, entry]) =>
     [entry]
       .flat()
       .filter(
         (row) =>
+          typeof row.latest !== 'string' ||
           row.current !== row.wanted ||
           (row.wanted !== row.latest && !blockers[name])
       )
