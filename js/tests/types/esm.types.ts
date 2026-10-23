@@ -500,4 +500,12 @@ export async function advancedFeatures(): Promise<void> {
   command('echo', {});
   // @ts-expect-error stdio modes are checked
   command.stdout('typo');
+  // @ts-expect-error command names must be strings when a handler is supplied
+  $.create(null, () => ({ code: 0 }));
+  // @ts-expect-error command handlers must be callable
+  $.create('invalid', { stdout: 'hello' });
+  // @ts-expect-error middleware receives context and a callable next handler
+  $.extend('typed', (_context, next: string) => next);
+  // @ts-expect-error composition accepts handlers rather than command names
+  $.compose('typed');
 }

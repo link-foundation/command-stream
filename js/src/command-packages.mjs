@@ -37,7 +37,11 @@ async function loadPackage(file, reload) {
 }
 
 function validate(name, handler) {
-  if (!/^[A-Za-z_][\w:.-]*$/.test(name) || typeof handler !== 'function') {
+  if (
+    typeof name !== 'string' ||
+    !/^[A-Za-z_][\w:.-]*$/.test(name) ||
+    typeof handler !== 'function'
+  ) {
     throw new TypeError(`Invalid virtual command: ${name}`);
   }
 }
