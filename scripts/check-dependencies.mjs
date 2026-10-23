@@ -1,6 +1,7 @@
 // Compare every maintained package's declarations with the registry's latest
 // stable release. Rust-script's embedded Cargo manifests count too.
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -42,12 +43,29 @@ function cargoDependencies(text, file) {
   return result;
 }
 
+/**
+ * JSON has no comments, so npm blockers live in `js/dependency-blockers.json`,
+ * which maps a package name to an issue URL and explanation.
+ */
+export function npmBlockers(root = repoRoot) {
+  const file = join(root, 'js/dependency-blockers.json');
+  if (!existsSync(file)) {
+    return {};
+  }
+  return Object.fromEntries(
+    Object.entries(JSON.parse(readFileSync(file, 'utf8'))).map(
+      ([name, note]) => [name, String(note).match(issuePattern)?.[0]]
+    )
+  );
+}
+
 /** Collect direct package and development dependencies without network access. */
 export function collectDependencies(root = repoRoot) {
   const deps = [];
   const npmFile = 'js/package.json';
   const npmText = readFileSync(join(root, npmFile), 'utf8');
   const npm = JSON.parse(npmText);
+  const blockers = npmBlockers(root);
   for (const section of [
     'dependencies',
     'devDependencies',
@@ -61,6 +79,7 @@ export function collectDependencies(root = repoRoot) {
         file: npmFile,
         line:
           npmText.split('\n').findIndex((row) => row.includes(`"${name}"`)) + 1,
+        blocker: blockers[name],
       });
     }
   }
@@ -209,7 +228,60 @@ export async function checkDependencies(deps, options = {}) {
   return report;
 }
 
-if (import.meta.main) {
+/**
+ * Failures in `npm outdated --json` output. The lockfile must always match the
+ * declaration; a newer release is tolerated only for a package with a blocker,
+ * whose issue the declaration check has already verified as open.
+ */
+export function outdatedFailures(outdated, blockers = {}) {
+  return Object.entries(outdated).flatMap(([name, entry]) =>
+    [entry]
+      .flat()
+      .filter(
+        (row) =>
+          row.current !== row.wanted ||
+          (row.wanted !== row.latest && !blockers[name])
+      )
+      .map(
+        (row) =>
+          `js/package.json (${name}): installed ${row.current ?? 'nothing'}, wanted ${row.wanted}, latest ${row.latest}`
+      )
+  );
+}
+
+function checkInstalledNpm() {
+  // `npm outdated` exits with 1 whenever it lists a package; read its JSON.
+  const run = spawnSync('npm', ['outdated', '--json'], {
+    cwd: join(repoRoot, 'js'),
+    encoding: 'utf8',
+  });
+  if (run.error || ![0, 1].includes(run.status)) {
+    console.error(run.error?.message ?? run.stderr);
+    process.exitCode = 1;
+    return;
+  }
+  const blockers = npmBlockers();
+  const outdated = JSON.parse(run.stdout || '{}');
+  for (const [name, entry] of Object.entries(outdated)) {
+    if (blockers[name]) {
+      console.log(
+        `Blocker: js/package.json (${name}): latest ${[entry].flat()[0].latest} blocked by ${blockers[name]}`
+      );
+    }
+  }
+  const failures = outdatedFailures(outdated, blockers);
+  for (const failure of failures) {
+    console.error(failure);
+  }
+  console.log(
+    `Checked installed JavaScript dependencies; ${failures.length} outdated.`
+  );
+  process.exitCode = failures.length ? 1 : 0;
+}
+
+if (import.meta.main && process.argv.includes('--installed-npm')) {
+  checkInstalledNpm();
+} else if (import.meta.main) {
   const deps = [...collectDependencies(), ...collectToolDependencies()];
   const report = await checkDependencies(deps);
   for (const exemption of report.exemptions) {
