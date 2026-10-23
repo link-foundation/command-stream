@@ -1,7 +1,7 @@
 use super::artifacts::{unroll_terminal_frames, write_terminal_artifacts};
 use super::buffer::{
-    take_terminal_input, terminal_parser, valid_dimensions, BufferChange, BufferFrame,
-    BufferPublisher, TerminalParser,
+    nonzero, screen_size, take_terminal_input, terminal_parser, valid_dimensions, BufferChange,
+    BufferFrame, BufferPublisher, TerminalParser,
 };
 use super::types::{
     Asciicast, AsciicastEvent, AsciicastHeader, TerminalCapture, TerminalCaptureError,
@@ -30,7 +30,7 @@ fn trim_trailing_blank(mut lines: Vec<String>) -> Vec<String> {
 
 fn frame(parser: &TerminalParser, started: Instant) -> TerminalFrame {
     let screen = parser.screen();
-    let (rows, cols) = screen.size();
+    let (rows, cols) = screen_size(screen);
     let (cursor_y, cursor_x) = screen.cursor_position();
     let lines = trim_trailing_blank(screen.rows(0, cols).collect());
     TerminalFrame {
@@ -180,7 +180,9 @@ fn resize_terminal(
             pixel_height: 0,
         })
         .map_err(|error| TerminalCaptureError::new(error.to_string(), None))?;
-    parser.screen_mut().set_size(resize.rows, resize.cols);
+    parser
+        .screen_mut()
+        .set_size(nonzero(resize.rows), nonzero(resize.cols));
     Ok(())
 }
 
@@ -443,7 +445,7 @@ impl TerminalSession {
 
     pub fn text(&self, color: bool) -> String {
         if color {
-            String::from_utf8_lossy(&self.parser.screen().contents_formatted()).into_owned()
+            self.parser.screen().contents_formatted()
         } else {
             self.parser.screen().contents()
         }

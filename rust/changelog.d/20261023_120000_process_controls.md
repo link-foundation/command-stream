@@ -13,3 +13,4 @@ bump: minor
 ### Changed
 
 - crates.io releases publish through trusted publishing (OIDC) and fall back to the `CARGO_REGISTRY_TOKEN` secret (#226).
+- Update vt100 to 0.18, tokio to 1.54 and libc to 0.2.191; vt100 stays internal to terminal capture.

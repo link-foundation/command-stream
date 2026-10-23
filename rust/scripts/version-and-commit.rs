@@ -18,7 +18,7 @@
 //! [dependencies]
 //! regex = "1.13.1"
 //! chrono = "0.4.45"
-//! ureq = "3.4.2"
+//! ureq = "3.5.0"
 //! serde = { version = "1.0.229", features = ["derive"] }
 //! serde_json = "1.0.154"
 //! ```
