@@ -88,7 +88,11 @@ impl crate::ProcessRunner {
     /// ```
     pub fn spawn_detached(&self) -> Result<Option<u32>> {
         let options = self.options();
-        let mut runner = crate::StreamingRunner::new(self.command())
+        let runner = match &self.argv {
+            Some(argv) => crate::StreamingRunner::with_command(argv.clone()),
+            None => crate::StreamingRunner::new(self.command()),
+        };
+        let mut runner = runner
             .prefer_local(options.prefer_local.clone())
             .env_remove_all(options.env_remove.iter().cloned());
         if let Some(cwd) = crate::resolve_spawn_cwd(options.cwd.as_ref()) {

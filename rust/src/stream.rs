@@ -125,7 +125,7 @@ impl StreamingRunner {
         })
     }
 
-    fn with_command(command: StreamingCommand) -> Self {
+    pub(crate) fn with_command(command: StreamingCommand) -> Self {
         StreamingRunner {
             command,
             cwd: None,

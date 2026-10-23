@@ -78,6 +78,7 @@ pub mod local_bin;
 #[doc(hidden)]
 pub mod macros;
 pub mod pipeline;
+mod process_argv;
 mod process_stop;
 pub mod quote;
 pub mod result_streams;
@@ -231,6 +232,9 @@ pub(crate) fn resolve_spawn_cwd(cwd: Option<&PathBuf>) -> Option<PathBuf> {
 /// A running or completed process
 pub struct ProcessRunner {
     command: String,
+    /// Exact program and arguments, set by [`ProcessRunner::from_argv`]. When
+    /// present the command bypasses the shell and the virtual commands.
+    argv: Option<stream_process::StreamingCommand>,
     options: RunOptions,
     child: Option<Child>,
     stdin_bytes: Vec<u8>,
@@ -311,6 +315,7 @@ impl ProcessRunner {
         let (tx, rx) = mpsc::channel(1024);
         ProcessRunner {
             command: command.into(),
+            argv: None,
             options,
             child: None,
             stdin_bytes: Vec::new(),
@@ -368,7 +373,8 @@ impl ProcessRunner {
         // nothing was pushed (#46).
         // Removals cannot be expressed to the built-ins, which see `env` as
         // overrides of the inherited environment, so they go to a real shell.
-        let first_word = if matches!(self.options.stdin, StdinOption::Pipe)
+        let first_word = if self.argv.is_some()
+            || matches!(self.options.stdin, StdinOption::Pipe)
             || !self.options.env_remove.is_empty()
             || has_shell_escapes(&self.command)
             || needs_real_shell(&self.command)
@@ -406,7 +412,10 @@ impl ProcessRunner {
         };
 
         // Execute via real shell if needed
-        let mut cmd = utils::shell_command(&self.command, self.options.env.as_ref());
+        let mut cmd = match &self.argv {
+            Some(argv) => argv.command(None),
+            None => utils::shell_command(&self.command, self.options.env.as_ref()),
+        };
 
         // Configure stdin
         match &self.options.stdin {

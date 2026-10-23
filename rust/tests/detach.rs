@@ -85,6 +85,24 @@ async fn process_runner_spawn_detached_runs_through_the_shell() {
     );
 }
 
+#[tokio::test]
+async fn process_runner_from_argv_spawn_detached_keeps_the_argv() {
+    let dir = tempfile::tempdir().unwrap();
+    let runner = ProcessRunner::from_argv(
+        "/bin/sh",
+        ["-c", "printf '%s\\n' \"$1\" > out", "sh", "$NOT_EXPANDED"],
+        RunOptions {
+            cwd: Some(dir.path().to_path_buf()),
+            ..Default::default()
+        },
+    );
+    assert!(runner.spawn_detached().unwrap().is_some());
+    assert_eq!(
+        wait_for_file(&dir.path().join("out")).await,
+        "$NOT_EXPANDED\n"
+    );
+}
+
 /// The probe half of `detached_child_outlives_the_caller`: detach a delayed
 /// write, then return so the probe process exits before the write happens.
 #[test]
