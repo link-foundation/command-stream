@@ -197,6 +197,7 @@ fn writes_replay_artifacts_and_preserves_partial_capture_on_timeout() {
         "session.cast",
         "snapshot.svg",
         "recording.svg",
+        "recording.gif",
     ] {
         assert!(artifacts.path().join(name).is_file(), "{name}");
     }

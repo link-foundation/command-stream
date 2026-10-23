@@ -35,6 +35,10 @@ chrono = "0.4.45"
 filetime = "0.2.29"
 portable-pty = "0.9.0"
 vt100 = "0.16.2"
+# recording.gif: frames are rasterised with 8x8 bitmap glyphs and encoded
+# without an SVG rasteriser or font loader.
+gif = { version = "0.14.2", default-features = false, features = ["std"] }
+font8x8 = "0.3.1"
 
 [dev-dependencies]
 tokio-test = "0.4.6"

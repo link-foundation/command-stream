@@ -6,6 +6,7 @@ use super::buffer::{
 use super::types::{
     Asciicast, AsciicastEvent, AsciicastHeader, TerminalCapture, TerminalCaptureError,
     TerminalCaptureOptions, TerminalCursor, TerminalFrame, TerminalInteraction, TerminalResize,
+    TerminalTrace, TerminalTraceEvent,
 };
 use portable_pty::{native_pty_system, Child, CommandBuilder, ExitStatus, MasterPty, PtySize};
 use regex::Regex;
@@ -224,6 +225,49 @@ fn spawn_reader(mut reader: Box<dyn Read + Send>) -> mpsc::Receiver<Vec<u8>> {
     receiver
 }
 
+/// Apply `aspect_ratio`, which derives `rows` from `cols` like the JS option.
+fn resolve_rows(options: &mut TerminalCaptureOptions) -> Result<(), TerminalCaptureError> {
+    let Some(ratio) = options.aspect_ratio else {
+        return Ok(());
+    };
+    if !ratio.is_finite() || ratio <= 0.0 {
+        return Err(TerminalCaptureError::new(
+            "terminal aspect_ratio must be greater than zero",
+            None,
+        ));
+    }
+    let rows = (f64::from(options.cols) / (2.0 * ratio)).round();
+    options.rows = rows.clamp(1.0, f64::from(u16::MAX)) as u16;
+    Ok(())
+}
+
+fn command_builder(options: &TerminalCaptureOptions) -> CommandBuilder {
+    let mut command = CommandBuilder::new(&options.file);
+    command.args(&options.args);
+    if let Some(cwd) = &options.cwd {
+        command.cwd(cwd);
+    }
+    if options.env_clear {
+        command.env_clear();
+    }
+    command.env(
+        "TERM",
+        options
+            .env
+            .get("TERM")
+            .map_or("xterm-256color", String::as_str),
+    );
+    for (name, value) in &options.env {
+        command.env(name, value);
+    }
+    for name in &options.env_remove {
+        command.env_remove(name);
+    }
+    command.env("COLUMNS", options.cols.to_string());
+    command.env("LINES", options.rows.to_string());
+    command
+}
+
 fn capture_result(
     status: portable_pty::ExitStatus,
     output: String,
@@ -293,10 +337,12 @@ pub struct TerminalSession {
     status: Option<ExitStatus>,
     timed_out: bool,
     stop_deadline: Option<Instant>,
+    exit_traced: bool,
 }
 
 impl TerminalSession {
-    fn open(options: TerminalCaptureOptions) -> Result<Self, TerminalCaptureError> {
+    fn open(mut options: TerminalCaptureOptions) -> Result<Self, TerminalCaptureError> {
+        resolve_rows(&mut options)?;
         if options.file.is_empty() {
             return Err(TerminalCaptureError::new(
                 "open_terminal requires a file",
@@ -338,26 +384,9 @@ impl TerminalSession {
                 pixel_height: 0,
             })
             .map_err(|error| TerminalCaptureError::new(error.to_string(), None))?;
-        let mut command = CommandBuilder::new(&options.file);
-        command.args(&options.args);
-        if let Some(cwd) = &options.cwd {
-            command.cwd(cwd);
-        }
-        command.env(
-            "TERM",
-            options
-                .env
-                .get("TERM")
-                .map_or("xterm-256color", String::as_str),
-        );
-        for (name, value) in &options.env {
-            command.env(name, value);
-        }
-        command.env("COLUMNS", options.cols.to_string());
-        command.env("LINES", options.rows.to_string());
         let child = pty
             .slave
-            .spawn_command(command)
+            .spawn_command(command_builder(&options))
             .map_err(|error| TerminalCaptureError::new(error.to_string(), None))?;
         drop(pty.slave);
         let reader = pty
@@ -393,6 +422,7 @@ impl TerminalSession {
             status: None,
             timed_out: false,
             stop_deadline: None,
+            exit_traced: false,
             options,
         })
     }
@@ -438,6 +468,30 @@ impl TerminalSession {
         self.status.is_none()
     }
 
+    fn trace(&self, event: TerminalTraceEvent) {
+        if let Some(callback) = &self.options.on_trace {
+            callback.call(&TerminalTrace {
+                time: elapsed(self.started),
+                event,
+            });
+        }
+    }
+
+    /// Report the exit once the child has exited and its output is drained,
+    /// so it is always the last event.
+    fn trace_exit(&mut self) {
+        if self.exit_traced || !self.finished() {
+            return;
+        }
+        self.exit_traced = true;
+        if let Some(status) = self.status.clone() {
+            self.trace(TerminalTraceEvent::Exit {
+                exit_code: status.exit_code() as i32,
+                signal: status.signal().map(str::to_owned),
+            });
+        }
+    }
+
     fn trim_recording(&mut self) {
         if self.options.recording {
             return;
@@ -459,6 +513,9 @@ impl TerminalSession {
         match self.receiver.recv_timeout(Duration::from_millis(5)) {
             Ok(data) => {
                 let text = String::from_utf8_lossy(&data);
+                self.trace(TerminalTraceEvent::Output {
+                    data: text.clone().into_owned(),
+                });
                 self.output.push_str(&text);
                 record(&mut self.recording, self.started, "o", text.into_owned());
                 self.pending_render.extend_from_slice(&data);
@@ -532,7 +589,10 @@ impl TerminalSession {
                 break;
             }
             let interaction = interaction.clone();
+            let interaction_index = self.interaction_index;
+            self.trace(TerminalTraceEvent::InteractionScheduled { interaction_index });
             append_frame(&mut self.frames, &self.parser, self.started);
+            self.trace(TerminalTraceEvent::InteractionApplied { interaction_index });
             apply_interaction(
                 &interaction,
                 self.writer.as_mut(),
@@ -579,9 +639,15 @@ impl TerminalSession {
                 .is_some_and(|deadline| Instant::now() >= deadline);
             if expired || stopped {
                 self.timed_out = expired;
+                if expired {
+                    self.trace(TerminalTraceEvent::Timeout {
+                        timeout_milliseconds: self.options.timeout.unwrap_or_default().as_millis(),
+                    });
+                }
                 self.stop()?;
             }
         }
+        self.trace_exit();
         Ok(())
     }
 
@@ -591,11 +657,11 @@ impl TerminalSession {
 
     fn stop(&mut self) -> Result<(), TerminalCaptureError> {
         let _ = self.child.kill();
-        self.status = Some(
-            self.child
-                .wait()
-                .map_err(|error| TerminalCaptureError::new(error.to_string(), None))?,
-        );
+        let status = self
+            .child
+            .wait()
+            .map_err(|error| TerminalCaptureError::new(error.to_string(), None))?;
+        self.status = Some(status);
         Ok(())
     }
 
@@ -698,6 +764,7 @@ impl TerminalSession {
         self.parser.process(&pending);
         append_frame(&mut self.frames, &self.parser, self.started);
         self.trim_recording();
+        self.trace_exit();
         let capture = capture_result(
             self.status
                 .clone()
@@ -710,6 +777,7 @@ impl TerminalSession {
         if let Some(directory) = &self.options.artifact_directory {
             write_terminal_artifacts(
                 directory,
+                self.options.artifacts.as_deref(),
                 &capture.frames,
                 &capture.transcript,
                 &capture.asciicast,
