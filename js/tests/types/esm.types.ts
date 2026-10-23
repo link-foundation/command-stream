@@ -94,6 +94,7 @@ export async function taggedTemplates(): Promise<void> {
   expectType<Equal<typeof result.code, number>>();
   expectType<Equal<typeof result.exitCode, number>>();
   expectType<Equal<typeof result.signal, NodeJS.Signals | null>>();
+  expectType<Equal<typeof result.timedOut, boolean>>();
 
   // Captured output behaves like a string.
   const text: string | undefined = result.stdout?.trim();
@@ -108,6 +109,8 @@ export async function taggedTemplates(): Promise<void> {
     cwd: '/tmp',
     stdin: 'data',
     preferLocal: true,
+    timeout: 5000,
+    loginShell: false,
   });
   expectType<Equal<typeof withOptions, CommandTag>>();
   expectType<Equal<ReturnType<typeof withOptions>, ProcessRunner>>();
@@ -121,6 +124,8 @@ export async function taggedTemplates(): Promise<void> {
   $({ stdin: 42 });
   // @ts-expect-error - killSignal must be a signal name
   $({ killSignal: 'SIGNOPE' });
+  // @ts-expect-error - timeout is a number of milliseconds
+  $({ timeout: '5s' });
   // @ts-expect-error - preferLocal accepts paths or a boolean
   $({ preferLocal: 42 });
   // @ts-expect-error - $ is not a plain function of a string

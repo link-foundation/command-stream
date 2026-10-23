@@ -746,7 +746,7 @@ command itself runs as its child:
 
 ```console
 $ ps -o args= -p 51234
-/bin/sh -l -c /bin/sleep 5
+/bin/sh -c /bin/sleep 5
 ```
 
 Do not depend on the wrapper being there. Some shells replace themselves with
@@ -1779,6 +1779,8 @@ As with any shell-enabled process, pass only trusted `file` and `args` values; s
 - `env: object` - Environment variables
 - `exitPumpGrace: number` - Milliseconds to wait for buffered output to drain after the process exits before aborting stdio reads held open by a grandchild (default `100`; see [Async Iteration](#async-iteration-real-time-streaming))
 - `killSignal: string` - Signal used to stop the process when it is killed without an explicit signal — i.e. `kill()` with no argument, `break`ing out of a `stream()` loop, or an external `AbortSignal` firing (default `'SIGTERM'`). An explicit `kill(signal)` argument always overrides this. The reported exit code follows the conventional `128 + signal` mapping (e.g. `SIGTERM` → 143, `SIGINT` → 130, `SIGKILL` → 137)
+- `timeout: number` - Milliseconds after which the command is stopped with `killSignal`, exactly as if its `signal` had been aborted (default `0`, no timeout). It bounds simple commands, pipelines, `stream()` and `.sync()`. The command resolves (it does not reject) with the signal exit code and `result.timedOut === true`; every other result has `timedOut: false`. Negative, non-finite or non-number values throw a `TypeError`. See [Timeouts](#timeouts)
+- `loginShell: boolean` - Run command strings through a login shell (`sh -l -c`), which sources `/etc/profile` and `~/.profile` before every command (default `false`). Without it the command runs in the caller's environment exactly, so profile output cannot leak into captured stdout and profile `PATH` edits cannot shadow caller-provided tools
 - `killGrace: number` - Milliseconds to wait after delivering `killSignal` before escalating to `SIGKILL`, giving the child a chance to run its own signal handler and shut down cleanly (default `100`). Set to `0` to escalate immediately, with no chance to clean up (only `SIGKILL` is delivered). `SIGKILL` itself is never delayed. See [Sending Signals to a Running Command](#sending-signals-to-a-running-command)
 
 **Override defaults:**
@@ -2137,6 +2139,27 @@ const running = $({
 })`some-endless-stream`;
 setTimeout(() => ac.abort(), 1000); // stops with SIGINT
 console.log((await running).code); // 130
+```
+
+#### Timeouts
+
+`timeout` stops a command that runs too long. It uses the same stop path as an
+aborted `signal`, so `killSignal` and `killGrace` apply, and awaiting resolves
+with the signal exit code instead of rejecting. `timedOut` tells a timeout apart
+from any other kill:
+
+```javascript
+const result = await $({ timeout: 5000 })`npm install`;
+if (result.timedOut) {
+  console.error(`gave up after 5s (${result.signal}, code ${result.code})`);
+}
+
+// Combine with an AbortSignal: whichever fires first stops the command.
+const ac = new AbortController();
+await $({ timeout: 60_000, signal: ac.signal, killSignal: 'SIGINT' })`./build`;
+
+// Sync mode is bounded too.
+$({ timeout: 1000 })`sleep 10`.sync().timedOut; // true
 ```
 
 #### Tuning the grace period

@@ -80,6 +80,10 @@ export interface ProcessOptions {
   exitPumpGrace?: number;
   /** Aborting this signal kills the command. */
   signal?: AbortSignal;
+  /** Milliseconds after which the command is stopped with `killSignal`; sets `result.timedOut`. Default: `0` (no timeout). */
+  timeout?: number;
+  /** Run command strings through a login shell (`sh -l -c`). Default: `false`. */
+  loginShell?: boolean;
   /** ANSI handling for emitted `stdout`/`stderr`/`data` events. */
   ansi?: Partial<AnsiConfig>;
   /** Set to `false` to silence tracing for this command. */
@@ -160,6 +164,8 @@ export interface ResultBase {
   exitCode: number;
   /** Terminating signal, or `null` for an ordinary exit. Cancellation reports the requested signal. */
   signal: NodeJS.Signals | null;
+  /** `true` when the `timeout` option stopped the command. */
+  timedOut: boolean;
   /** Resolves to the captured stdout text. */
   text(): Promise<string>;
 }
