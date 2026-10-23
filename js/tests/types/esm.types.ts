@@ -61,6 +61,7 @@ import $, {
   shell,
   shelljs,
   spawn,
+  spawnDetached,
   unregister,
   unrollTerminalFrames,
   unset,
@@ -68,6 +69,7 @@ import $, {
   type CommandError,
   type CommandResult,
   type CommandTag,
+  type DetachedProcess,
   type OutputChunk,
   type ParsedAsciicast,
   type ProcessOptions,
@@ -147,6 +149,24 @@ export async function entryPoints(): Promise<void> {
   await exec('node', '--version');
   // @ts-expect-error - run takes a string or an argv array
   await run(42);
+
+  // Fire and forget (issue #232).
+  expectType<
+    Equal<Awaited<ReturnType<typeof spawnDetached>>, DetachedProcess>
+  >();
+  const detached: number = (await spawnDetached('sleep 1', { cwd: '/tmp' }))
+    .pid;
+  await spawnDetached(['sleep', '1'] as const);
+  await spawnDetached({ file: 'sleep', args: ['1'] }, { env: {} });
+  const detachedResult = await $({ detached: true })`sleep 1`;
+  const detachedPid: number | undefined = detachedResult.pid;
+  const flagged: boolean | undefined = detachedResult.detached;
+  const fromRunner: DetachedProcess = await $`sleep 1`.spawnDetached();
+  use(detached, detachedPid, flagged, fromRunner);
+  // @ts-expect-error - spawnDetached needs a command
+  await spawnDetached(42);
+  // @ts-expect-error - detached is a boolean
+  $({ detached: 'yes' });
 
   const child: ChildProcess = spawn('node', ['--version'], { stdio: 'pipe' });
   const same: typeof spawn = $.spawn;

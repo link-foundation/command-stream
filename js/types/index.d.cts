@@ -51,6 +51,7 @@ declare namespace $ {
   export type ChildWritableStream = CommandStream.ChildWritableStream;
   export type CommandError = CommandStream.CommandError;
   export type CommandResult = CommandStream.CommandResult;
+  export type DetachedProcess = CommandStream.DetachedProcess;
   export type CommandSpec = CommandStream.CommandSpec;
   export type CommandTag = CommandStream.CommandTag;
   export type CrossSpawn = CommandStream.CrossSpawn;

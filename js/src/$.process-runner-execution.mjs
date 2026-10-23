@@ -41,6 +41,10 @@ import {
   drainPumpsAfterExit,
 } from './$.process-runner-exit.mjs';
 import { effectiveCwd, effectiveEnv } from './$.process-context.mjs';
+import {
+  startDetached,
+  startDetachedSync,
+} from './$.process-runner-detach.mjs';
 
 const isBun = typeof globalThis.Bun !== 'undefined';
 /** Check for shell operators in command. */
@@ -1102,6 +1106,9 @@ export function attachExecutionMethods(ProcessRunner, deps) {
         this.finish(createCancelledResult(this._cancellationSignal))
       );
     }
+    if (this.options.detached) {
+      return startDetached(this);
+    }
 
     trace(
       'ProcessRunner',
@@ -1409,6 +1416,9 @@ export function attachExecutionMethods(ProcessRunner, deps) {
 
     this.started = true;
     this._mode = 'sync';
+    if (this.options.detached) {
+      return startDetachedSync(this);
+    }
     const shellSettings = { ...globalShellSettings };
 
     const { cwd, stdin } = this.options;
