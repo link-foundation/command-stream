@@ -63,7 +63,7 @@ test('crates rejects credentials denied by the publish endpoint', async () => {
   await expect(
     checkCratePublisher({
       packageName: 'command-stream',
-      env: { CARGO_TOKEN: 'token' },
+      env: { ...env, CARGO_TOKEN: 'token' },
       fetchFn: async () => response({}, 403),
     })
   ).rejects.toThrow('HTTP 403');
@@ -72,7 +72,7 @@ test('crates verifies publish scope using a body that cannot publish an archive'
   let calls = 0;
   await checkCratePublisher({
     packageName: 'command-stream',
-    env: { CARGO_REGISTRY_TOKEN: 'token' },
+    env: { ...env, CARGO_REGISTRY_TOKEN: 'token' },
     fetchFn: async (url, options) => {
       calls++;
       expect(url).toBe('https://crates.io/api/v1/crates/new');
@@ -92,10 +92,43 @@ test('crates rejects unrelated client errors and unexpected success', async () =
     await expect(
       checkCratePublisher({
         packageName: 'command-stream',
-        env: { CARGO_TOKEN: 'token' },
+        env: { ...env, CARGO_TOKEN: 'token' },
         fetchFn: async () =>
           response({ errors: [{ detail: 'unexpected error' }] }, status),
       })
     ).rejects.toThrow();
   }
+});
+
+test('crates requires GitHub OIDC so trusted publishing can run (issue #226)', async () => {
+  await expect(
+    checkCratePublisher({
+      packageName: 'command-stream',
+      env: { CARGO_REGISTRY_TOKEN: 'token' },
+      fetchFn: async () => {
+        throw new Error('must not reach crates.io');
+      },
+    })
+  ).rejects.toThrow('id-token: write');
+});
+
+test('crates reports whether the trusted publishing token was checked', async () => {
+  const accepted = async () =>
+    response({ errors: [{ detail: 'invalid tarball length' }] }, 400);
+  const oidc = await checkCratePublisher({
+    packageName: 'command-stream',
+    env: {
+      ...env,
+      CARGO_REGISTRY_TOKEN: 'cio_trusted',
+      CRATES_IO_AUTH_OUTCOME: 'success',
+    },
+    fetchFn: accepted,
+  });
+  expect(oidc.source).toBe('trusted-publishing');
+  const fallback = await checkCratePublisher({
+    packageName: 'command-stream',
+    env: { ...env, CARGO_TOKEN: 'token', CRATES_IO_AUTH_OUTCOME: 'failure' },
+    fetchFn: accepted,
+  });
+  expect(fallback.source).toBe('token');
 });
