@@ -746,6 +746,14 @@ export interface TerminalInteraction {
   timeoutMilliseconds?: number;
 }
 
+/**
+ * A file `artifactDirectory` can receive: `transcript` (`transcript.txt`),
+ * `frames` (`frames.json`), `cast` (`session.cast`), `snapshot`
+ * (`snapshot.svg`), `recording` (`recording.svg`) and `gif` (`recording.gif`).
+ */
+export type TerminalArtifactName =
+  'transcript' | 'frames' | 'cast' | 'snapshot' | 'recording' | 'gif';
+
 /** Rendering options for the SVG/GIF artifacts. */
 export interface TerminalArtifactOptions {
   background?: string;
@@ -791,6 +799,11 @@ export interface TerminalOptions {
   timeoutMilliseconds?: number;
   artifactDirectory?: string;
   artifactOptions?: TerminalArtifactOptions;
+  /**
+   * Which artifacts to write to `artifactDirectory`. Default: all of them.
+   * Renderers for unrequested artifacts (notably the GIF) are skipped.
+   */
+  artifacts?: TerminalArtifactName[];
   onTrace?: (event: TerminalTraceEvent) => void;
   label?: string;
 }

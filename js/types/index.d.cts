@@ -86,6 +86,7 @@ declare namespace $ {
   export type StreamResult = CommandStream.StreamResult;
   export type SyncStartOptions = CommandStream.SyncStartOptions;
   export type TemplateValue = CommandStream.TemplateValue;
+  export type TerminalArtifactName = CommandStream.TerminalArtifactName;
   export type TerminalArtifactOptions = CommandStream.TerminalArtifactOptions;
   export type TerminalAsciicast = CommandStream.TerminalAsciicast;
   export type TerminalCaptureError = CommandStream.TerminalCaptureError;

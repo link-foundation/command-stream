@@ -388,6 +388,14 @@ export async function terminal(): Promise<void> {
 
   // @ts-expect-error - file is required
   await captureTerminal({ cols: 80 });
+  await captureTerminal({
+    file: 'node',
+    env: { ...process.env, ANTHROPIC_API_KEY: undefined },
+    artifactDirectory: 'artifacts',
+    artifacts: ['transcript', 'snapshot', 'gif'],
+  });
+  // @ts-expect-error - unknown artifact name
+  await captureTerminal({ file: 'node', artifacts: ['video'] });
   use(transcript, firstLine, unrolled);
 }
 

@@ -630,6 +630,12 @@ await $withInput`cat`; // Pipes the input to cat
 const $withEnv = $({ env: { ...process.env, MY_VAR: 'value' } });
 await $withEnv`printenv MY_VAR`; // Prints: value
 
+// `env` replaces the environment; an `undefined` value removes a variable
+const $withoutKey = $({
+  env: { ...process.env, ANTHROPIC_API_KEY: undefined },
+});
+await $withoutKey`printenv ANTHROPIC_API_KEY`; // Exit code 1: not set
+
 // Custom working directory
 const $inTmp = $({ cwd: '/tmp' });
 await $inTmp`pwd`; // Prints: /tmp
@@ -990,6 +996,22 @@ timestamps; pauses longer than `idleTimeLimit` are trimmed.
 GIF is provided for consumers that cannot play CSS-animated SVG. The format is
 limited to 256 colors per frame, so truecolor recordings can show color
 banding. Prefer `recording.svg` when full color fidelity is important.
+
+Pass `artifacts` to choose which of these files are written; it defaults to all
+of them. The names are `transcript` (`transcript.txt`), `frames`
+(`frames.json`), `cast` (`session.cast`), `snapshot` (`snapshot.svg`),
+`recording` (`recording.svg`) and `gif` (`recording.gif`). A renderer runs only
+when its artifact is requested, so leaving out `gif` skips the rasterisation
+that dominates the cost of writing artifacts. An unknown name rejects with a
+`TypeError` before the terminal is opened:
+
+```javascript
+await captureTerminal({
+  file: 'my-tui',
+  artifactDirectory: 'artifacts/ci',
+  artifacts: ['transcript', 'snapshot'], // no SVG recording, no GIF render
+});
+```
 
 The [committed recording sample](docs/screenshots/terminal-artifacts/recording.svg)
 uses the same public API and CSS animation path used by generated artifacts.
@@ -1776,7 +1798,7 @@ As with any shell-enabled process, pass only trusted `file` and `args` values; s
 - `stdin: 'inherit' | 'ignore' | string | Buffer` - How to handle stdin
 - `interactive: boolean` - Enable TTY forwarding for interactive commands (requires `stdin: 'inherit'` and TTY environment)
 - `cwd: string` - Working directory for command
-- `env: object` - Environment variables
+- `env: object` - The child's complete environment. It **replaces** the inherited environment rather than adding to it, so spread `process.env` to keep it: `{ ...process.env, MY_VAR: 'value' }`. To remove an inherited variable, leave it out or set it to `undefined`: `{ ...process.env, ANTHROPIC_API_KEY: undefined }` (the same applies to `captureTerminal()`/`openTerminal()` `env`, and to the built-in `env` command)
 - `exitPumpGrace: number` - Milliseconds to wait for buffered output to drain after the process exits before aborting stdio reads held open by a grandchild (default `100`; see [Async Iteration](#async-iteration-real-time-streaming))
 - `killSignal: string` - Signal used to stop the process when it is killed without an explicit signal — i.e. `kill()` with no argument, `break`ing out of a `stream()` loop, or an external `AbortSignal` firing (default `'SIGTERM'`). An explicit `kill(signal)` argument always overrides this. The reported exit code follows the conventional `128 + signal` mapping (e.g. `SIGTERM` → 143, `SIGINT` → 130, `SIGKILL` → 137)
 - `timeout: number` - Milliseconds after which the command is stopped with `killSignal`, exactly as if its `signal` had been aborted (default `0`, no timeout). It bounds simple commands, pipelines, `stream()` and `.sync()`. The command resolves (it does not reject) with the signal exit code and `result.timedOut === true`; every other result has `timedOut: false`. Negative, non-finite or non-number values throw a `TypeError`. See [Timeouts](#timeouts)
