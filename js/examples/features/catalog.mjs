@@ -162,6 +162,68 @@ export const features = [
     },
   },
   {
+    id: 'timeouts',
+    title: 'Time out a command',
+    category: 'Running commands',
+    summary:
+      'The `timeout` option stops a command with its kill signal once the limit passes; the result reports `timedOut`.',
+    file: 'js/examples/features/timeouts.mjs',
+    api: ['$', 'timeout', 'timedOut'],
+    alternatives: {
+      'bun-shell': {
+        unsupported: 'Bun.$ has no timeout; Bun.spawn accepts { timeout }',
+      },
+      zx: "await $({ timeout: '200ms', nothrow: true })`sleep 5`; // signal SIGTERM",
+      execa:
+        'await execa({ timeout: 200 })`sleep 5`; // throws, error.timedOut',
+      shelljs: "shell.exec('sleep 5', { timeout: 200 }); // code only",
+      child_process: "execFile('sleep', ['5'], { timeout: 200 }, callback);",
+    },
+  },
+  {
+    id: 'env-removal',
+    title: 'Remove environment variables',
+    category: 'Running commands',
+    summary:
+      'An `env` value of `undefined` drops that variable from the child, like `env -u NAME`.',
+    file: 'js/examples/features/env-removal.mjs',
+    api: ['$', 'env'],
+    alternatives: {
+      'bun-shell':
+        'const { NAME, ...env } = process.env;\nawait $`printenv NAME`.env(env).nothrow();',
+      zx: 'await $({ env: { ...process.env, NAME: undefined } })`printenv NAME`;',
+      execa: 'await execa({ env: { NAME: undefined } })`printenv NAME`;',
+      shelljs: {
+        unsupported: 'commands share shell.env; delete the key process-wide',
+      },
+      child_process:
+        "const { NAME, ...env } = process.env;\nexecFile('printenv', ['NAME'], { env });",
+    },
+  },
+  {
+    id: 'detached',
+    title: 'Fire-and-forget background commands',
+    category: 'Running commands',
+    summary:
+      '`spawnDetached()` (or `$({ detached: true })`) starts a command in its own session with ignored stdio and resolves with its pid without waiting for it.',
+    file: 'js/examples/features/detached.mjs',
+    api: ['spawnDetached', 'detached'],
+    alternatives: {
+      'bun-shell': {
+        unsupported:
+          "Bun.$ always waits; Bun.spawn(argv, { detached: true, stdio: ['ignore', 'ignore', 'ignore'] }).unref()",
+      },
+      zx: { unsupported: 'no detached option; use node:child_process' },
+      execa:
+        "const child = execa({ detached: true, stdio: 'ignore' })`my-server`;\nchild.unref();",
+      shelljs: {
+        unsupported: 'exec always waits for the command or its callback',
+      },
+      child_process:
+        "spawn('my-server', [], { detached: true, stdio: 'ignore' }).unref();",
+    },
+  },
+  {
     id: 'function-api',
     title: 'Function and builder APIs',
     category: 'Running commands',
@@ -793,6 +855,13 @@ export const rustApiByFeature = new Map(
     'sync-execution': ['run_sync'],
     'exit-codes': ['CommandResult::code', 'CommandResult::error_for_status'],
     options: ['exec', 'RunOptions'],
+    timeouts: [
+      'RunOptions::timeout',
+      'StreamingRunner::timeout',
+      'ProcessRunner::timed_out',
+    ],
+    'env-removal': ['RunOptions::env_remove', 'StreamingRunner::env_remove'],
+    detached: ['StreamingRunner::detach', 'ProcessRunner::spawn_detached'],
     'function-api': ['run', 'exec', 'create'],
     cancellation: [
       'ProcessRunner::child',
@@ -804,6 +873,9 @@ export const rustApiByFeature = new Map(
     'stdin-streaming': [
       'ProcessRunner::write_stdin',
       'ProcessRunner::close_stdin',
+      'ProcessRunner::from_argv',
+      'StreamingRunner::stdin_pipe',
+      'OutputStream::write_stdin',
     ],
     'buffers-strings': ['CommandResult::stdout', 'OutputChunk'],
     'mirror-capture': ['RunOptions::mirror', 'RunOptions::capture'],
