@@ -57,16 +57,15 @@
 use std::collections::HashMap;
 use std::ffi::OsString;
 use std::path::PathBuf;
-use std::process::Stdio;
 use std::time::Duration;
-use tokio::io::BufReader;
-use tokio::process::Command;
 use tokio::sync::{mpsc, watch};
 use tokio::task::JoinHandle;
 
-use crate::signal::{
-    send_signal_to_process, signal_exit_code, Delivery, DEFAULT_KILL_GRACE_MS, DEFAULT_KILL_SIGNAL,
+use crate::signal::{DEFAULT_KILL_GRACE_MS, DEFAULT_KILL_SIGNAL};
+use crate::stream_process::{
+    run_streaming_process, ChildEnv, GraceWindows, ProcessSetup, StreamChannels, StreamingCommand,
 };
+use crate::stream_stdin::{StdinRequest, StdinSender};
 use crate::trace::trace_lazy;
 use crate::{CommandResult, Result};
 
@@ -92,20 +91,14 @@ pub struct StreamingRunner {
     cwd: Option<PathBuf>,
     env: Option<HashMap<String, String>>,
     env_clear: bool,
+    env_remove: Vec<String>,
     prefer_local: crate::PreferLocal,
     stdin_content: Option<Vec<u8>>,
+    stdin_pipe: bool,
+    timeout: Option<Duration>,
     kill_signal: String,
     kill_grace_ms: u64,
     exit_pump_grace_ms: u64,
-}
-
-#[derive(Clone)]
-enum StreamingCommand {
-    Shell(String),
-    Argv {
-        program: OsString,
-        args: Vec<OsString>,
-    },
 }
 
 impl StreamingRunner {
@@ -138,8 +131,11 @@ impl StreamingRunner {
             cwd: None,
             env: None,
             env_clear: false,
+            env_remove: Vec::new(),
             prefer_local: crate::PreferLocal::Off,
             stdin_content: None,
+            stdin_pipe: false,
+            timeout: None,
             kill_signal: DEFAULT_KILL_SIGNAL.to_string(),
             kill_grace_ms: DEFAULT_KILL_GRACE_MS,
             exit_pump_grace_ms: DEFAULT_EXIT_PUMP_GRACE_MS,
@@ -182,6 +178,84 @@ impl StreamingRunner {
         self
     }
 
+    /// Remove one variable from the child's environment, the equivalent of
+    /// `env -u NAME` or [`std::process::Command::env_remove`].
+    ///
+    /// Removals are applied after [`env`](Self::env) and
+    /// [`clear_env`](Self::clear_env), so a removed variable is absent even
+    /// when the `env` map also sets it.
+    ///
+    /// ```no_run
+    /// use command_stream::StreamingRunner;
+    ///
+    /// # async fn example() -> command_stream::Result<()> {
+    /// let result = StreamingRunner::from_argv("printenv", ["CLAUDECODE"])
+    ///     .env_remove("CLAUDECODE")
+    ///     .collect()
+    ///     .await?;
+    /// assert_eq!(result.code, 1); // printenv reports the variable as missing
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn env_remove(mut self, name: impl Into<String>) -> Self {
+        self.env_remove.push(name.into());
+        self
+    }
+
+    /// Remove several variables from the child's environment. See
+    /// [`env_remove`](Self::env_remove).
+    pub fn env_remove_all<I, S>(mut self, names: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        self.env_remove.extend(names.into_iter().map(Into::into));
+        self
+    }
+
+    /// Keep the child's stdin open for the lifetime of the stream, so that
+    /// [`OutputStream::write_stdin`] can send input in reaction to output.
+    ///
+    /// Without it stdin is the null device (or, with [`stdin`](Self::stdin),
+    /// a fixed buffer that is closed once written). Content set with `stdin`
+    /// or `stdin_bytes` is still written first. Finish with
+    /// [`OutputStream::close_stdin`] so the child reads end-of-file; dropping
+    /// the stream closes stdin as well.
+    ///
+    /// ```no_run
+    /// use command_stream::{OutputChunk, StreamingRunner};
+    ///
+    /// # async fn example() -> command_stream::Result<()> {
+    /// let mut stream = StreamingRunner::from_argv("cat", Vec::<String>::new())
+    ///     .stdin_pipe()
+    ///     .stream();
+    /// stream.write_stdin(b"ping\n").await?;
+    /// while let Some(chunk) = stream.next().await {
+    ///     if let OutputChunk::Stdout(data) = chunk {
+    ///         assert_eq!(data, b"ping\n");
+    ///         stream.close_stdin().await?;
+    ///     }
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn stdin_pipe(mut self) -> Self {
+        self.stdin_pipe = true;
+        self
+    }
+
+    /// Bound the run: once `limit` has passed since the spawn, the child is
+    /// stopped with the [`kill_signal`](Self::kill_signal) (then `SIGKILL`
+    /// after the grace period), exactly as [`OutputStream::kill`] would.
+    ///
+    /// Mirrors the JavaScript `timeout` option. The `Exit` chunk carries the
+    /// `128 + signal` code (143 for the default `SIGTERM`) and
+    /// [`OutputStream::timed_out`] reports `true`.
+    pub fn timeout(mut self, limit: Duration) -> Self {
+        self.timeout = Some(limit);
+        self
+    }
+
     /// Configure the signal used to stop the process when it is killed without
     /// an explicit signal — i.e. [`OutputStream::kill`] or abandoning the
     /// stream. Mirrors the JavaScript `killSignal` option (default `SIGTERM`).
@@ -212,6 +286,54 @@ impl StreamingRunner {
         self
     }
 
+    /// Take the working directory and the environment the child is spawned
+    /// with, including the `prefer_local` PATH.
+    fn take_child_env(&mut self) -> (Option<PathBuf>, ChildEnv) {
+        let cwd = self.cwd.take();
+        let mut vars = self.env.take();
+        let local_cwd = cwd
+            .clone()
+            .or_else(|| std::env::current_dir().ok())
+            .unwrap_or_else(|| PathBuf::from("."));
+        if let Some((key, path)) =
+            crate::local_bin::preferred_path(vars.as_ref(), &local_cwd, &self.prefer_local)
+        {
+            vars.get_or_insert_with(|| std::env::vars().collect())
+                .insert(key, path);
+        }
+        let env = ChildEnv {
+            vars,
+            clear: self.env_clear,
+            remove: std::mem::take(&mut self.env_remove),
+        };
+        (cwd, env)
+    }
+
+    /// Start the command detached from the caller and return its pid, without
+    /// waiting for it (issue #232).
+    ///
+    /// The child gets null stdio, leads a process group of its own on Unix
+    /// (`CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS` on Windows) and is not
+    /// killed when anything is dropped, so it keeps running after the caller
+    /// returns or exits. [`cwd`](Self::cwd), [`env`](Self::env),
+    /// [`clear_env`](Self::clear_env), [`env_remove`](Self::env_remove) and
+    /// [`prefer_local`](Self::prefer_local) apply as usual; stdin content,
+    /// [`stdin_pipe`](Self::stdin_pipe), [`timeout`](Self::timeout) and the
+    /// kill settings do not, since nothing supervises the child. A background
+    /// thread reaps it when it exits. No Tokio runtime is needed.
+    ///
+    /// ```no_run
+    /// use command_stream::StreamingRunner;
+    ///
+    /// let pid = StreamingRunner::from_argv("sleep", ["60"]).cwd("/tmp").detach()?;
+    /// println!("started in the background as pid {pid:?}");
+    /// # Ok::<(), command_stream::Error>(())
+    /// ```
+    pub fn detach(mut self) -> Result<Option<u32>> {
+        let (cwd, env) = self.take_child_env();
+        crate::detach::spawn_detached(&self.command, cwd.as_deref(), &env)
+    }
+
     pub(crate) fn spawn(mut self) -> (OutputStream, JoinHandle<Result<()>>) {
         let (tx, rx) = mpsc::channel(1024);
         // Unbounded so a synchronous Drop can request a kill without awaiting.
@@ -224,20 +346,23 @@ impl StreamingRunner {
 
         // Spawn the process handling task
         let command = self.command.clone();
-        let cwd = self.cwd.take();
-        let mut env = self.env.take();
-        let local_cwd = cwd
-            .clone()
-            .or_else(|| std::env::current_dir().ok())
-            .unwrap_or_else(|| PathBuf::from("."));
-        if let Some((key, path)) =
-            crate::local_bin::preferred_path(env.as_ref(), &local_cwd, &self.prefer_local)
-        {
-            env.get_or_insert_with(|| std::env::vars().collect())
-                .insert(key, path);
-        }
-        let stdin_content = self.stdin_content.take();
-        let env_clear = self.env_clear;
+        let (cwd, env) = self.take_child_env();
+        let (timed_out_tx, timed_out_rx) = watch::channel(false);
+        let (stdin_tx, stdin_requests) = if self.stdin_pipe {
+            let (sender, receiver) = crate::stream_stdin::channel();
+            (Some(sender), Some(receiver))
+        } else {
+            (None, None)
+        };
+        let setup = ProcessSetup {
+            command,
+            cwd,
+            env,
+            stdin_content: self.stdin_content.take(),
+            stdin_requests,
+            timeout: self.timeout,
+            kill_signal: self.kill_signal.clone(),
+        };
         let grace = GraceWindows {
             exit_pump_ms: self.exit_pump_grace_ms,
             kill_ms: self.kill_grace_ms,
@@ -250,10 +375,9 @@ impl StreamingRunner {
                 kill_rx,
                 pid_tx,
                 exit_signal_tx,
+                timed_out_tx,
             };
-            let result =
-                run_streaming_process(command, cwd, env, stdin_content, env_clear, grace, channels)
-                    .await;
+            let result = run_streaming_process(setup, grace, channels).await;
             if let Err(error) = &result {
                 trace_lazy("StreamingRunner", || format!("Error: {error}"));
             }
@@ -268,6 +392,8 @@ impl StreamingRunner {
                 killed: false,
                 pid_rx,
                 exit_signal_rx,
+                timed_out_rx,
+                stdin_tx,
             },
             task,
         )
@@ -334,6 +460,8 @@ pub struct OutputStream {
     killed: bool,
     pid_rx: watch::Receiver<Option<u32>>,
     exit_signal_rx: watch::Receiver<Option<String>>,
+    timed_out_rx: watch::Receiver<bool>,
+    stdin_tx: Option<StdinSender>,
 }
 
 impl OutputStream {
@@ -346,6 +474,42 @@ impl OutputStream {
     /// Ordinary exit codes above 128 are not mistaken for signals.
     pub fn exit_signal(&self) -> Option<String> {
         self.exit_signal_rx.borrow().clone()
+    }
+
+    /// Whether the [`StreamingRunner::timeout`] elapsed and stopped the child.
+    ///
+    /// It becomes `true` before the terminating `Exit` chunk is delivered, so
+    /// it can be read as soon as that chunk arrives. An explicit kill, or a
+    /// child exiting on its own, leaves it `false`.
+    pub fn timed_out(&self) -> bool {
+        *self.timed_out_rx.borrow()
+    }
+
+    /// Write bytes to the child's stdin while it runs, and flush them.
+    ///
+    /// Requires [`StreamingRunner::stdin_pipe`]. The write is carried out by
+    /// the task that owns the pipe, so the output readers keep draining
+    /// stdout and stderr meanwhile. Fails with a broken-pipe error when stdin
+    /// was never piped, has been closed, or the child has exited.
+    pub async fn write_stdin(&self, data: impl AsRef<[u8]>) -> Result<()> {
+        let data = data.as_ref().to_vec();
+        crate::stream_stdin::request(self.stdin_tx.as_ref(), |ack| StdinRequest::Write(data, ack))
+            .await?;
+        Ok(())
+    }
+
+    /// Close the child's stdin so it reads end-of-file.
+    ///
+    /// Later [`write_stdin`](Self::write_stdin) calls fail. Closing twice, or
+    /// after the child has exited, is a no-op.
+    pub async fn close_stdin(&mut self) -> Result<()> {
+        let Some(sender) = self.stdin_tx.take() else {
+            return Ok(());
+        };
+        match crate::stream_stdin::request(Some(&sender), StdinRequest::Close).await {
+            Err(error) if error.kind() == std::io::ErrorKind::BrokenPipe => Ok(()),
+            other => Ok(other?),
+        }
     }
 
     /// Process id of the streamed command, as currently known.
@@ -438,276 +602,6 @@ impl Drop for OutputStream {
             let _ = self.kill_tx.send(self.kill_signal.clone());
         }
     }
-}
-
-/// The channels `run_streaming_process` communicates over: output chunks out,
-/// kill requests in, and the child's id published once the spawn succeeds.
-struct StreamChannels {
-    /// Carries the output chunks, and finally the `Exit` chunk, to the consumer.
-    output_tx: mpsc::Sender<OutputChunk>,
-    /// Carries kill requests, by signal name, in from the consumer.
-    kill_rx: mpsc::UnboundedReceiver<String>,
-    /// Publishes the child's id, which is only known inside the spawning task.
-    pid_tx: watch::Sender<Option<u32>>,
-    exit_signal_tx: watch::Sender<Option<String>>,
-}
-
-/// How long the runner waits, in milliseconds, at the two points where it gives
-/// something a chance to finish on its own before forcing the issue.
-#[derive(Debug, Clone, Copy)]
-struct GraceWindows {
-    /// Time allowed for the readers to drain buffered output after the child
-    /// exits, before the `Exit` chunk is emitted.
-    exit_pump_ms: u64,
-    /// Time allowed for the child to handle the delivered signal, before the
-    /// escalation to `SIGKILL`.
-    kill_ms: u64,
-}
-
-/// Run a streaming process and send output to the channel
-async fn run_streaming_process(
-    command: StreamingCommand,
-    cwd: Option<PathBuf>,
-    env: Option<HashMap<String, String>>,
-    stdin_content: Option<Vec<u8>>,
-    env_clear: bool,
-    grace: GraceWindows,
-    channels: StreamChannels,
-) -> Result<()> {
-    let StreamChannels {
-        output_tx: tx,
-        mut kill_rx,
-        pid_tx,
-        exit_signal_tx,
-    } = channels;
-    trace_lazy("StreamingRunner", || match &command {
-        StreamingCommand::Shell(command) => format!("Starting: {command}"),
-        StreamingCommand::Argv { program, args } => {
-            format!("Starting argv command: {program:?} {args:?}")
-        }
-    });
-
-    let mut cmd = match command {
-        StreamingCommand::Shell(command) => crate::utils::shell_command(&command, env.as_ref()),
-        StreamingCommand::Argv { program, args } => {
-            let mut cmd = Command::new(program);
-            cmd.args(args);
-            cmd
-        }
-    };
-
-    cmd.kill_on_drop(true);
-
-    // Configure stdio
-    if stdin_content.is_some() {
-        cmd.stdin(Stdio::piped());
-    } else {
-        cmd.stdin(Stdio::null());
-    }
-    cmd.stdout(Stdio::piped());
-    cmd.stderr(Stdio::piped());
-
-    // Run the child in its own process group so we can signal the whole group
-    // (parent + grandchildren), matching the JavaScript implementation.
-    #[cfg(unix)]
-    cmd.process_group(0);
-
-    // Set working directory
-    if let Some(ref cwd) = cwd {
-        cmd.current_dir(cwd);
-    }
-
-    // Set environment
-    if env_clear {
-        cmd.env_clear();
-    }
-    if let Some(ref env_vars) = env {
-        for (key, value) in env_vars {
-            cmd.env(key, value);
-        }
-    }
-
-    let mut child = cmd.spawn()?;
-    // Publish the id before any awaiting, so a consumer asking for it as soon
-    // as the first chunk arrives already sees it.
-    let _ = pid_tx.send(child.id());
-
-    // Write stdin concurrently with output readers and process cancellation.
-    // Filling stdin before reading stdout deadlocks a full-duplex child.
-    let stdin_handle = stdin_content.and_then(|content| {
-        child.stdin.take().map(|mut stdin| {
-            tokio::spawn(async move {
-                use tokio::io::AsyncWriteExt;
-                let _ = stdin.write_all(&content).await;
-                let _ = stdin.shutdown().await;
-            })
-        })
-    });
-
-    // Spawn stdout reader
-    let stdout = child.stdout.take();
-    let tx_stdout = tx.clone();
-    let stdout_handle = stdout.map(|stdout| {
-        tokio::spawn(async move {
-            let mut reader = BufReader::new(stdout);
-            let mut buf = vec![0u8; 8192];
-            loop {
-                use tokio::io::AsyncReadExt;
-                match reader.read(&mut buf).await {
-                    Ok(0) => break,
-                    Ok(n) => {
-                        if tx_stdout
-                            .send(OutputChunk::Stdout(buf[..n].to_vec()))
-                            .await
-                            .is_err()
-                        {
-                            break;
-                        }
-                    }
-                    Err(_) => break,
-                }
-            }
-        })
-    });
-
-    // Spawn stderr reader
-    let stderr = child.stderr.take();
-    let tx_stderr = tx.clone();
-    let stderr_handle = stderr.map(|stderr| {
-        tokio::spawn(async move {
-            let mut reader = BufReader::new(stderr);
-            let mut buf = vec![0u8; 8192];
-            loop {
-                use tokio::io::AsyncReadExt;
-                match reader.read(&mut buf).await {
-                    Ok(0) => break,
-                    Ok(n) => {
-                        if tx_stderr
-                            .send(OutputChunk::Stderr(buf[..n].to_vec()))
-                            .await
-                            .is_err()
-                        {
-                            break;
-                        }
-                    }
-                    Err(_) => break,
-                }
-            }
-        })
-    });
-
-    // Wait for the process to exit OR for a kill request — crucially we do NOT
-    // wait for the readers first. If a grandchild keeps the pipe open the
-    // readers would never finish, so waiting on them before the exit (as the
-    // old implementation did) would hang forever (issue #155).
-    let pid = child.id();
-    let code;
-    tokio::select! {
-        status = child.wait() => {
-            let status = status?;
-            #[cfg(unix)]
-            {
-                use std::os::unix::process::ExitStatusExt;
-                let signal = status.signal().and_then(|number| {
-                    nix::sys::signal::Signal::try_from(number).ok().map(|signal| signal.to_string())
-                });
-                let _ = exit_signal_tx.send(signal);
-            }
-            code = status_to_code(status);
-        }
-        maybe_signal = kill_rx.recv() => {
-            // A kill was requested (explicit kill()/kill_with() or the stream
-            // being dropped). Stop the process group with the requested signal.
-            let signal = maybe_signal.unwrap_or_else(|| DEFAULT_KILL_SIGNAL.to_string());
-            trace_lazy("StreamingRunner", || format!("Kill requested | signal={}", signal));
-            // Give the child its grace period to run its own handler and exit
-            // on its own terms, then escalate to a forceful kill so a process
-            // that ignores the signal still terminates.
-            //
-            // A zero grace period means the child is given no opportunity to
-            // handle the signal, so the requested signal is not delivered at
-            // all. Anything done between it and the forceful kill - a syscall,
-            // or awaiting a zero-length timeout, which yields to the runtime -
-            // is a window the child can be scheduled in, which made "no grace"
-            // a race the child occasionally won rather than a guarantee.
-            if cfg!(unix) && grace.kill_ms > 0 && signal != "SIGKILL" {
-                if let Some(pid) = pid {
-                    // The child is always spawned with `process_group(0)`
-                    // above, so it leads the group named by its own pid.
-                    send_signal_to_process(pid, &signal, Delivery::ProcessAndGroup);
-                }
-                // Keep the leader unreaped until escalation: its descendants
-                // may ignore the first signal even when the leader exits.
-                // Reaping it here previously suppressed their SIGKILL.
-                tokio::time::sleep(Duration::from_millis(grace.kill_ms)).await;
-            }
-            if let Some(pid) = pid {
-                // Windows uses taskkill here before terminating the parent.
-                send_signal_to_process(pid, "SIGKILL", Delivery::ProcessAndGroup);
-            }
-            let _ = child.start_kill();
-            let _ = child.wait().await;
-            // Report the conventional 128 + signal code for the requested
-            // signal, matching the JavaScript implementation.
-            let _ = exit_signal_tx.send(Some(signal.clone()));
-            code = signal_exit_code(&signal);
-        }
-    }
-
-    if let Some(handle) = stdin_handle {
-        handle.abort();
-        let _ = handle.await;
-    }
-
-    // The process has exited. Give the readers a short grace period to flush any
-    // buffered output, then abort any that are still blocked on an inherited
-    // open pipe so we don't hang.
-    let stdout_abort = stdout_handle.as_ref().map(|h| h.abort_handle());
-    let stderr_abort = stderr_handle.as_ref().map(|h| h.abort_handle());
-    let drain = async {
-        if let Some(handle) = stdout_handle {
-            let _ = handle.await;
-        }
-        if let Some(handle) = stderr_handle {
-            let _ = handle.await;
-        }
-    };
-    if tokio::time::timeout(Duration::from_millis(grace.exit_pump_ms), drain)
-        .await
-        .is_err()
-    {
-        // A reader is still blocked on an inherited open pipe — abort it so the
-        // exit chunk is delivered without waiting for the grandchild.
-        if let Some(abort) = stdout_abort {
-            abort.abort();
-        }
-        if let Some(abort) = stderr_abort {
-            abort.abort();
-        }
-    }
-
-    // Send exit code (always — even if a reader was aborted).
-    let _ = tx.send(OutputChunk::Exit(code)).await;
-
-    trace_lazy("StreamingRunner", || format!("Exited with code: {}", code));
-
-    Ok(())
-}
-
-/// Convert an exit status into a numeric exit code, using the conventional
-/// `128 + signal` mapping when the process was terminated by a signal.
-fn status_to_code(status: std::process::ExitStatus) -> i32 {
-    if let Some(code) = status.code() {
-        return code;
-    }
-    #[cfg(unix)]
-    {
-        use std::os::unix::process::ExitStatusExt;
-        if let Some(sig) = status.signal() {
-            return 128 + sig;
-        }
-    }
-    -1
 }
 
 /// Async iterator trait for output streams

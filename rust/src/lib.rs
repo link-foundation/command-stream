@@ -71,19 +71,23 @@ pub use command_packages::{CommandEnvironment, CommandPackage, PackageHandler};
 pub use development::{
     dev, start_repl, DevController, DevEvent, DevOptions, ReplOptions, RustRepl,
 };
+mod detach;
 pub mod events;
 pub mod execa;
 pub mod local_bin;
 #[doc(hidden)]
 pub mod macros;
 pub mod pipeline;
+mod process_stop;
 pub mod quote;
 pub mod result_streams;
 mod run_options;
 pub mod signal;
 pub mod state;
 pub mod stream;
+mod stream_process;
 pub mod stream_processing;
+mod stream_stdin;
 pub mod terminal;
 pub mod trace;
 
@@ -199,7 +203,7 @@ fn fallback_cwd() -> PathBuf {
 /// Normal behavior is preserved: when an explicit cwd is given, or when the
 /// inherited working directory is valid, this returns the requested value
 /// (`None` meaning "inherit").
-fn resolve_spawn_cwd(cwd: Option<&PathBuf>) -> Option<PathBuf> {
+pub(crate) fn resolve_spawn_cwd(cwd: Option<&PathBuf>) -> Option<PathBuf> {
     // An explicit directory is always honored as-is.
     if let Some(c) = cwd {
         return Some(c.clone());
@@ -239,6 +243,9 @@ pub struct ProcessRunner {
     started: bool,
     finished: bool,
     cancelled: bool,
+    /// When [`RunOptions::timeout`] stops the command, counted from the start.
+    deadline: Option<tokio::time::Instant>,
+    timed_out: bool,
     /// Whether the child was spawned into a process group of its own, and so
     /// can be signalled as a group. Recorded at spawn time because it cannot be
     /// discovered later: by the time the group is signalled the leader is
@@ -312,6 +319,8 @@ impl ProcessRunner {
             started: false,
             finished: false,
             cancelled: false,
+            deadline: None,
+            timed_out: false,
             #[cfg(unix)]
             own_process_group: false,
             output_tx: Some(tx),
@@ -340,6 +349,10 @@ impl ProcessRunner {
             return Ok(());
         }
         self.started = true;
+        self.deadline = self
+            .options
+            .timeout
+            .map(|limit| tokio::time::Instant::now() + limit);
 
         utils::trace_lazy("ProcessRunner", || {
             format!("Starting command: {}", self.command)
@@ -353,7 +366,10 @@ impl ProcessRunner {
         // arguments, so `echo hello > out.txt` printed the redirection instead
         // of writing the file, and `git push ... 2>&1` reported success while
         // nothing was pushed (#46).
+        // Removals cannot be expressed to the built-ins, which see `env` as
+        // overrides of the inherited environment, so they go to a real shell.
         let first_word = if matches!(self.options.stdin, StdinOption::Pipe)
+            || !self.options.env_remove.is_empty()
             || has_shell_escapes(&self.command)
             || needs_real_shell(&self.command)
         {
@@ -361,7 +377,19 @@ impl ProcessRunner {
         } else {
             self.command.split_whitespace().next().unwrap_or("")
         };
-        if let Some(mut result) = self.try_virtual_command(first_word).await {
+        let virtual_result = match self.deadline {
+            Some(deadline) => {
+                tokio::time::timeout_at(deadline, self.try_virtual_command(first_word))
+                    .await
+                    .unwrap_or_else(|_| {
+                        self.timed_out = true;
+                        let code = signal::signal_exit_code(&self.options.kill_signal);
+                        Some(CommandResult::new("", "", code))
+                    })
+            }
+            None => self.try_virtual_command(first_word).await,
+        };
+        if let Some(mut result) = virtual_result {
             if let StdinOption::Content(ref content) = self.options.stdin {
                 result.stdin =
                     crate::result_streams::CapturedInput::new(content.as_bytes().to_vec());
@@ -429,6 +457,9 @@ impl ProcessRunner {
             &local_cwd,
             &self.options.prefer_local,
         );
+        for name in &self.options.env_remove {
+            cmd.env_remove(name);
+        }
 
         // Run the child in its own process group so that killing it can signal
         // the whole group (parent + grandchildren), matching `StreamingRunner`
@@ -549,20 +580,11 @@ impl ProcessRunner {
         utils::trace_lazy("ProcessRunner", || {
             format!("Draining child output | pid={:?}", self.pid)
         });
+        let mirror = self.options.mirror;
         let drain = async {
             tokio::try_join!(
-                collect_child_output(
-                    stdout_reader,
-                    self.options.mirror,
-                    ChildOutput::Stdout,
-                    &mut stdout,
-                ),
-                collect_child_output(
-                    stderr_reader,
-                    self.options.mirror,
-                    ChildOutput::Stderr,
-                    &mut stderr,
-                ),
+                collect_child_output(stdout_reader, mirror, ChildOutput::Stdout, &mut stdout),
+                collect_child_output(stderr_reader, mirror, ChildOutput::Stderr, &mut stderr),
             )
             .map(|_| ())
         };
@@ -593,7 +615,23 @@ impl ProcessRunner {
             };
             (collected, status)
         } else {
-            (drain.await, None)
+            // Drain, then reap, unless the timeout elapses first (issue #227).
+            let plan = self.stop_plan();
+            let work = async {
+                let collected = drain.await;
+                let status = match collected {
+                    Ok(()) => Some(child.wait().await),
+                    Err(_) => None,
+                };
+                (collected, status)
+            };
+            let (outcome, timed_out) = process_stop::bounded(work, self.deadline, plan).await;
+            self.timed_out = timed_out;
+            match outcome {
+                Some((collected, status)) => (collected, status.transpose()?),
+                // Tokio reaps the abandoned child once it lets go of its pipes.
+                None => (Ok(()), None),
+            }
         };
         if let Err(error) = collected {
             // `try_join!` drops the other pipe reader after an error. Stop
@@ -607,13 +645,17 @@ impl ProcessRunner {
             format!("Child output drained | pid={:?}", self.pid)
         });
         let status = match status {
-            Some(status) => status,
-            None => child.wait().await?,
+            Some(status) => Some(status),
+            None if self.timed_out => None,
+            None => Some(child.wait().await?),
         };
         utils::trace_lazy("ProcessRunner", || {
-            format!("Child exited | pid={:?} status={status}", self.pid)
+            format!("Child exited | pid={:?} status={status:?}", self.pid)
         });
-        let code = status.code().unwrap_or(-1);
+        let code = match status {
+            Some(status) if !self.timed_out => status.code().unwrap_or(-1),
+            _ => signal::signal_exit_code(&self.options.kill_signal),
+        };
 
         let mut result = CommandResult::new(
             String::from_utf8_lossy(&stdout).into_owned(),
@@ -693,110 +735,6 @@ impl ProcessRunner {
             "uniq" => Some(commands::uniq(ctx).await),
 
             _ => None,
-        }
-    }
-
-    /// Stop the process using the configured kill signal
-    /// ([`RunOptions::kill_signal`], default `SIGTERM`).
-    ///
-    /// Mirrors the JavaScript `kill()` with no argument.
-    pub fn kill(&mut self) -> Result<()> {
-        let signal = self.options.kill_signal.clone();
-        self.kill_with(&signal)
-    }
-
-    /// Stop the process using an explicit signal, overriding
-    /// [`RunOptions::kill_signal`] for this call.
-    ///
-    /// Mirrors the JavaScript `kill(signal)`. The signal is delivered to the
-    /// child and its process group, so grandchildren behind a `sh -c` wrapper
-    /// are stopped too - except for a child sharing the caller's terminal,
-    /// which stays in the caller's group so CTRL+C keeps reaching it. The child
-    /// then has [`RunOptions::kill_grace_ms`] to run its own handler before
-    /// `SIGKILL` follows, so a process that ignores the signal still
-    /// terminates.
-    ///
-    /// ```no_run
-    /// use command_stream::{ProcessRunner, RunOptions};
-    ///
-    /// # #[tokio::main]
-    /// # async fn main() -> command_stream::Result<()> {
-    /// let mut runner = ProcessRunner::new("sleep 30", RunOptions::default());
-    /// runner.start().await?;
-    /// runner.kill_with("SIGINT")?; // the CTRL+C signal
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn kill_with(&mut self, signal: &str) -> Result<()> {
-        self.cancelled = true;
-        utils::trace_lazy("ProcessRunner", || format!("kill | signal={signal}"));
-
-        let Some(child) = self.child.as_mut() else {
-            return Ok(());
-        };
-
-        // Windows stops the tree before the parent exits, while its descendants
-        // can still be found. Direct-child termination is the fallback.
-        // The `#[cfg(unix)]` block below is stripped on Windows, which leaves
-        // this one as the function's tail expression - hence no `return`.
-        #[cfg(not(unix))]
-        {
-            if let Some(pid) = child.id() {
-                signal::send_signal_to_process(pid, signal, signal::Delivery::ProcessAndGroup);
-            }
-            child.start_kill()?;
-            utils::trace_lazy("ProcessRunner", || {
-                "Direct-child termination requested".to_string()
-            });
-            Ok(())
-        }
-
-        // Without a pid the process never spawned (or was already reaped);
-        // fall back to the forceful stop so `kill()` still terminates it.
-        #[cfg(unix)]
-        {
-            let Some(pid) = child.id() else {
-                child.start_kill()?;
-                return Ok(());
-            };
-
-            // `SIGKILL` cannot be handled, so there is nothing to wait for.
-            //
-            // A zero grace period means the child is given no opportunity to
-            // handle the signal either, so the requested signal is not
-            // delivered at all. Anything done between it and `SIGKILL` - even a
-            // single syscall - is a window the child can be scheduled in, which
-            // made "no grace" a race the child occasionally won rather than a
-            // guarantee. The reported exit code still comes from the signal
-            // that was requested.
-            let grace = self.options.kill_grace_ms;
-            let delivery = if self.own_process_group {
-                signal::Delivery::ProcessAndGroup
-            } else {
-                signal::Delivery::ProcessOnly
-            };
-            if grace == 0 || signal == "SIGKILL" {
-                signal::send_signal_to_process(pid, "SIGKILL", delivery);
-                let _ = child.start_kill();
-                return Ok(());
-            }
-
-            signal::send_signal_to_process(pid, signal, delivery);
-
-            // Otherwise escalate in the background so the child keeps its grace
-            // period without blocking the caller, which may not be inside an
-            // await point.
-            tokio::spawn(async move {
-                tokio::time::sleep(std::time::Duration::from_millis(grace)).await;
-                // Best effort: if the child already exited on the first signal
-                // this delivery simply fails, and the pid has not been reused
-                // because the `Child` handle above has not reaped it yet. That
-                // unreaped leader is also what keeps the group id alive, so the
-                // group delivery still reaches a grandchild that outlived it.
-                signal::send_signal_to_process(pid, "SIGKILL", delivery);
-            });
-
-            Ok(())
         }
     }
 
