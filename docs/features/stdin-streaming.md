@@ -54,7 +54,7 @@ stdin option: "up front\n"
 
 ## Rust
 
-**API:** `ProcessRunner::write_stdin`, `ProcessRunner::close_stdin`
+**API:** `ProcessRunner::write_stdin`, `ProcessRunner::close_stdin`, `ProcessRunner::from_argv`, `StreamingRunner::stdin_pipe`, `OutputStream::write_stdin`
 
 ### Example
 
@@ -62,8 +62,10 @@ stdin option: "up front\n"
 
 ```rust
 async fn stdin_streaming() -> ExampleResult {
-    let mut runner = ProcessRunner::new(
+    // `from_argv` runs the program with exactly these arguments, no shell.
+    let mut runner = ProcessRunner::from_argv(
         "cat",
+        Vec::<String>::new(),
         RunOptions {
             mirror: false,
             stdin: StdinOption::Pipe,
@@ -75,7 +77,24 @@ async fn stdin_streaming() -> ExampleResult {
     runner.write_stdin("second line\n").await?;
     runner.close_stdin().await?;
     let result = runner.run().await?;
-    Ok(vec![observation("what cat echoed back", result.stdout)])
+
+    // A streaming command keeps stdin open with `stdin_pipe`, so input can
+    // answer output.
+    let mut stream = StreamingRunner::from_argv("cat", Vec::<String>::new())
+        .stdin_pipe()
+        .stream();
+    stream.write_stdin("ping\n").await?;
+    let mut answered = Vec::new();
+    while let Some(chunk) = stream.next().await {
+        if let OutputChunk::Stdout(data) = chunk {
+            answered.extend(data);
+            stream.close_stdin().await?;
+        }
+    }
+    Ok(vec![
+        observation("what cat echoed back", result.stdout),
+        observation("streamed reply", String::from_utf8(answered)?),
+    ])
 }
 ```
 
@@ -84,6 +103,7 @@ async fn stdin_streaming() -> ExampleResult {
 ```
 # stdin-streaming — Rust
 what cat echoed back: "first line\nsecond line\n"
+streamed reply: "ping\n"
 ```
 
 ## The same thing in other libraries

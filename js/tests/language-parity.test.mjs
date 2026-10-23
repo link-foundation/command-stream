@@ -95,6 +95,27 @@ describe.skipIf(process.platform === 'win32')('language parity guard', () => {
     );
   });
 
+  test('a Rust benchmark dependency bump does not require a JavaScript edit', () => {
+    // JavaScript benchmark dependencies live in js/package.json, outside the
+    // benchmark paths, so updating the Rust ones is not a benchmark change.
+    const result = parityResult(['rust/benchmarks/Cargo.toml']);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout?.toString()).toContain(
+      'Language parity check passed.'
+    );
+  });
+
+  test('a new Rust benchmark still requires its JavaScript counterpart', () => {
+    const result = parityResult([
+      'rust/benchmarks/Cargo.toml',
+      'rust/benchmarks/new_bench.rs',
+    ]);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout?.toString()).toContain('JavaScript benchmarks');
+  });
+
   test('a benchmark edit cannot stand in for a source implementation', () => {
     const result = parityResult(['js/src/.keep', 'rust/benchmarks/.keep']);
 

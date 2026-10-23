@@ -7,7 +7,9 @@
 // U+FFFD, as they do when Bun converts a JS string to UTF-8). The walker
 // reads directories in raw OS order and yields paths in the same order as
 // `Bun.Glob#scanSync`. Only POSIX semantics are ported (`/` is the only
-// separator); Bun's Windows-specific paths are not.
+// separator); Bun's Windows-specific paths are not. Bun 1.4.4 replaced this
+// matcher with one that adds ranges and extglobs and nests groups without a
+// limit; the port keeps the v1.4.2 semantics, including the 10-level brace limit.
 //
 // The matcher is derived from works under the MIT License:
 // Copyright (c) 2023 Devon Govett, (c) 2023 Stephen Gregoratto,

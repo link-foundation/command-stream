@@ -80,6 +80,17 @@ export interface ProcessOptions {
   exitPumpGrace?: number;
   /** Aborting this signal kills the command. */
   signal?: AbortSignal;
+  /** Milliseconds after which the command is stopped with `killSignal`; sets `result.timedOut`. Default: `0` (no timeout). */
+  timeout?: number;
+  /** Run command strings through a login shell (`sh -l -c`). Default: `false`. */
+  loginShell?: boolean;
+  /**
+   * Fire and forget: start the command in a new session with stdio ignored,
+   * `unref()` it, and resolve as soon as it has spawned with
+   * `{ code: 0, pid, detached: true }` instead of waiting for it to exit.
+   * Default: `false`.
+   */
+  detached?: boolean;
   /** ANSI handling for emitted `stdout`/`stderr`/`data` events. */
   ansi?: Partial<AnsiConfig>;
   /** Set to `false` to silence tracing for this command. */
@@ -160,6 +171,12 @@ export interface ResultBase {
   exitCode: number;
   /** Terminating signal, or `null` for an ordinary exit. Cancellation reports the requested signal. */
   signal: NodeJS.Signals | null;
+  /** `true` when the `timeout` option stopped the command. */
+  timedOut: boolean;
+  /** Process id of a `detached` command, which keeps running after the result. */
+  pid?: number;
+  /** `true` for the result of a `detached` command. */
+  detached?: boolean;
   /** Resolves to the captured stdout text. */
   text(): Promise<string>;
 }
@@ -382,6 +399,11 @@ export declare class ProcessRunner
   sync(): StreamResult;
   /** Run asynchronously and resolve to the result. */
   async(): Promise<StreamResult>;
+  /**
+   * Start the command detached from the caller (new session, stdio ignored,
+   * `unref()`'d) and resolve with its pid once it has spawned.
+   */
+  spawnDetached(): Promise<DetachedProcess>;
 
   then<TResult1 = StreamResult, TResult2 = never>(
     onfulfilled?:
@@ -520,6 +542,24 @@ export declare function run(
   command: string | readonly string[],
   options?: ProcessOptions
 ): Promise<StreamResult>;
+
+/** A process started by {@link spawnDetached}. */
+export interface DetachedProcess {
+  pid: number;
+}
+
+/**
+ * Start a command that outlives the caller and resolve with its pid once it
+ * has spawned (rejects when it cannot be started). A string runs through the
+ * shell; an argv array, or `{ file, args }`, runs without one. It starts in a
+ * new session with stdio ignored and is `unref()`'d; `cwd`, `env`,
+ * `preferLocal` and `loginShell` apply as usual.
+ */
+export declare function spawnDetached(
+  command:
+    string | readonly string[] | { file: string; args?: readonly string[] },
+  options?: ProcessOptions
+): Promise<DetachedProcess>;
 
 /** Create a tagged template with default options. */
 export declare function create(defaultOptions?: ProcessOptions): CommandTag;
@@ -740,6 +780,14 @@ export interface TerminalInteraction {
   timeoutMilliseconds?: number;
 }
 
+/**
+ * A file `artifactDirectory` can receive: `transcript` (`transcript.txt`),
+ * `frames` (`frames.json`), `cast` (`session.cast`), `snapshot`
+ * (`snapshot.svg`), `recording` (`recording.svg`) and `gif` (`recording.gif`).
+ */
+export type TerminalArtifactName =
+  'transcript' | 'frames' | 'cast' | 'snapshot' | 'recording' | 'gif';
+
 /** Rendering options for the SVG/GIF artifacts. */
 export interface TerminalArtifactOptions {
   background?: string;
@@ -785,6 +833,11 @@ export interface TerminalOptions {
   timeoutMilliseconds?: number;
   artifactDirectory?: string;
   artifactOptions?: TerminalArtifactOptions;
+  /**
+   * Which artifacts to write to `artifactDirectory`. Default: all of them.
+   * Renderers for unrequested artifacts (notably the GIF) are skipped.
+   */
+  artifacts?: TerminalArtifactName[];
   onTrace?: (event: TerminalTraceEvent) => void;
   label?: string;
 }

@@ -1,6 +1,7 @@
 // Lightweight ProcessRunner entry point without terminal capture dependencies
 
 import { ProcessRunner } from './$.process-runner-base.mjs';
+import { attachDetachMethods } from './$.process-runner-detach.mjs';
 import { attachExecutionMethods } from './$.process-runner-execution.mjs';
 import { attachOrchestrationMethods } from './$.process-runner-orchestration.mjs';
 import { attachPipelineMethods } from './$.process-runner-pipeline.mjs';
@@ -24,6 +25,7 @@ attachPipelineMethods(ProcessRunner, dependencies);
 attachOrchestrationMethods(ProcessRunner, dependencies);
 attachVirtualCommandMethods(ProcessRunner, dependencies);
 attachStreamKillMethods(ProcessRunner, dependencies);
+attachDetachMethods(ProcessRunner);
 
 trace(
   'Initialization',

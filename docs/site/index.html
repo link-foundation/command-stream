@@ -341,6 +341,98 @@
             }
           },
           {
+            "id": "timeouts",
+            "title": "Time out a command",
+            "category": "Running commands",
+            "summary": "The `timeout` option stops a command with its kill signal once the limit passes; the result reports `timedOut`.",
+            "file": "js/examples/features/timeouts.mjs",
+            "api": ["$", "timeout", "timedOut"],
+            "alternatives": {
+              "bun-shell": {
+                "unsupported": "Bun.$ has no timeout; Bun.spawn accepts { timeout }"
+              },
+              "zx": "await $({ timeout: '200ms', nothrow: true })`sleep 5`; // signal SIGTERM",
+              "execa": "await execa({ timeout: 200 })`sleep 5`; // throws, error.timedOut",
+              "shelljs": "shell.exec('sleep 5', { timeout: 200 }); // code only",
+              "child_process": "execFile('sleep', ['5'], { timeout: 200 }, callback);"
+            },
+            "source": "// The timeout option stops a command that runs too long.\nimport { $ } from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\n\nawait example(\n  { id: 'timeouts', title: 'Time out a command' },\n  async ({ record }) => {\n    // Stopped with the kill signal (SIGTERM) once 200ms have passed.\n    const slow = await $({ mirror: false, timeout: 200 })`sleep 5`;\n    record('exit code', slow.code);\n    record('timed out', slow.timedOut);\n\n    const quick = await $({ mirror: false, timeout: 5000 })`echo in time`;\n    record('finished in time', quick.stdout);\n    record('quick command timed out', quick.timedOut);\n  }\n);",
+            "rustApi": [
+              "RunOptions::timeout",
+              "StreamingRunner::timeout",
+              "ProcessRunner::timed_out"
+            ],
+            "rustSource": "async fn timeouts() -> ExampleResult {\n    // Stopped with the kill signal (SIGTERM) once 200ms have passed.\n    let mut slow = ProcessRunner::new(\n        \"sleep 5\",\n        RunOptions {\n            timeout: Some(Duration::from_millis(200)),\n            ..quiet_options()\n        },\n    );\n    let result = slow.run().await?;\n\n    let mut quick = ProcessRunner::new(\n        \"echo in time\",\n        RunOptions {\n            timeout: Some(Duration::from_secs(5)),\n            ..quiet_options()\n        },\n    );\n    let in_time = quick.run().await?;\n    Ok(vec![\n        observation(\"exit code\", result.code),\n        observation(\"timed out\", slow.timed_out()),\n        observation(\"finished in time\", in_time.stdout),\n        observation(\"quick command timed out\", quick.timed_out()),\n    ])\n}",
+            "rustOutput": "# timeouts — Rust\nexit code: 143\ntimed out: true\nfinished in time: \"in time\\n\"\nquick command timed out: false",
+            "identicalOutput": true,
+            "output": {
+              "node": "# timeouts — Time out a command\nexit code: 143\ntimed out: true\nfinished in time: \"in time\\n\"\nquick command timed out: false",
+              "bun": "# timeouts — Time out a command\nexit code: 143\ntimed out: true\nfinished in time: \"in time\\n\"\nquick command timed out: false"
+            }
+          },
+          {
+            "id": "env-removal",
+            "title": "Remove environment variables",
+            "category": "Running commands",
+            "summary": "An `env` value of `undefined` drops that variable from the child, like `env -u NAME`.",
+            "file": "js/examples/features/env-removal.mjs",
+            "api": ["$", "env"],
+            "alternatives": {
+              "bun-shell": "const { NAME, ...env } = process.env;\nawait $`printenv NAME`.env(env).nothrow();",
+              "zx": "await $({ env: { ...process.env, NAME: undefined } })`printenv NAME`;",
+              "execa": "await execa({ env: { NAME: undefined } })`printenv NAME`;",
+              "shelljs": {
+                "unsupported": "commands share shell.env; delete the key process-wide"
+              },
+              "child_process": "const { NAME, ...env } = process.env;\nexecFile('printenv', ['NAME'], { env });"
+            },
+            "source": "// An env value of undefined removes that variable from the child's environment.\nimport { $ } from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\n\nawait example(\n  { id: 'env-removal', title: 'Remove environment variables' },\n  async ({ record }) => {\n    const env = { ...process.env, DEMO_KEEP: 'kept', DEMO_DROP: 'dropped' };\n\n    const kept = await $({ mirror: false, env })`printenv DEMO_KEEP`;\n    record('kept variable', kept.stdout);\n\n    // `env -u DEMO_DROP`: the variable is absent, not merely empty.\n    const removed = await $({\n      mirror: false,\n      env: { ...env, DEMO_DROP: undefined },\n    })`printenv DEMO_DROP`;\n    record('removed variable exit code', removed.code);\n  }\n);",
+            "rustApi": [
+              "RunOptions::env_remove",
+              "StreamingRunner::env_remove"
+            ],
+            "rustSource": "async fn env_removal() -> ExampleResult {\n    let env: HashMap\u003cString, String> = std::env::vars()\n        .chain([\n            (\"DEMO_KEEP\".to_string(), \"kept\".to_string()),\n            (\"DEMO_DROP\".to_string(), \"dropped\".to_string()),\n        ])\n        .collect();\n    let kept = exec(\n        \"printenv DEMO_KEEP\",\n        RunOptions {\n            env: Some(env.clone()),\n            ..quiet_options()\n        },\n    )\n    .await?;\n\n    // `env -u DEMO_DROP`: the variable is absent, not merely empty.\n    let removed = StreamingRunner::from_argv(\"printenv\", [\"DEMO_DROP\"])\n        .env(env)\n        .env_remove(\"DEMO_DROP\")\n        .collect()\n        .await?;\n    Ok(vec![\n        observation(\"kept variable\", kept.stdout),\n        observation(\"removed variable exit code\", removed.code),\n    ])\n}",
+            "rustOutput": "# env-removal — Rust\nkept variable: \"kept\\n\"\nremoved variable exit code: 1",
+            "identicalOutput": true,
+            "output": {
+              "node": "# env-removal — Remove environment variables\nkept variable: \"kept\\n\"\nremoved variable exit code: 1",
+              "bun": "# env-removal — Remove environment variables\nkept variable: \"kept\\n\"\nremoved variable exit code: 1"
+            }
+          },
+          {
+            "id": "detached",
+            "title": "Fire-and-forget background commands",
+            "category": "Running commands",
+            "summary": "`spawnDetached()` (or `$({ detached: true })`) starts a command in its own session with ignored stdio and resolves with its pid without waiting for it.",
+            "file": "js/examples/features/detached.mjs",
+            "api": ["spawnDetached", "detached"],
+            "alternatives": {
+              "bun-shell": {
+                "unsupported": "Bun.$ always waits; Bun.spawn(argv, { detached: true, stdio: ['ignore', 'ignore', 'ignore'] }).unref()"
+              },
+              "zx": {
+                "unsupported": "no detached option; use node:child_process"
+              },
+              "execa": "const child = execa({ detached: true, stdio: 'ignore' })`my-server`;\nchild.unref();",
+              "shelljs": {
+                "unsupported": "exec always waits for the command or its callback"
+              },
+              "child_process": "spawn('my-server', [], { detached: true, stdio: 'ignore' }).unref();"
+            },
+            "source": "// spawnDetached() starts a command that outlives the caller and returns its pid.\nimport fs from 'fs';\nimport path from 'path';\nimport { spawnDetached } from '../../src/$.mjs';\nimport { example, makeTempDir } from './_harness.mjs';\n\nawait example(\n  { id: 'detached', title: 'Fire-and-forget background commands' },\n  async ({ record }) => {\n    const dir = makeTempDir('detached');\n    const marker = path.join(dir, 'done.txt');\n\n    // Resolves as soon as the process has spawned; it is not awaited.\n    const { pid } = await spawnDetached(\n      'sleep 0.2 && echo finished > done.txt',\n      {\n        cwd: dir,\n      }\n    );\n    record('pid is a number', Number.isInteger(pid) && pid > 0);\n    record('still running when spawnDetached resolves', !fs.existsSync(marker));\n\n    for (let i = 0; i \u003c 100 && !fs.existsSync(marker); i++) {\n      await new Promise((resolve) => setTimeout(resolve, 50));\n    }\n    record(\n      'what the background command wrote',\n      fs.readFileSync(marker, 'utf8')\n    );\n  }\n);",
+            "rustApi": [
+              "StreamingRunner::detach",
+              "ProcessRunner::spawn_detached"
+            ],
+            "rustSource": "async fn detached() -> ExampleResult {\n    let dir = std::env::temp_dir().join(format!(\"command-stream-detached-{}\", std::process::id()));\n    std::fs::create_dir_all(&dir)?;\n    let marker = dir.join(\"done.txt\");\n\n    // Returns as soon as the process has spawned; it is not awaited.\n    let pid = StreamingRunner::new(\"sleep 0.2 && echo finished > done.txt\")\n        .cwd(&dir)\n        .detach()?;\n    let running = !marker.exists();\n\n    for _ in 0..100 {\n        if marker.exists() {\n            break;\n        }\n        tokio::time::sleep(Duration::from_millis(50)).await;\n    }\n    let written = std::fs::read_to_string(&marker)?;\n    std::fs::remove_dir_all(&dir)?;\n    Ok(vec![\n        observation(\"pid is a number\", pid.is_some_and(|pid| pid > 0)),\n        observation(\"still running when detach returns\", running),\n        observation(\"what the background command wrote\", written),\n    ])\n}",
+            "rustOutput": "# detached — Rust\npid is a number: true\nstill running when detach returns: true\nwhat the background command wrote: \"finished\\n\"",
+            "identicalOutput": true,
+            "output": {
+              "node": "# detached — Fire-and-forget background commands\npid is a number: true\nstill running when spawnDetached resolves: true\nwhat the background command wrote: \"finished\\n\"",
+              "bun": "# detached — Fire-and-forget background commands\npid is a number: true\nstill running when spawnDetached resolves: true\nwhat the background command wrote: \"finished\\n\""
+            }
+          },
+          {
             "id": "function-api",
             "title": "Function and builder APIs",
             "category": "Running commands",
@@ -474,10 +566,13 @@
             "source": "// .streams.stdin gives write access to a running command.\nimport { $ } from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\n\nconst $q = $({ mirror: false });\n\nawait example(\n  { id: 'stdin-streaming', title: 'Writing to stdin while a command runs' },\n  async ({ record }) => {\n    const runner = $q`cat`;\n    const stdin = await runner.streams.stdin;\n    stdin.write('first line\\n');\n    stdin.write('second line\\n');\n    stdin.end();\n    record('what cat echoed back', (await runner).stdout);\n\n    // A whole string can also be handed over up front.\n    record(\n      'stdin option',\n      (await $({ mirror: false, stdin: 'up front\\n' })`cat`).stdout\n    );\n  }\n);",
             "rustApi": [
               "ProcessRunner::write_stdin",
-              "ProcessRunner::close_stdin"
+              "ProcessRunner::close_stdin",
+              "ProcessRunner::from_argv",
+              "StreamingRunner::stdin_pipe",
+              "OutputStream::write_stdin"
             ],
-            "rustSource": "async fn stdin_streaming() -> ExampleResult {\n    let mut runner = ProcessRunner::new(\n        \"cat\",\n        RunOptions {\n            mirror: false,\n            stdin: StdinOption::Pipe,\n            ..RunOptions::default()\n        },\n    );\n    runner.start().await?;\n    runner.write_stdin(\"first line\\n\").await?;\n    runner.write_stdin(\"second line\\n\").await?;\n    runner.close_stdin().await?;\n    let result = runner.run().await?;\n    Ok(vec![observation(\"what cat echoed back\", result.stdout)])\n}",
-            "rustOutput": "# stdin-streaming — Rust\nwhat cat echoed back: \"first line\\nsecond line\\n\"",
+            "rustSource": "async fn stdin_streaming() -> ExampleResult {\n    // `from_argv` runs the program with exactly these arguments, no shell.\n    let mut runner = ProcessRunner::from_argv(\n        \"cat\",\n        Vec::\u003cString>::new(),\n        RunOptions {\n            mirror: false,\n            stdin: StdinOption::Pipe,\n            ..RunOptions::default()\n        },\n    );\n    runner.start().await?;\n    runner.write_stdin(\"first line\\n\").await?;\n    runner.write_stdin(\"second line\\n\").await?;\n    runner.close_stdin().await?;\n    let result = runner.run().await?;\n\n    // A streaming command keeps stdin open with `stdin_pipe`, so input can\n    // answer output.\n    let mut stream = StreamingRunner::from_argv(\"cat\", Vec::\u003cString>::new())\n        .stdin_pipe()\n        .stream();\n    stream.write_stdin(\"ping\\n\").await?;\n    let mut answered = Vec::new();\n    while let Some(chunk) = stream.next().await {\n        if let OutputChunk::Stdout(data) = chunk {\n            answered.extend(data);\n            stream.close_stdin().await?;\n        }\n    }\n    Ok(vec![\n        observation(\"what cat echoed back\", result.stdout),\n        observation(\"streamed reply\", String::from_utf8(answered)?),\n    ])\n}",
+            "rustOutput": "# stdin-streaming — Rust\nwhat cat echoed back: \"first line\\nsecond line\\n\"\nstreamed reply: \"ping\\n\"",
             "identicalOutput": true,
             "output": {
               "node": "# stdin-streaming — Writing to stdin while a command runs\nwhat cat echoed back: \"first line\\nsecond line\\n\"\nstdin option: \"up front\\n\"",

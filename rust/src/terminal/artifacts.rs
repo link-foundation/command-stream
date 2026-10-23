@@ -1,5 +1,7 @@
+use super::raster::render_recording_gif;
 use super::types::{
-    Asciicast, AsciicastEvent, AsciicastHeader, TerminalCaptureError, TerminalFrame,
+    Asciicast, AsciicastEvent, AsciicastHeader, TerminalArtifact, TerminalCaptureError,
+    TerminalFrame,
 };
 use std::fs;
 use std::path::Path;
@@ -171,15 +173,18 @@ pub fn read_asciicast(path: impl AsRef<Path>) -> Result<Asciicast, TerminalCaptu
     Ok(Asciicast { header, events })
 }
 
+/// Write the `selected` artifacts (all of them for `None`) to `directory`.
+/// Each renderer runs only when its artifact is selected.
 pub(crate) fn write_terminal_artifacts(
     directory: &Path,
+    selected: Option<&[TerminalArtifact]>,
     frames: &[TerminalFrame],
     transcript: &str,
     asciicast: &Asciicast,
 ) -> Result<(), TerminalCaptureError> {
     fs::create_dir_all(directory)
         .map_err(|error| TerminalCaptureError::new(error.to_string(), None))?;
-    let fallback = TerminalFrame {
+    let fallback = [TerminalFrame {
         time: 0.0,
         cols: asciicast.header.width,
         rows: asciicast.header.height,
@@ -187,24 +192,29 @@ pub(crate) fn write_terminal_artifacts(
         alternate: false,
         lines: Vec::new(),
         screen: Vec::new(),
-    };
-    let final_frame = frames.last().unwrap_or(&fallback);
-    let writes = [
-        ("transcript.txt", format!("{transcript}\n")),
-        (
-            "frames.json",
-            format!(
+    }];
+    let rendered = if frames.is_empty() { &fallback } else { frames };
+    let final_frame = &rendered[rendered.len() - 1];
+    let mut written = Vec::new();
+    for artifact in selected.unwrap_or(&TerminalArtifact::ALL) {
+        if written.contains(artifact) {
+            continue;
+        }
+        written.push(*artifact);
+        let contents = match artifact {
+            TerminalArtifact::Transcript => format!("{transcript}\n").into_bytes(),
+            TerminalArtifact::Frames => format!(
                 "{}\n",
                 serde_json::to_string_pretty(frames)
                     .map_err(|error| TerminalCaptureError::new(error.to_string(), None))?
-            ),
-        ),
-        ("session.cast", serialize_asciicast(asciicast)?),
-        ("snapshot.svg", render_snapshot_svg(final_frame)),
-        ("recording.svg", render_recording_svg(frames)),
-    ];
-    for (name, contents) in writes {
-        fs::write(directory.join(name), contents)
+            )
+            .into_bytes(),
+            TerminalArtifact::Cast => serialize_asciicast(asciicast)?.into_bytes(),
+            TerminalArtifact::Snapshot => render_snapshot_svg(final_frame).into_bytes(),
+            TerminalArtifact::Recording => render_recording_svg(frames).into_bytes(),
+            TerminalArtifact::Gif => render_recording_gif(rendered)?,
+        };
+        fs::write(directory.join(artifact.file_name()), contents)
             .map_err(|error| TerminalCaptureError::new(error.to_string(), None))?;
     }
     Ok(())

@@ -59,8 +59,8 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Check installed JavaScript dependencies
-        working-directory: js
-        run: npm outdated
+        # `npm outdated`, with js/dependency-blockers.json applied.
+        run: bun scripts/check-dependencies.mjs --installed-npm
 
       - name: Check Rust lockfiles have no compatible updates pending
         shell: bash

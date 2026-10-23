@@ -147,6 +147,29 @@ async function run(commandOrTokens, options = {}) {
   return exec(file, args, { ...options, mirror: false, capture: true });
 }
 
+function detachedSpec(command) {
+  if (typeof command === 'string') {
+    return { mode: 'shell', command };
+  }
+  const [file, args = []] = Array.isArray(command)
+    ? [command[0], command.slice(1)]
+    : [command?.file, command?.args];
+  if (typeof file !== 'string' || file === '') {
+    throw new TypeError(
+      'spawnDetached() needs a command string, an argv array or { file, args }'
+    );
+  }
+  return { mode: 'exec', file, args: [...args] };
+}
+
+// Fire and forget (issue #232): resolves with `{ pid }` once the command has
+// spawned, without waiting for it to exit.
+// eslint-disable-next-line require-await -- async so a bad command rejects
+async function spawnDetached(command, options = {}) {
+  trace('API', () => `spawnDetached ENTER | ${JSON.stringify({ command })}`);
+  return new ProcessRunner(detachedSpec(command), options).spawnDetached();
+}
+
 function $tagged(strings, ...values) {
   // Check if called as a function with options object: $({ options })
   if (
@@ -572,6 +595,7 @@ export {
   execaCommandSync,
   sh,
   exec,
+  spawnDetached,
   crossSpawn as spawn,
   run,
   quote,

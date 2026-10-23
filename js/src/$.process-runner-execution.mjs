@@ -5,6 +5,10 @@ import { toStreamResult } from './$.result-streams.mjs';
 import { trace } from './$.trace.mjs';
 import { normalizeBunExitSignal } from './$.process-runner-signal.mjs';
 import {
+  normalizeTimeout,
+  setupCommandTimeout,
+} from './$.process-runner-timeout.mjs';
+import {
   buildCommandArgv,
   describeCommand,
   isShellArgvSpec,
@@ -37,6 +41,10 @@ import {
   drainPumpsAfterExit,
 } from './$.process-runner-exit.mjs';
 import { effectiveCwd, effectiveEnv } from './$.process-context.mjs';
+import {
+  startDetached,
+  startDetachedSync,
+} from './$.process-runner-detach.mjs';
 
 const isBun = typeof globalThis.Bun !== 'undefined';
 /** Check for shell operators in command. */
@@ -497,7 +505,7 @@ function throwErrexitIfNeeded(runner, globalShellSettings) {
  * @returns {object} Result object
  */
 function executeSyncBun(argv, options) {
-  const { cwd, env, stdin } = options;
+  const { cwd, env, stdin, timeout, killSignal } = options;
   let proc;
   try {
     proc = Bun.spawnSync(argv, {
@@ -506,6 +514,8 @@ function executeSyncBun(argv, options) {
       stdin: getSyncStdinInput(stdin),
       stdout: 'pipe',
       stderr: 'pipe',
+      timeout,
+      killSignal,
     });
   } catch (error) {
     return createExecutionErrorResult(error);
@@ -519,6 +529,7 @@ function executeSyncBun(argv, options) {
     stderr: proc.stderr?.toString('utf8') || '',
     stdin: getStdinString(stdin),
   });
+  result.timedOut = Boolean(proc.exitedDueToTimeout);
   result.child = proc;
   return result;
 }
@@ -530,7 +541,7 @@ function executeSyncBun(argv, options) {
  * @returns {object} Result object
  */
 function executeSyncNode(argv, options) {
-  const { cwd, env, stdin, shell } = options;
+  const { cwd, env, stdin, shell, timeout, killSignal } = options;
   const proc = cp.spawnSync(argv[0], argv.slice(1), {
     cwd,
     env,
@@ -538,9 +549,14 @@ function executeSyncNode(argv, options) {
     input: getSyncStdinInput(stdin),
     encoding: 'utf8',
     stdio: ['pipe', 'pipe', 'pipe'],
+    timeout,
+    killSignal,
   });
+  // A `timeout` kill sets `error` (ETIMEDOUT) next to the kill signal; report
+  // it as a signal exit like the async path does, not as a spawn failure.
+  const timedOut = proc.error?.code === 'ETIMEDOUT';
 
-  if (proc.error) {
+  if (proc.error && !timedOut) {
     const result = createExecutionErrorResult(proc.error);
     result.child = proc;
     return result;
@@ -556,6 +572,7 @@ function executeSyncNode(argv, options) {
     stderr: proc.stderr || '',
     stdin: getStdinString(stdin),
   });
+  result.timedOut = timedOut;
   result.child = proc;
   return result;
 }
@@ -619,10 +636,25 @@ function processSyncResult(runner, result, globalShellSettings) {
 }
 
 /**
+ * Stop a runner for an aborted `signal` or an expired `timeout`. Honors the
+ * configured killSignal (defaults to SIGTERM) so both use the same stop signal
+ * as an explicit kill().
+ * @param {object} runner - ProcessRunner instance
+ */
+function stopForAbort(runner) {
+  runner.kill();
+  trace('ProcessRunner', () => 'Process kill initiated due to abort');
+  if (runner._abortController && !runner._abortController.signal.aborted) {
+    runner._abortController.abort();
+  }
+}
+
+/**
  * Setup external abort signal listener
  * @param {object} runner - ProcessRunner instance
  */
 function setupExternalAbortSignal(runner) {
+  setupCommandTimeout(runner, () => stopForAbort(runner));
   const signal = runner.options.signal;
   if (!signal || typeof signal.addEventListener !== 'function') {
     return;
@@ -659,21 +691,7 @@ function setupExternalAbortSignal(runner) {
         })}`
     );
 
-    // Honor the configured killSignal (defaults to SIGTERM) so AbortSignal-based
-    // cancellation uses the same stop signal as an explicit kill().
-    runner.kill();
-    trace(
-      'ProcessRunner',
-      () => 'Process kill initiated due to external abort signal'
-    );
-
-    if (runner._abortController && !runner._abortController.signal.aborted) {
-      trace(
-        'ProcessRunner',
-        () => 'Aborting internal controller due to external signal'
-      );
-      runner._abortController.abort();
-    }
+    stopForAbort(runner);
   });
 
   if (signal.aborted) {
@@ -1088,6 +1106,9 @@ export function attachExecutionMethods(ProcessRunner, deps) {
         this.finish(createCancelledResult(this._cancellationSignal))
       );
     }
+    if (this.options.detached) {
+      return startDetached(this);
+    }
 
     trace(
       'ProcessRunner',
@@ -1129,7 +1150,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
 
       // Build command arguments
       const childEnv = effectiveEnv(this) ?? env;
-      const argv = buildCommandArgv(this.spec, childEnv);
+      const argv = buildCommandArgv(this.spec, childEnv, this.options);
 
       trace(
         'ProcessRunner',
@@ -1395,12 +1416,15 @@ export function attachExecutionMethods(ProcessRunner, deps) {
 
     this.started = true;
     this._mode = 'sync';
+    if (this.options.detached) {
+      return startDetachedSync(this);
+    }
     const shellSettings = { ...globalShellSettings };
 
     const { cwd, stdin } = this.options;
     const env = effectiveEnv(this);
     const shellArgv = isShellArgvSpec(this.spec);
-    const argv = buildCommandArgv(this.spec, env);
+    const argv = buildCommandArgv(this.spec, env, this.options);
 
     logShellTrace(shellSettings, describeCommand(this.spec));
 
@@ -1409,6 +1433,8 @@ export function attachExecutionMethods(ProcessRunner, deps) {
       env,
       stdin,
       shell: shellArgv,
+      timeout: normalizeTimeout(this.options.timeout) || undefined,
+      killSignal: this.options.killSignal,
     });
     return processSyncResult(this, result, shellSettings);
   };

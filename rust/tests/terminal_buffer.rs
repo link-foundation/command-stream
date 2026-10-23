@@ -1,4 +1,5 @@
 use command_stream::terminal::TerminalBuffer;
+use std::num::NonZeroU16;
 
 #[test]
 fn snapshots_and_frame_changes() {
@@ -16,7 +17,8 @@ fn snapshots_and_frame_changes() {
 fn compact_changes_replay_colors_cursor_and_resize() {
     let mut buffer = TerminalBuffer::new(3, 12);
     let mut changes = buffer.subscribe_changes();
-    let mut replay = vt100::Parser::new(3, 12, 0);
+    let mut replay =
+        vt100::Parser::new(NonZeroU16::new(3).unwrap(), NonZeroU16::new(12).unwrap(), 0);
     for data in [
         b"hello".as_slice(),
         b"\r\x1b[31mH",
@@ -31,7 +33,10 @@ fn compact_changes_replay_colors_cursor_and_resize() {
         replay.process(&change.ansi);
         assert_eq!(replay.screen().contents(), buffer.text(false));
         assert_eq!(replay.screen().cursor_position(), buffer.snapshot().cursor);
-        assert_eq!(replay.screen().state_formatted(), buffer.snapshot().ansi);
+        assert_eq!(
+            replay.screen().state_formatted().into_bytes(),
+            buffer.snapshot().ansi
+        );
     }
     buffer.resize(4, 16);
     let change = changes.try_recv().unwrap();

@@ -51,6 +51,7 @@ declare namespace $ {
   export type ChildWritableStream = CommandStream.ChildWritableStream;
   export type CommandError = CommandStream.CommandError;
   export type CommandResult = CommandStream.CommandResult;
+  export type DetachedProcess = CommandStream.DetachedProcess;
   export type CommandSpec = CommandStream.CommandSpec;
   export type CommandTag = CommandStream.CommandTag;
   export type CrossSpawn = CommandStream.CrossSpawn;
@@ -86,6 +87,7 @@ declare namespace $ {
   export type StreamResult = CommandStream.StreamResult;
   export type SyncStartOptions = CommandStream.SyncStartOptions;
   export type TemplateValue = CommandStream.TemplateValue;
+  export type TerminalArtifactName = CommandStream.TerminalArtifactName;
   export type TerminalArtifactOptions = CommandStream.TerminalArtifactOptions;
   export type TerminalAsciicast = CommandStream.TerminalAsciicast;
   export type TerminalCaptureError = CommandStream.TerminalCaptureError;
