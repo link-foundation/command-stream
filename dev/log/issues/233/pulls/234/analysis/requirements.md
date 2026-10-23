@@ -105,3 +105,22 @@ The Rust crate already ran `sh -c`, so it needed no change.
 - Feature catalog: `timeouts`, `env-removal`, `detached`, and an extended
   `stdin-streaming`, with JS (Node and Bun) and Rust examples checked by
   `scripts/check-parity.mjs`.
+
+## CI fixes outside the issues
+
+These checks were failing on this branch and some on `main` as well.
+
+| Check | Cause | Fix |
+| --- | --- | --- |
+| JS tests on Bun 1.4.4 | Bun 1.4.4 replaced the glob matcher that `js/src/bun-shell/glob.mjs` ports; nesting is no longer limited to 10 levels | The test checks the ported v1.4.2 limit directly (`experiments/issue-233/bun-glob-nesting.mjs`) |
+| JS tests on macOS | macOS `ps` has no `sid` keyword | The session leader is read from the `s` in `ps -o stat` |
+| Benchmarks `--locked` | `gif` and `font8x8` missing from `rust/benchmarks/Cargo.lock` | Lockfile updated |
+| Dependency freshness | eslint, eslint-plugin-prettier, jscpd, tokio, libc, vt100 0.18, ureq and execa had newer releases | All are updated except execa. vt100 0.18 needed `NonZeroU16` sizes and `String` state in terminal capture |
+
+execa 10.2.0 is held at 10.1.1 because its declarations fail with
+`exactOptionalPropertyTypes` and `skipLibCheck: false` (TS2344 in
+`types/return/result-all.d.ts`). command-stream re-exports them and checks them
+under those settings. Reproduction: `experiments/issue-233/execa-types/`.
+Reported upstream as https://github.com/sindresorhus/execa/issues/1265.
+`js/dependency-blockers.json` records it. The freshness check accepts this
+blocker only while that issue stays open.
