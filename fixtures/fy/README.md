@@ -19,3 +19,11 @@ cd rust && cargo run --quiet --example fy_translate -- ../fixtures/fy/sample.sh 
 ```sh
 cd js && bun -e "import {translateShellToMjs} from './src/fy/index.mjs'; import {readFileSync} from 'node:fs'; process.stdout.write(translateShellToMjs(readFileSync('../fixtures/fy/sample.sh','utf8')).code)" > ../fixtures/fy/sample.mjs
 ```
+
+`competitors.js` and `competitors.mjs` pin syntax-based migration of zx, Execa,
+ShellJS, cross-spawn, and Bun shell imports. Both migration test suites use these
+files verbatim; formatters must leave source and expected output untouched.
+
+`sample-program.mjs` pins the default interpreter-backed output for `sample.sh`.
+Run `node js/experiments/generate-fy-fixtures.mjs` to regenerate this and the
+competitor output after an intentional rule change.

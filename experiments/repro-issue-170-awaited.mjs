@@ -19,7 +19,8 @@ async function run() {
 
   let code, stderr, threw;
   try {
-    const result = await $`sh -c "echo stdout-marker; echo stderr-marker >&2; sleep 0.3; exit 5"`;
+    const result =
+      await $`sh -c "echo stdout-marker; echo stderr-marker >&2; sleep 0.3; exit 5"`;
     code = result.code;
     stderr = result.stderr;
   } catch (error) {
@@ -28,7 +29,9 @@ async function run() {
     stderr = error.stderr;
   }
 
-  console.error(`RESULT threw=${threw} code=${code} stderr=${JSON.stringify(stderr)}`);
+  console.error(
+    `RESULT threw=${threw} code=${code} stderr=${JSON.stringify(stderr)}`
+  );
   if (code === 5) {
     console.error('PASS: real exit code 5 preserved');
     process.exit(0);

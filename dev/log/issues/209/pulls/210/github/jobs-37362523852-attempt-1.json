@@ -1,0 +1,289 @@
+{
+  "total_count": 3,
+  "jobs": [
+    {
+      "id": 111940292750,
+      "run_id": 37362523852,
+      "workflow_name": "Repository quality checks",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523852",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEClQjg",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111940292750",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523852/job/111940292750",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-05T19:18:59Z",
+      "started_at": "2026-10-05T19:21:34Z",
+      "completed_at": "2026-10-05T19:21:45Z",
+      "name": "Check workflow invariants",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-05T19:21:35Z",
+          "completed_at": "2026-10-05T19:21:36Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-05T19:21:36Z",
+          "completed_at": "2026-10-05T19:21:40Z"
+        },
+        {
+          "name": "Simulate a fresh merge with the base branch",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-05T19:21:40Z",
+          "completed_at": "2026-10-05T19:21:40Z"
+        },
+        {
+          "name": "Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-05T19:21:40Z",
+          "completed_at": "2026-10-05T19:21:42Z"
+        },
+        {
+          "name": "Check CI/CD invariants",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-05T19:21:42Z",
+          "completed_at": "2026-10-05T19:21:42Z"
+        },
+        {
+          "name": "Post Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-10-05T19:21:42Z",
+          "completed_at": "2026-10-05T19:21:42Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-10-05T19:21:42Z",
+          "completed_at": "2026-10-05T19:21:42Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-10-05T19:21:42Z",
+          "completed_at": "2026-10-05T19:21:42Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111940292750",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "runner_id": 1000084086,
+      "runner_name": "GitHub Actions 1000084086",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 111940293073,
+      "run_id": 37362523852,
+      "workflow_name": "Repository quality checks",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523852",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEClR0Q",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111940293073",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523852/job/111940293073",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-05T19:18:59Z",
+      "started_at": "2026-10-05T19:19:09Z",
+      "completed_at": "2026-10-05T19:19:21Z",
+      "name": "Validate documentation",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-05T19:19:11Z",
+          "completed_at": "2026-10-05T19:19:12Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-05T19:19:12Z",
+          "completed_at": "2026-10-05T19:19:16Z"
+        },
+        {
+          "name": "Simulate a fresh merge with the base branch",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-05T19:19:16Z",
+          "completed_at": "2026-10-05T19:19:16Z"
+        },
+        {
+          "name": "Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-05T19:19:16Z",
+          "completed_at": "2026-10-05T19:19:17Z"
+        },
+        {
+          "name": "Check documentation links, size and required sections",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-05T19:19:17Z",
+          "completed_at": "2026-10-05T19:19:17Z"
+        },
+        {
+          "name": "Post Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-10-05T19:19:17Z",
+          "completed_at": "2026-10-05T19:19:18Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-10-05T19:19:18Z",
+          "completed_at": "2026-10-05T19:19:18Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-10-05T19:19:18Z",
+          "completed_at": "2026-10-05T19:19:18Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111940293073",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "runner_id": 1000084087,
+      "runner_name": "GitHub Actions 1000084087",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 111940293103,
+      "run_id": 37362523852,
+      "workflow_name": "Repository quality checks",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523852",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEClR7w",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111940293103",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523852/job/111940293103",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-05T19:18:59Z",
+      "started_at": "2026-10-05T19:29:07Z",
+      "completed_at": "2026-10-05T19:29:21Z",
+      "name": "Check formatting of every tracked file",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-05T19:29:07Z",
+          "completed_at": "2026-10-05T19:29:08Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-05T19:29:08Z",
+          "completed_at": "2026-10-05T19:29:10Z"
+        },
+        {
+          "name": "Simulate a fresh merge with the base branch",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-05T19:29:10Z",
+          "completed_at": "2026-10-05T19:29:11Z"
+        },
+        {
+          "name": "Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-05T19:29:11Z",
+          "completed_at": "2026-10-05T19:29:12Z"
+        },
+        {
+          "name": "Install dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-05T19:29:12Z",
+          "completed_at": "2026-10-05T19:29:13Z"
+        },
+        {
+          "name": "Check formatting",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-05T19:29:13Z",
+          "completed_at": "2026-10-05T19:29:19Z"
+        },
+        {
+          "name": "Post Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-10-05T19:29:19Z",
+          "completed_at": "2026-10-05T19:29:19Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-10-05T19:29:19Z",
+          "completed_at": "2026-10-05T19:29:19Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-10-05T19:29:19Z",
+          "completed_at": "2026-10-05T19:29:19Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111940293103",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "runner_id": 1000084152,
+      "runner_name": "GitHub Actions 1000084152",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    }
+  ]
+}

@@ -6,14 +6,14 @@
 // monitorParentStreams' listener -> _handleParentStreamClosure() on every active
 // runner, which aborts/kills the live command. If that replaces the real exit
 // code (5) with a synthetic SIGTERM (143), the errexit error is wrong.
-import { $, shell } from "../js/src/$.mjs";
+import { $, shell } from '../js/src/$.mjs';
 
 shell.errexit(true);
 
 // Fire a spurious 'close' on process.stdout shortly after the command starts.
 setTimeout(() => {
-  console.error(">>> emitting spurious close on process.stdout");
-  process.stdout.emit("close");
+  console.error('>>> emitting spurious close on process.stdout');
+  process.stdout.emit('close');
 }, 60);
 
 let code, stderr, stdout, threw;
@@ -31,14 +31,14 @@ try {
 }
 
 console.error(
-  `RESULT threw=${threw} code=${code} stdout=${JSON.stringify(stdout)} stderr=${JSON.stringify(stderr)}`,
+  `RESULT threw=${threw} code=${code} stdout=${JSON.stringify(stdout)} stderr=${JSON.stringify(stderr)}`
 );
 if (code === 5) {
-  console.error("PASS: real exit code 5 preserved");
+  console.error('PASS: real exit code 5 preserved');
   process.exit(0);
 } else {
   console.error(
-    `FAIL: expected code 5, got ${code} (synthetic SIGTERM means the bug reproduced)`,
+    `FAIL: expected code 5, got ${code} (synthetic SIGTERM means the bug reproduced)`
   );
   process.exit(1);
 }

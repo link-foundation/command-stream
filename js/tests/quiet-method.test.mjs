@@ -139,7 +139,7 @@ describe('.quiet() method', () => {
       process.stdout.write = originalWrite;
 
       // Should capture the output
-      expect(result.stdout).toContain('owner');
+      expect(result.stdout?.toString()).toContain('owner');
 
       // But not print to console
       expect(capturedStdout).toBe('');

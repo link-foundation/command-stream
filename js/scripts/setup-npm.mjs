@@ -26,10 +26,12 @@
 import { resolve } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { loadUseM } from './use-m-loader.mjs';
+import { runChecked } from './run-checked.mjs';
 
 export const NPM_MIN_VERSION = '11.5.1';
-export const NODE_MIN_VERSION = '22.14.0';
-export const NPM_TARGET_MAJOR = 11;
+export const NODE_MIN_VERSION = '22.22.2';
+export const NPM_TARGET_MAJOR = 12;
 export const NPM_REGISTRY_METADATA_URL = 'https://registry.npmjs.org/npm';
 
 /**
@@ -108,16 +110,21 @@ export function isSupportedNpmVersion(version) {
 }
 
 /**
- * Whether the Node.js version is new enough for the OIDC setup path.
+ * Whether Node.js satisfies npm 12's supported runtime ranges.
  * @param {string} version
  * @returns {boolean}
  */
 export function isSupportedNodeVersion(version) {
-  return isVersionAtLeast(version, NODE_MIN_VERSION);
+  const { major } = parseVersion(version);
+  return (
+    (major === 22 && isVersionAtLeast(version, NODE_MIN_VERSION)) ||
+    (major === 24 && isVersionAtLeast(version, '24.15.0')) ||
+    isVersionAtLeast(version, '26.0.0')
+  );
 }
 
 /**
- * Pick the newest stable npm 11.x release (at or above the OIDC minimum) from
+ * Pick the newest stable npm 12.x release (at or above the OIDC minimum) from
  * registry metadata.
  * @param {{versions?: Object}} metadata
  * @returns {{version: string, tarballUrl: string}}
@@ -167,7 +174,7 @@ async function resolveLatestSupportedNpmRelease(fetchFn) {
 }
 
 // Update npm for OIDC trusted publishing (requires >= 11.5.1).
-// Pin to npm@11 to avoid breaking changes from future major versions.
+// Pin to npm@12 to avoid breaking changes from future major versions.
 //
 // Known issue: some GitHub Actions runner images ship a broken npm that is
 // missing the 'promise-retry' module, causing `npm install -g` to fail with
@@ -177,13 +184,13 @@ async function resolveLatestSupportedNpmRelease(fetchFn) {
 // See: https://github.com/npm/cli/issues/9151
 //
 // Workaround strategies in order of preference:
-// 1. npm install -g npm@11 (standard approach)
+// 1. npm install -g npm@12 (standard approach)
 // 2. curl tarball download (bypasses broken npm entirely)
-// 3. npx npm@11 install (uses npx cache, bypasses arborist)
+// 3. npx npm@12 install (uses npx cache, bypasses arborist)
 // 4. corepack as last resort
 
 async function tryStandardInstall($) {
-  await $`npm install -g npm@11`;
+  await runChecked($`npm install -g npm@12`);
 }
 
 async function tryCurlTarball($, fetchFn) {
@@ -196,17 +203,19 @@ async function tryCurlTarball($, fetchFn) {
   const globalNpmDir = `${nodeDir}/lib/node_modules/npm`;
   const tempNpmDir = '/tmp/setup-npm-package';
 
-  await $`rm -rf "${tempNpmDir}" && mkdir -p "${tempNpmDir}"`;
-  await $`curl -fsSL "${npmRelease.tarballUrl}" | tar xz --strip-components=1 -C "${tempNpmDir}" && rm -rf "${globalNpmDir}" && mv "${tempNpmDir}" "${globalNpmDir}"`;
+  await runChecked($`rm -rf "${tempNpmDir}" && mkdir -p "${tempNpmDir}"`);
+  await runChecked(
+    $`curl -fsSL "${npmRelease.tarballUrl}" | tar xz --strip-components=1 -C "${tempNpmDir}" && rm -rf "${globalNpmDir}" && mv "${tempNpmDir}" "${globalNpmDir}"`
+  );
 }
 
 async function tryNpxInstall($) {
-  await $`npx --yes npm@11 install -g npm@11`;
+  await runChecked($`npx --yes npm@12 install -g npm@12`);
 }
 
 async function tryCorepack($) {
-  await $`corepack enable`;
-  await $`corepack prepare npm@11 --activate`;
+  await runChecked($`corepack enable`);
+  await runChecked($`corepack prepare npm@12 --activate`);
 }
 
 async function tryStrategy(name, fn) {
@@ -221,7 +230,7 @@ async function tryStrategy(name, fn) {
 
 function failUnsupportedNodeVersion(nodeVersion) {
   console.error(
-    `ERROR: Node.js ${NODE_MIN_VERSION} or later is required for npm OIDC trusted publishing setup.`
+    `ERROR: npm 12 publishing setup requires Node.js ^${NODE_MIN_VERSION}, ^24.15.0, or >=26.0.0.`
   );
   console.error(`Current Node.js version is ${nodeVersion}.`);
   process.exit(1);
@@ -255,7 +264,7 @@ export async function setupNpm($, fetchFn = fetch) {
   console.log(`Current npm version: ${currentVersion}`);
 
   const strategies = [
-    ['npm install -g npm@11', () => tryStandardInstall($)],
+    ['npm install -g npm@12', () => tryStandardInstall($)],
     ['curl-based tarball download', () => tryCurlTarball($, fetchFn)],
     ['npx-based install', () => tryNpxInstall($)],
     ['corepack', () => tryCorepack($)],
@@ -300,9 +309,7 @@ if (isMainModule()) {
 
     // Load use-m dynamically only for CLI execution, so tests can import the
     // pure version helpers without fetching dependencies or mutating npm.
-    const { use } = eval(
-      await (await fetch('https://unpkg.com/use-m/use.js')).text()
-    );
+    const use = await loadUseM();
     const { $ } = await use('command-stream');
 
     await setupNpm($);

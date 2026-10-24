@@ -6,7 +6,7 @@
 
 mod basename;
 mod cat;
-mod cd;
+pub(crate) mod cd;
 mod cp;
 mod dirname;
 mod echo;
@@ -21,7 +21,9 @@ mod pwd;
 mod rm;
 mod seq;
 mod sleep;
+mod tee;
 mod test;
+mod text;
 mod touch;
 mod r#true;
 mod which;
@@ -45,14 +47,15 @@ pub use r#true::r#true;
 pub use rm::rm;
 pub use seq::seq;
 pub use sleep::sleep;
+pub use tee::tee;
 pub use test::test;
+pub use text::{head, sort, tail, uniq};
 pub use touch::touch;
 pub use which::which;
 pub use yes::yes;
 
 use crate::utils::CommandResult;
 use std::collections::HashMap;
-use std::path::Path;
 use tokio::sync::mpsc;
 
 /// Context for virtual command execution
@@ -176,9 +179,38 @@ impl VirtualCommandRegistry {
 
     /// Register all built-in commands
     pub fn register_builtins(&mut self) {
-        // Note: These are placeholder registrations - actual async handlers
-        // would need proper wrapper functions
-        // The actual commands are available as standalone functions
+        macro_rules! register {
+            ($name:literal, $function:path) => {
+                self.register($name, |ctx| Box::pin($function(ctx)));
+            };
+        }
+
+        register!("echo", echo);
+        register!("pwd", pwd);
+        register!("cd", cd);
+        register!("true", r#true);
+        register!("false", r#false);
+        register!("sleep", sleep);
+        register!("cat", cat);
+        register!("ls", ls);
+        register!("mkdir", mkdir);
+        register!("rm", rm);
+        register!("touch", touch);
+        register!("cp", cp);
+        register!("mv", mv);
+        register!("basename", basename);
+        register!("dirname", dirname);
+        register!("env", env);
+        register!("exit", exit);
+        register!("which", which);
+        register!("yes", yes);
+        register!("seq", seq);
+        register!("tee", tee);
+        register!("test", test);
+        register!("head", head);
+        register!("tail", tail);
+        register!("sort", sort);
+        register!("uniq", uniq);
     }
 }
 

@@ -19,11 +19,12 @@ import fs, { createWriteStream, promises as fsPromises } from 'fs';
 import path from 'path';
 import os from 'os';
 import { createHash } from 'crypto';
+import { loadUseM } from './js/scripts/use-m-loader.mjs';
 
-// Dynamically load dependencies using use-m
-const { use } = eval(
-  await fetch('https://unpkg.com/use-m/use.js').then((r) => r.text())
-);
+// Dynamically load dependencies using use-m, through the shared loader: an
+// inline fetch here would die at module load with a bare `TypeError: fetch
+// failed` when the CDN blinks (see js/scripts/use-m-loader.mjs).
+const use = await loadUseM();
 
 // Load required packages dynamically with specific versions
 const [yargs, yargsHelpers, archiver] = await Promise.all([
@@ -201,16 +202,14 @@ Each .zip.base64 file contains a backup of:
     await fsPromises.unlink(tempFile);
 
     if (createResult.code !== 0) {
-      if (createResult.stdout.includes('gist.github.com')) {
-        // Sometimes gh returns non-zero but still creates the gist
-        const gistUrl = createResult.stdout.match(
-          /https:\/\/gist\.github\.com\/\S+/
-        )?.[0];
-        if (gistUrl) {
-          const gistId = gistUrl.split('/').pop();
-          console.log(`✅ Gist created successfully`);
-          return gistId;
-        }
+      // Sometimes gh returns non-zero but still creates the gist
+      const gistUrl = createResult.stdout.match(
+        /https:\/\/gist\.github\.com\/\S+/
+      )?.[0];
+      if (gistUrl) {
+        const gistId = gistUrl.split('/').pop();
+        console.log(`✅ Gist created successfully`);
+        return gistId;
       }
 
       // Parse error message for common issues
@@ -497,7 +496,9 @@ async function verifyProfile(profileName) {
         const zipBuffer = Buffer.from(base64Data, 'base64');
         await fsPromises.writeFile(zipPath, zipBuffer);
       } catch (err) {
-        throw new Error(`Failed to decode profile data: ${err.message}`);
+        throw new Error(`Failed to decode profile data: ${err.message}`, {
+          cause: err,
+        });
       }
 
       // Extract to verify contents

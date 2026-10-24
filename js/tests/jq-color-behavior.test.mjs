@@ -11,11 +11,11 @@ test('jq behavior - default mirror mode shows output automatically', async () =>
   const result = await $`echo ${testJson} | jq .`;
 
   expect(result.code).toBe(0);
-  expect(result.stdout).toContain('"message"');
-  expect(result.stdout).toContain('"hello"');
-  expect(result.stdout).toContain('42');
-  expect(result.stdout).toContain('true');
-  expect(result.stdout).toContain('null');
+  expect(result.stdout?.toString()).toContain('"message"');
+  expect(result.stdout?.toString()).toContain('"hello"');
+  expect(result.stdout?.toString()).toContain('42');
+  expect(result.stdout?.toString()).toContain('true');
+  expect(result.stdout?.toString()).toContain('null');
 });
 
 test('jq behavior - explicit color output contains ANSI codes', async () => {
@@ -23,9 +23,9 @@ test('jq behavior - explicit color output contains ANSI codes', async () => {
   const result = await $`echo ${testJson} | jq -C .`;
 
   expect(result.code).toBe(0);
-  expect(result.stdout).toMatch(/\u001b\[\d+/); // Contains ANSI escape sequences
-  expect(result.stdout).toContain('"message"');
-  expect(result.stdout).toContain('"hello"');
+  expect(result.stdout?.toString()).toMatch(/\u001b\[\d+/); // Contains ANSI escape sequences
+  expect(result.stdout?.toString()).toContain('"message"');
+  expect(result.stdout?.toString()).toContain('"hello"');
 });
 
 test('jq behavior - monochrome output has no ANSI codes', async () => {
@@ -33,9 +33,9 @@ test('jq behavior - monochrome output has no ANSI codes', async () => {
   const result = await $`echo ${testJson} | jq -M .`;
 
   expect(result.code).toBe(0);
-  expect(result.stdout).not.toMatch(/\u001b\[\d+/); // No ANSI escape sequences
-  expect(result.stdout).toContain('"message"');
-  expect(result.stdout).toContain('"hello"');
+  expect(result.stdout?.toString()).not.toMatch(/\u001b\[\d+/); // No ANSI escape sequences
+  expect(result.stdout?.toString()).toContain('"message"');
+  expect(result.stdout?.toString()).toContain('"hello"');
 });
 
 test('jq behavior - field extraction works correctly', async () => {
@@ -92,7 +92,7 @@ test('jq behavior - TTY detection and automatic coloring', async () => {
   const result = await $`echo ${testJson} | jq .`;
 
   expect(result.code).toBe(0);
-  expect(result.stdout).toContain('"message"');
+  expect(result.stdout?.toString()).toContain('"message"');
 
   const hasColors = /\u001b\[\d+/.test(result.stdout);
 
@@ -110,11 +110,11 @@ test('jq behavior - TTY detection and automatic coloring', async () => {
   expect(typeof hasColors).toBe('boolean');
 
   // Verify we got valid JSON output regardless of colors
-  expect(result.stdout).toContain('"message"');
-  expect(result.stdout).toContain('"hello"');
-  expect(result.stdout).toContain('42');
-  expect(result.stdout).toContain('true');
-  expect(result.stdout).toContain('null');
+  expect(result.stdout?.toString()).toContain('"message"');
+  expect(result.stdout?.toString()).toContain('"hello"');
+  expect(result.stdout?.toString()).toContain('42');
+  expect(result.stdout?.toString()).toContain('true');
+  expect(result.stdout?.toString()).toContain('null');
 });
 
 test('jq behavior - force colors work in any environment', async () => {
@@ -122,8 +122,8 @@ test('jq behavior - force colors work in any environment', async () => {
   const result = await $`echo ${testJson} | jq -C .`;
 
   expect(result.code).toBe(0);
-  expect(result.stdout).toMatch(/\u001b\[\d+/); // Should have ANSI codes
-  expect(result.stdout).toContain('"message"');
+  expect(result.stdout?.toString()).toMatch(/\u001b\[\d+/); // Should have ANSI codes
+  expect(result.stdout?.toString()).toContain('"message"');
 
   // The color codes should make the output longer than the plain version
   const plainResult = await $`echo ${testJson} | jq -M .`;
@@ -135,6 +135,6 @@ test('jq behavior - streaming with colors works', async () => {
   const result = await $`echo ${testJson} | jq -C . | cat`;
 
   expect(result.code).toBe(0);
-  expect(result.stdout).toMatch(/\u001b\[\d+/); // Colors preserved through pipe
-  expect(result.stdout).toContain('"message"');
+  expect(result.stdout?.toString()).toMatch(/\u001b\[\d+/); // Colors preserved through pipe
+  expect(result.stdout?.toString()).toContain('"message"');
 });

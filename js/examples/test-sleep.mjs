@@ -20,6 +20,7 @@ try {
 }
 
 console.error('[test-sleep.mjs] Is TTY:', process.stdout.isTTY);
+const sleepCommand = $`sleep 30`; // Construct first so signal handling is active.
 console.log('STARTING_SLEEP');
 console.error('[test-sleep.mjs] Wrote STARTING_SLEEP to stdout');
 
@@ -40,9 +41,9 @@ await new Promise((resolve) => {
   }
 });
 
-console.error('[test-sleep.mjs] About to run sleep command');
+console.error('[test-sleep.mjs] About to await sleep command');
 try {
-  const result = await $`sleep 30`; // Long enough to be interrupted, but timeout safe
+  const result = await sleepCommand; // Long enough to be interrupted, but timeout safe
   console.log('SLEEP_COMPLETED');
   console.error('[test-sleep.mjs] Sleep completed with code:', result.code);
 } catch (error) {

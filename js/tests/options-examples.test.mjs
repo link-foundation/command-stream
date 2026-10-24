@@ -12,7 +12,7 @@ describe('Options Examples (Feature Demo)', () => {
     });
 
     // Output goes to console but not stored in result
-    expect(result.stdout).toBeUndefined();
+    expect(result.stdout?.toString()).toBeUndefined();
     expect(result.code).toBe(0);
   });
 
@@ -21,7 +21,7 @@ describe('Options Examples (Feature Demo)', () => {
     const result = await $`echo "silent execution"`.start({ mirror: false });
 
     // Output is captured but not shown on console
-    expect(result.stdout).toBe('silent execution\n');
+    expect(result.stdout?.toString()).toBe('silent execution\n');
     expect(result.code).toBe(0);
   });
 
@@ -32,7 +32,7 @@ describe('Options Examples (Feature Demo)', () => {
       mirror: false,
     });
 
-    expect(result.stdout).toBeUndefined();
+    expect(result.stdout?.toString()).toBeUndefined();
     expect(result.code).toBe(0);
   });
 
@@ -44,7 +44,7 @@ describe('Options Examples (Feature Demo)', () => {
       capture: true, // But do capture the result
     });
 
-    expect(result.stdout).toBe('Hello from stdin!');
+    expect(result.stdout?.toString()).toBe('Hello from stdin!');
     expect(result.code).toBe(0);
   });
 
@@ -55,8 +55,8 @@ describe('Options Examples (Feature Demo)', () => {
       capture: false,
     });
 
-    expect(result1.stdout).toBeUndefined();
-    expect(result2.stdout).toBeUndefined();
+    expect(result1.stdout?.toString()).toBeUndefined();
+    expect(result2.stdout?.toString()).toBeUndefined();
     expect(result1.code).toBe(0);
     expect(result2.code).toBe(0);
   });
@@ -70,7 +70,7 @@ describe('Options Examples (Feature Demo)', () => {
       mirror: false,
     });
 
-    expect(result.stdout).toBe('with template literal\n');
+    expect(result.stdout?.toString()).toBe('with template literal\n');
     expect(result.code).toBe(0);
   });
 
@@ -84,8 +84,8 @@ describe('Options Examples (Feature Demo)', () => {
       });
       const realResult = await $`ls /tmp`.start({ capture: false });
 
-      expect(virtualResult.stdout).toBeUndefined();
-      expect(realResult.stdout).toBeUndefined();
+      expect(virtualResult.stdout?.toString()).toBeUndefined();
+      expect(realResult.stdout?.toString()).toBeUndefined();
       expect(virtualResult.code).toBe(0);
       expect(realResult.code).toBe(0);
     }
@@ -96,7 +96,7 @@ describe('Options Examples (Feature Demo)', () => {
     const runner = $`echo "chainable"`;
     const result = await runner.start({ mirror: false });
 
-    expect(result.stdout).toBe('chainable\n');
+    expect(result.stdout?.toString()).toBe('chainable\n');
     expect(result.code).toBe(0);
 
     // The result object has the standard properties

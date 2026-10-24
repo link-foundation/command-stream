@@ -1,47 +1,38 @@
+import {
+  isCommandIterable,
+  createGeneratorStage,
+  virtualContext,
+} from './$.command-output.mjs';
 // ProcessRunner pipeline methods - all pipeline execution strategies
 // Part of the modular ProcessRunner architecture
 
 import cp from 'child_process';
+import { Readable, Writable } from 'node:stream';
+import { createExitPromise } from './$.process-runner-exit.mjs';
+import { killChildProcess } from './$.process-runner-stream-kill.mjs';
 import { trace } from './$.trace.mjs';
-import { findAvailableShell } from './$.shell.mjs';
-import { StreamUtils, safeWrite } from './$.stream-utils.mjs';
-import { createResult } from './$.result.mjs';
+import {
+  findAvailableShell,
+  shellArgs,
+  withExportedProcessContext,
+} from './$.shell.mjs';
+import {
+  StreamUtils,
+  safeWrite,
+  stdinDataFromOptions,
+} from './$.stream-utils.mjs';
+import {
+  createCancelledResult,
+  createCommandError,
+  createResult,
+} from './$.result.mjs';
+import {
+  applyVirtualProcessContext,
+  effectiveCwd,
+  effectiveEnv,
+} from './$.process-context.mjs';
 
 const isBun = typeof globalThis.Bun !== 'undefined';
-
-/**
- * Commands that need streaming workaround
- */
-const STREAMING_COMMANDS = ['jq', 'grep', 'sed', 'cat', 'awk'];
-
-/**
- * Check if command needs streaming workaround
- * @param {object} command - Command object
- * @returns {boolean}
- */
-function needsStreamingWorkaround(command) {
-  return STREAMING_COMMANDS.includes(command.cmd);
-}
-
-/**
- * Analyze pipeline for virtual commands
- * @param {Array} commands - Pipeline commands
- * @param {Function} isVirtualCommandsEnabled - Check if virtual commands enabled
- * @param {Map} virtualCommands - Virtual commands registry
- * @returns {object} Analysis result
- */
-function analyzePipeline(commands, isVirtualCommandsEnabled, virtualCommands) {
-  const pipelineInfo = commands.map((command) => ({
-    ...command,
-    isVirtual: isVirtualCommandsEnabled() && virtualCommands.has(command.cmd),
-  }));
-  return {
-    pipelineInfo,
-    hasVirtual: pipelineInfo.some((info) => info.isVirtual),
-    virtualCount: pipelineInfo.filter((p) => p.isVirtual).length,
-    realCount: pipelineInfo.filter((p) => !p.isVirtual).length,
-  };
-}
 
 /**
  * Read stream to string
@@ -51,19 +42,20 @@ function analyzePipeline(commands, isVirtualCommandsEnabled, virtualCommands) {
 async function readStreamToString(stream) {
   const reader = stream.getReader();
   let result = '';
+  const decoder = new TextDecoder();
   try {
     let done = false;
     while (!done) {
       const readResult = await reader.read();
       done = readResult.done;
       if (!done && readResult.value) {
-        result += new TextDecoder().decode(readResult.value);
+        result += decoder.decode(readResult.value, { stream: true });
       }
     }
   } finally {
     reader.releaseLock();
   }
-  return result;
+  return result + decoder.decode();
 }
 
 /**
@@ -76,7 +68,11 @@ function buildCommandParts(command) {
   const parts = [cmd];
   for (const arg of args) {
     if (arg.value !== undefined) {
-      if (arg.quoted) {
+      // `raw` preserves the word exactly as written (quotes and all), so
+      // handing it back to a real shell round-trips without re-quoting guesses.
+      if (arg.raw !== undefined) {
+        parts.push(arg.raw);
+      } else if (arg.quoted) {
         parts.push(`${arg.quoteChar}${arg.value}${arg.quoteChar}`);
       } else if (arg.value.includes(' ')) {
         parts.push(`"${arg.value}"`);
@@ -98,89 +94,30 @@ function buildCommandParts(command) {
 }
 
 /**
- * Check if command string needs shell execution
- * @param {string} commandStr - Command string
- * @returns {boolean}
- */
-function needsShellExecution(commandStr) {
-  return (
-    commandStr.includes('*') ||
-    commandStr.includes('$') ||
-    commandStr.includes('>') ||
-    commandStr.includes('<') ||
-    commandStr.includes('&&') ||
-    commandStr.includes('||') ||
-    commandStr.includes(';') ||
-    commandStr.includes('`')
-  );
-}
-
-/**
- * Get spawn args based on shell need
- * @param {boolean} needsShell - Whether shell is needed
- * @param {string} cmd - Command name
- * @param {Array} args - Command args
- * @param {string} commandStr - Full command string
- * @returns {string[]} Spawn arguments
- */
-function getSpawnArgs(needsShell, cmd, args, commandStr) {
-  if (needsShell) {
-    const shell = findAvailableShell();
-    return [shell.cmd, ...shell.args.filter((arg) => arg !== '-l'), commandStr];
-  }
-  return [cmd, ...args.map((a) => (a.value !== undefined ? a.value : a))];
-}
-
-/**
- * Determine stdin configuration for first command
- * @param {object} options - Runner options
- * @returns {object} Stdin config with stdin, needsManualStdin, stdinData
- */
-function getFirstCommandStdin(options) {
-  if (options.stdin && typeof options.stdin === 'string') {
-    return {
-      stdin: 'pipe',
-      needsManualStdin: true,
-      stdinData: Buffer.from(options.stdin),
-    };
-  }
-  if (options.stdin && Buffer.isBuffer(options.stdin)) {
-    return { stdin: 'pipe', needsManualStdin: true, stdinData: options.stdin };
-  }
-  return { stdin: 'ignore', needsManualStdin: false, stdinData: null };
-}
-
-/**
  * Get stdin string from options
  * @param {object} options - Runner options
  * @returns {string}
  */
 function getStdinString(options) {
-  if (options.stdin && typeof options.stdin === 'string') {
-    return options.stdin;
-  }
-  if (options.stdin && Buffer.isBuffer(options.stdin)) {
-    return options.stdin.toString('utf8');
-  }
-  return '';
+  return stdinDataFromOptions(options);
 }
 
 /**
- * Handle pipefail check
+ * Compute the status reported by a pipeline. Without pipefail this is the last
+ * stage; with pipefail it is the rightmost failing stage, matching Bash.
+ * pipefail changes the status only. errexit decides whether that status throws.
+ *
  * @param {number[]} exitCodes - Exit codes from pipeline
  * @param {object} shellSettings - Shell settings
+ * @returns {number} Pipeline exit status
  */
-function checkPipefail(exitCodes, shellSettings) {
-  if (shellSettings.pipefail) {
-    const failedIndex = exitCodes.findIndex((code) => code !== 0);
-    if (failedIndex !== -1) {
-      const error = new Error(
-        `Pipeline command at index ${failedIndex} failed with exit code ${exitCodes[failedIndex]}`
-      );
-      error.code = exitCodes[failedIndex];
-      throw error;
-    }
+function pipelineExitCode(exitCodes, shellSettings) {
+  const codes = exitCodes.map((code) => code ?? 0);
+  const last = codes.at(-1) ?? 0;
+  if (!shellSettings.pipefail) {
+    return last;
   }
+  return codes.findLast((code) => code !== 0) ?? last;
 }
 
 /**
@@ -190,37 +127,12 @@ function checkPipefail(exitCodes, shellSettings) {
  */
 function throwErrexitError(result, shellSettings) {
   if (shellSettings.errexit && result.code !== 0) {
-    const error = new Error(`Pipeline failed with exit code ${result.code}`);
-    error.code = result.code;
-    error.stdout = result.stdout;
-    error.stderr = result.stderr;
-    error.result = result;
-    throw error;
-  }
-}
-
-/**
- * Write stdin to Bun process
- * @param {object} proc - Process with stdin
- * @param {Buffer} stdinData - Data to write
- */
-async function writeBunStdin(proc, stdinData) {
-  if (!proc.stdin) {
-    return;
-  }
-  const stdinHandler = StreamUtils.setupStdinHandling(
-    proc.stdin,
-    'Bun process stdin'
-  );
-  try {
-    if (stdinHandler.isWritable()) {
-      await proc.stdin.write(stdinData);
-      await proc.stdin.end();
-    }
-  } catch (e) {
-    if (e.code !== 'EPIPE') {
-      trace('ProcessRunner', () => `stdin write error | ${e.message}`);
-    }
+    throw createCommandError(`Pipeline failed with exit code ${result.code}`, {
+      code: result.code,
+      stdout: result.stdout,
+      stderr: result.stderr,
+      result,
+    });
   }
 }
 
@@ -232,15 +144,18 @@ async function writeBunStdin(proc, stdinData) {
  * @param {object} collector - Object to collect stderr
  */
 function collectStderrAsync(runner, proc, isLast, collector) {
-  (async () => {
+  return (async () => {
     for await (const chunk of proc.stderr) {
       const buf = Buffer.from(chunk);
-      collector.stderr += buf.toString();
+      if (runner.options.capture) {
+        collector.stderr += buf.toString();
+      }
       if (isLast) {
         if (runner.options.mirror) {
           safeWrite(process.stderr, buf);
         }
         runner._emitProcessedData('stderr', buf);
+        await runner._waitForStreamCapacity();
       }
     }
   })();
@@ -294,15 +209,16 @@ function createStringStream(data) {
  * Pipe stream to process stdin
  * @param {ReadableStream} stream - Input stream
  * @param {object} proc - Process
+ * @returns {Promise<void>|undefined} Resolves when the pump has finished
  */
-function pipeStreamToProcess(stream, proc) {
+export function pipeStreamToProcess(stream, proc) {
   if (!stream || !proc.stdin) {
-    return;
+    return undefined;
   }
   const reader = stream.getReader();
   const writer = proc.stdin.getWriter ? proc.stdin.getWriter() : proc.stdin;
 
-  (async () => {
+  const promise = (async () => {
     try {
       while (true) {
         const { done, value } = await reader.read();
@@ -312,6 +228,7 @@ function pipeStreamToProcess(stream, proc) {
         if (writer.write) {
           try {
             await writer.write(value);
+            await writer.flush?.();
           } catch (error) {
             StreamUtils.handleStreamError(error, 'stream writer', false);
             break;
@@ -332,34 +249,73 @@ function pipeStreamToProcess(stream, proc) {
         }
       }
     } finally {
+      await reader.cancel().catch(() => {});
       reader.releaseLock();
-      if (writer.close) {
-        await writer.close();
-      } else if (writer.end) {
-        writer.end();
+      // The downstream process may already have exited and closed its stdin,
+      // in which case closing the writer raises EPIPE. That is a normal
+      // pipeline race, not an error worth propagating as an unhandled
+      // rejection.
+      try {
+        if (writer.close) {
+          await writer.close();
+        } else if (writer.end) {
+          writer.end();
+        }
+      } catch (error) {
+        StreamUtils.handleStreamError(error, 'stream writer close', false);
       }
     }
   })();
+
+  return promise.catch((error) => {
+    StreamUtils.handleStreamError(error, 'stream pipe', false);
+  });
 }
 
 /**
  * Spawn shell command in Bun
  * @param {string} commandStr - Command string
  * @param {object} options - Options (cwd, env, stdin)
+ * @param {boolean} [loginShell] - Run the shell as a login shell
  * @returns {object} Process
  */
-function spawnShellCommand(commandStr, options) {
+function spawnShellCommand(commandStr, options, loginShell = false) {
   const shell = findAvailableShell();
-  return Bun.spawn(
-    [shell.cmd, ...shell.args.filter((arg) => arg !== '-l'), commandStr],
-    {
-      cwd: options.cwd,
-      env: options.env,
-      stdin: options.stdin,
+  const argv = [
+    shell.cmd,
+    ...shellArgs(shell, loginShell),
+    withExportedProcessContext(commandStr, options.env),
+  ];
+  if (isBun) {
+    return Bun.spawn(argv, {
+      ...options,
       stdout: 'pipe',
       stderr: 'pipe',
-    }
-  );
+      detached: process.platform !== 'win32',
+    });
+  }
+  const child = cp.spawn(argv[0], argv.slice(1), {
+    cwd: options.cwd,
+    env: options.env,
+    stdio: [options.stdin, 'pipe', 'pipe'],
+    detached: process.platform !== 'win32',
+  });
+  const exited = new Promise((resolve, reject) => {
+    child.once('error', reject);
+    createExitPromise(child).then(({ code }) => resolve(code ?? 1));
+  });
+  // A spawn error can occur before the caller starts awaiting stage statuses.
+  exited.catch(() => {});
+  return {
+    pid: child.pid,
+    stdout: Readable.toWeb(child.stdout, {
+      strategy: { highWaterMark: 65536, size: (chunk) => chunk.byteLength },
+    }),
+    stderr: child.stderr,
+    stdin: child.stdin ? Writable.toWeb(child.stdin) : null,
+    exited,
+    kill: (signal) => child.kill(signal),
+  };
 }
 
 /**
@@ -372,326 +328,104 @@ async function collectFinalStdout(runner, proc) {
   const chunks = [];
   for await (const chunk of proc.stdout) {
     const buf = Buffer.from(chunk);
-    chunks.push(buf);
+    if (runner.options.capture) {
+      chunks.push(buf);
+    }
     if (runner.options.mirror) {
       safeWrite(process.stdout, buf);
     }
     runner._emitProcessedData('stdout', buf);
+    await runner._waitForStreamCapacity();
   }
   return Buffer.concat(chunks).toString('utf8');
 }
 
-/**
- * Spawn async node process for pipeline
- * @param {object} runner - ProcessRunner instance
- * @param {string[]} argv - Command arguments
- * @param {string} stdin - Stdin input
- * @param {boolean} isLastCommand - Is this the last command
- * @returns {Promise<object>} Result with status, stdout, stderr
- */
-function spawnNodeAsync(runner, argv, stdin, isLastCommand) {
-  return new Promise((resolve, reject) => {
-    const proc = cp.spawn(argv[0], argv.slice(1), {
-      cwd: runner.options.cwd,
-      env: runner.options.env,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
-
-    let stdout = '';
-    let stderr = '';
-
-    proc.stdout.on('data', (chunk) => {
-      stdout += chunk.toString();
-      if (isLastCommand) {
-        if (runner.options.mirror) {
-          safeWrite(process.stdout, chunk);
-        }
-        runner._emitProcessedData('stdout', chunk);
-      }
-    });
-
-    proc.stderr.on('data', (chunk) => {
-      stderr += chunk.toString();
-      if (isLastCommand) {
-        if (runner.options.mirror) {
-          safeWrite(process.stderr, chunk);
-        }
-        runner._emitProcessedData('stderr', chunk);
-      }
-    });
-
-    proc.on('close', (code) => resolve({ status: code, stdout, stderr }));
-    proc.on('error', reject);
-
-    if (proc.stdin) {
-      StreamUtils.addStdinErrorHandler(
-        proc.stdin,
-        'spawnNodeAsync stdin',
-        reject
-      );
+async function emitVirtualStage(runner, result) {
+  for (const type of ['stdout', 'stderr']) {
+    if (!result[type]) {
+      continue;
     }
-    if (stdin) {
-      StreamUtils.safeStreamWrite(proc.stdin, stdin, 'spawnNodeAsync stdin');
+    const bytes = Buffer.from(result[type]);
+    if (runner.options.mirror) {
+      safeWrite(type === 'stdout' ? process.stdout : process.stderr, bytes);
     }
-    StreamUtils.safeStreamEnd(proc.stdin, 'spawnNodeAsync stdin');
-  });
-}
-
-/**
- * Log shell trace/verbose
- * @param {object} settings - Shell settings
- * @param {string} cmd - Command
- * @param {string[]} argValues - Argument values
- */
-function logShellTrace(settings, cmd, argValues) {
-  const cmdStr = `${cmd} ${argValues.join(' ')}`;
-  if (settings.xtrace) {
-    console.log(`+ ${cmdStr}`);
-  }
-  if (settings.verbose) {
-    console.log(cmdStr);
+    runner._emitProcessedData(type, bytes);
+    await runner._waitForStreamCapacity();
   }
 }
 
-/**
- * Handle virtual command in non-streaming pipeline
- * @param {object} runner - ProcessRunner instance
- * @param {Function} handler - Handler function
- * @param {string[]} argValues - Argument values
- * @param {string} currentInput - Current input
- * @param {object} options - Runner options
- * @returns {Promise<object>} Result
- */
-async function runVirtualHandler(
+async function virtualPipelineStage(
   runner,
   handler,
-  argValues,
-  currentInput,
-  options
+  command,
+  input,
+  last,
+  collector
 ) {
-  if (handler.constructor.name === 'AsyncGeneratorFunction') {
-    const chunks = [];
-    for await (const chunk of handler({
-      args: argValues,
-      stdin: currentInput,
-      ...options,
-    })) {
-      chunks.push(Buffer.from(chunk));
+  const data = input ? await readStreamToString(input) : '';
+  const args = getArgValues(command.args);
+  const result = await handler(virtualContext(runner, args, data));
+  if (isCommandIterable(result)) {
+    const stage = createGeneratorStage(result, runner, last);
+    if (last) {
+      for await (const _chunk of stage.stream) {
+        /* stage emits while pulled */
+      }
     }
     return {
-      code: 0,
-      stdout: options.capture
-        ? Buffer.concat(chunks).toString('utf8')
-        : undefined,
-      stderr: options.capture ? '' : undefined,
-      stdin: options.capture ? currentInput : undefined,
+      stream: stage.stream,
+      code: stage.done,
+      output: last ? stage.output() : '',
     };
   }
-  const result = await handler({
-    args: argValues,
-    stdin: currentInput,
-    ...options,
-  });
-  return {
-    ...result,
-    code: result.code ?? 0,
-    stdout: options.capture ? (result.stdout ?? '') : undefined,
-    stderr: options.capture ? (result.stderr ?? '') : undefined,
-    stdin: options.capture ? currentInput : undefined,
-  };
-}
-
-/**
- * Emit final result output
- * @param {object} runner - ProcessRunner instance
- * @param {object} result - Result object
- */
-function emitFinalOutput(runner, result) {
-  if (result.stdout) {
-    const buf = Buffer.from(result.stdout);
-    if (runner.options.mirror) {
-      safeWrite(process.stdout, buf);
-    }
-    runner._emitProcessedData('stdout', buf);
-  }
-  if (result.stderr) {
-    const buf = Buffer.from(result.stderr);
-    if (runner.options.mirror) {
-      safeWrite(process.stderr, buf);
-    }
-    runner._emitProcessedData('stderr', buf);
-  }
-}
-
-/**
- * Create final result for pipeline
- * @param {object} runner - ProcessRunner instance
- * @param {object} result - Current result
- * @param {string} currentOutput - Current output
- * @param {object} shellSettings - Shell settings
- * @returns {object} Final result
- */
-function createFinalPipelineResult(
-  runner,
-  result,
-  currentOutput,
-  shellSettings
-) {
-  const finalResult = createResult({
-    code: result.code,
-    stdout: currentOutput,
-    stderr: result.stderr,
-    stdin: getStdinString(runner.options),
-  });
-  runner.finish(finalResult);
-  throwErrexitError(finalResult, shellSettings);
-  return finalResult;
-}
-
-/**
- * Handle pipeline error
- * @param {object} runner - ProcessRunner instance
- * @param {Error} error - Error
- * @param {string} currentOutput - Current output
- * @param {object} shellSettings - Shell settings
- * @returns {object} Error result
- */
-function handlePipelineError(runner, error, currentOutput, shellSettings) {
-  const result = createResult({
-    code: error.code ?? 1,
-    stdout: currentOutput,
-    stderr: error.stderr ?? error.message,
-    stdin: getStdinString(runner.options),
-  });
-  if (result.stderr) {
-    const buf = Buffer.from(result.stderr);
-    if (runner.options.mirror) {
-      safeWrite(process.stderr, buf);
-    }
-    runner._emitProcessedData('stderr', buf);
-  }
-  runner.finish(result);
-  if (shellSettings.errexit) {
-    throw error;
-  }
-  return result;
-}
-
-/**
- * Handle virtual command in non-streaming pipeline iteration
- * @param {object} runner - ProcessRunner instance
- * @param {object} command - Command object
- * @param {string} currentInput - Current input
- * @param {boolean} isLastCommand - Is last command
- * @param {object} deps - Dependencies
- * @returns {Promise<object>} { output, input, finalResult }
- */
-async function handleVirtualPipelineCommand(
-  runner,
-  command,
-  currentInput,
-  isLastCommand,
-  deps
-) {
-  const { virtualCommands, globalShellSettings } = deps;
-  const handler = virtualCommands.get(command.cmd);
-  const argValues = getArgValues(command.args);
-  logShellTrace(globalShellSettings, command.cmd, argValues);
-
-  const result = await runVirtualHandler(
-    runner,
-    handler,
-    argValues,
-    currentInput,
-    runner.options
-  );
-
-  if (isLastCommand) {
-    emitFinalOutput(runner, result);
-    return {
-      finalResult: createFinalPipelineResult(
-        runner,
-        result,
-        result.stdout,
-        globalShellSettings
-      ),
-    };
-  }
-
-  if (globalShellSettings.errexit && result.code !== 0) {
-    const error = new Error(
-      `Pipeline command failed with exit code ${result.code}`
-    );
-    error.code = result.code;
-    error.result = result;
-    throw error;
-  }
-
-  return { input: result.stdout };
-}
-
-/**
- * Handle shell command in non-streaming pipeline iteration
- * @param {object} runner - ProcessRunner instance
- * @param {object} command - Command object
- * @param {string} currentInput - Current input
- * @param {boolean} isLastCommand - Is last command
- * @param {object} deps - Dependencies
- * @returns {Promise<object>} { output, input, finalResult }
- */
-async function handleShellPipelineCommand(
-  runner,
-  command,
-  currentInput,
-  isLastCommand,
-  deps
-) {
-  const { globalShellSettings } = deps;
-  const commandStr = buildCommandParts(command).join(' ');
-  logShellTrace(globalShellSettings, commandStr, []);
-
-  const shell = findAvailableShell();
-  const argv = [shell.cmd, ...shell.args.filter((a) => a !== '-l'), commandStr];
-  const proc = await spawnNodeAsync(runner, argv, currentInput, isLastCommand);
-  const result = {
-    code: proc.status || 0,
-    stdout: proc.stdout || '',
-    stderr: proc.stderr || '',
-  };
-
-  if (globalShellSettings.pipefail && result.code !== 0) {
-    const error = new Error(
-      `Pipeline command '${commandStr}' failed with exit code ${result.code}`
-    );
-    error.code = result.code;
-    throw error;
-  }
-
-  if (isLastCommand) {
-    let allStderr = '';
-    if (runner.errChunks?.length > 0) {
-      allStderr = Buffer.concat(runner.errChunks).toString('utf8');
-    }
-    if (result.stderr) {
-      allStderr += result.stderr;
-    }
-    const finalResult = createResult({
-      code: result.code,
-      stdout: result.stdout,
-      stderr: allStderr,
-      stdin: getStdinString(runner.options),
-    });
-    runner.finish(finalResult);
-    throwErrexitError(finalResult, globalShellSettings);
-    return { finalResult };
-  }
-
+  applyVirtualProcessContext(runner, result);
   if (result.stderr && runner.options.capture) {
-    runner.errChunks = runner.errChunks || [];
-    runner.errChunks.push(Buffer.from(result.stderr));
+    collector.stderr += result.stderr;
   }
+  if (last) {
+    await emitVirtualStage(runner, result);
+  }
+  return {
+    stream: createStringStream(result.stdout || ''),
+    code: result.code ?? 0,
+    output: result.stdout || '',
+  };
+}
 
-  return { input: result.stdout };
+function nativePipelineStage(runner, command, input, last, collector, pumps) {
+  const proc = spawnShellCommand(
+    buildCommandParts(command).join(' '),
+    {
+      cwd: effectiveCwd(runner),
+      env: effectiveEnv(runner),
+      stdin: input ? 'pipe' : 'ignore',
+    },
+    runner.options.loginShell
+  );
+  const stop = () =>
+    killChildProcess(
+      proc,
+      runner._cancellationSignal ?? 'SIGTERM',
+      runner.options.killGrace
+    );
+  runner._abortController.signal.addEventListener('abort', stop, {
+    once: true,
+  });
+  proc.exited
+    .finally(() =>
+      runner._abortController.signal.removeEventListener('abort', stop)
+    )
+    .catch(() => {});
+  for (const pump of [
+    pipeStreamToProcess(input, proc),
+    collectStderrAsync(runner, proc, last, collector),
+  ]) {
+    if (pump) {
+      pump.catch(() => {});
+      pumps.push(pump);
+    }
+  }
+  return proc;
 }
 
 /**
@@ -706,181 +440,38 @@ export function attachPipelineMethods(ProcessRunner, deps) {
   // Use module-level helper
   ProcessRunner.prototype._readStreamToString = readStreamToString;
 
-  ProcessRunner.prototype._runStreamingPipelineBun = async function (commands) {
+  ProcessRunner.prototype._runStreamingPipelineBun = function (commands) {
     trace(
       'ProcessRunner',
       () => `_runStreamingPipelineBun | cmds=${commands.length}`
     );
 
-    const analysis = analyzePipeline(
-      commands,
-      isVirtualCommandsEnabled,
-      virtualCommands
-    );
-    if (analysis.hasVirtual) {
-      return this._runMixedStreamingPipeline(commands);
-    }
-    if (commands.some(needsStreamingWorkaround)) {
-      return this._runTeeStreamingPipeline(commands);
-    }
-
-    const processes = [];
-    const collector = { stderr: '' };
-
-    for (let i = 0; i < commands.length; i++) {
-      const command = commands[i];
-      const commandStr = buildCommandParts(command).join(' ');
-      const needsShell = needsShellExecution(commandStr);
-      const spawnArgs = getSpawnArgs(
-        needsShell,
-        command.cmd,
-        command.args,
-        commandStr
-      );
-
-      let stdin;
-      let stdinConfig = null;
-      if (i === 0) {
-        stdinConfig = getFirstCommandStdin(this.options);
-        stdin = stdinConfig.stdin;
-      } else {
-        stdin = processes[i - 1].stdout;
-      }
-
-      const proc = Bun.spawn(spawnArgs, {
-        cwd: this.options.cwd,
-        env: this.options.env,
-        stdin,
-        stdout: 'pipe',
-        stderr: 'pipe',
-      });
-
-      if (stdinConfig?.needsManualStdin && stdinConfig.stdinData) {
-        writeBunStdin(proc, stdinConfig.stdinData);
-      }
-
-      processes.push(proc);
-      collectStderrAsync(this, proc, i === commands.length - 1, collector);
-    }
-
-    const lastProc = processes[processes.length - 1];
-    let finalOutput = '';
-
-    for await (const chunk of lastProc.stdout) {
-      const buf = Buffer.from(chunk);
-      finalOutput += buf.toString();
-      if (this.options.mirror) {
-        safeWrite(process.stdout, buf);
-      }
-      this._emitProcessedData('stdout', buf);
-    }
-
-    const exitCodes = await Promise.all(processes.map((p) => p.exited));
-    checkPipefail(exitCodes, globalShellSettings);
-
-    const result = createResult({
-      code: exitCodes[exitCodes.length - 1] || 0,
-      stdout: finalOutput,
-      stderr: collector.stderr,
-      stdin: getStdinString(this.options),
-    });
-
-    this.finish(result);
-    throwErrexitError(result, globalShellSettings);
-    return result;
-  };
-
-  ProcessRunner.prototype._runTeeStreamingPipeline = async function (commands) {
-    trace(
-      'ProcessRunner',
-      () => `_runTeeStreamingPipeline | cmds=${commands.length}`
-    );
-
-    const processes = [];
-    const collector = { stderr: '' };
-    let currentStream = null;
-
-    for (let i = 0; i < commands.length; i++) {
-      const command = commands[i];
-      const commandStr = buildCommandParts(command).join(' ');
-      const needsShell = needsShellExecution(commandStr);
-      const spawnArgs = getSpawnArgs(
-        needsShell,
-        command.cmd,
-        command.args,
-        commandStr
-      );
-
-      let stdin;
-      let stdinConfig = null;
-      if (i === 0) {
-        stdinConfig = getFirstCommandStdin(this.options);
-        stdin = stdinConfig.stdin;
-      } else {
-        stdin = currentStream;
-      }
-
-      const proc = Bun.spawn(spawnArgs, {
-        cwd: this.options.cwd,
-        env: this.options.env,
-        stdin,
-        stdout: 'pipe',
-        stderr: 'pipe',
-      });
-
-      if (
-        stdinConfig?.needsManualStdin &&
-        stdinConfig.stdinData &&
-        proc.stdin
-      ) {
-        await writeBunStdin(proc, stdinConfig.stdinData);
-      }
-
-      processes.push(proc);
-
-      if (i < commands.length - 1) {
-        const [readStream, pipeStream] = proc.stdout.tee();
-        currentStream = pipeStream;
-        (async () => {
-          for await (const _chunk of readStream) {
-            /* consume */
-          }
-        })();
-      } else {
-        currentStream = proc.stdout;
-      }
-
-      collectStderrAsync(this, proc, i === commands.length - 1, collector);
-    }
-
-    const lastProc = processes[processes.length - 1];
-    let finalOutput = '';
-
-    for await (const chunk of lastProc.stdout) {
-      const buf = Buffer.from(chunk);
-      finalOutput += buf.toString();
-      if (this.options.mirror) {
-        safeWrite(process.stdout, buf);
-      }
-      this._emitProcessedData('stdout', buf);
-    }
-
-    const exitCodes = await Promise.all(processes.map((p) => p.exited));
-    checkPipefail(exitCodes, globalShellSettings);
-
-    const result = createResult({
-      code: exitCodes[exitCodes.length - 1] || 0,
-      stdout: finalOutput,
-      stderr: collector.stderr,
-      stdin: getStdinString(this.options),
-    });
-
-    this.finish(result);
-    throwErrexitError(result, globalShellSettings);
-    return result;
+    return this._runMixedStreamingPipeline(commands);
   };
 
   ProcessRunner.prototype._runMixedStreamingPipeline = async function (
+    commands
+  ) {
+    try {
+      return await this._runMixedStreamingPipelineStages(commands);
+    } catch (error) {
+      // Virtual stages (e.g. `sleep`) reject when kill() aborts them. A killed
+      // pipeline reports the kill signal like a killed single command does,
+      // whether kill() came from the caller, `signal`, or `timeout` (#227).
+      if (!this._cancelled) {
+        throw error;
+      }
+      trace(
+        'ProcessRunner',
+        () => `Pipeline stage rejected after kill: ${error.message}`
+      );
+      // kill() normally finishes the runner itself; finish() returns that
+      // stored result and only builds one when kill() has not done so yet.
+      return this.finish(createCancelledResult(this._cancellationSignal));
+    }
+  };
+
+  ProcessRunner.prototype._runMixedStreamingPipelineStages = async function (
     commands
   ) {
     trace(
@@ -891,144 +482,62 @@ export function attachPipelineMethods(ProcessRunner, deps) {
     let currentInputStream = createInitialInputStream(this.options);
     let finalOutput = '';
     const collector = { stderr: '' };
+    const pumps = [];
+    const stageCodes = [];
 
     for (let i = 0; i < commands.length; i++) {
+      if (this._cancelled) {
+        await currentInputStream?.cancel();
+        break;
+      }
       const command = commands[i];
-      const { cmd, args } = command;
+      const { cmd } = command;
       const isLastCommand = i === commands.length - 1;
 
       if (isVirtualCommandsEnabled() && virtualCommands.has(cmd)) {
-        const handler = virtualCommands.get(cmd);
-        const argValues = getArgValues(args);
-        const inputData = currentInputStream
-          ? await this._readStreamToString(currentInputStream)
-          : '';
-
-        if (handler.constructor.name === 'AsyncGeneratorFunction') {
-          const chunks = [];
-          const self = this;
-          currentInputStream = new ReadableStream({
-            async start(controller) {
-              const { stdin: _, ...opts } = self.options;
-              for await (const chunk of handler({
-                args: argValues,
-                stdin: inputData,
-                ...opts,
-              })) {
-                const data = Buffer.from(chunk);
-                controller.enqueue(data);
-                if (isLastCommand) {
-                  chunks.push(data);
-                  if (self.options.mirror) {
-                    safeWrite(process.stdout, data);
-                  }
-                  self.emit('stdout', data);
-                  self.emit('data', { type: 'stdout', data });
-                }
-              }
-              controller.close();
-              if (isLastCommand) {
-                finalOutput = Buffer.concat(chunks).toString('utf8');
-              }
-            },
-          });
-        } else {
-          const { stdin: _, ...opts } = this.options;
-          const result = await handler({
-            args: argValues,
-            stdin: inputData,
-            ...opts,
-          });
-          const outputData = result.stdout || '';
-          if (isLastCommand) {
-            finalOutput = outputData;
-            const buf = Buffer.from(outputData);
-            if (this.options.mirror) {
-              safeWrite(process.stdout, buf);
-            }
-            this._emitProcessedData('stdout', buf);
-          }
-          currentInputStream = createStringStream(outputData);
-          if (result.stderr) {
-            collector.stderr += result.stderr;
-          }
+        const stage = await virtualPipelineStage(
+          this,
+          virtualCommands.get(cmd),
+          command,
+          currentInputStream,
+          isLastCommand,
+          collector
+        );
+        currentInputStream = stage.stream;
+        stageCodes.push(stage.code);
+        if (isLastCommand) {
+          finalOutput = stage.output;
         }
       } else {
-        const commandStr = buildCommandParts(command).join(' ');
-        const proc = spawnShellCommand(commandStr, {
-          cwd: this.options.cwd,
-          env: this.options.env,
-          stdin: currentInputStream ? 'pipe' : 'ignore',
-        });
-
-        pipeStreamToProcess(currentInputStream, proc);
+        const proc = nativePipelineStage(
+          this,
+          command,
+          currentInputStream,
+          isLastCommand,
+          collector,
+          pumps
+        );
         currentInputStream = proc.stdout;
-        collectStderrAsync(this, proc, isLastCommand, collector);
-
+        stageCodes.push(proc.exited);
         if (isLastCommand) {
           finalOutput = await collectFinalStdout(this, proc);
-          await proc.exited;
         }
       }
     }
 
+    const exitCodes = await Promise.all(stageCodes);
+    await Promise.all(pumps);
+
     const result = createResult({
-      code: 0,
-      stdout: finalOutput,
-      stderr: collector.stderr,
-      stdin: getStdinString(this.options),
+      code: pipelineExitCode(exitCodes, globalShellSettings),
+      stdout: this.options.capture ? finalOutput : undefined,
+      stderr: this.options.capture ? collector.stderr : undefined,
+      stdin: this.options.capture ? getStdinString(this.options) : undefined,
     });
 
     this.finish(result);
+    throwErrexitError(result, globalShellSettings);
     return result;
-  };
-
-  ProcessRunner.prototype._runPipelineNonStreaming = async function (commands) {
-    trace(
-      'ProcessRunner',
-      () => `_runPipelineNonStreaming | cmds=${commands.length}`
-    );
-
-    const currentOutput = '';
-    let currentInput = getStdinString(this.options);
-    const pipelineDeps = { virtualCommands, globalShellSettings };
-
-    for (let i = 0; i < commands.length; i++) {
-      const command = commands[i];
-      const isLastCommand = i === commands.length - 1;
-      const isVirtual =
-        isVirtualCommandsEnabled() && virtualCommands.has(command.cmd);
-
-      try {
-        const handleResult = isVirtual
-          ? await handleVirtualPipelineCommand(
-              this,
-              command,
-              currentInput,
-              isLastCommand,
-              pipelineDeps
-            )
-          : await handleShellPipelineCommand(
-              this,
-              command,
-              currentInput,
-              isLastCommand,
-              pipelineDeps
-            );
-
-        if (handleResult.finalResult) {
-          return handleResult.finalResult;
-        }
-        currentInput = handleResult.input;
-      } catch (error) {
-        return handlePipelineError(
-          this,
-          error,
-          currentOutput,
-          globalShellSettings
-        );
-      }
-    }
   };
 
   ProcessRunner.prototype._runPipeline = function (commands) {
@@ -1070,9 +579,9 @@ export function attachPipelineMethods(ProcessRunner, deps) {
     trace(
       'ProcessRunner',
       () =>
-        `BRANCH: _runPipeline => NODE_NON_STREAMING | ${JSON.stringify({}, null, 2)}`
+        `BRANCH: _runPipeline => NODE_STREAMING | ${JSON.stringify({}, null, 2)}`
     );
-    return this._runPipelineNonStreaming(commands);
+    return this._runMixedStreamingPipeline(commands);
   };
 
   ProcessRunner.prototype._runProgrammaticPipeline = async function (
@@ -1086,7 +595,7 @@ export function attachPipelineMethods(ProcessRunner, deps) {
 
     try {
       trace('ProcessRunner', () => 'Executing source command');
-      const sourceResult = await source;
+      const sourceResult = await source._startAsync();
 
       if (sourceResult.code !== 0) {
         trace(
@@ -1110,7 +619,7 @@ export function attachPipelineMethods(ProcessRunner, deps) {
         stdin: sourceResult.stdout,
       });
 
-      const destResult = await destWithStdin;
+      const destResult = await destWithStdin._startAsync();
 
       trace(
         'ProcessRunner',

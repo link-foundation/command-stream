@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "module": "nodenext",
+    "target": "es2022",
+    "noEmit": true,
+    "skipLibCheck": false,
+    "types": ["node"]
+  }
+}

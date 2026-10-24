@@ -29,7 +29,9 @@ try {
 
   // Cleanup
   const lines = result.stdout?.trim().split('\n') || [];
-  const gistUrl = lines.find((line) => line.includes('gist.github.com'));
+  const gistUrl = lines.find((line) =>
+    line.startsWith('https://gist.github.com/')
+  );
   if (gistUrl) {
     const gistId = gistUrl.split('/').pop();
     await $`gh gist delete ${gistId} --yes`.run({

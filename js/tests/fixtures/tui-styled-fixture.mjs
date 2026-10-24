@@ -10,8 +10,13 @@ process.stdout.write(
   ].join('')
 );
 
+// A finite optional delay reproduces scheduling lag on hosted runners.
+const schedulingDelay = Math.min(
+  Math.max(Number(process.argv[2]) || 0, 0),
+  600
+);
 setTimeout(() => {
   process.stdout.write('\u001b[H\u001b[32msecond\u001b[0m');
-}, 120);
+}, 120 + schedulingDelay);
 
-setTimeout(() => process.exit(0), 180);
+setTimeout(() => process.exit(0), 180 + schedulingDelay);

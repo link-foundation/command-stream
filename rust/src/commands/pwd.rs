@@ -2,16 +2,13 @@
 
 use crate::commands::CommandContext;
 use crate::utils::CommandResult;
-use std::env;
 
 /// Execute the pwd command
 ///
 /// Prints the current working directory.
-pub async fn pwd(_ctx: CommandContext) -> CommandResult {
-    match env::current_dir() {
-        Ok(path) => CommandResult::success(format!("{}\n", path.display())),
-        Err(e) => CommandResult::error(format!("pwd: {}\n", e)),
-    }
+pub async fn pwd(ctx: CommandContext) -> CommandResult {
+    let path = ctx.get_cwd();
+    CommandResult::success(format!("{}\n", path.display()))
 }
 
 #[cfg(test)]

@@ -7,7 +7,7 @@
  * script to prove the output is not merely well-shaped but correct.
  */
 
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { beforeEach, afterEach, describe, expect, test } from 'bun:test';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -15,6 +15,7 @@ import { pathToFileURL } from 'node:url';
 
 import { LinkType } from 'meta-language';
 
+import { beforeTestCleanup, afterTestCleanup } from './test-cleanup.mjs';
 import { $, enableVirtualCommands } from '../src/$.mjs';
 import { formalizeShell, translateShellToMjs } from '../src/fy/index.mjs';
 import { parseShellScript } from '../src/fy/shell-script-parser.mjs';
@@ -22,8 +23,11 @@ import { parseShellScript } from '../src/fy/shell-script-parser.mjs';
 // Other test files call `disableVirtualCommands()` and never re-enable it, so
 // `$fy` has to be re-enabled here or it would fall through to `/bin/sh`.
 beforeEach(() => {
+  beforeTestCleanup();
   enableVirtualCommands();
 });
+
+afterEach(afterTestCleanup);
 
 /** Translates `source` and returns the body without the generated preamble. */
 function body(source) {
@@ -224,21 +228,25 @@ describe('$fy command', () => {
   test('shows usage when given no input', async () => {
     const result = await $`$fy`;
     expect(result.code).toBe(1);
-    expect(result.stderr).toContain('$fy - Convert shell scripts');
-    expect(result.stderr).toContain('Usage:');
+    expect(String(result.stderr)).toContain('$fy - Convert shell scripts');
+    expect(String(result.stderr)).toContain('Usage:');
   });
 
   test('shows help on --help', async () => {
     const result = await $`$fy --help`;
     expect(result.code).toBe(0);
-    expect(result.stdout).toContain('Usage:');
+    expect(String(result.stdout)).toContain('Usage:');
   });
 
   test('translates from stdin', async () => {
-    const result = await $({ stdin: 'cd /tmp && pwd' })`$fy`;
+    const result = await $({ stdin: 'cd /tmp && pwd' })`$fy --structural`;
     expect(result.code).toBe(0);
-    expect(result.stdout).toContain("import { $ } from 'command-stream';");
-    expect(result.stdout).toContain('if ((await $`cd /tmp`).code === 0) {');
+    expect(String(result.stdout)).toContain(
+      "import { $ } from 'command-stream';"
+    );
+    expect(String(result.stdout)).toContain(
+      'if ((await $`cd /tmp`).code === 0) {'
+    );
   });
 
   test('translates a file to stdout and to an output file', async () => {
@@ -248,11 +256,11 @@ describe('$fy command', () => {
       const output = join(directory, 'out.mjs');
       writeFileSync(input, 'echo hello\n');
 
-      const printed = await $`$fy ${input}`;
+      const printed = await $`$fy --structural ${input}`;
       expect(printed.code).toBe(0);
-      expect(printed.stdout).toContain('await $`echo hello`;');
+      expect(String(printed.stdout)).toContain('await $`echo hello`;');
 
-      const written = await $`$fy ${input} ${output}`;
+      const written = await $`$fy --structural ${input} ${output}`;
       expect(written.code).toBe(0);
       expect(readFileSync(output, 'utf8')).toContain('await $`echo hello`;');
     } finally {
@@ -263,7 +271,7 @@ describe('$fy command', () => {
   test('reports a missing input file', async () => {
     const result = await $`$fy /nonexistent/script.sh`;
     expect(result.code).toBe(1);
-    expect(result.stderr).toContain('cannot read');
+    expect(String(result.stderr)).toContain('cannot read');
   });
 });
 
@@ -298,8 +306,8 @@ describe('translated scripts run', () => {
       const fromShell = await $`sh ${shellFile}`;
       const fromModule = await $`bun ${moduleFile}`;
       expect(fromModule.code).toBe(0);
-      expect(fromModule.stdout).toBe(fromShell.stdout);
-      expect(fromShell.stdout.trim().split('\n')).toEqual([
+      expect(String(fromModule.stdout)).toBe(String(fromShell.stdout));
+      expect(String(fromShell.stdout).trim().split('\n')).toEqual([
         'hello world',
         'hello there',
         'yes',

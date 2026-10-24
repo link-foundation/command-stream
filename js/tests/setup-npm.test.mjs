@@ -48,26 +48,33 @@ test(`requires npm ${NPM_MIN_VERSION} or later for OIDC`, () => {
   expect(isSupportedNpmVersion('11.12.1')).toBe(true);
 });
 
-test(`requires Node.js ${NODE_MIN_VERSION} or later`, () => {
+test(`requires npm 12's Node.js ranges, starting at ${NODE_MIN_VERSION}`, () => {
   expect(isSupportedNodeVersion('v22.13.1')).toBe(false);
-  expect(isSupportedNodeVersion('v22.14.0')).toBe(true);
-  expect(isSupportedNodeVersion('v24.0.0')).toBe(true);
+  expect(isSupportedNodeVersion('v22.22.1')).toBe(false);
+  expect(isSupportedNodeVersion('v22.22.2')).toBe(true);
+  expect(isSupportedNodeVersion('v23.0.0')).toBe(false);
+  expect(isSupportedNodeVersion('v24.14.0')).toBe(false);
+  expect(isSupportedNodeVersion('v24.15.0')).toBe(true);
+  expect(isSupportedNodeVersion('v25.0.0')).toBe(false);
+  expect(isSupportedNodeVersion('v26.0.0')).toBe(true);
 });
 
-test('selects the latest npm 11 tarball that satisfies trusted publishing', () => {
+test('selects the latest npm 12 tarball that satisfies trusted publishing', () => {
   const release = selectLatestSupportedNpmRelease(
     makeNpmMetadata([
       '11.4.2',
       '11.5.0',
       '11.5.1',
       '11.6.0-beta.0',
-      '11.10.0',
       '12.0.0',
+      '12.2.0',
+      '12.3.0-beta.0',
+      '13.0.0',
     ])
   );
 
   expect(release).toEqual({
-    version: '11.10.0',
-    tarballUrl: 'https://registry.npmjs.org/npm/-/npm-11.10.0.tgz',
+    version: '12.2.0',
+    tarballUrl: 'https://registry.npmjs.org/npm/-/npm-12.2.0.tgz',
   });
 });

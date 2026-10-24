@@ -1,0 +1,59 @@
+{
+  "note": "Single-run Linux latency probes; not a throughput or memory claim.",
+  "javascript": {
+    "runtime": "v26.10.0",
+    "platform": "linux",
+    "workload": {
+      "chunks": 8,
+      "bytes": 65536,
+      "delay": 5
+    },
+    "observations": [
+      {
+        "mode": "ShellJS buffered",
+        "received": 524288,
+        "code": 0,
+        "firstByteMs": 130.24127,
+        "totalMs": 130.27276899999998
+      },
+      {
+        "mode": "command-stream buffered",
+        "received": 524288,
+        "code": 0,
+        "firstByteMs": 162.92446700000005,
+        "totalMs": 162.932502
+      },
+      {
+        "mode": "command-stream streaming",
+        "received": 524288,
+        "code": 0,
+        "firstByteMs": 69.58850900000004,
+        "totalMs": 136.09662200000002
+      }
+    ]
+  },
+  "rust": {
+    "observations": [
+      {
+        "code": 0,
+        "firstByteMs": 60.836294,
+        "mode": "buffered",
+        "received": 524288,
+        "totalMs": 60.944165
+      },
+      {
+        "code": 0,
+        "firstByteMs": 6.404146,
+        "mode": "streaming",
+        "received": 524288,
+        "totalMs": 54.470108
+      }
+    ],
+    "platform": "linux",
+    "workload": {
+      "bytes": 65536,
+      "chunks": 8,
+      "delay": 5
+    }
+  }
+}

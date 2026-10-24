@@ -79,16 +79,18 @@ async _runSequence(sequence) {
 
 ```javascript
 async _runSubshell(subshell) {
-  // Save current directory
-  const savedCwd = process.cwd();
+  // Save invocation-local context
+  const savedCwd = this._effectiveCwd;
+  const savedEnv = this._effectiveEnv;
 
   try {
     // Execute subshell command
     const result = await this._runSequence(subshell.command);
     return result;
   } finally {
-    // Restore directory
-    process.chdir(savedCwd);
+    // Discard subshell changes
+    this._effectiveCwd = savedCwd;
+    this._effectiveEnv = savedEnv;
   }
 }
 ```
@@ -117,7 +119,7 @@ async _runSimpleCommand(command) {
 After implementation:
 
 1. `cd /tmp && pwd` should output `/tmp`
-2. `cd /tmp` followed by `pwd` should output `/tmp`
+2. `cd /tmp` followed by a separate `pwd` should output the host directory
 3. `(cd /tmp && pwd) ; pwd` should output `/tmp` then original directory
 4. All existing tests should still pass
 

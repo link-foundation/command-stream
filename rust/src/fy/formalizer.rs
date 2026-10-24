@@ -6,7 +6,7 @@
 //! second half — [`super::rules`] plus [`super::engine`] — rewrites that
 //! network into JavaScript purely by substitution rules.
 
-use std::collections::{HashSet, VecDeque};
+use std::collections::HashSet;
 
 use meta_language::language_profile::LanguageProfile;
 use meta_language::link_network::{LinkId, LinkNetwork, LinkType};
@@ -16,16 +16,6 @@ use super::word_expander::expand_word;
 
 /// The language name used for every shell link in the network.
 pub const SHELL_LANGUAGE: &str = "Shell";
-
-/// Term of the nodes used to work around meta-language's fixed-arity insertion
-/// API (see `js/docs/meta-language-gaps.md`). The engine flattens them, so they
-/// are invisible to the rules.
-pub const CHUNK_TERM: &str = "chunk";
-
-/// The largest arity [`LinkNetwork::insert_syntax_node`] is instantiated for
-/// here. `insert_syntax_node` is const-generic and there is no public
-/// dynamic-arity insertion, so wider nodes are chunked.
-const MAX_ARITY: usize = 8;
 
 /// Node terms that carry their own text (materialised as a leading token child).
 const TEXT_BEARING: [&str; 18] = [
@@ -144,56 +134,9 @@ pub fn shell_profile(concepts: &[String]) -> LanguageProfile {
     profile
 }
 
-/// Inserts a syntax node of any arity.
-///
-/// `insert_syntax_node` takes a fixed-size array, so children beyond
-/// [`MAX_ARITY`] are grouped into nested [`CHUNK_TERM`] nodes that the rule
-/// engine flattens again.
+/// Inserts a syntax node whose child count is known at run time.
 fn insert_syntax_node(network: &mut LinkNetwork, term: &str, children: Vec<LinkId>) -> LinkId {
-    if children.len() > MAX_ARITY {
-        let mut queue: VecDeque<LinkId> = children.into();
-        let mut grouped = Vec::new();
-        while !queue.is_empty() {
-            let chunk: Vec<LinkId> = queue.drain(..queue.len().min(MAX_ARITY)).collect();
-            grouped.push(insert_syntax_node(network, CHUNK_TERM, chunk));
-        }
-        return insert_syntax_node(network, term, grouped);
-    }
-
-    // Slots past `count` are never referenced by the inserted node.
-    let mut fixed = [LinkId::from_u64(0); MAX_ARITY];
-    let count = children.len();
-    fixed[..count].copy_from_slice(&children);
-
-    match count {
-        0 => network.insert_syntax_node(SHELL_LANGUAGE, term, []),
-        1 => network.insert_syntax_node(SHELL_LANGUAGE, term, [fixed[0]]),
-        2 => network.insert_syntax_node(SHELL_LANGUAGE, term, [fixed[0], fixed[1]]),
-        3 => network.insert_syntax_node(SHELL_LANGUAGE, term, [fixed[0], fixed[1], fixed[2]]),
-        4 => network.insert_syntax_node(
-            SHELL_LANGUAGE,
-            term,
-            [fixed[0], fixed[1], fixed[2], fixed[3]],
-        ),
-        5 => network.insert_syntax_node(
-            SHELL_LANGUAGE,
-            term,
-            [fixed[0], fixed[1], fixed[2], fixed[3], fixed[4]],
-        ),
-        6 => network.insert_syntax_node(
-            SHELL_LANGUAGE,
-            term,
-            [fixed[0], fixed[1], fixed[2], fixed[3], fixed[4], fixed[5]],
-        ),
-        7 => network.insert_syntax_node(
-            SHELL_LANGUAGE,
-            term,
-            [
-                fixed[0], fixed[1], fixed[2], fixed[3], fixed[4], fixed[5], fixed[6],
-            ],
-        ),
-        _ => network.insert_syntax_node(SHELL_LANGUAGE, term, fixed),
-    }
+    network.insert_dynamic_syntax_node(SHELL_LANGUAGE, term, &children)
 }
 
 /// A formalized shell script.
@@ -260,7 +203,7 @@ mod tests {
     }
 
     #[test]
-    fn chunks_nodes_wider_than_the_fixed_insertion_arity() {
+    fn inserts_nodes_of_dynamic_arity() {
         let commands: String = (0..20)
             .map(|index| format!("echo {index}\n"))
             .collect::<Vec<_>>()
@@ -270,8 +213,8 @@ mod tests {
             .network
             .link(formalization.root)
             .expect("root link exists");
-        // 20 statements do not fit in one fixed-arity node, so they are grouped.
-        assert!(root.references().len() <= MAX_ARITY);
+        // The upstream dynamic API retains the complete ordered child list.
+        assert_eq!(root.references().len(), 20);
         assert!(formalization.terms.contains("command"));
     }
 

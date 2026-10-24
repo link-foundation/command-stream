@@ -1,0 +1,155 @@
+{
+  "source": "test/js/bun/shell/yield.test.ts",
+  "units": [
+    {
+      "line": 11,
+      "upstream": "doesn't stackoverflow",
+      "disposition": "case",
+      "note": "upstream interpolates a JS array of 10000 \"a\" strings (each element becomes its own argument); encoded compactly as a raw value of 10000 space-separated words, which yields the same 10000 arguments to echo",
+      "cases": [
+        {
+          "id": "yield/echo-10000-args-to-file",
+          "template": ["echo -n ", " > myfile.txt"],
+          "values": [
+            {
+              "raw": {
+                "repeat": "a ",
+                "count": 10000
+              }
+            }
+          ],
+          "expect": {
+            "files": {
+              "myfile.txt": {
+                "concat": [
+                  {
+                    "repeat": "a ",
+                    "count": 9999
+                  },
+                  "a"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 49,
+      "upstream": "synchronous write errors in nested command substitutions",
+      "disposition": "case",
+      "note": "test.if(isLinux): /dev/full makes write(2) fail with ENOSPC synchronously; upstream runs it in a bun subprocess and checks stdout/exitCode (re-entrancy guard crash regression)",
+      "cases": [
+        {
+          "id": "yield/dev-full-nested-cmdsubst",
+          "template": [
+            "echo $(echo $(echo $(echo a > /dev/full) > /dev/full) > /dev/full) > /dev/full || echo outer_write_failed"
+          ],
+          "platforms": ["linux"],
+          "expect": {
+            "stdout": "outer_write_failed\n",
+            "exitCode": 0,
+            "stderr": ""
+          }
+        }
+      ]
+    },
+    {
+      "line": 59,
+      "upstream": "synchronous write errors in sequential statements",
+      "disposition": "case",
+      "note": "test.if(isLinux); every `|| echo fN` runs only because its /dev/full write failed",
+      "cases": [
+        {
+          "id": "yield/dev-full-sequential",
+          "template": [
+            "echo a > /dev/full || echo f1; echo b > /dev/full || echo f2; echo c > /dev/full || echo f3; echo d > /dev/full || echo f4"
+          ],
+          "platforms": ["linux"],
+          "expect": {
+            "stdout": "f1\nf2\nf3\nf4\n",
+            "exitCode": 0,
+            "stderr": ""
+          }
+        },
+        {
+          "id": "yield/dev-full-echo-fails",
+          "template": ["echo a > /dev/full"],
+          "platforms": ["linux"],
+          "expect": {
+            "stdout": "",
+            "stderr": "",
+            "exitCode": {
+              "not": 0
+            }
+          },
+          "note": "extra: the failing builtin write itself has a non-zero exit (Bun 1.4.2 reports the odd code 65508, i.e. -ENOSPC truncated to u16; the builtin cat path reports 28)"
+        }
+      ]
+    },
+    {
+      "line": 66,
+      "upstream": "builtin cat completing on a synchronous write error leaves the shell usable",
+      "disposition": "case",
+      "note": "test.if(isLinux); upstream runs three sequential $ commands in one bun subprocess with BUN_ENABLE_EXPERIMENTAL_SHELL_BUILTINS=1 (enables the builtin cat; that flag must be in the Bun process env, so here cat may be the external /usr/bin/cat, which prints \"cat: write error: No space left on device\" on stderr, while the builtin cat prints nothing). Each command is one case.",
+      "cases": [
+        {
+          "id": "yield/cat-dev-full-then-fallback",
+          "template": ["echo hello | cat > /dev/full || echo write_failed"],
+          "platforms": ["linux"],
+          "expect": {
+            "stdout": "write_failed\n",
+            "exitCode": 0,
+            "stderr": {
+              "oneOf": [
+                "",
+                {
+                  "contains": "No space left on device"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "yield/cat-dev-full-then-fallback-again",
+          "template": [
+            "echo again | cat > /dev/full || echo write_failed_again"
+          ],
+          "platforms": ["linux"],
+          "expect": {
+            "stdout": "write_failed_again\n",
+            "exitCode": 0,
+            "stderr": {
+              "oneOf": [
+                "",
+                {
+                  "contains": "No space left on device"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "yield/cat-after-write-errors",
+          "template": [
+            "echo hello | cat > /dev/full; echo again | cat > /dev/full; echo next | cat"
+          ],
+          "platforms": ["linux"],
+          "expect": {
+            "stdout": "next\n",
+            "exitCode": 0,
+            "stderr": {
+              "oneOf": [
+                "",
+                {
+                  "contains": "No space left on device"
+                }
+              ]
+            }
+          },
+          "note": "the two failing writes and the final `echo next | cat` in one script: the shell stays usable"
+        }
+      ]
+    }
+  ]
+}

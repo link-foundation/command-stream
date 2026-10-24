@@ -1,0 +1,6 @@
+#!/usr/bin/env command-stream
+// A script with a non-standard extension runs as ESM when --ext is given.
+
+console.log(chalk.yellowBright`Non-standard extension with --ext runs as ESM.`);
+await $`pwd`;
+console.log('__filename =', __filename);

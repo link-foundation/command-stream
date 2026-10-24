@@ -28,14 +28,14 @@ await $`(cd /tmp && pwd)`;
 const result4 = await $`pwd`;
 console.log('pwd after subshell cd:', result4.stdout.trim());
 
-console.log('\nTest 4: Separate cd commands');
+console.log('\nTest 4: Separate cd commands are isolated');
 await $`cd /tmp`;
 const result5 = await $`pwd`;
-console.log('After separate "cd /tmp":', result5.stdout.trim());
+console.log('After separate "cd /tmp" (original):', result5.stdout.trim());
 
 await $`cd /usr`;
 const result6 = await $`pwd`;
-console.log('After separate "cd /usr":', result6.stdout.trim());
+console.log('After separate "cd /usr" (original):', result6.stdout.trim());
 
 // Return to original
 process.chdir(originalCwd);

@@ -1,0 +1,34 @@
+JavaScript runtimes: Node.js 26.11.0, Bun 1.4.2
+Languages: JavaScript Node.js 26.11.0, Bun 1.4.2; Rust 1.98.1 (48a229cea 2026-09-01)
+
+✓ await-result
+✓ result-text
+✓ sync-execution
+✓ exit-codes
+✓ options
+✓ function-api
+✓ cancellation
+✓ async-iteration
+✓ events
+✓ stdin-streaming
+✓ buffers-strings
+✓ mirror-capture
+✓ builtin-catalog
+✓ builtin-filesystem
+✓ builtin-text
+✓ builtin-environment
+✓ virtual-commands
+✓ virtual-context
+✓ virtual-streaming
+✓ pipelines
+✓ redirection
+✓ sequences
+✓ interpolation
+✓ shell-settings
+✓ ansi-utils
+✓ zx-compat
+✓ execa-compat
+✓ shelljs-compat
+✓ native-text
+
+All 29 features are executable in JavaScript and Rust; JavaScript observations match in 2 runtime(s).

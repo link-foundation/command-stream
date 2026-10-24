@@ -29,8 +29,9 @@ test('path interpolation - path already wrapped in single quotes', () => {
   const path = "'/path/to/command'";
   const cmd = $({ mirror: false })`${path} hello`;
 
-  // With the fix, already-quoted paths should be used as-is when they don't contain internal quotes
-  expect(cmd.spec.command).toBe("'/path/to/command' hello");
+  // The quotes are part of the value, so they are escaped like any other
+  // character - the same result "$path" would give in sh (issue #41).
+  expect(cmd.spec.command).toBe("''\\''/path/to/command'\\''' hello");
 });
 
 test('path interpolation - environment variable inheritance works', () => {
@@ -94,19 +95,16 @@ test('path interpolation - command building works correctly', () => {
   expect(cmd.spec.mode).toBe('shell');
 });
 
-test('path interpolation - fixed escaping for simple pre-quoted paths', () => {
-  // This test verifies the fix for excessive escaping of pre-quoted paths
-  // The issue was that paths like "'/path/to/command'" would get double-escaped
-
+test('path interpolation - pre-quoted paths keep their quotes', () => {
+  // Values are never re-interpreted as shell syntax: a path that already
+  // carries quotes keeps them as literal characters (issue #41).
   const preQuotedPath = "'/path/to/command'"; // Already has single quotes
   const cmd = $({ mirror: false })`${preQuotedPath} --version`;
 
-  // Fixed behavior: no excessive escaping for simple pre-quoted paths
   const generated = cmd.spec.command;
-  expect(generated).not.toContain("\\'"); // Should NOT contain escaped quotes
-  expect(generated).toBe("'/path/to/command' --version"); // Should use path as-is
+  expect(generated).toBe("''\\''/path/to/command'\\''' --version");
 
-  // The generated command should be valid shell syntax
+  // The generated command is still valid shell syntax.
   expect(generated).toMatch(/^'.*' --version$/);
 });
 
@@ -142,16 +140,12 @@ test('path interpolation - environment variable scenario from GitHub issue', () 
   }
 });
 
-test('path interpolation - improved handling of pre-quoted paths', () => {
-  // Test that the improved quoting logic handles pre-quoted paths better
+test('path interpolation - pre-quoted paths are one literal argument', () => {
   const preQuotedPath = "'/path/to/claude'"; // Already has single quotes
   const cmd = $({ mirror: false })`${preQuotedPath} --version`;
 
-  // With the fix, already-quoted paths should be used as-is when they don't contain internal quotes
-  expect(cmd.spec.command).toBe("'/path/to/claude' --version");
-
-  // Should not contain excessive escaping
-  expect(cmd.spec.command).not.toContain("\\'");
+  // Quote characters are data, so they survive into the argument itself.
+  expect(cmd.spec.command).toBe("''\\''/path/to/claude'\\''' --version");
   expect(cmd.spec.mode).toBe('shell');
 });
 
@@ -164,10 +158,10 @@ test('path interpolation - handles complex quoting edge cases', () => {
   // This should still use escaping because it has internal quotes
   expect(cmd1.spec.command).toContain("\\'");
 
-  // Case 2: Empty quotes should be handled
+  // Case 2: Empty quotes are two literal quote characters
   const emptyQuoted = "''";
   const cmd2 = $({ mirror: false })`echo ${emptyQuoted}`;
-  expect(cmd2.spec.command).toBe("echo ''");
+  expect(cmd2.spec.command).toBe("echo ''\\'''\\'''");
 
   // Case 3: Just quotes with no content
   const justQuotes = "'";
@@ -299,10 +293,10 @@ test('double-quoting prevention - user quotes with spaces', () => {
   // User quotes a path that actually needs quotes (has spaces)
   const pathWithSpaces = '/path with spaces/cmd';
 
-  // User provides single quotes
+  // User provides single quotes - they become part of the argument
   const singleQuoted = `'${pathWithSpaces}'`;
   const cmd1 = $({ mirror: false })`${singleQuoted} --test`;
-  expect(cmd1.spec.command).toBe("'/path with spaces/cmd' --test");
+  expect(cmd1.spec.command).toBe("''\\''/path with spaces/cmd'\\''' --test");
 
   // User provides double quotes
   const doubleQuoted = `"${pathWithSpaces}"`;
@@ -314,10 +308,10 @@ test('double-quoting prevention - user quotes with special chars', () => {
   // User quotes a string with special characters
   const dangerous = 'test; echo INJECTED';
 
-  // User provides single quotes
+  // User provides single quotes - the value stays a single literal argument
   const singleQuoted = `'${dangerous}'`;
   const cmd1 = $({ mirror: false })`echo ${singleQuoted}`;
-  expect(cmd1.spec.command).toBe("echo 'test; echo INJECTED'");
+  expect(cmd1.spec.command).toBe("echo ''\\''test; echo INJECTED'\\'''");
 
   // User provides double quotes
   const doubleQuoted = `"${dangerous}"`;
@@ -329,10 +323,10 @@ test('double-quoting prevention - user unnecessarily quotes safe strings', () =>
   // User quotes a safe string that doesn't need quotes
   const safe = 'hello';
 
-  // User provides single quotes (unnecessary)
+  // User provides single quotes (unnecessary) - echo prints them
   const singleQuoted = `'${safe}'`;
   const cmd1 = $({ mirror: false })`echo ${singleQuoted}`;
-  expect(cmd1.spec.command).toBe("echo 'hello'");
+  expect(cmd1.spec.command).toBe("echo ''\\''hello'\\'''");
 
   // User provides double quotes (unnecessary)
   const doubleQuoted = `"${safe}"`;
@@ -345,7 +339,7 @@ test('double-quoting prevention - mixed scenarios', () => {
     {
       desc: 'Already single-quoted safe string',
       input: "'safe'",
-      expected: "echo 'safe'",
+      expected: "echo ''\\''safe'\\'''",
     },
     {
       desc: 'Already double-quoted safe string',
@@ -355,7 +349,7 @@ test('double-quoting prevention - mixed scenarios', () => {
     {
       desc: 'Already single-quoted dangerous string',
       input: "'rm -rf /'",
-      expected: "echo 'rm -rf /'",
+      expected: "echo ''\\''rm -rf /'\\'''",
     },
     {
       desc: 'Already double-quoted dangerous string',
@@ -365,7 +359,7 @@ test('double-quoting prevention - mixed scenarios', () => {
     {
       desc: 'Single-quoted path with spaces',
       input: "'/usr/local bin/app'",
-      expected: "echo '/usr/local bin/app'",
+      expected: "echo ''\\''/usr/local bin/app'\\'''",
     },
     {
       desc: 'Double-quoted path with spaces',

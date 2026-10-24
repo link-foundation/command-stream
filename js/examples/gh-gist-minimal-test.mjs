@@ -26,7 +26,7 @@ try {
 
   // Extract gist ID and delete it
   const gistUrl = result.stdout?.trim();
-  if (gistUrl && gistUrl.includes('gist.github.com')) {
+  if (gistUrl && gistUrl.startsWith('https://gist.github.com/')) {
     const gistId = gistUrl.split('/').pop();
     console.log('- Gist ID:', gistId);
 
@@ -64,7 +64,7 @@ try {
 
   // Extract gist ID and delete it
   const gistUrl = result.stdout?.trim();
-  if (gistUrl && gistUrl.includes('gist.github.com')) {
+  if (gistUrl && gistUrl.startsWith('https://gist.github.com/')) {
     const gistId = gistUrl.split('/').pop();
     console.log('- Gist ID:', gistId);
 

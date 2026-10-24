@@ -1,19 +1,22 @@
 import fs from 'fs';
 import { VirtualUtils } from '../$.utils.mjs';
 
-export default async function test({ args }) {
+export default async function test({ args, cwd }) {
   if (args.length === 0) {
     return { stdout: '', code: 1 };
   }
 
   const operator = args[0];
   const operand = args[1];
+  const resolvedOperand = operand
+    ? VirtualUtils.resolvePath(operand, cwd)
+    : operand;
 
   try {
     switch (operator) {
       case '-e': // File exists
         try {
-          fs.statSync(operand);
+          fs.statSync(resolvedOperand);
           return { stdout: '', code: 0 };
         } catch {
           return { stdout: '', code: 1 };
@@ -21,7 +24,7 @@ export default async function test({ args }) {
 
       case '-f': // Regular file
         try {
-          const stats = fs.statSync(operand);
+          const stats = fs.statSync(resolvedOperand);
           return { stdout: '', code: stats.isFile() ? 0 : 1 };
         } catch {
           return { stdout: '', code: 1 };
@@ -29,7 +32,7 @@ export default async function test({ args }) {
 
       case '-d': // Directory
         try {
-          const stats = fs.statSync(operand);
+          const stats = fs.statSync(resolvedOperand);
           return { stdout: '', code: stats.isDirectory() ? 0 : 1 };
         } catch {
           return { stdout: '', code: 1 };
@@ -37,7 +40,7 @@ export default async function test({ args }) {
 
       case '-s': // File exists and not empty
         try {
-          const stats = fs.statSync(operand);
+          const stats = fs.statSync(resolvedOperand);
           return { stdout: '', code: stats.size > 0 ? 0 : 1 };
         } catch {
           return { stdout: '', code: 1 };

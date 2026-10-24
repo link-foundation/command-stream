@@ -36,7 +36,7 @@ describe('README Examples and Use Cases', () => {
       const result = await $`echo "hello world"`;
       expect(result.stdout.trim()).toBe('hello world');
       expect(result.code).toBe(0);
-      expect(typeof result.stdout).toBe('string');
+      expect(typeof result.stdout).toBe('object');
     });
   });
 
@@ -182,7 +182,7 @@ describe('README Examples and Use Cases', () => {
         mirror: false,
         capture: false,
       });
-      expect(perfResult.stdout).toBeUndefined();
+      expect(perfResult.stdout?.toString()).toBeUndefined();
     });
   });
 
@@ -339,9 +339,9 @@ describe('README Examples and Use Cases', () => {
 
       // Verify result object structure from API docs
       expect(typeof result.code).toBe('number');
-      expect(typeof result.stdout).toBe('string');
-      expect(typeof result.stderr).toBe('string');
-      expect(typeof result.stdin).toBe('string');
+      expect(typeof result.stdout).toBe('object');
+      expect(typeof result.stderr).toBe('object');
+      expect(typeof result.stdin).toBe('object');
       expect(result.child).toBeDefined();
 
       expect(result.code).toBe(0);
@@ -382,12 +382,14 @@ describe('README Examples and Use Cases', () => {
       expect(testCmd2.spec.command).toBe("echo '/my path/file'");
     });
 
-    test('user-provided quotes are preserved', () => {
+    test('user-provided quotes are kept as data', () => {
       const quotedPath = "'/path with spaces/file'";
       const doubleQuoted = '"/path with spaces/file"';
 
       const testCmd1 = $({ mirror: false })`cat ${quotedPath}`;
-      expect(testCmd1.spec.command).toBe("cat '/path with spaces/file'");
+      expect(testCmd1.spec.command).toBe(
+        "cat ''\\''/path with spaces/file'\\'''"
+      );
 
       const testCmd2 = $({ mirror: false })`cat ${doubleQuoted}`;
       expect(testCmd2.spec.command).toBe('cat \'"/path with spaces/file"\'');

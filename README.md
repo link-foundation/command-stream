@@ -13,10 +13,30 @@ language implementations:
 - [Rust crate](./rust/README.md): Rust library and binary published to crates.io
   as `command-stream`.
 
+The [ShellJS migration guide](./js/docs/SHELLJS_MIGRATION.md) covers the pinned
+JavaScript compatibility API, Rust session API, and 26 native built-in commands.
+
 Both implementations focus on shell-like command execution, real-time output
-handling, pipeline support, and cross-platform behavior. Language-specific API
+handling, pipeline support, and cross-platform behavior. Both also include a
+zx-compatible API (`command-stream/zx` and `$.zx` in JavaScript,
+`command_stream::zx` in Rust); see the
+[zx migration guide](./js/docs/ZX_MIGRATION.md). The isolated [Execa API](./js/docs/EXECA_MIGRATION.md) is available as
+`command-stream/execa` and `$.execa` in JavaScript, with portable process
+counterparts in `command_stream::execa` and the Rust crate root. Language-specific API
 examples, package-manager instructions, release notes, and best practices live
 with each package.
+
+## Feature Guide
+
+The [generated feature guide](./docs/README.md) runs every documented feature
+in JavaScript and Rust and captures its real output. JavaScript examples are
+also compared across Node.js and Bun. The same catalog powers the searchable
+[feature website](https://link-foundation.github.io/command-stream/), which is
+verified and deployed by GitHub Actions.
+
+The [stream processing guide](./docs/stream-processing-guide.md) covers both
+languages, deadline batching, backpressure, live analytics, and comparisons
+with existing streaming APIs.
 
 ## Repository Layout
 
@@ -24,7 +44,7 @@ with each package.
 | ---------- | ---------------------------------------------------------- |
 | `js/`      | JavaScript package source, tests, docs, and CI/CD scripts. |
 | `rust/`    | Rust crate source, tests, docs, and CI/CD scripts.         |
-| `docs/`    | Repository-level investigations and case studies.          |
+| `docs/`    | Generated feature guide, website, and case studies.        |
 | `.github/` | GitHub workflow definitions and deployment notes.          |
 
 ## Releases
@@ -38,7 +58,32 @@ JavaScript and Rust releases are independent:
 
 ## Development
 
-Run language-specific checks from the language folders:
+The [interactive development guide](./js/docs/INTERACTIVE-DEVELOPMENT.md) covers
+JavaScript and Rust REPLs, complete library access, and watch/restart commands.
+
+Both maintained language implementations carry pinned, executable competitor
+compatibility corpora with explicit missing-feature ledgers:
+
+- [JavaScript competitor test audit](./js/docs/COMPETITOR_TEST_AUDIT.md)
+- [Rust competitor test audit](./rust/docs/COMPETITOR_TEST_AUDIT.md)
+
+Run the focused suites with `bun run test:competitors` in `js/` and
+`cargo test --test competitor_compatibility` in `rust/`.
+
+The benchmark playgrounds provide measured process, package-footprint,
+feature-coverage, and deterministic real-world comparisons for both maintained
+implementations:
+
+- [JavaScript benchmarks](./js/benchmarks/README.md): Execa, cross-spawn,
+  ShellJS, zx, and Bun Shell. Run `bun run benchmark:smoke` from `js/`.
+- [Rust benchmarks](./rust/benchmarks/README.md): `std::process`, Tokio process,
+  async-process, duct, subprocess, and xshell. Run the documented Cargo smoke
+  command from `rust/`.
+
+CI runs both suites and the language parity check prevents benchmark changes in
+only one implementation unless maintainers explicitly apply `parity-exempt`.
+
+Run all language-specific checks from the language folders:
 
 ```bash
 cd js
@@ -53,6 +98,23 @@ cargo fmt --all -- --check
 cargo clippy --all-targets --all-features
 cargo test --all-features
 ```
+
+Check dependency freshness from the repository root:
+
+```bash
+bun scripts/check-dependencies.mjs
+```
+
+CI compares all package, benchmark, release-script, and pinned CI-tool
+dependencies with the registries' latest stable releases, runs `npm outdated`,
+and rejects pending compatible updates in both Rust lockfiles. A Rust
+dependency may carry a blocker comment on its manifest line, for example
+`# https://github.com/owner/repo/issues/123: explanation`. Since JSON has no
+comments, an npm package's blocker goes in `js/dependency-blockers.json` as
+`"name": "https://github.com/owner/repo/issues/123: explanation"`. The
+referenced issue must remain open; closed issues and lookup failures fail the
+check. The policy
+also runs weekly so new releases are detected between repository changes.
 
 ## License
 

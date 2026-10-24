@@ -1,0 +1,85 @@
+--- rust-template/scripts/create-changelog-fragment.rs
++++ rust/scripts/create-changelog-fragment.rs
+@@ -9,15 +9,13 @@
+ //! ```cargo
+ //! [dependencies]
+ //! chrono = "0.4"
+-//! getrandom = "0.2"
+ //! ```
+ 
+-use chrono::Utc;
+-use getrandom::getrandom;
+ use std::env;
+ use std::fs;
+ use std::path::Path;
+ use std::process::exit;
++use chrono::Utc;
+ 
+ fn get_arg(name: &str) -> Option<String> {
+     let args: Vec<String> = env::args().collect();
+@@ -74,40 +72,13 @@
+     Utc::now().format("%Y%m%d%H%M%S").to_string()
+ }
+ 
+-fn generate_stop_commands_token() -> Result<String, String> {
+-    let mut bytes = [0_u8; 16];
+-    getrandom(&mut bytes)
+-        .map_err(|error| format!("could not generate a stop-commands token: {error}"))?;
+-    Ok(bytes.iter().map(|byte| format!("{byte:02x}")).collect())
+-}
+-
+-/// Print operator-controlled text without allowing legacy `##[...]` or modern
+-/// `::...::` command syntax inside it to be interpreted by the Actions runner.
+-fn print_fragment_content(fragment_content: &str) -> Result<(), String> {
+-    if env::var_os("GITHUB_ACTIONS").is_some() {
+-        let token = generate_stop_commands_token()?;
+-        println!("::stop-commands::{token}");
+-        print!("{fragment_content}");
+-        if !fragment_content.ends_with('\n') {
+-            println!();
+-        }
+-        println!("::{token}::");
+-    } else {
+-        print!("{fragment_content}");
+-    }
+-    Ok(())
+-}
+-
+ fn main() {
+     let bump_type = get_arg("bump-type").unwrap_or_else(|| "patch".to_string());
+     let description = get_arg("description");
+ 
+     // Validate bump type
+     if !["major", "minor", "patch"].contains(&bump_type.as_str()) {
+-        eprintln!(
+-            "Invalid bump type: {}. Must be major, minor, or patch.",
+-            bump_type
+-        );
++        eprintln!("Invalid bump type: {}. Must be major, minor, or patch.", bump_type);
+         exit(1);
+     }
+ 
+@@ -144,22 +115,5 @@
+     println!("Created changelog fragment: {}", fragment_file);
+     println!();
+     println!("Content:");
+-    if let Err(error) = print_fragment_content(&fragment_content) {
+-        eprintln!("Error printing fragment safely: {error}");
+-        exit(1);
+-    }
++    println!("{}", fragment_content);
+ }
+-
+-#[cfg(test)]
+-mod tests {
+-    use super::*;
+-
+-    #[test]
+-    fn stop_commands_tokens_are_random_128_bit_hex_values() {
+-        let first = generate_stop_commands_token().unwrap();
+-        let second = generate_stop_commands_token().unwrap();
+-        assert_eq!(first.len(), 32);
+-        assert!(first.bytes().all(|byte| byte.is_ascii_hexdigit()));
+-        assert_ne!(first, second);
+-    }
+-}

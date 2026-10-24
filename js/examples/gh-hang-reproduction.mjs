@@ -36,7 +36,7 @@ try {
   console.log('Stderr content:', result.stderr?.trim());
 
   // Clean up gist if created
-  if (result.stdout && result.stdout.includes('gist.github.com')) {
+  if (/^https:\/\/gist\.github\.com\//m.test(result.stdout ?? '')) {
     const gistId = result.stdout.trim().split('/').pop();
     await $`gh gist delete ${gistId} --yes`.run({
       capture: true,
@@ -84,7 +84,9 @@ try {
 
   // Extract URL from output
   const lines = result.stdout.trim().split('\n');
-  const gistUrl = lines.find((line) => line.includes('gist.github.com'));
+  const gistUrl = lines.find((line) =>
+    line.startsWith('https://gist.github.com/')
+  );
 
   if (gistUrl) {
     const gistId = gistUrl.split('/').pop();
@@ -124,7 +126,7 @@ try {
   console.log('Stdout captured:', result.stdout?.trim());
 
   // Clean up
-  if (result.stdout && result.stdout.includes('gist.github.com')) {
+  if (/^https:\/\/gist\.github\.com\//m.test(result.stdout ?? '')) {
     const gistId = result.stdout.trim().split('/').pop();
     await $`gh gist delete ${gistId} --yes`.run({
       capture: true,

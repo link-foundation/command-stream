@@ -98,7 +98,8 @@ export async function beforeTestCleanup() {
       }
     } catch (_e) {
       throw new Error(
-        `[test-cleanup] CRITICAL: Cannot restore to original directory ${originalCwd}, stuck in ${finalCwd}`
+        `[test-cleanup] CRITICAL: Cannot restore to original directory ${originalCwd}, stuck in ${finalCwd}`,
+        { cause: _e }
       );
     }
   }
@@ -172,7 +173,8 @@ export async function afterTestCleanup() {
       }
     } catch (_e) {
       throw new Error(
-        `[test-cleanup] CRITICAL: Cannot restore to original directory ${originalCwd} in afterEach, stuck in ${finalCwd}`
+        `[test-cleanup] CRITICAL: Cannot restore to original directory ${originalCwd} in afterEach, stuck in ${finalCwd}`,
+        { cause: _e }
       );
     }
   }

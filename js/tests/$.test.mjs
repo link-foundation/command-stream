@@ -186,8 +186,10 @@ describe('Utility Functions', () => {
       expect(quote(true)).toBe('true'); // Safe boolean string, no quotes needed
     });
 
-    test('should preserve user-provided quotes', () => {
-      expect(quote("'already quoted'")).toBe("'already quoted'");
+    test('should treat user-provided quotes as data', () => {
+      // Quote characters in a value are literal data, exactly like "$var" in
+      // sh - they never quote the value itself (issue #41).
+      expect(quote("'already quoted'")).toBe("''\\''already quoted'\\'''");
       expect(quote('"double quoted"')).toBe('\'"double quoted"\'');
     });
   });
@@ -263,7 +265,7 @@ describe('ProcessRunner - Classic Await Pattern', () => {
 
     expect(result.code).toBe(0);
     expect(result.stdout.trim()).toBe('hello world');
-    expect(result.stderr).toBe('');
+    expect(result.stderr?.toString()).toBe('');
   });
 
   test('should handle command with non-zero exit', async () => {
@@ -324,9 +326,8 @@ describe('ProcessRunner - Classic Await Pattern', () => {
     const dangerous = "'; rm -rf /; echo '";
     const result = await $`echo ${dangerous}`;
 
-    // The dangerous string is safely quoted, so the echo outputs it without the outer quotes
-    // Single quotes in the output are handled by shell
-    expect(result.stdout.trim()).toBe('; rm -rf /; echo');
+    // The whole value reaches echo as one literal argument, quotes included.
+    expect(result.stdout.trim()).toBe(dangerous);
   });
 });
 
@@ -455,7 +456,7 @@ describe('ProcessRunner - Mixed Pattern', () => {
     expect(eventCount).toBeGreaterThan(0);
     expect(eventData.trim()).toBe('mixed test');
     expect(result.stdout.trim()).toBe('mixed test');
-    expect(eventData).toBe(result.stdout);
+    expect(eventData).toBe(result.stdout.toString());
   });
 });
 
@@ -516,7 +517,7 @@ describe('Public APIs', () => {
       const result = await exec('pwd');
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toBeTruthy();
+      expect(result.stdout?.toString()).toBeTruthy();
     });
   });
 
@@ -585,7 +586,7 @@ describe('Error Handling and Edge Cases', () => {
     const result = await $`true`;
 
     expect(result.code).toBe(0);
-    expect(result.stdout).toBe('');
+    expect(result.stdout?.toString()).toBe('');
   });
 
   test('should handle stdin options', async () => {
@@ -615,7 +616,7 @@ describe('ProcessRunner Options', () => {
     );
 
     const result = await process;
-    expect(result.stdout).toBeUndefined();
+    expect(result.stdout?.toString()).toBeUndefined();
   });
 
   // Skip on Windows - uses 'pwd' command

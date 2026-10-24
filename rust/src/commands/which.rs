@@ -6,7 +6,8 @@ use crate::utils::{CommandResult, VirtualUtils};
 /// List of virtual (shell builtin) commands
 const VIRTUAL_COMMANDS: &[&str] = &[
     "echo", "pwd", "cd", "true", "false", "sleep", "cat", "ls", "mkdir", "rm", "touch", "cp", "mv",
-    "basename", "dirname", "env", "exit", "which", "yes", "seq", "test", "$fy",
+    "basename", "dirname", "env", "exit", "which", "yes", "seq", "tee", "test", "head", "tail",
+    "sort", "uniq", "$fy",
 ];
 
 /// Execute the which command
@@ -44,18 +45,10 @@ pub async fn which(ctx: CommandContext) -> CommandResult {
     }
 
     if output.is_empty() {
-        CommandResult {
-            stdout: String::new(),
-            stderr: errors,
-            code: 1,
-        }
+        CommandResult::new("", errors, 1)
     } else if !found_all {
         // Some commands found, some not
-        CommandResult {
-            stdout: output,
-            stderr: errors,
-            code: 1,
-        }
+        CommandResult::new(output, errors, 1)
     } else {
         CommandResult::success(output)
     }

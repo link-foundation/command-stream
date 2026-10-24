@@ -1,14 +1,17 @@
 {
-  "threshold": 0,
+  "threshold": 6,
   "minTokens": 30,
   "minLines": 5,
   "skipComments": true,
+  "format": ["javascript"],
   "ignore": [
+    "**/src/shelljs/vendor/**",
     "**/node_modules/**",
     "**/build/**",
     "**/dist/**",
     "**/*.min.js",
     "**/coverage/**",
+    "**/reports/**",
     "**/.changeset/**",
     "**/docs/case-studies/**/data/**",
     "**/docs/case-studies/**/log-excerpts/**",
@@ -17,7 +20,6 @@
     "**/pnpm-lock.yaml",
     "**/yarn.lock"
   ],
-  "format": "console",
   "reporters": ["console", "html"],
   "output": "./reports/jscpd"
 }

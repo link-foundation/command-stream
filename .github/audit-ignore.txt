@@ -1,0 +1,16 @@
+# Advisories the npm and bun lockfile audits (security.yml) skip.
+#
+# One GHSA ID per line; text after `#` is the reason. Only list an advisory
+# that has no patched release to move to, record why it cannot be reached
+# or how it is mitigated in the published package, and remove the line once a
+# fix ships: the npm audit job warns when an entry no longer matches anything.
+
+# braces <= 3.0.3: stack exhaustion on deeply nested brace patterns. No patched
+# version exists (3.0.3 is the latest release). Dev tooling (@changesets/cli and
+# jscpd via micromatch) and the pinned upstream ShellJS reference use this tree
+# only in development. Published ShellJS compatibility uses bundled commands,
+# declarations and dependency-free globbing. No production dependency resolves
+# braces; packed consumer installations are audited separately without exceptions.
+# Dependency review uses this same single advisory exception in security.yml.
+# Remove this development-only exception when a patched release ships.
+GHSA-vfj7-8cjw-p6xm

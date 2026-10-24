@@ -34,10 +34,10 @@
 //!
 //! ```cargo
 //! [dependencies]
-//! regex = "1"
-//! ureq = "2"
-//! serde = { version = "1", features = ["derive"] }
-//! serde_json = "1"
+//! regex = "1.13.1"
+//! ureq = "3.5.0"
+//! serde = { version = "1.0.229", features = ["derive"] }
+//! serde_json = "1.0.154"
 //! ```
 
 use serde::Deserialize;
@@ -104,23 +104,24 @@ fn check_version_on_crates_io(crate_name: &str, version: &str) -> bool {
     let url = format!("https://crates.io/api/v1/crates/{}/{}", crate_name, version);
 
     match ureq::get(&url)
-        .set("User-Agent", "rust-script-check-release")
+        .header("User-Agent", "rust-script-check-release")
         .call()
     {
-        Ok(response) => {
+        Ok(mut response) => {
             if response.status() == 200 {
-                if let Ok(body) = response.into_string() {
+                if let Ok(body) = response.body_mut().read_to_string() {
                     if let Ok(data) = serde_json::from_str::<CratesIoVersion>(&body) {
                         return data.version.is_some();
                     }
                 }
             }
-            false
+            eprintln!("::error::Invalid crates.io version metadata");
+            exit(1)
         }
-        Err(ureq::Error::Status(404, _)) => false,
+        Err(ureq::Error::StatusCode(404)) => false,
         Err(e) => {
-            eprintln!("Warning: Could not check crates.io: {}", e);
-            false
+            eprintln!("::error::crates.io availability is unknown: {}", e);
+            exit(1)
         }
     }
 }
@@ -152,11 +153,11 @@ fn check_docker_hub_tag(image: &str, version: &str) -> bool {
     );
 
     match ureq::get(&url)
-        .set("User-Agent", "rust-script-check-release")
+        .header("User-Agent", "rust-script-check-release")
         .call()
     {
         Ok(response) => response.status() == 200,
-        Err(ureq::Error::Status(404, _)) => false,
+        Err(ureq::Error::StatusCode(404)) => false,
         Err(e) => {
             eprintln!("Warning: Could not check Docker Hub tag: {}", e);
             false
@@ -171,19 +172,19 @@ fn check_github_release(repository: &str, tag_prefix: &str, version: &str) -> bo
     );
 
     let mut request = ureq::get(&url)
-        .set("User-Agent", "rust-script-check-release")
-        .set("Accept", "application/vnd.github+json");
+        .header("User-Agent", "rust-script-check-release")
+        .header("Accept", "application/vnd.github+json");
 
     if let Ok(token) = env::var("GITHUB_TOKEN") {
         if !token.is_empty() {
             let auth_header = format!("Bearer {}", token);
-            request = request.set("Authorization", &auth_header);
+            request = request.header("Authorization", &auth_header);
         }
     }
 
     match request.call() {
         Ok(response) => response.status() == 200,
-        Err(ureq::Error::Status(404, _)) => false,
+        Err(ureq::Error::StatusCode(404)) => false,
         Err(e) => {
             eprintln!("Warning: Could not check GitHub release: {}", e);
             false
@@ -223,12 +224,12 @@ fn get_max_published_version(crate_name: &str) -> Option<String> {
     let url = format!("https://crates.io/api/v1/crates/{}", crate_name);
 
     match ureq::get(&url)
-        .set("User-Agent", "rust-script-check-release")
+        .header("User-Agent", "rust-script-check-release")
         .call()
     {
-        Ok(response) => {
+        Ok(mut response) => {
             if response.status() == 200 {
-                if let Ok(body) = response.into_string() {
+                if let Ok(body) = response.body_mut().read_to_string() {
                     if let Ok(data) = serde_json::from_str::<CratesIoCrate>(&body) {
                         if let Some(versions) = data.versions {
                             let mut max_version: Option<(u32, u32, u32, String)> = None;
@@ -260,12 +261,13 @@ fn get_max_published_version(crate_name: &str) -> Option<String> {
                     }
                 }
             }
-            None
+            eprintln!("::error::Invalid crates.io package metadata");
+            exit(1)
         }
-        Err(ureq::Error::Status(404, _)) => None,
+        Err(ureq::Error::StatusCode(404)) => None,
         Err(e) => {
-            eprintln!("Warning: Could not query crates.io for versions: {}", e);
-            None
+            eprintln!("::error::crates.io versions are unknown: {}", e);
+            exit(1)
         }
     }
 }
@@ -361,7 +363,9 @@ fn main() {
                 image, dockerhub_published
             );
         } else {
-            println!("Docker Hub artifact check skipped: DOCKERHUB_IMAGE or Dockerfile is not configured");
+            println!(
+                "Docker Hub artifact check skipped: DOCKERHUB_IMAGE or Dockerfile is not configured"
+            );
         }
         println!(
             "GitHub release {}{} published: {}",

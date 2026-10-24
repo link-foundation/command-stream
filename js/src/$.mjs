@@ -1,3 +1,5 @@
+import shelljs from './shelljs/index.mjs';
+import * as publicApi from './$.mjs';
 // command-stream - A unified shell command execution library
 // Main entry point - integrates all ProcessRunner modules
 
@@ -5,13 +7,22 @@ import { trace } from './$.trace.mjs';
 import {
   globalShellSettings,
   virtualCommands,
-  isVirtualCommandsEnabled,
   enableVirtualCommands as enableVirtualCommandsState,
   disableVirtualCommands as disableVirtualCommandsState,
   forceCleanupAll,
   resetGlobalState,
 } from './$.state.mjs';
-import { buildShellCommand, quote, quoteLiteral, raw } from './$.quote.mjs';
+import {
+  buildShellCommand,
+  isPreQuotedPassthroughEnabled,
+  isQuoteContextEnabled,
+  quote,
+  quoteForContext,
+  quoteLiteral,
+  raw,
+  setPreQuotedPassthroughEnabled,
+  setQuoteContextEnabled,
+} from './$.quote.mjs';
 import {
   AnsiUtils,
   configureAnsi,
@@ -20,36 +31,35 @@ import {
 } from './$.ansi.mjs';
 import {
   captureTerminal,
+  openTerminal,
   readAsciicast,
   unrollTerminalFrames,
 } from './terminal-capture.mjs';
 
-// Import ProcessRunner base and method modules
-import { ProcessRunner } from './$.process-runner-base.mjs';
-import { attachExecutionMethods } from './$.process-runner-execution.mjs';
-import { attachPipelineMethods } from './$.process-runner-pipeline.mjs';
-import { attachOrchestrationMethods } from './$.process-runner-orchestration.mjs';
-import { attachVirtualCommandMethods } from './$.process-runner-virtual.mjs';
-import { attachStreamKillMethods } from './$.process-runner-stream-kill.mjs';
-
-// Create dependencies object for method attachment
-const deps = {
-  virtualCommands,
-  globalShellSettings,
-  isVirtualCommandsEnabled,
-};
-
-// Attach all methods to ProcessRunner prototype using mixin pattern
-attachExecutionMethods(ProcessRunner, deps);
-attachPipelineMethods(ProcessRunner, deps);
-attachOrchestrationMethods(ProcessRunner, deps);
-attachVirtualCommandMethods(ProcessRunner, deps);
-attachStreamKillMethods(ProcessRunner, deps);
-
-trace(
-  'Initialization',
-  () => 'ProcessRunner methods attached via mixin pattern'
-);
+import { ProcessRunner } from './process-runner.mjs';
+import { command, CommandBuilder } from './command-builder.mjs';
+import { fy } from './fy.mjs';
+import { stream, merge, StreamPipeline } from './stream-processing.mjs';
+import { TerminalBuffer } from './terminal-buffer.mjs';
+import {
+  createCommand,
+  extend,
+  inherit,
+  compose,
+  install,
+  marketplace,
+  commandMetadata,
+} from './command-packages.mjs';
+import {
+  startRepl as createRepl,
+  dev as createDev,
+  PipelineDebugger,
+} from './development.mjs';
+import { testing } from './testing.mjs';
+import { startRustRepl } from './rust-repl.mjs';
+import { toStreamResult } from './$.result-streams.mjs';
+import crossSpawn from 'cross-spawn';
+import { createRequire } from 'node:module';
 
 // Public APIs
 async function sh(commandString, options = {}) {
@@ -76,7 +86,7 @@ async function sh(commandString, options = {}) {
     'API',
     () => `sh EXIT | ${JSON.stringify({ code: result.code }, null, 2)}`
   );
-  return result;
+  return toStreamResult(result);
 }
 
 async function exec(file, args = [], options = {}) {
@@ -101,7 +111,7 @@ async function exec(file, args = [], options = {}) {
     'API',
     () => `exec EXIT | ${JSON.stringify({ code: result.code }, null, 2)}`
   );
-  return result;
+  return toStreamResult(result);
 }
 
 // eslint-disable-next-line require-await -- delegates to sh/exec which are async
@@ -135,6 +145,29 @@ async function run(commandOrTokens, options = {}) {
       `BRANCH: run => TOKEN_ARRAY | ${JSON.stringify({ file, argsCount: args.length }, null, 2)}`
   );
   return exec(file, args, { ...options, mirror: false, capture: true });
+}
+
+function detachedSpec(command) {
+  if (typeof command === 'string') {
+    return { mode: 'shell', command };
+  }
+  const [file, args = []] = Array.isArray(command)
+    ? [command[0], command.slice(1)]
+    : [command?.file, command?.args];
+  if (typeof file !== 'string' || file === '') {
+    throw new TypeError(
+      'spawnDetached() needs a command string, an argv array or { file, args }'
+    );
+  }
+  return { mode: 'exec', file, args: [...args] };
+}
+
+// Fire and forget (issue #232): resolves with `{ pid }` once the command has
+// spawned, without waiting for it to exit.
+// eslint-disable-next-line require-await -- async so a bad command rejects
+async function spawnDetached(command, options = {}) {
+  trace('API', () => `spawnDetached ENTER | ${JSON.stringify({ command })}`);
+  return new ProcessRunner(detachedSpec(command), options).spawnDetached();
 }
 
 function $tagged(strings, ...values) {
@@ -209,7 +242,10 @@ function $tagged(strings, ...values) {
   return runner;
 }
 
-function create(defaultOptions = {}) {
+function create(defaultOptions = {}, handler, metadata) {
+  if (typeof defaultOptions === 'string') {
+    return createCommand(defaultOptions, handler, metadata);
+  }
   trace(
     'API',
     () => `create ENTER | ${JSON.stringify({ defaultOptions }, null, 2)}`
@@ -335,6 +371,18 @@ const shell = {
   pipefail: (enable = true) =>
     enable ? set('o pipefail') : unset('o pipefail'),
   nounset: (enable = true) => (enable ? set('u') : unset('u')),
+
+  // Quote-context aware interpolation (on by default). Pass false to restore
+  // the historical behaviour of always single-quoting interpolated values,
+  // or null to follow COMMAND_STREAM_QUOTE_CONTEXT again.
+  quoteContext: (enable = true) => setQuoteContextEnabled(enable),
+
+  // Legacy pre-quoted passthrough (off by default): when enabled, a value that
+  // is already wrapped in matching quotes is spliced in as shell syntax instead
+  // of being treated as literal text. Pass null to follow
+  // COMMAND_STREAM_PREQUOTED_PASSTHROUGH again.
+  preQuotedPassthrough: (enable = true) =>
+    setPreQuotedPassthroughEnabled(enable),
 };
 
 // Virtual command registration API
@@ -344,6 +392,7 @@ function register(name, handler) {
     () => `register ENTER | ${JSON.stringify({ name }, null, 2)}`
   );
   virtualCommands.set(name, handler);
+  commandMetadata.delete(name);
   trace(
     'VirtualCommands',
     () => `register EXIT | ${JSON.stringify({ registered: true }, null, 2)}`
@@ -357,6 +406,7 @@ function unregister(name) {
     () => `unregister ENTER | ${JSON.stringify({ name }, null, 2)}`
   );
   const deleted = virtualCommands.delete(name);
+  commandMetadata.delete(name);
   trace(
     'VirtualCommands',
     () => `unregister EXIT | ${JSON.stringify({ deleted }, null, 2)}`
@@ -398,8 +448,15 @@ import basenameCommand from './commands/$.basename.mjs';
 import dirnameCommand from './commands/$.dirname.mjs';
 import yesCommand from './commands/$.yes.mjs';
 import seqCommand from './commands/$.seq.mjs';
+import teeCommand from './commands/$.tee.mjs';
 import testCommand from './commands/$.test.mjs';
 import fyCommand from './commands/$.$fy.mjs';
+import headCommand from './commands/$.head.mjs';
+import tailCommand from './commands/$.tail.mjs';
+import sortCommand from './commands/$.sort.mjs';
+import uniqCommand from './commands/$.uniq.mjs';
+
+import { $ as bunShell } from './bun-shell/shell.mjs';
 
 // Built-in commands that match Bun.$ functionality
 function registerBuiltins() {
@@ -415,7 +472,7 @@ function registerBuiltins() {
   register('true', trueCommand);
   register('false', falseCommand);
   register('which', createWhichCommand(virtualCommands));
-  register('exit', createExitCommand(globalShellSettings));
+  register('exit', createExitCommand());
   register('env', envCommand);
   register('cat', catCommand);
   register('ls', lsCommand);
@@ -428,11 +485,83 @@ function registerBuiltins() {
   register('dirname', dirnameCommand);
   register('yes', yesCommand);
   register('seq', seqCommand);
+  register('tee', teeCommand);
   register('test', testCommand);
   register('$fy', fyCommand);
+  register('head', headCommand);
+  register('tail', tailCommand);
+  register('sort', sortCommand);
+  register('uniq', uniqCommand);
 }
 
 // Initialize built-in commands
+
+$tagged.spawn = crossSpawn;
+$tagged.command = command;
+$tagged.fy = fy;
+$tagged.stream = stream;
+$tagged.merge = merge;
+$tagged.TerminalBuffer = TerminalBuffer;
+Object.assign($tagged, {
+  create,
+  register,
+  unregister,
+  listCommands,
+  extend,
+  inherit,
+  compose,
+  install,
+  marketplace,
+});
+// Read the namespace when a session starts, after module initialization, so
+// every current and future public export is available in the REPL.
+const startRepl = (options) => createRepl(publicApi, options);
+const dev = (options) => createDev(publicApi, options);
+Object.assign($tagged, {
+  dev,
+  startRepl,
+  startRustRepl,
+  PipelineDebugger,
+  testing,
+});
+Object.defineProperty($tagged, 'shelljs', { get: () => shelljs });
+// `$.bun`: the Bun.$-compatible shell (also `command-stream/bun`).
+$tagged.bun = bunShell;
+
+// `$.zx` is the zx compatibility mode (issue #26): the `$` of
+// `command-stream/zx`. It is loaded on first access through `require(esm)`,
+// like `$.cjs`, so `command-stream` users who never touch it do not pay for
+// the zx layer.
+let compatibilityRequire;
+function requireCompat(specifier) {
+  // HTTP module URLs are not valid createRequire bases. Core CDN imports do
+  // not need this filesystem-backed loader; initialize it only on use.
+  compatibilityRequire ??= createRequire(import.meta.url);
+  return compatibilityRequire(specifier);
+}
+Object.defineProperty($tagged, 'zx', {
+  configurable: true,
+  enumerable: false,
+  get: () => requireCompat('./zx/core.cjs').$,
+});
+
+// The isolated Execa entry is loaded only when this compatibility API is used.
+function execaCompat(options) {
+  trace('ExecaCompat', () => 'Loading the isolated Execa API');
+  return requireCompat('./execa/index.cjs').execaCompat(options);
+}
+
+const execa = (...args) => execaCompat().execa(...args);
+const execaSync = (...args) => execaCompat().execaSync(...args);
+const execaNode = (...args) => execaCompat().execaNode(...args);
+const execaCommand = (...args) => execaCompat().execaCommand(...args);
+const execaCommandSync = (...args) => execaCompat().execaCommandSync(...args);
+
+Object.defineProperties($tagged, {
+  execa: { configurable: true, get: () => execaCompat().execa },
+  execaCompat: { configurable: true, value: execaCompat },
+});
+
 trace('Initialization', () => 'Registering built-in virtual commands');
 registerBuiltins();
 trace(
@@ -441,12 +570,43 @@ trace(
 );
 
 export {
+  startRustRepl,
+  dev,
+  startRepl,
+  PipelineDebugger,
+  testing,
+  extend,
+  inherit,
+  compose,
+  install,
+  marketplace,
+  TerminalBuffer,
+  stream,
+  merge,
+  StreamPipeline,
+  command,
+  CommandBuilder,
+  fy,
+  shelljs,
   $tagged as $,
+  execaCompat,
+  execa,
+  execaSync,
+  execaNode,
+  execaCommand,
+  execaCommandSync,
   sh,
   exec,
+  spawnDetached,
+  crossSpawn as spawn,
   run,
   quote,
+  quoteForContext,
   quoteLiteral,
+  isQuoteContextEnabled,
+  setQuoteContextEnabled,
+  isPreQuotedPassthroughEnabled,
+  setPreQuotedPassthroughEnabled,
   create,
   raw,
   literal,
@@ -466,6 +626,7 @@ export {
   processOutput,
   forceCleanupAll,
   captureTerminal,
+  openTerminal,
   readAsciicast,
   unrollTerminalFrames,
 };

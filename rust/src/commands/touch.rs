@@ -30,8 +30,8 @@ pub async fn touch(ctx: CommandContext) -> CommandResult {
         if resolved_path.exists() {
             // Update modification time
             let now = SystemTime::now();
-            if let Err(e) =
-                filetime::set_file_mtime(&resolved_path, filetime::FileTime::from_system_time(now))
+            if filetime::set_file_mtime(&resolved_path, filetime::FileTime::from_system_time(now))
+                .is_err()
             {
                 // Fallback: try to just open and close the file
                 if let Err(e2) = OpenOptions::new().write(true).open(&resolved_path) {

@@ -25,8 +25,13 @@ import basenameCommand from './commands/$.basename.mjs';
 import dirnameCommand from './commands/$.dirname.mjs';
 import yesCommand from './commands/$.yes.mjs';
 import seqCommand from './commands/$.seq.mjs';
+import teeCommand from './commands/$.tee.mjs';
 import testCommand from './commands/$.test.mjs';
 import fyCommand from './commands/$.$fy.mjs';
+import headCommand from './commands/$.head.mjs';
+import tailCommand from './commands/$.tail.mjs';
+import sortCommand from './commands/$.sort.mjs';
+import uniqCommand from './commands/$.uniq.mjs';
 
 /**
  * Register a virtual command
@@ -110,6 +115,11 @@ export function registerBuiltins() {
   register('dirname', dirnameCommand);
   register('yes', yesCommand);
   register('seq', seqCommand);
+  register('tee', teeCommand);
   register('test', testCommand);
   register('$fy', fyCommand);
+  register('head', headCommand);
+  register('tail', tailCommand);
+  register('sort', sortCommand);
+  register('uniq', uniqCommand);
 }

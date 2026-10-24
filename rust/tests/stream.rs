@@ -1,6 +1,6 @@
 //! Tests for the streaming module
 
-use command_stream::{AsyncIterator, OutputChunk, StreamingRunner};
+use command_stream::{OutputChunk, StreamingRunner};
 
 #[tokio::test]
 async fn test_streaming_runner_basic() {
@@ -18,6 +18,68 @@ async fn test_streaming_runner_with_stdin() {
 
     assert!(result.is_success());
     assert!(result.stdout.contains("test input"));
+}
+
+/// An executable and its arguments must reach the OS as separate values rather
+/// than being reconstructed as a command string for the platform shell.
+#[tokio::test]
+async fn test_streaming_runner_preserves_exact_argv() {
+    let test_executable = std::env::current_exe().unwrap();
+    let shell_metacharacters = "argument with spaces & | < > ^ % ! ' \"";
+    let runner =
+        StreamingRunner::from_argv(test_executable, ["--list", "--skip", shell_metacharacters]);
+
+    let result = runner.collect().await.unwrap();
+
+    assert!(
+        result.is_success(),
+        "exact-argv child failed: {}",
+        result.stderr
+    );
+    assert!(
+        result.stdout.contains("test_streaming_runner_basic"),
+        "exact-argv child did not produce its test list: {}",
+        result.stdout
+    );
+}
+
+#[test]
+fn test_exact_argv_blocking_collection() {
+    let executable = std::env::current_exe().unwrap();
+    let result = StreamingRunner::from_argv(executable, ["--list"])
+        .cwd(std::env::temp_dir())
+        .collect_blocking()
+        .unwrap();
+
+    assert!(result.is_success(), "{}", result.stderr);
+    assert!(result.stdout.contains("test_streaming_runner_basic"));
+}
+
+#[tokio::test]
+async fn test_blocking_collection_rejects_nested_runtime() {
+    let executable = std::env::current_exe().unwrap();
+    let error = StreamingRunner::from_argv(executable, ["--list"])
+        .collect_blocking()
+        .expect_err("blocking in a Tokio runtime must return an error");
+    assert!(error.to_string().contains("collect_blocking cannot run"));
+}
+
+/// A direct executable that cannot be spawned must not be mistaken for a
+/// successful command merely because the output channel closes without data.
+#[tokio::test]
+async fn test_streaming_collect_propagates_spawn_error() {
+    let missing = format!(
+        "command-stream-definitely-missing-{}{}",
+        std::process::id(),
+        std::env::consts::EXE_SUFFIX
+    );
+
+    let error = StreamingRunner::from_argv(missing, Vec::<String>::new())
+        .collect()
+        .await
+        .expect_err("missing executable must return an error");
+
+    assert!(error.to_string().contains("IO error"));
 }
 
 #[tokio::test]
@@ -78,16 +140,19 @@ async fn test_streaming_exit_code() {
 #[tokio::test]
 async fn test_streaming_runner_cwd() {
     let temp_dir = tempfile::tempdir().unwrap();
-    let command = if cfg!(windows) { "cd" } else { "pwd" };
-    let runner = StreamingRunner::new(command).cwd(temp_dir.path());
+    let marker = "command-stream-cwd-marker.txt";
+    // Check the effect of cwd rather than comparing its printed spelling.
+    // Git Bash maps the Windows temp directory to `/tmp`, so `pwd` and Rust's
+    // native path describe the same directory with unrelated-looking strings.
+    let runner = StreamingRunner::new(format!("echo reached > {marker}")).cwd(temp_dir.path());
     let result = runner.collect().await.unwrap();
 
     assert!(result.is_success());
-    let stdout = result.stdout.trim().replace('\\', "/");
-    let expected = temp_dir.path().to_string_lossy().replace('\\', "/");
-    assert!(
-        stdout.contains(&expected),
-        "expected stdout {stdout:?} to contain cwd {expected:?}"
+    assert_eq!(
+        std::fs::read_to_string(temp_dir.path().join(marker))
+            .unwrap()
+            .trim(),
+        "reached"
     );
 }
 
@@ -256,4 +321,35 @@ async fn test_streaming_runner_env() {
 
     assert!(result.is_success());
     assert!(result.stdout.contains("test_value"));
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn test_streaming_runner_exports_directory_environment_safely() {
+    use std::collections::HashMap;
+
+    let oldpwd = "old dir ' $(printf injected) `printf injected`; end";
+    let env = HashMap::from([
+        (
+            "PWD".to_string(),
+            std::env::current_dir()
+                .unwrap()
+                .to_string_lossy()
+                .to_string(),
+        ),
+        ("OLDPWD".to_string(), oldpwd.to_string()),
+    ]);
+    let runner = StreamingRunner::new("/usr/bin/env").env(env);
+
+    let result = runner.collect().await.unwrap();
+
+    assert!(result.is_success(), "child failed: {}", result.stderr);
+    assert!(
+        result
+            .stdout
+            .lines()
+            .any(|line| line == format!("OLDPWD={oldpwd}")),
+        "child environment did not preserve OLDPWD: {}",
+        result.stdout
+    );
 }

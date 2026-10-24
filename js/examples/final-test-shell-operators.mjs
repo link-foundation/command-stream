@@ -31,7 +31,9 @@ await test('&& operator works', async () => {
   if (result.stdout.trim() !== '/tmp') {
     throw new Error(`Expected /tmp, got ${result.stdout.trim()}`);
   }
-  process.chdir(originalCwd);
+  if (process.cwd() !== originalCwd) {
+    throw new Error('Host cwd was changed');
+  }
 });
 
 // Test 2: || operator
@@ -49,18 +51,21 @@ await test('; operator works', async () => {
   if (lines[0] !== '/tmp' || lines[1] !== '/usr') {
     throw new Error(`Expected /tmp and /usr, got ${lines.join(', ')}`);
   }
-  process.chdir(originalCwd);
+  if (process.cwd() !== originalCwd) {
+    throw new Error('Host cwd was changed');
+  }
 });
 
 // Test 4: Subshell ()
 await test('Subshell isolation works', async () => {
-  await $`cd /tmp`;
-  const result = await $`(cd /usr && pwd) ; pwd`;
+  const result = await $`cd /tmp ; (cd /usr && pwd) ; pwd`;
   const lines = result.stdout.trim().split('\n');
   if (lines[0] !== '/usr' || lines[1] !== '/tmp') {
     throw new Error(`Expected /usr then /tmp, got ${lines.join(', ')}`);
   }
-  process.chdir(originalCwd);
+  if (process.cwd() !== originalCwd) {
+    throw new Error('Host cwd was changed');
+  }
 });
 
 // Test 5: Complex chain
@@ -75,18 +80,16 @@ await test('Complex chain works', async () => {
     }
   } finally {
     rmSync(tempDir, { recursive: true, force: true });
-    process.chdir(originalCwd);
   }
 });
 
-// Test 6: cd persists across commands
-await test('cd persists in session', async () => {
+// Test 6: separate invocations are isolated
+await test('cd is isolated between invocations', async () => {
   await $`cd /var`;
   const pwd = await $`pwd`;
-  if (pwd.stdout.trim() !== '/var') {
-    throw new Error(`Expected /var, got ${pwd.stdout.trim()}`);
+  if (pwd.stdout.trim() !== originalCwd) {
+    throw new Error(`Expected ${originalCwd}, got ${pwd.stdout.trim()}`);
   }
-  process.chdir(originalCwd);
 });
 
 // Test 7: Nested subshells

@@ -1,21 +1,27 @@
-# Missing meta-language features found while building `$fy`
+# Meta-language integration findings for `$fy`
 
 `$fy` translates shell scripts into command-stream modules using the model that
 [link-foundation/meta-language](https://github.com/link-foundation/meta-language)
 defines: a source text is _formalized_ into a links network, and the network is
 then _substituted_ into a target language through a `TranslationRuleSet`.
 
-The data model carried the whole design — `LinkNetwork`, `LinkType`,
-`LinkQuery`, `TranslationRule`, `TranslationTemplate` are exactly the right
-primitives, and `js/src/fy/shell-formalizer.mjs` and
-`js/src/fy/translation-rules.mjs` use them directly. What is missing is the
-_evaluation strategy_ that turns a rule set into output. That gap is filled
-locally by `js/src/fy/rule-engine.mjs` (~215 lines), which is written so that it
-collapses into a single upstream call once these features land.
+These findings were reported upstream in
+[meta-language#183](https://github.com/link-foundation/meta-language/issues/183).
+That issue is now closed; [the current package recheck](https://github.com/link-foundation/meta-language/issues/183#issuecomment-6382007356) records the npm/Rust version difference. The numbered observations below describe the npm
+**0.46.0** API, which remains npm `latest` as of 2026-10-24, and historical Rust
+**0.54.0** behavior where explicitly marked.
 
-Version under test: **meta-language 0.46.0** (the current npm `latest`). Note
-that the repository's `main` is already at 0.54.0, so npm publishing lags the
-repository — that alone is worth fixing, since consumers cannot try newer work.
+This PR now uses Rust **1.0.0**. It supplies public dynamic-arity insertion,
+reference captures, and recursive template rendering (`render_link`), so the
+old Rust chunk-node workaround has been removed. The local renderer retains
+our additional modes, conditional segments, variadic separators, indentation,
+and byte-preserving source spans to keep the JavaScript and Rust outputs
+identical. The old blanket claim that Rust cannot recurse no longer applies.
+
+JavaScript still uses `LinkNetwork`, `LinkQuery`, `TranslationRule`, and
+`TranslationRuleSet` from npm 0.46.0, with a local evaluator for its templates.
+Both implementations formalize source into those typed links and apply rule
+queries and substitution; translation does not wait for another upstream release.
 
 Every gap below is reproduced by `js/experiments/meta-language-gaps.mjs`; run
 `node js/experiments/meta-language-gaps.mjs` to see the observed output.
@@ -139,10 +145,10 @@ so the arity must be a compile-time constant, while a parser produces nodes of
 arity known only at run time (a script has as many statements as it has). The
 one dynamic entry point, `insert_dynamic_link`, is `pub(crate)`.
 
-`rust/src/fy/formalizer.rs` works around this by matching on the child count up
-to a fixed maximum and grouping any wider node into nested `chunk` nodes that
-`rust/src/fy/engine.rs` flattens again — output-neutral, but it means the
-network shape no longer matches the source tree.
+The original implementation worked around this by grouping wide nodes into
+`chunk` nodes. **Resolved in the Rust dependency now used here:** the formalizer
+calls `insert_dynamic_syntax_node` directly and verifies a 20-child script
+without grouping.
 
 **Needed:** a public `insert_link(&mut self, language, kind, refs: &[LinkId])`
 (or simply making `insert_dynamic_link` public). The JavaScript package is
@@ -156,7 +162,5 @@ run-time parser cannot avoid. `js/src/fy/rule-engine.mjs` is a working
 reference implementation of 1–8 over meta-language's own types and is offered
 upstream.
 
-Gaps 1–3 were re-confirmed against the Rust crate at 0.54.0 by reading
-`translation_rules.rs`: `TranslationRuleSet::render` is `pub(crate)`, applies
-only the first matching rule, does not recurse, and does not substitute — so
-`rust/src/fy/engine.rs` is the same reference implementation in Rust.
+The old Rust 0.54.0 findings do not describe Rust 1.0.0. See the version notes
+above and the passing dynamic-arity and shared-fixture tests for current evidence.

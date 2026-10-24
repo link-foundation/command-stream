@@ -2,15 +2,19 @@
 
 use crate::commands::CommandContext;
 use crate::utils::CommandResult;
-use std::env;
+use std::collections::HashMap;
 
 /// Execute the env command
 ///
 /// Displays environment variables.
-pub async fn env(_ctx: CommandContext) -> CommandResult {
+pub async fn env(ctx: CommandContext) -> CommandResult {
     let mut output = String::new();
 
-    for (key, value) in env::vars() {
+    let mut env_vars: HashMap<_, _> = std::env::vars().collect();
+    if let Some(overrides) = ctx.env {
+        env_vars.extend(overrides);
+    }
+    for (key, value) in env_vars {
         output.push_str(&format!("{}={}\n", key, value));
     }
 

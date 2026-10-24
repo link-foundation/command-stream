@@ -9,6 +9,12 @@
 //! Step 2 contains no shell knowledge beyond the rule table, and step 1
 //! contains no JavaScript knowledge at all.
 
+pub mod cli;
+pub mod source;
+pub use source::{
+    translate_competitor_source, translate_shell_program, translate_source, SourceOptions,
+};
+
 pub mod engine;
 pub mod formalizer;
 pub mod lexer;

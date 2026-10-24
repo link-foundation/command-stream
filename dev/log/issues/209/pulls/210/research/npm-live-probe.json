@@ -1,0 +1,109 @@
+[
+  {
+    "url": "https://registry.npmjs.org/command-stream",
+    "status": 200,
+    "headers": {
+      "Date": "Mon, 05 Oct 2026 17:26:48 GMT",
+      "Content-Type": "application/json",
+      "Content-Length": "289158",
+      "Connection": "close",
+      "CF-Ray": "a45e22295a98d9dc-FRA",
+      "CF-Cache-Status": "HIT",
+      "Accept-Ranges": "bytes",
+      "Access-Control-Allow-Origin": "*",
+      "Cache-Control": "public, max-age=300",
+      "ETag": "\"10a84fc171fb6e8061622ec9454ae9e9\"",
+      "Last-Modified": "Mon, 05 Oct 2026 12:45:15 GMT",
+      "Server": "cloudflare",
+      "Vary": "accept-encoding, accept"
+    },
+    "version": null,
+    "has_1_4_0": true,
+    "dist": null,
+    "time_1_4_0": "2026-10-05T12:45:13.783Z"
+  },
+  {
+    "url": "https://registry.npmjs.org/command-stream/1.4.0",
+    "status": 200,
+    "headers": {
+      "Date": "Mon, 05 Oct 2026 17:26:49 GMT",
+      "Content-Type": "application/json",
+      "Content-Length": "5944",
+      "Connection": "close",
+      "CF-Ray": "a45e222acc4ccbe0-FRA",
+      "CF-Cache-Status": "DYNAMIC",
+      "Access-Control-Allow-Origin": "*",
+      "Cache-Control": "max-age=300",
+      "Server": "cloudflare",
+      "Vary": "accept-encoding, accept"
+    },
+    "version": "1.4.0",
+    "has_1_4_0": false,
+    "dist": {
+      "shasum": "f4a663877e5ce1e7a9a993bf1b20aecb15200fff",
+      "tarball": "https://registry.npmjs.org/command-stream/-/command-stream-1.4.0.tgz",
+      "fileCount": 609,
+      "integrity": "sha512-drZO+DwBsxNqWAfmua5OgLp0nXwExDtMfeqsR3ednMmppdtzuUQM2c2DiBUA1/oB7uXVDCfOKUmT/xoJIcjmYA==",
+      "signatures": [
+        {
+          "sig": "MEQCICDNTNscW8BPyYlYG/yyeg0Gz5aCakr7k2LphZwkYkTtAiAHRBGkpGvhIm6ZrIVNQvaHSMc/B1RAJ7akhXwNWD4H0Q==",
+          "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+        },
+        {
+          "sig": "MEUCIA6Hqmtye7aYC6U6vNSgL8Y/lUitXyLro3PI01NZUI1BAiEA6KqVVtjlpPzLYYJmVs15T/aIZajBvQZRTcE8Q4neNE4=",
+          "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+        }
+      ],
+      "attestations": {
+        "url": "https://registry.npmjs.org/-/npm/v1/attestations/command-stream@1.4.0",
+        "provenance": {
+          "predicateType": "https://slsa.dev/provenance/v1"
+        }
+      },
+      "unpackedSize": 2013922
+    },
+    "time_1_4_0": null
+  },
+  {
+    "url": "https://registry.npmjs.org/command-stream/1.4.0?cache-bust=1791221208258441926",
+    "status": 200,
+    "headers": {
+      "Date": "Mon, 05 Oct 2026 17:26:49 GMT",
+      "Content-Type": "application/json",
+      "Content-Length": "5944",
+      "Connection": "close",
+      "CF-Ray": "a45e222ccf0bdcaa-FRA",
+      "CF-Cache-Status": "DYNAMIC",
+      "Access-Control-Allow-Origin": "*",
+      "Cache-Control": "max-age=300",
+      "Server": "cloudflare",
+      "Vary": "accept-encoding, accept"
+    },
+    "version": "1.4.0",
+    "has_1_4_0": false,
+    "dist": {
+      "shasum": "f4a663877e5ce1e7a9a993bf1b20aecb15200fff",
+      "tarball": "https://registry.npmjs.org/command-stream/-/command-stream-1.4.0.tgz",
+      "fileCount": 609,
+      "integrity": "sha512-drZO+DwBsxNqWAfmua5OgLp0nXwExDtMfeqsR3ednMmppdtzuUQM2c2DiBUA1/oB7uXVDCfOKUmT/xoJIcjmYA==",
+      "signatures": [
+        {
+          "sig": "MEQCICDNTNscW8BPyYlYG/yyeg0Gz5aCakr7k2LphZwkYkTtAiAHRBGkpGvhIm6ZrIVNQvaHSMc/B1RAJ7akhXwNWD4H0Q==",
+          "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+        },
+        {
+          "sig": "MEUCIA6Hqmtye7aYC6U6vNSgL8Y/lUitXyLro3PI01NZUI1BAiEA6KqVVtjlpPzLYYJmVs15T/aIZajBvQZRTcE8Q4neNE4=",
+          "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+        }
+      ],
+      "attestations": {
+        "url": "https://registry.npmjs.org/-/npm/v1/attestations/command-stream@1.4.0",
+        "provenance": {
+          "predicateType": "https://slsa.dev/provenance/v1"
+        }
+      },
+      "unpackedSize": 2013922
+    },
+    "time_1_4_0": null
+  }
+]

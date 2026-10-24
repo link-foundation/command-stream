@@ -103,3 +103,9 @@ export { formalizeShell } from './shell-formalizer.mjs';
 export { parseShellScript } from './shell-script-parser.mjs';
 export { buildRuleSet } from './translation-rules.mjs';
 export { RuleEngine } from './rule-engine.mjs';
+
+export {
+  translateSource,
+  translateShellProgram,
+  translateCompetitorSource,
+} from './source-translator.mjs';

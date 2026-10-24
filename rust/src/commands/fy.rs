@@ -1,112 +1,85 @@
-//! Virtual `$fy` command implementation — shell to mjs translator.
-//!
-//! This module is only the command-line surface. The translation itself is
-//! rule-based and lives in [`crate::fy`]: the script is first formalized as a
-//! link-foundation/meta-language links network, then rewritten into JavaScript
-//! by a `TranslationRuleSet`.
-
-use std::collections::BTreeSet;
-use std::fs;
-
+//! Virtual `$fy` command: the CLI delegates all rendering to typed-link rules.
 use crate::commands::CommandContext;
-use crate::fy::{translate_shell_to_mjs, TranslateOptions};
+use crate::fy::{
+    cli::{parse_arguments, USAGE},
+    translate_shell_to_mjs, translate_source, TranslateOptions,
+};
 use crate::utils::{CommandResult, VirtualUtils};
+use std::collections::BTreeSet;
+use std::fs::{self, OpenOptions};
+use std::io::Write;
 
-const USAGE: &str = r#"$fy - Convert shell scripts to command-stream JavaScript modules
-
-Usage:
-  $fy <input.sh>              # Translate and print to stdout
-  $fy <input.sh> <output.mjs> # Translate and save to a file
-  echo "ls -la" | $fy         # Translate from stdin
-
-Options:
-  --no-shebang                Omit the leading #!/usr/bin/env node line
-  -h, --help                  Show this help
-
-Examples:
-  $fy deploy.sh                    # Print the translated deploy script
-  $fy build.sh build.mjs           # Translate build.sh into build.mjs
-  echo "cd /tmp && ls" | $fy       # Translate a one-liner from stdin
-
-The translation is driven by substitution rules over a meta-language links
-network, so pipelines, &&/||, if/while/until/for/case, functions, redirects,
-variable assignments and ${...} expansions all translate structurally rather
-than textually.
-"#;
-
-/// Renders translation diagnostics as shell-style warnings.
-fn format_diagnostics(diagnostics: &[String]) -> String {
-    let unique: BTreeSet<&String> = diagnostics.iter().collect();
-    unique
-        .into_iter()
-        .map(|message| format!("$fy: warning: {message}\n"))
-        .collect()
-}
-
-/// Execute the `$fy` command.
+/// Execute source migration, refusing to overwrite an existing output file.
 pub async fn fy(ctx: CommandContext) -> CommandResult {
-    if ctx.args.iter().any(|arg| arg == "-h" || arg == "--help") {
+    let mut parsed = match parse_arguments(&ctx.args) {
+        Ok(parsed) => parsed,
+        Err(error) => return CommandResult::error(format!("$fy: translation failed: {error}\n")),
+    };
+    if parsed.help {
         return CommandResult::success(USAGE);
     }
-
-    let options = TranslateOptions {
-        shebang: !ctx.args.iter().any(|arg| arg == "--no-shebang"),
-        ..TranslateOptions::default()
-    };
-    let positional: Vec<&String> = ctx
-        .args
-        .iter()
-        .filter(|argument| !argument.starts_with('-'))
-        .collect();
-
-    // A file argument always wins: `$fy in.sh` must read `in.sh` even when the
-    // command happens to inherit a non-empty stdin from its caller.
-    let stdin = ctx
-        .stdin
-        .as_deref()
-        .filter(|stdin| positional.is_empty() && !stdin.is_empty());
-
-    let source = match (stdin, positional.first()) {
-        (Some(stdin), _) => stdin.to_string(),
-        (None, Some(path)) => {
-            let resolved = VirtualUtils::resolve_path(path, Some(&ctx.get_cwd()));
-            match fs::read_to_string(&resolved) {
-                Ok(source) => source,
-                Err(error) => {
-                    return CommandResult::error(format!("$fy: cannot read '{path}': {error}\n"))
-                }
+    let input = parsed.positional.first();
+    if let Some(path) = input.filter(|path| path.as_str() != "-") {
+        parsed.options.name = std::path::Path::new(path)
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .into_owned();
+    }
+    let source = if input.is_none_or(|path| path == "-") {
+        match ctx.stdin.as_deref().filter(|value| !value.is_empty()) {
+            Some(source) => source.to_owned(),
+            None => return CommandResult::error(USAGE),
+        }
+    } else {
+        let path = input.unwrap();
+        match fs::read_to_string(VirtualUtils::resolve_path(path, Some(&ctx.get_cwd()))) {
+            Ok(source) => source,
+            Err(error) => {
+                return CommandResult::error(format!("$fy: cannot read '{path}': {error}\n"))
             }
         }
-        (None, None) => return CommandResult::error(USAGE),
     };
-
-    let translated = translate_shell_to_mjs(&source, &options);
-    let stderr = format_diagnostics(&translated.diagnostics);
-
-    let output_file = if stdin.is_some() {
-        None
+    let translated = if parsed.structural {
+        translate_shell_to_mjs(
+            &source,
+            &TranslateOptions {
+                shebang: parsed.options.shebang,
+                module_name: parsed.options.module_name,
+            },
+        )
     } else {
-        positional.get(1)
+        match translate_source(&source, &parsed.options) {
+            Ok(result) => result,
+            Err(error) => {
+                return CommandResult::error(format!("$fy: translation failed: {error}\n"))
+            }
+        }
     };
-    let Some(output_file) = output_file else {
-        return CommandResult {
-            stdout: translated.code,
-            stderr,
-            code: 0,
-        };
+    let warnings: BTreeSet<_> = translated.diagnostics.iter().collect();
+    let stderr: String = warnings
+        .into_iter()
+        .map(|message| format!("$fy: warning: {message}\n"))
+        .collect();
+    let Some(output) = parsed.positional.get(1) else {
+        return CommandResult::new(translated.code, stderr, 0);
     };
-
-    let resolved = VirtualUtils::resolve_path(output_file, Some(&ctx.get_cwd()));
-    if let Err(error) = fs::write(&resolved, &translated.code) {
-        return CommandResult::error(format!(
-            "{stderr}$fy: cannot write '{output_file}': {error}\n"
-        ));
+    let mut options = OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o755);
     }
-    CommandResult {
-        stdout: format!("Translated to '{output_file}'\n"),
-        stderr,
-        code: 0,
+    let write = || -> std::io::Result<()> {
+        options
+            .open(VirtualUtils::resolve_path(output, Some(&ctx.get_cwd())))?
+            .write_all(translated.code.as_bytes())
+    };
+    if let Err(error) = write() {
+        return CommandResult::error(format!("{stderr}$fy: cannot write '{output}': {error}\n"));
     }
+    CommandResult::new(format!("Translated to '{output}'\n"), stderr, 0)
 }
 
 #[cfg(test)]
@@ -120,7 +93,10 @@ mod tests {
         let mut temp = NamedTempFile::new().unwrap();
         writeln!(temp, "ls -la").unwrap();
 
-        let ctx = CommandContext::new(vec![temp.path().to_string_lossy().to_string()]);
+        let ctx = CommandContext::new(vec![
+            "--structural".into(),
+            temp.path().to_string_lossy().to_string(),
+        ]);
         let result = fy(ctx).await;
 
         assert!(result.is_success());
@@ -130,7 +106,7 @@ mod tests {
 
     #[tokio::test]
     async fn translates_stdin() {
-        let mut ctx = CommandContext::new(vec![]);
+        let mut ctx = CommandContext::new(vec!["--structural".into()]);
         ctx.stdin = Some("echo hi\n".to_string());
         let result = fy(ctx).await;
 
@@ -143,7 +119,10 @@ mod tests {
         let mut temp = NamedTempFile::new().unwrap();
         writeln!(temp, "pwd").unwrap();
 
-        let mut ctx = CommandContext::new(vec![temp.path().to_string_lossy().to_string()]);
+        let mut ctx = CommandContext::new(vec![
+            "--structural".into(),
+            temp.path().to_string_lossy().to_string(),
+        ]);
         ctx.stdin = Some("echo from-stdin\n".to_string());
         let result = fy(ctx).await;
 
@@ -155,17 +134,19 @@ mod tests {
     async fn writes_to_an_output_file() {
         let mut input = NamedTempFile::new().unwrap();
         writeln!(input, "echo hi").unwrap();
-        let output = NamedTempFile::new().unwrap();
+        let output_dir = tempfile::tempdir().unwrap();
+        let output = output_dir.path().join("out.mjs");
 
         let ctx = CommandContext::new(vec![
+            "--structural".into(),
             input.path().to_string_lossy().to_string(),
-            output.path().to_string_lossy().to_string(),
+            output.as_path().to_string_lossy().to_string(),
         ]);
         let result = fy(ctx).await;
 
         assert!(result.is_success());
         assert!(result.stdout.starts_with("Translated to '"));
-        let written = fs::read_to_string(output.path()).unwrap();
+        let written = fs::read_to_string(output.as_path()).unwrap();
         assert!(written.contains("await $`echo hi`;"));
     }
 

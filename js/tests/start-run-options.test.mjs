@@ -10,7 +10,7 @@ describe('Start/Run Options Passing', () => {
       const result = await $`echo "test with capture false"`.start({
         capture: false,
       });
-      expect(result.stdout).toBeUndefined();
+      expect(result.stdout?.toString()).toBeUndefined();
       expect(result.code).toBe(0);
     });
 
@@ -18,7 +18,7 @@ describe('Start/Run Options Passing', () => {
       const result = await $`echo "test with capture true"`.start({
         capture: true,
       });
-      expect(result.stdout).toBe('test with capture true\n');
+      expect(result.stdout?.toString()).toBe('test with capture true\n');
       expect(result.code).toBe(0);
     });
 
@@ -27,7 +27,7 @@ describe('Start/Run Options Passing', () => {
       const result = await $`echo "test with mirror false"`.start({
         mirror: false,
       });
-      expect(result.stdout).toBe('test with mirror false\n');
+      expect(result.stdout?.toString()).toBe('test with mirror false\n');
       expect(result.code).toBe(0);
     });
 
@@ -36,7 +36,7 @@ describe('Start/Run Options Passing', () => {
         capture: false,
         mirror: false,
       });
-      expect(result.stdout).toBeUndefined();
+      expect(result.stdout?.toString()).toBeUndefined();
       expect(result.code).toBe(0);
     });
 
@@ -45,14 +45,14 @@ describe('Start/Run Options Passing', () => {
         stdin: 'custom input data',
         capture: true,
       });
-      expect(result.stdout).toBe('custom input data');
+      expect(result.stdout?.toString()).toBe('custom input data');
       expect(result.code).toBe(0);
     });
 
     // Skip on Windows - uses 'ls /tmp' which is Unix-specific
     test.skipIf(isWindows)('should work with real shell commands', async () => {
       const result = await $`ls /tmp`.start({ capture: false });
-      expect(result.stdout).toBeUndefined();
+      expect(result.stdout?.toString()).toBeUndefined();
       expect(result.code).toBe(0);
     });
 
@@ -61,11 +61,11 @@ describe('Start/Run Options Passing', () => {
 
       // Start the process
       const firstResult = await runner.start();
-      expect(firstResult.stdout).toBe('already started test\n');
+      expect(firstResult.stdout?.toString()).toBe('already started test\n');
 
       // Try to start again with different options - should be ignored
       const secondResult = await runner.start({ capture: false });
-      expect(secondResult.stdout).toBe('already started test\n'); // Should still have stdout
+      expect(secondResult.stdout?.toString()).toBe('already started test\n'); // Should still have stdout
     });
   });
 
@@ -74,13 +74,13 @@ describe('Start/Run Options Passing', () => {
       const result = await $`echo "test with run alias"`.run({
         capture: false,
       });
-      expect(result.stdout).toBeUndefined();
+      expect(result.stdout?.toString()).toBeUndefined();
       expect(result.code).toBe(0);
     });
 
     test('should work identically to .start() with capture: true', async () => {
       const result = await $`echo "test with run alias"`.run({ capture: true });
-      expect(result.stdout).toBe('test with run alias\n');
+      expect(result.stdout?.toString()).toBe('test with run alias\n');
       expect(result.code).toBe(0);
     });
 
@@ -89,7 +89,7 @@ describe('Start/Run Options Passing', () => {
         mirror: false,
         capture: true,
       });
-      expect(result.stdout).toBe('run with multiple options\n');
+      expect(result.stdout?.toString()).toBe('run with multiple options\n');
       expect(result.code).toBe(0);
     });
 
@@ -98,7 +98,7 @@ describe('Start/Run Options Passing', () => {
         stdin: 'run method input',
         capture: true,
       });
-      expect(result.stdout).toBe('run method input');
+      expect(result.stdout?.toString()).toBe('run method input');
       expect(result.code).toBe(0);
     });
   });
@@ -106,7 +106,7 @@ describe('Start/Run Options Passing', () => {
   describe('Backward compatibility', () => {
     test('direct await should still work with default options', async () => {
       const result = await $`echo "default behavior"`;
-      expect(result.stdout).toBe('default behavior\n');
+      expect(result.stdout?.toString()).toBe('default behavior\n');
       expect(result.code).toBe(0);
     });
 
@@ -114,7 +114,9 @@ describe('Start/Run Options Passing', () => {
       const directResult = await $`echo "no options test"`;
       const startResult = await $`echo "no options test"`.start();
 
-      expect(directResult.stdout).toBe(startResult.stdout);
+      expect(directResult.stdout?.toString()).toBe(
+        startResult.stdout?.toString()
+      );
       expect(directResult.code).toBe(startResult.code);
     });
 
@@ -122,7 +124,9 @@ describe('Start/Run Options Passing', () => {
       const directResult = await $`echo "run no options"`;
       const runResult = await $`echo "run no options"`.run();
 
-      expect(directResult.stdout).toBe(runResult.stdout);
+      expect(directResult.stdout?.toString()).toBe(
+        runResult.stdout?.toString()
+      );
       expect(directResult.code).toBe(runResult.code);
     });
   });
@@ -132,7 +136,7 @@ describe('Start/Run Options Passing', () => {
       const result = await $`echo "virtual command test"`.start({
         capture: false,
       });
-      expect(result.stdout).toBeUndefined();
+      expect(result.stdout?.toString()).toBeUndefined();
       expect(result.code).toBe(0);
     });
 
@@ -141,7 +145,7 @@ describe('Start/Run Options Passing', () => {
         capture: true,
         mirror: false,
       });
-      expect(result.stdout).toBe('virtual run test\n');
+      expect(result.stdout?.toString()).toBe('virtual run test\n');
       expect(result.code).toBe(0);
     });
   });
@@ -149,7 +153,7 @@ describe('Start/Run Options Passing', () => {
   describe('Edge cases', () => {
     test('should handle empty options object', async () => {
       const result = await $`echo "empty options"`.start({});
-      expect(result.stdout).toBe('empty options\n');
+      expect(result.stdout?.toString()).toBe('empty options\n');
       expect(result.code).toBe(0);
     });
 
@@ -158,7 +162,7 @@ describe('Start/Run Options Passing', () => {
         mode: 'async',
         capture: false,
       });
-      expect(result.stdout).toBeUndefined();
+      expect(result.stdout?.toString()).toBeUndefined();
       expect(result.code).toBe(0);
     });
 
@@ -175,7 +179,7 @@ describe('Start/Run Options Passing', () => {
       // Verify chunks were reinitialized
       expect(runner.options.capture).toBe(false);
       expect(runner.outChunks).toBe(null);
-      expect(result.stdout).toBeUndefined();
+      expect(result.stdout?.toString()).toBeUndefined();
     });
   });
 });

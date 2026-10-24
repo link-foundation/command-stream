@@ -1,0 +1,121 @@
+{
+  "source": "test/js/bun/shell/commands/yes.test.ts",
+  "units": [
+    {
+      "line": 8,
+      "upstream": "can pipe to a buffer",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-yes/buffer",
+          "template": ["yes > ", ""],
+          "values": [
+            {
+              "outBuffer": {
+                "id": "b1",
+                "size": 10
+              }
+            }
+          ],
+          "expect": {
+            "buffers": {
+              "b1": "y\ny\ny\ny\ny\n"
+            },
+            "stderr": "yes: ENOSPC\n",
+            "exitCode": 1
+          },
+          "note": "Upstream only checks the buffer; Bun 1.4.2 stops with 'yes: ENOSPC' on stderr and exit code 1 once the buffer is full."
+        }
+      ]
+    },
+    {
+      "line": 14,
+      "upstream": "can be overwritten by the first argument",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-yes/custom-string",
+          "template": ["yes xy > ", ""],
+          "values": [
+            {
+              "outBuffer": {
+                "id": "b1",
+                "size": 18
+              }
+            }
+          ],
+          "expect": {
+            "buffers": {
+              "b1": "xy\nxy\nxy\nxy\nxy\nxy\n"
+            },
+            "stderr": "yes: ENOSPC\n",
+            "exitCode": 1
+          },
+          "note": "Upstream only checks the buffer; stderr/exit code are real Bun 1.4.2 behaviour."
+        }
+      ]
+    },
+    {
+      "line": 20,
+      "upstream": "ignores other arguments",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-yes/multiple-args-joined",
+          "template": ["yes ab cd ef > ", ""],
+          "values": [
+            {
+              "outBuffer": {
+                "id": "b1",
+                "size": 17
+              }
+            }
+          ],
+          "expect": {
+            "buffers": {
+              "b1": "ab cd ef\nab cd ef"
+            },
+            "stderr": "yes: ENOSPC\n",
+            "exitCode": 1
+          },
+          "note": "Despite the upstream title, all arguments are joined with spaces (like coreutils yes). The last partial line is truncated to the buffer size. stderr/exit code are real Bun 1.4.2 behaviour."
+        }
+      ]
+    },
+    {
+      "line": 26,
+      "upstream": "fills a buffer larger than one no-IO burst",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-yes/large-buffer-enospc",
+          "template": ["yes hi > ", ""],
+          "values": [
+            {
+              "outBuffer": {
+                "id": "b1",
+                "size": 131072
+              }
+            }
+          ],
+          "expect": {
+            "buffers": {
+              "b1": {
+                "concat": [
+                  {
+                    "repeat": "hi\n",
+                    "count": 43690
+                  },
+                  "hi"
+                ]
+              }
+            },
+            "stderr": "yes: ENOSPC\n",
+            "exitCode": 1
+          },
+          "note": "Upstream runs this in a bun subprocess (so a crash surfaces as a failure) and checks exitCode 1, stderr 'yes: ENOSPC\\n', the first 12 bytes and that the 128 KiB buffer is completely filled; the case checks the full buffer content directly."
+        }
+      ]
+    }
+  ]
+}

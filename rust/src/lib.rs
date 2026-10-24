@@ -63,44 +63,136 @@
 
 // Modular utility modules (following JavaScript modular pattern)
 pub mod ansi;
+pub mod bun_shell;
+pub mod command_builder;
+pub mod command_packages;
+pub mod development;
+pub use command_packages::{CommandEnvironment, CommandPackage, PackageHandler};
+pub use development::{
+    dev, start_repl, DevController, DevEvent, DevOptions, ReplOptions, RustRepl,
+};
+mod detach;
 pub mod events;
+pub mod execa;
 pub mod fy;
+pub mod local_bin;
 #[doc(hidden)]
 pub mod macros;
 pub mod pipeline;
+mod process_argv;
+mod process_stop;
 pub mod quote;
+pub mod result_streams;
+mod run_options;
+pub mod signal;
 pub mod state;
 pub mod stream;
+mod stream_process;
+pub mod stream_processing;
+mod stream_stdin;
 pub mod terminal;
 pub mod trace;
 
 // Core modules
 pub mod commands;
 pub mod shell_parser;
+pub mod shelljs;
 pub mod utils;
 
-use std::collections::HashMap;
+// zx-compatible API (google/zx 8.x): `$`-style Shell, ProcessOutput, goods.
+pub mod zx;
+
 use std::path::PathBuf;
 use std::process::Stdio;
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::process::{Child, Command};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};
+use tokio::process::Child;
 use tokio::sync::mpsc;
 
+pub use command_builder::{fy, CommandBuilder, CommandStdio};
 pub use commands::{CommandContext, StreamChunk};
+pub use execa::{execa, execa_compat, execa_node, execa_sync};
+pub use run_options::{Error, Result, RunOptions, StdinOption};
 pub use shell_parser::{needs_real_shell, parse_shell_command, ParsedCommand};
 pub use utils::{CommandResult, VirtualUtils};
 
 // Re-export modular utilities at crate root for convenient access
 pub use ansi::{AnsiConfig, AnsiUtils};
 pub use events::{EventData, EventType, StreamEmitter};
+pub use local_bin::PreferLocal;
 pub use pipeline::{Pipeline, PipelineBuilder, PipelineExt};
-pub use quote::quote;
+pub use quote::{
+    escape_for_double_quotes, escape_for_single_quotes, has_shell_escapes,
+    is_pre_quoted_passthrough_enabled, is_quote_context_enabled, quote, quote_for_context,
+    scan_quote_context, QuoteContext,
+};
+pub use signal::{signal_exit_code, signal_number, DEFAULT_KILL_GRACE_MS, DEFAULT_KILL_SIGNAL};
 pub use state::{
     get_shell_settings, global_state, reset_global_state, set_shell_option, unset_shell_option,
     GlobalState, ShellSettings,
 };
 pub use stream::{AsyncIterator, IntoStream, OutputChunk, OutputStream, StreamingRunner};
+pub use stream_processing::{DataStream, StreamStats};
 pub use trace::trace;
+
+#[derive(Clone, Copy)]
+enum ChildOutput {
+    Stdout,
+    Stderr,
+}
+
+/// Read child output as byte chunks so capture does not invent a trailing newline.
+///
+/// stdout and stderr use separate futures in `ProcessRunner::run`, preventing
+/// either pipe from filling while the other is being drained. Mirroring keeps
+/// the original bytes too, including output that does not end in a newline.
+async fn collect_child_output<R>(
+    reader: Option<R>,
+    mirror: bool,
+    target: ChildOutput,
+    collected: &mut Vec<u8>,
+) -> std::io::Result<()>
+where
+    R: AsyncRead + Unpin,
+{
+    let Some(mut reader) = reader else {
+        return Ok(());
+    };
+    let mut buffer = [0_u8; 8192];
+
+    loop {
+        let count = reader.read(&mut buffer).await?;
+        if count == 0 {
+            break;
+        }
+
+        let chunk = &buffer[..count];
+        collected.extend_from_slice(chunk);
+        if mirror {
+            match target {
+                ChildOutput::Stdout => {
+                    let mut output = std::io::stdout().lock();
+                    let _ = std::io::Write::write_all(&mut output, chunk);
+                    let _ = std::io::Write::flush(&mut output);
+                }
+                ChildOutput::Stderr => {
+                    let mut output = std::io::stderr().lock();
+                    let _ = std::io::Write::write_all(&mut output, chunk);
+                    let _ = std::io::Write::flush(&mut output);
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn fallback_cwd() -> PathBuf {
+    std::env::var_os("HOME")
+        .or_else(|| std::env::var_os("USERPROFILE"))
+        .map(PathBuf::from)
+        .filter(|path| path.is_dir())
+        .unwrap_or_else(std::env::temp_dir)
+}
 
 /// Resolve a working directory that is safe to spawn a child process in.
 ///
@@ -113,7 +205,7 @@ pub use trace::trace;
 /// Normal behavior is preserved: when an explicit cwd is given, or when the
 /// inherited working directory is valid, this returns the requested value
 /// (`None` meaning "inherit").
-fn resolve_spawn_cwd(cwd: Option<&PathBuf>) -> Option<PathBuf> {
+pub(crate) fn resolve_spawn_cwd(cwd: Option<&PathBuf>) -> Option<PathBuf> {
     // An explicit directory is always honored as-is.
     if let Some(c) = cwd {
         return Some(c.clone());
@@ -124,10 +216,7 @@ fn resolve_spawn_cwd(cwd: Option<&PathBuf>) -> Option<PathBuf> {
     match std::env::current_dir() {
         Ok(_) => None,
         Err(e) => {
-            let fallback = std::env::var_os("HOME")
-                .or_else(|| std::env::var_os("USERPROFILE"))
-                .map(PathBuf::from)
-                .unwrap_or_else(std::env::temp_dir);
+            let fallback = fallback_cwd();
             trace(
                 "ProcessRunner",
                 &format!(
@@ -136,97 +225,89 @@ fn resolve_spawn_cwd(cwd: Option<&PathBuf>) -> Option<PathBuf> {
                     fallback.display()
                 ),
             );
-            if fallback.exists() {
-                Some(fallback)
-            } else {
-                Some(std::env::temp_dir())
-            }
+            Some(fallback)
         }
     }
-}
-
-/// Error type for command-stream operations
-#[derive(Debug, thiserror::Error)]
-pub enum Error {
-    #[error("IO error: {0}")]
-    Io(#[from] std::io::Error),
-
-    #[error("Command failed with exit code {code}: {message}")]
-    CommandFailed { code: i32, message: String },
-
-    #[error("Command not found: {0}")]
-    CommandNotFound(String),
-
-    #[error("Parse error: {0}")]
-    ParseError(String),
-
-    #[error("Cancelled")]
-    Cancelled,
-}
-
-/// Result type for command-stream operations
-pub type Result<T> = std::result::Result<T, Error>;
-
-/// Options for command execution
-#[derive(Debug, Clone)]
-pub struct RunOptions {
-    /// Mirror output to parent stdout/stderr
-    pub mirror: bool,
-    /// Capture output in result
-    pub capture: bool,
-    /// Standard input handling
-    pub stdin: StdinOption,
-    /// Working directory
-    pub cwd: Option<PathBuf>,
-    /// Environment variables
-    pub env: Option<HashMap<String, String>>,
-    /// Interactive mode (TTY forwarding)
-    pub interactive: bool,
-    /// Enable shell operator parsing
-    pub shell_operators: bool,
-    /// Enable tracing for this command
-    pub trace: bool,
-}
-
-impl Default for RunOptions {
-    fn default() -> Self {
-        RunOptions {
-            mirror: true,
-            capture: true,
-            stdin: StdinOption::Inherit,
-            cwd: None,
-            env: None,
-            interactive: false,
-            shell_operators: true,
-            trace: true,
-        }
-    }
-}
-
-/// Standard input options
-#[derive(Debug, Clone)]
-pub enum StdinOption {
-    /// Inherit from parent process
-    Inherit,
-    /// Pipe (allow writing to stdin)
-    Pipe,
-    /// Provide string content
-    Content(String),
-    /// Null device
-    Null,
 }
 
 /// A running or completed process
 pub struct ProcessRunner {
     command: String,
+    /// Exact program and arguments, set by [`ProcessRunner::from_argv`]. When
+    /// present the command bypasses the shell and the virtual commands.
+    argv: Option<stream_process::StreamingCommand>,
     options: RunOptions,
     child: Option<Child>,
+    stdin_bytes: Vec<u8>,
+    /// Process id of the spawned child, recorded at spawn time. `run()` takes
+    /// the child in order to await it, so reading the id from it only works
+    /// between `start()` and `run()`; this copy is what makes `pid()` answer
+    /// after the command has finished too (issue #18).
+    pid: Option<u32>,
     result: Option<CommandResult>,
     started: bool,
     finished: bool,
     cancelled: bool,
+    /// When [`RunOptions::timeout`] stops the command, counted from the start.
+    deadline: Option<tokio::time::Instant>,
+    timed_out: bool,
+    /// Whether the child was spawned into a process group of its own, and so
+    /// can be signalled as a group. Recorded at spawn time because it cannot be
+    /// discovered later: by the time the group is signalled the leader is
+    /// usually a zombie, which macOS refuses to answer `getpgid` for.
+    #[cfg(unix)]
+    own_process_group: bool,
     output_tx: Option<mpsc::Sender<StreamChunk>>,
+    // Held, never read: dropping the receiver would close the channel, and
+    // streaming virtual commands treat a closed channel as "stop now" (see
+    // `commands::yes`, which loops until `output_tx.send` fails). Keeping it
+    // alive is what gives those commands their run-until-cancelled behaviour.
+    #[allow(dead_code)]
     output_rx: Option<mpsc::Receiver<StreamChunk>>,
+}
+
+/// Borrowed access to the operating-system child owned by a [`ProcessRunner`].
+///
+/// The wrapper keeps process termination on the runner's signal-aware path:
+/// [`kill`](Self::kill) and [`kill_with`](Self::kill_with) signal the child and
+/// its process group, honor the configured grace period, and then escalate if
+/// necessary. Use [`native`](Self::native) or [`native_mut`](Self::native_mut)
+/// when direct access to Tokio's child object is required.
+pub struct ProcessChild<'a> {
+    runner: &'a mut ProcessRunner,
+}
+
+impl ProcessChild<'_> {
+    /// Process id of the active child.
+    pub fn pid(&self) -> Option<u32> {
+        self.native().id()
+    }
+
+    /// Borrow Tokio's native child process object.
+    pub fn native(&self) -> &Child {
+        self.runner
+            .child
+            .as_ref()
+            .expect("ProcessChild exists only while its native child is present")
+    }
+
+    /// Mutably borrow Tokio's native child process object.
+    pub fn native_mut(&mut self) -> &mut Child {
+        self.runner
+            .child
+            .as_mut()
+            .expect("ProcessChild exists only while its native child is present")
+    }
+
+    /// Stop the child using the runner's configured signal and grace period.
+    pub fn kill(&mut self) -> Result<()> {
+        self.runner.kill()
+    }
+
+    /// Stop the child using an explicit signal and the configured grace period.
+    pub fn kill_with(&mut self, signal: &str) -> Result<()> {
+        self.runner.kill_with(signal)
+    }
 }
 
 impl ProcessRunner {
@@ -235,15 +316,37 @@ impl ProcessRunner {
         let (tx, rx) = mpsc::channel(1024);
         ProcessRunner {
             command: command.into(),
+            argv: None,
             options,
             child: None,
+            stdin_bytes: Vec::new(),
+            pid: None,
             result: None,
             started: false,
             finished: false,
             cancelled: false,
+            deadline: None,
+            timed_out: false,
+            #[cfg(unix)]
+            own_process_group: false,
             output_tx: Some(tx),
             output_rx: Some(rx),
         }
+    }
+
+    /// Whether the child will read from the caller's terminal.
+    ///
+    /// Only an *inherited* stdin that is actually a tty counts: a pipe, a null
+    /// stdin, or inherited stdin that has been redirected to a file carries no
+    /// terminal, and neither does output-only inheritance. This is the one case
+    /// where the child must stay in the caller's process group.
+    #[cfg(unix)]
+    fn shares_the_terminal(&self) -> bool {
+        use std::io::IsTerminal;
+
+        self.options.interactive
+            || (matches!(self.options.stdin, StdinOption::Inherit)
+                && std::io::stdin().is_terminal())
     }
 
     /// Start the process
@@ -252,19 +355,56 @@ impl ProcessRunner {
             return Ok(());
         }
         self.started = true;
+        self.deadline = self
+            .options
+            .timeout
+            .map(|limit| tokio::time::Instant::now() + limit);
 
         utils::trace_lazy("ProcessRunner", || {
             format!("Starting command: {}", self.command)
         });
 
-        // Check if this is a virtual command
-        let first_word = self.command.split_whitespace().next().unwrap_or("");
-        if let Some(result) = self.try_virtual_command(first_word).await {
+        // Check if this is a virtual command. Backslash escapes are removed by a
+        // real shell but not by the whitespace splitting used for virtual
+        // command args, so such commands always go to the system shell (#49).
+        // The same applies to redirection and expansions: whitespace splitting
+        // would hand `>`, `out.txt` to the virtual command as two ordinary
+        // arguments, so `echo hello > out.txt` printed the redirection instead
+        // of writing the file, and `git push ... 2>&1` reported success while
+        // nothing was pushed (#46).
+        // Removals cannot be expressed to the built-ins, which see `env` as
+        // overrides of the inherited environment, so they go to a real shell.
+        let first_word = if self.argv.is_some()
+            || matches!(self.options.stdin, StdinOption::Pipe)
+            || !self.options.env_remove.is_empty()
+            || has_shell_escapes(&self.command)
+            || needs_real_shell(&self.command)
+        {
+            ""
+        } else {
+            self.command.split_whitespace().next().unwrap_or("")
+        };
+        let virtual_result = match self.deadline {
+            Some(deadline) => {
+                tokio::time::timeout_at(deadline, self.try_virtual_command(first_word))
+                    .await
+                    .unwrap_or_else(|_| {
+                        self.timed_out = true;
+                        let code = signal::signal_exit_code(&self.options.kill_signal);
+                        Some(CommandResult::new("", "", code))
+                    })
+            }
+            None => self.try_virtual_command(first_word).await,
+        };
+        if let Some(mut result) = virtual_result {
+            if let StdinOption::Content(ref content) = self.options.stdin {
+                result.stdin =
+                    crate::result_streams::CapturedInput::new(content.as_bytes().to_vec());
+            }
             self.result = Some(result);
             self.finished = true;
             return Ok(());
         }
-
         // Parse command for shell operators (for future use with virtual command pipelines)
         let _parsed = if self.options.shell_operators && !needs_real_shell(&self.command) {
             parse_shell_command(&self.command)
@@ -273,13 +413,10 @@ impl ProcessRunner {
         };
 
         // Execute via real shell if needed
-        let shell = find_available_shell();
-
-        let mut cmd = Command::new(&shell.cmd);
-        for arg in &shell.args {
-            cmd.arg(arg);
-        }
-        cmd.arg(&self.command);
+        let mut cmd = match &self.argv {
+            Some(argv) => argv.command(None),
+            None => utils::shell_command(&self.command, self.options.env.as_ref()),
+        };
 
         // Configure stdin
         match &self.options.stdin {
@@ -318,11 +455,104 @@ impl ProcessRunner {
                 cmd.env(key, value);
             }
         }
+        let local_cwd = self
+            .options
+            .cwd
+            .clone()
+            .or_else(|| std::env::current_dir().ok())
+            .unwrap_or_else(|| PathBuf::from("."));
+        local_bin::apply_prefer_local(
+            &mut cmd,
+            self.options.env.as_ref(),
+            &local_cwd,
+            &self.options.prefer_local,
+        );
+        for name in &self.options.env_remove {
+            cmd.env_remove(name);
+        }
+
+        // Run the child in its own process group so that killing it can signal
+        // the whole group (parent + grandchildren), matching `StreamingRunner`
+        // and the JavaScript implementation's `detached` spawn.
+        //
+        // A child that shares the terminal is deliberately left in the caller's
+        // group. The tty delivers CTRL+C to its foreground group only, so
+        // moving such a child out would both hide CTRL+C from it and stop it
+        // with SIGTTIN the moment it read from the terminal. JavaScript draws
+        // the same line, spawning interactive commands without `detached`.
+        #[cfg(unix)]
+        {
+            self.own_process_group = !self.shares_the_terminal();
+            if self.own_process_group {
+                cmd.process_group(0);
+            }
+        }
 
         // Spawn the process
         let child = cmd.spawn()?;
+        // Record the id while the child is still held. `run()` takes the child
+        // in order to await it, so this copy is what keeps `pid()` readable
+        // afterwards.
+        self.pid = child.id();
         self.child = Some(child);
 
+        Ok(())
+    }
+
+    /// Borrow the active operating-system child.
+    ///
+    /// Call [`start`](Self::start) first. The result is `None` before startup,
+    /// for built-in commands (which run in-process), and after [`run`](Self::run)
+    /// consumes and reaps the child. Killing through the returned handle keeps
+    /// the runner's process-group and graceful-escalation behavior.
+    ///
+    /// ```no_run
+    /// use command_stream::{ProcessRunner, RunOptions};
+    ///
+    /// # #[tokio::main]
+    /// # async fn main() -> command_stream::Result<()> {
+    /// let mut runner = ProcessRunner::new("sleep 30", RunOptions::default());
+    /// runner.start().await?;
+    /// if let Some(mut child) = runner.child() {
+    ///     println!("child pid: {:?}", child.pid());
+    ///     child.kill_with("SIGTERM")?;
+    /// }
+    /// let _ = runner.run().await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn child(&mut self) -> Option<ProcessChild<'_>> {
+        self.child.as_ref()?;
+        Some(ProcessChild { runner: self })
+    }
+
+    /// Write bytes to the stdin pipe of a running command.
+    ///
+    /// Configure the runner with [`StdinOption::Pipe`], call [`start`](Self::start),
+    /// write as many chunks as needed, and finish with [`close_stdin`](Self::close_stdin).
+    pub async fn write_stdin(&mut self, data: impl AsRef<[u8]>) -> Result<()> {
+        self.start().await?;
+        let stdin = self
+            .child
+            .as_mut()
+            .and_then(|child| child.stdin.as_mut())
+            .ok_or_else(|| {
+                Error::Io(std::io::Error::new(
+                    std::io::ErrorKind::BrokenPipe,
+                    "command stdin is not available; use StdinOption::Pipe",
+                ))
+            })?;
+        stdin.write_all(data.as_ref()).await?;
+        self.stdin_bytes.extend_from_slice(data.as_ref());
+        Ok(())
+    }
+
+    /// Close a running command's stdin pipe so it can observe end-of-input.
+    pub async fn close_stdin(&mut self) -> Result<()> {
+        self.start().await?;
+        if let Some(mut stdin) = self.child.as_mut().and_then(|child| child.stdin.take()) {
+            stdin.shutdown().await?;
+        }
         Ok(())
     }
 
@@ -334,12 +564,10 @@ impl ProcessRunner {
             return Ok(result.clone());
         }
 
-        let mut child = self.child.take().ok_or_else(|| {
-            Error::Io(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "Process not started",
-            ))
-        })?;
+        let mut child = self
+            .child
+            .take()
+            .ok_or_else(|| Error::Io(std::io::Error::other("Process not started")))?;
 
         // Handle stdin content if provided
         if let StdinOption::Content(ref content) = self.options.stdin {
@@ -352,40 +580,103 @@ impl ProcessRunner {
             }
         }
 
-        // Collect output
-        let mut stdout_content = String::new();
-        let mut stderr_content = String::new();
-
-        if let Some(stdout) = child.stdout.take() {
-            let mut reader = BufReader::new(stdout).lines();
-            while let Ok(Some(line)) = reader.next_line().await {
-                if self.options.mirror {
-                    println!("{}", line);
-                }
-                stdout_content.push_str(&line);
-                stdout_content.push('\n');
-            }
-        }
-
-        if let Some(stderr) = child.stderr.take() {
-            let mut reader = BufReader::new(stderr).lines();
-            while let Ok(Some(line)) = reader.next_line().await {
-                if self.options.mirror {
-                    eprintln!("{}", line);
-                }
-                stderr_content.push_str(&line);
-                stderr_content.push('\n');
-            }
-        }
-
-        let status = child.wait().await?;
-        let code = status.code().unwrap_or(-1);
-
-        let result = CommandResult {
-            stdout: stdout_content,
-            stderr: stderr_content,
-            code,
+        // Drain both pipes concurrently and preserve their newline framing. The
+        // previous line reader appended `\n` to every final line, changing
+        // output from commands such as `printf` that omit a newline (issue #37).
+        let stdout_reader = child.stdout.take();
+        let stderr_reader = child.stderr.take();
+        let mut stdout = Vec::new();
+        let mut stderr = Vec::new();
+        utils::trace_lazy("ProcessRunner", || {
+            format!("Draining child output | pid={:?}", self.pid)
+        });
+        let mirror = self.options.mirror;
+        let drain = async {
+            tokio::try_join!(
+                collect_child_output(stdout_reader, mirror, ChildOutput::Stdout, &mut stdout),
+                collect_child_output(stderr_reader, mirror, ChildOutput::Stderr, &mut stderr),
+            )
+            .map(|_| ())
         };
+        let (collected, status) = if self.cancelled {
+            // Keep draining while a graceful signal handler runs. After the
+            // child exits, a descendant can still retain either pipe. Like
+            // the streaming runner, bound that remaining drain; the outside
+            // buffers survive cancellation of the reader.
+            tokio::pin!(drain);
+            let mut status = None;
+            let collected = tokio::select! {
+                output = &mut drain => output,
+                child_status = child.wait() => {
+                    status = Some(child_status?);
+                    match tokio::time::timeout(
+                        std::time::Duration::from_millis(stream::DEFAULT_EXIT_PUMP_GRACE_MS),
+                        &mut drain,
+                    ).await {
+                        Ok(output) => output,
+                        Err(_) => {
+                            utils::trace_lazy("ProcessRunner", || {
+                                "Cancelled output drain timed out; retaining buffered bytes".to_string()
+                            });
+                            Ok(())
+                        }
+                    }
+                }
+            };
+            (collected, status)
+        } else {
+            // Drain, then reap, unless the timeout elapses first (issue #227).
+            let plan = self.stop_plan();
+            let work = async {
+                let collected = drain.await;
+                let status = match collected {
+                    Ok(()) => Some(child.wait().await),
+                    Err(_) => None,
+                };
+                (collected, status)
+            };
+            let (outcome, timed_out) = process_stop::bounded(work, self.deadline, plan).await;
+            self.timed_out = timed_out;
+            match outcome {
+                Some((collected, status)) => (collected, status.transpose()?),
+                // Tokio reaps the abandoned child once it lets go of its pipes.
+                None => (Ok(()), None),
+            }
+        };
+        if let Err(error) = collected {
+            // `try_join!` drops the other pipe reader after an error. Stop
+            // and reap the child so it cannot remain blocked on that pipe.
+            let _ = child.start_kill();
+            let _ = child.wait().await;
+            return Err(error.into());
+        }
+
+        utils::trace_lazy("ProcessRunner", || {
+            format!("Child output drained | pid={:?}", self.pid)
+        });
+        let status = match status {
+            Some(status) => Some(status),
+            None if self.timed_out => None,
+            None => Some(child.wait().await?),
+        };
+        utils::trace_lazy("ProcessRunner", || {
+            format!("Child exited | pid={:?} status={status:?}", self.pid)
+        });
+        let code = match status {
+            Some(status) if !self.timed_out => status.code().unwrap_or(-1),
+            _ => signal::signal_exit_code(&self.options.kill_signal),
+        };
+
+        let mut result = CommandResult::new(
+            String::from_utf8_lossy(&stdout).into_owned(),
+            String::from_utf8_lossy(&stderr).into_owned(),
+            code,
+        );
+        if let StdinOption::Content(ref content) = self.options.stdin {
+            result.stdin = crate::result_streams::CapturedInput::new(content.as_bytes().to_vec());
+        } else if !self.stdin_bytes.is_empty() {
+            result.stdin = crate::result_streams::CapturedInput::new(self.stdin_bytes.clone());
+        }
 
         self.result = Some(result.clone());
         self.finished = true;
@@ -399,9 +690,19 @@ impl ProcessRunner {
             return None;
         }
 
-        // Parse args from command string
-        let parts: Vec<&str> = self.command.split_whitespace().collect();
-        let args: Vec<String> = parts.iter().skip(1).map(|s| s.to_string()).collect();
+        // An empty command name means the caller already decided this command
+        // must go to a real shell (redirection, expansions, escapes). Bail out
+        // before tokenizing so we neither waste work nor parse shell syntax we
+        // deliberately delegate.
+        if cmd_name.is_empty() {
+            return None;
+        }
+
+        // Parse args from command string, respecting quotes and performing
+        // POSIX quote removal so `echo label:'help wanted'` reaches the built-in
+        // as the single argument `label:help wanted` (issue #48).
+        let words = shell_parser::split_command_words(&self.command);
+        let args: Vec<String> = words.into_iter().skip(1).collect();
 
         let ctx = CommandContext {
             args,
@@ -418,7 +719,7 @@ impl ProcessRunner {
         match cmd_name {
             "echo" => Some(commands::echo(ctx).await),
             "pwd" => Some(commands::pwd(ctx).await),
-            "cd" => Some(commands::cd(ctx).await),
+            "cd" => Some(commands::cd::resolve_cd(ctx).await.0),
             "true" => Some(commands::r#true(ctx).await),
             "false" => Some(commands::r#false(ctx).await),
             "sleep" => Some(commands::sleep(ctx).await),
@@ -436,19 +737,16 @@ impl ProcessRunner {
             "which" => Some(commands::which(ctx).await),
             "yes" => Some(commands::yes(ctx).await),
             "seq" => Some(commands::seq(ctx).await),
+            "tee" => Some(commands::tee(ctx).await),
             "test" => Some(commands::test(ctx).await),
             "$fy" => Some(commands::fy(ctx).await),
+            "head" => Some(commands::head(ctx).await),
+            "tail" => Some(commands::tail(ctx).await),
+            "sort" => Some(commands::sort(ctx).await),
+            "uniq" => Some(commands::uniq(ctx).await),
+
             _ => None,
         }
-    }
-
-    /// Kill the process
-    pub fn kill(&mut self) -> Result<()> {
-        self.cancelled = true;
-        if let Some(ref mut child) = self.child {
-            child.start_kill()?;
-        }
-        Ok(())
     }
 
     /// Check if the process is finished
@@ -461,6 +759,34 @@ impl ProcessRunner {
         self.result.as_ref()
     }
 
+    /// Process id of the command, or `None` when there is no operating system
+    /// process to identify.
+    ///
+    /// It is `None` before the command starts, and stays `None` for built-in
+    /// (virtual) commands such as `echo` or `sleep`, which run inside this
+    /// process and never spawn a child. Once a real command has been spawned
+    /// the value is stable: it remains readable after the command finishes,
+    /// unlike the child handle, which [`run`](Self::run) consumes.
+    ///
+    /// Mirrors the JavaScript `runner.pid` property.
+    ///
+    /// ```no_run
+    /// use command_stream::{ProcessRunner, RunOptions};
+    ///
+    /// # #[tokio::main]
+    /// # async fn main() -> command_stream::Result<()> {
+    /// let mut runner = ProcessRunner::new("/bin/sleep 1", RunOptions::default());
+    /// runner.start().await?;
+    /// println!("running as pid {:?}", runner.pid());
+    /// runner.run().await?;
+    /// println!("still readable: {:?}", runner.pid());
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn pid(&self) -> Option<u32> {
+        self.pid
+    }
+
     /// Get the command string
     pub fn command(&self) -> &str {
         &self.command
@@ -469,62 +795,6 @@ impl ProcessRunner {
     /// Get the options
     pub fn options(&self) -> &RunOptions {
         &self.options
-    }
-}
-
-/// Shell configuration
-#[derive(Debug, Clone)]
-struct ShellConfig {
-    cmd: String,
-    args: Vec<String>,
-}
-
-/// Find an available shell
-fn find_available_shell() -> ShellConfig {
-    let is_windows = cfg!(windows);
-
-    if is_windows {
-        // Windows shells
-        let shells = [
-            ("cmd.exe", vec!["/c"]),
-            ("powershell.exe", vec!["-Command"]),
-        ];
-
-        for (cmd, args) in shells {
-            if which::which(cmd).is_ok() {
-                return ShellConfig {
-                    cmd: cmd.to_string(),
-                    args: args.into_iter().map(String::from).collect(),
-                };
-            }
-        }
-
-        ShellConfig {
-            cmd: "cmd.exe".to_string(),
-            args: vec!["/c".to_string()],
-        }
-    } else {
-        // Unix shells
-        let shells = [
-            ("/bin/sh", vec!["-c"]),
-            ("/usr/bin/sh", vec!["-c"]),
-            ("/bin/bash", vec!["-c"]),
-            ("sh", vec!["-c"]),
-        ];
-
-        for (cmd, args) in shells {
-            if std::path::Path::new(cmd).exists() || which::which(cmd).is_ok() {
-                return ShellConfig {
-                    cmd: cmd.to_string(),
-                    args: args.into_iter().map(String::from).collect(),
-                };
-            }
-        }
-
-        ShellConfig {
-            cmd: "/bin/sh".to_string(),
-            args: vec!["-c".to_string()],
-        }
     }
 }
 

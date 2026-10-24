@@ -1,30 +1,15 @@
 //! Recursive rule engine for translating a meta-language links network.
 //!
-//! meta-language models translation as a `TranslationRuleSet`: a query per
-//! source construct plus a template per target language. Its own
-//! `TranslationRuleSet::render` is `pub(crate)`, applies the *first* rule that
-//! matches and does not recurse into a template's placeholders, so it cannot
-//! translate a nested tree (see `js/docs/meta-language-gaps.md` for the report
-//! filed upstream).
-//!
-//! This engine keeps meta-language's rule model — the rules really are
-//! `TranslationRule`s carrying `LinkQuery`s and per-language templates — and
-//! supplies only the missing evaluation strategy:
-//!
-//!   * bottom-up recursion through placeholders,
-//!   * variadic placeholders over a node's children,
-//!   * conditional segments for optional captures,
-//!   * automatic indentation of multi-line substitutions.
-//!
-//! Once meta-language grows these, this file collapses into a call to its own
-//! rule-set rendering.
+//! Uses meta-language's query/capture/template model. The evaluator adds named
+//! rendering modes, conditional sections, variadic separators and indentation
+//! shared with the npm 0.46.0 implementation. Rust meta-language 1.0.0 now has
+//! recursive rendering too; the historical gaps and current status are recorded
+//! in `js/docs/meta-language-gaps.md`.
 
 use std::collections::HashMap;
 
 use meta_language::link_network::{LinkId, LinkNetwork, LinkType};
 use meta_language::translation_rules::{TranslationRule, TranslationRuleSet};
-
-use super::formalizer::CHUNK_TERM;
 
 /// How a placeholder renders its captured link.
 #[derive(Clone, Default)]
@@ -161,6 +146,7 @@ fn current_indent(output: &str) -> &str {
 
 /// Renders a links network by recursively substituting translation-rule templates.
 pub struct RuleEngine<'a> {
+    pub preserve_layout: bool,
     network: &'a LinkNetwork,
     rule_set: &'a TranslationRuleSet,
     language: String,
@@ -190,6 +176,7 @@ impl<'a> RuleEngine<'a> {
         }
 
         RuleEngine {
+            preserve_layout: false,
             network,
             rule_set,
             language: language.to_string(),
@@ -237,7 +224,12 @@ impl<'a> RuleEngine<'a> {
 
     /// The source text a link captures, without applying any rule.
     fn captured_text(&self, link_id: LinkId) -> String {
-        self.network.render_source_from(link_id, "Shell")
+        let language = self
+            .network
+            .link(link_id)
+            .and_then(|link| link.metadata().language())
+            .unwrap_or("Shell");
+        self.network.render_source_from(link_id, language)
     }
 
     /// Looks a template up through the configured fallback chain.
@@ -264,25 +256,12 @@ impl<'a> RuleEngine<'a> {
         self.network.link(link_id)?.references().get(index).copied()
     }
 
-    /// The renderable children of a link, with chunk nodes flattened.
+    /// The ordered children of a link.
     fn children_of(&self, link_id: LinkId) -> Vec<LinkId> {
-        let Some(link) = self.network.link(link_id) else {
-            return Vec::new();
-        };
-        let mut children = Vec::new();
-        for &child in link.references() {
-            let is_chunk = self
-                .network
-                .link(child)
-                .and_then(|child| child.metadata().term().map(|term| term == CHUNK_TERM))
-                .unwrap_or(false);
-            if is_chunk {
-                children.extend(self.children_of(child));
-            } else {
-                children.push(child);
-            }
-        }
-        children
+        self.network
+            .link(link_id)
+            .map(|link| link.references().to_vec())
+            .unwrap_or_default()
     }
 
     /// Renders `link_id` in the mode a placeholder asked for.
@@ -355,7 +334,11 @@ impl<'a> RuleEngine<'a> {
                     continue;
                 };
 
-                let indent = current_indent(&output).to_string();
+                let indent = if self.preserve_layout {
+                    String::new()
+                } else {
+                    current_indent(&output).to_string()
+                };
                 let mode = placeholder.mode.map(str::to_string);
                 let value = if placeholder.variadic {
                     let separator = decode_separator(placeholder.separator);

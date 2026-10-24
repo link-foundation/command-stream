@@ -13,11 +13,10 @@
  */
 
 import { readFileSync } from 'fs';
+import { loadUseM } from './use-m-loader.mjs';
 
 // Load use-m dynamically
-const { use } = eval(
-  await (await fetch('https://unpkg.com/use-m/use.js')).text()
-);
+const use = await loadUseM();
 
 // Import link-foundation libraries
 const { $ } = await use('command-stream');

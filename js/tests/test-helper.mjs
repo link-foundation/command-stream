@@ -91,7 +91,8 @@ beforeEach(async () => {
       }
     } catch (_e) {
       throw new Error(
-        `[test-helper] CRITICAL: Cannot restore to original directory ${originalCwd}, stuck in ${finalCwd}`
+        `[test-helper] CRITICAL: Cannot restore to original directory ${originalCwd}, stuck in ${finalCwd}`,
+        { cause: _e }
       );
     }
   }
@@ -159,7 +160,8 @@ afterEach(async () => {
       }
     } catch (_e) {
       throw new Error(
-        `[test-helper] CRITICAL: Cannot restore to original directory ${originalCwd}, stuck in ${finalCwd}`
+        `[test-helper] CRITICAL: Cannot restore to original directory ${originalCwd}, stuck in ${finalCwd}`,
+        { cause: _e }
       );
     }
   }

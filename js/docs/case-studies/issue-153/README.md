@@ -156,7 +156,7 @@ When you see errors like these, suspect the Array.join() pitfall:
 
 ## Related Documentation
 
-- [BEST-PRACTICES.md](../../BEST-PRACTICES.md) - Best practices for command-stream usage
+- [BEST-PRACTICES.md](../../../BEST-PRACTICES.md) - Best practices for command-stream usage
 - [README.md](../../../../README.md) - Common Pitfalls section
 - [$.quote.mjs](../../../src/$.quote.mjs) - Quote function implementation
 

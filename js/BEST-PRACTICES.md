@@ -6,8 +6,10 @@ This document covers best practices, common patterns, and pitfalls to avoid when
 
 - [Array Argument Handling](#array-argument-handling)
 - [String Interpolation](#string-interpolation)
+  - [JSON and Structured Data](#json-and-structured-data)
 - [Security Best Practices](#security-best-practices)
 - [Error Handling](#error-handling)
+- [Real-time Streaming](#real-time-streaming)
 - [Performance Tips](#performance-tips)
 - [Common Pitfalls](#common-pitfalls)
   - [7. try/catch for Exit Code Detection (Silent Bug)](#7-trycatch-for-exit-code-detection-silent-bug)
@@ -82,6 +84,110 @@ const userInput = "'; rm -rf /; echo '";
 await $`echo ${userInput}`;
 // Executed safely - input is quoted, not executed
 ```
+
+### Interpolating Inside Your Own Quotes
+
+A value placed inside quotes you wrote yourself is spliced in as escaped literal
+text instead of being wrapped in a second pair of quotes, exactly like `"$var"`
+in a POSIX shell:
+
+```javascript
+const script = 'for f in *.js; do echo "Processing: $f"; done';
+await $`bash -c "${script}"`; // runs the script, like: bash -c "$script"
+
+const name = "it's here";
+await $`echo '${name}'`; // → echo 'it'\''s here'
+```
+
+This is still injection-safe - the value cannot close the quote or start a new
+command - and it is what makes the common `bash -c "${cmd}"` form work.
+
+Prefer letting command-stream quote for you (no quotes in the template) unless
+the value has to reach another program as a single script argument:
+
+```javascript
+// Preferred: no quotes needed
+await $`cat ${path}`;
+
+// Use your own quotes when the value is a script for another shell
+await $`bash -c "${script}"`;
+```
+
+To restore the old always-quote behavior, call `shell.quoteContext(false)` or set
+`COMMAND_STREAM_QUOTE_CONTEXT=0`.
+
+### JSON and Structured Data
+
+Interpolate `JSON.stringify()` output directly. Do not add shell quotes to the
+value or manually escape its double quotes:
+
+```javascript
+const json = JSON.stringify(credentials);
+
+// RIGHT: one literal argument
+await $`some-cli --credentials ${json}`;
+
+// WRONG: the added backslashes become part of the argument
+await $`some-cli --credentials ${json.replaceAll('"', '\\"')}`;
+```
+
+When redirecting exact bytes, use `printf '%s'`; the fixed format string keeps
+`%` sequences in the JSON from being interpreted:
+
+```javascript
+await $`printf '%s' ${json} > ${outputFile}`;
+```
+
+`echo` adds a newline and different shells do not handle its backslash escapes
+identically. For a file-only operation, `fs.writeFile(outputFile, json)` is
+simpler and avoids a shell.
+
+### Multiline Text and Exact File Writes
+
+Multiline interpolations are one literal argument, just like a quoted shell
+variable. Backticks, dollar signs, quotes, backslashes, and newlines in the
+value are data and are not evaluated as shell syntax:
+
+```javascript
+const outputFile = 'generated.md';
+const content = `# Generated
+
+Literal: \`code\`, $HOME, \${name}, "quotes", and C:\\Tools`;
+await $`printf '%s' ${content} > ${outputFile}`;
+```
+
+`echo` adds its normal trailing newline and its option/escape handling varies
+between shells. Use `printf '%s'` when byte-for-byte text output matters. For
+large text, pipe the value through `stdin`; for binary data, skip the shell and
+use `fs.writeFile`. Never use `raw()` for untrusted content.
+
+### Paths With Spaces
+
+Interpolate the path as-is. An interpolated value always becomes exactly one
+argument, so spaces, apostrophes, and other special characters need no help
+from you - the same guarantee as `"$path"` in a shell script:
+
+```javascript
+const file = '/Users/john/My Documents/report.txt';
+
+await $`cat ${file}`; // one argument, spaces included
+await $`cp ${file} ${'/tmp/My Backups/'}`;
+```
+
+Never pre-quote the value. Quote characters you add become part of the file
+name, exactly as `sh` would treat them:
+
+```javascript
+// WRONG: looks for a file whose name starts and ends with a quote
+await $`cat ${"'" + file + "'"}`;
+
+// RIGHT
+await $`cat ${file}`;
+```
+
+Before v0.21 a value that started and ended with a matching quote was spliced
+in as shell syntax. Set `COMMAND_STREAM_PREQUOTED_PASSTHROUGH=1` or call
+`shell.preQuotedPassthrough(true)` if you still depend on that.
 
 ### Using raw() for Trusted Commands
 
@@ -180,8 +286,10 @@ shell.errexit(true);
 try {
   await $`critical-operation`;
 } catch (error) {
-  console.error('Critical operation failed:', error);
-  process.exit(1);
+  // The status is available under both names: `code` (Node.js
+  // `child_process`) and `exitCode` (Execa, zx, nano-spawn, Bun shell).
+  console.error('Critical operation failed with', error.exitCode);
+  process.exit(error.code);
 }
 ```
 
@@ -204,6 +312,129 @@ switch (result.code) {
     console.error(`Unknown error (code ${result.code})`);
 }
 ```
+
+---
+
+## Real-time Streaming
+
+### Stream Compound Commands Progressively
+
+Use `stream()` when code must react to output before the full command finishes.
+Sequences containing `;`, `&&`, `||`, subshells, or pipelines preserve
+command-stream built-ins and registered virtual commands. Output from nested
+system processes is forwarded as soon as it arrives:
+
+```javascript
+import { $ } from 'command-stream';
+
+const build = $({
+  mirror: false,
+})`echo "build started"; npm run build; echo "build finished"`;
+
+for await (const chunk of build.stream()) {
+  if (chunk.type === 'stdout') {
+    consumeBuildOutput(chunk.data);
+  } else if (chunk.type === 'stderr') {
+    consumeBuildError(chunk.data);
+  } else if (chunk.type === 'exit') {
+    console.log('build exited with', chunk.code);
+  }
+}
+```
+
+Always check `chunk.type`: the final `{ type: 'exit', code }` chunk has no
+`data` property.
+
+Breaking out of the loop stops the currently active command, including a real
+process nested inside a compound command. Keep a runner reference when you also
+need explicit cancellation:
+
+```javascript
+const watcher = $`echo "watching"; npm run watch`;
+
+for await (const chunk of watcher.stream()) {
+  if (chunk.type === 'stdout' && isReady(chunk.data)) {
+    watcher.kill('SIGINT');
+  }
+}
+```
+
+### Choose the Right Execution Model
+
+JavaScript process libraries generally use one of three models:
+
+1. **Parse and interpret shell syntax in the library.** [Bun Shell](https://bun.sh/docs/runtime/shell)
+   uses a lexer, parser, and interpreter with cross-platform built-ins. This is
+   the model command-stream uses for supported operators so built-in and custom
+   virtual commands remain available.
+2. **Run an explicit system shell.** [zx](https://google.github.io/zx/shell)
+   is shell-oriented, while [Node's `child_process`](https://nodejs.org/api/child_process.html)
+   exposes a `shell` option. This is appropriate for trusted scripts that need
+   platform shell features such as command substitution, glob expansion, file
+   descriptor redirection, or background jobs. command-stream automatically
+   falls back to the system shell when a compound command uses unsupported
+   syntax.
+3. **Spawn executables directly and compose streams programmatically.**
+   [Execa](https://github.com/sindresorhus/execa) emphasizes direct process
+   execution, iterable output, and programmatic pipelines; Node also exposes
+   piped child streams directly. In command-stream, prefer `.pipe()` when the
+   pipeline structure is built dynamically or should not depend on shell
+   syntax.
+
+Use the internal command-stream path for portable built-ins, registered virtual
+commands, and ordinary sequences. Use a real shell only when its extra syntax
+is required, because behavior then depends on the installed shell and custom
+virtual commands do not exist inside that external process. Use `.pipe()` for
+explicit application-controlled composition.
+
+### Streaming Pitfalls
+
+```javascript
+// WRONG: waits for completion before application code can consume stdout.
+const result = await $({ mirror: false })`long-running-build`;
+consumeBuildOutput(result.stdout);
+
+// CORRECT: consumes each chunk while the build is still running.
+for await (const chunk of $({ mirror: false })`long-running-build`.stream()) {
+  if (chunk.type === 'stdout') consumeBuildOutput(chunk.data);
+}
+```
+
+Do not wrap a sequence in `sh -c` merely to make it stream. That creates a
+separate shell where registered virtual commands are unavailable:
+
+```javascript
+import { $, register } from 'command-stream';
+
+register('project-status', statusHandler);
+
+// WRONG: the external shell cannot resolve the JavaScript virtual command.
+await $`sh -c 'echo checking; project-status'`;
+
+// CORRECT: command-stream keeps both commands in its own orchestration.
+await $`echo checking; project-status`;
+```
+
+Never insert untrusted text as raw shell syntax:
+
+```javascript
+import { $, raw } from 'command-stream';
+
+// WRONG: raw user input can introduce operators or command substitution.
+await $`${raw(request.body.command)}`;
+
+// CORRECT: interpolation treats external data as an argument.
+await $`project-status ${request.body.project}`;
+```
+
+Finally, command-stream can forward only what a producer writes. Some programs
+buffer output when stdout is a pipe; use that program's line-buffered,
+unbuffered, or watch option when available. Increasing a test timeout does not
+fix producer-side buffering.
+
+See
+[`examples/streaming-compound-commands.mjs`](./examples/streaming-compound-commands.mjs)
+for a runnable compound-stream example.
 
 ---
 

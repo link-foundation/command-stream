@@ -153,21 +153,29 @@ const cellStyle = (cell, options) => {
 const sameStyle = (left, right) =>
   Object.keys(left).every((key) => left[key] === right[key]);
 
+const isBlankCell = (cell) => (cell.chars || ' ').trim() === '';
+
 const coalesceRow = (cells, options) => {
   const runs = [];
-  for (let column = 0; column < cells.length; ) {
+  for (let column = 0; column < cells.length;) {
     const cell = cells[column];
     if (cell.width === 0) {
       column += 1;
+      continue;
+    }
+    if (isBlankCell(cell)) {
+      column += Math.max(cell.width, 1);
       continue;
     }
     const style = cellStyle(cell, options);
     const run = {
       column,
       width: Math.max(cell.width, 1),
-      text: cell.chars || ' ',
+      text: cell.chars,
       style,
     };
+    let visibleTextLength = run.text.length;
+    let visibleWidth = run.width;
     column += Math.max(cell.width, 1);
     while (column < cells.length) {
       const next = cells[column];
@@ -182,7 +190,13 @@ const coalesceRow = (cells, options) => {
       run.text += next.chars || ' ';
       run.width += Math.max(next.width, 1);
       column += Math.max(next.width, 1);
+      if (!isBlankCell(next)) {
+        visibleTextLength = run.text.length;
+        visibleWidth = run.width;
+      }
     }
+    run.text = run.text.slice(0, visibleTextLength);
+    run.width = visibleWidth;
     runs.push(run);
   }
   return runs;
@@ -243,7 +257,7 @@ const renderFrame = (frame, options) => {
   const backgrounds = [];
   const foregrounds = [];
   rows.forEach((cells, row) => {
-    for (let column = 0; column < cells.length; ) {
+    for (let column = 0; column < cells.length;) {
       const first = cells[column];
       const background = cellStyle(first, options).bg;
       let width = Math.max(first.width, 1);
@@ -407,9 +421,12 @@ const renderRecordingSvg = ({ frames, options, font }) => {
 };
 
 const renderGif = async ({ frames, options, font }) => {
-  const [{ Resvg }, { GIFEncoder, applyPalette, quantize }] = await Promise.all(
-    [import('@resvg/resvg-js'), import('gifenc')]
-  );
+  const [{ Resvg }, gifencModule] = await Promise.all([
+    import('@resvg/resvg-js'),
+    import('gifenc'),
+  ]);
+  const gifenc = gifencModule.GIFEncoder ? gifencModule : gifencModule.default;
+  const { GIFEncoder, applyPalette, quantize } = gifenc;
   const { width, height } = dimensions(frames, options);
   const { times } = frameTimes(frames, options.idleTimeLimit);
   const sheet = svgShell({
@@ -473,13 +490,49 @@ export const readAsciicast = async (path) => {
   return { header, events };
 };
 
+/** Every artifact `writeTerminalArtifacts` can write, by name. */
+export const TERMINAL_ARTIFACTS = Object.freeze({
+  transcript: 'transcript.txt',
+  frames: 'frames.json',
+  cast: 'session.cast',
+  snapshot: 'snapshot.svg',
+  recording: 'recording.svg',
+  gif: 'recording.gif',
+});
+
+/**
+ * Validate an `artifacts` selection and return it as a set of names.
+ * `undefined` selects every artifact, for backward compatibility (#231).
+ */
+export const resolveTerminalArtifacts = (
+  artifacts,
+  label = 'writeTerminalArtifacts'
+) => {
+  if (artifacts === undefined) {
+    return new Set(Object.keys(TERMINAL_ARTIFACTS));
+  }
+  if (!Array.isArray(artifacts)) {
+    throw new TypeError(`${label} artifacts must be an array of names`);
+  }
+  for (const name of artifacts) {
+    if (!Object.hasOwn(TERMINAL_ARTIFACTS, name)) {
+      throw new TypeError(
+        `${label} artifacts has unknown name ${JSON.stringify(name)}; expected one of ${Object.keys(TERMINAL_ARTIFACTS).join(', ')}`
+      );
+    }
+  }
+  return new Set(artifacts);
+};
+
 export const writeTerminalArtifacts = async ({
   directory,
   frames,
   transcript,
   asciicast,
   options: requestedOptions = {},
+  artifacts,
 }) => {
+  const selected = resolveTerminalArtifacts(artifacts);
   const { mkdir, writeFile } = await import('node:fs/promises');
   const { join } = await import('node:path');
   const options = { ...DEFAULTS, ...requestedOptions };
@@ -490,25 +543,35 @@ export const writeTerminalArtifacts = async ({
     cells: [],
   };
   const renderFrames = frames.length ? frames : [finalFrame];
-  const font = await embeddedFont();
+  // Each renderer runs only when its artifact was requested: the GIF in
+  // particular rasterises every frame and dominates the cost (#231).
+  const renderers = {
+    transcript: () => `${transcript}\n`,
+    frames: () => `${JSON.stringify(frames, null, 2)}\n`,
+    cast: () => serializeAsciicast(asciicast),
+    snapshot: async () =>
+      renderSnapshotSvg({
+        frame: finalFrame,
+        options,
+        font: await embeddedFont(),
+      }),
+    recording: async () =>
+      renderRecordingSvg({
+        frames: renderFrames,
+        options,
+        font: await embeddedFont(),
+      }),
+    gif: async () =>
+      renderGif({ frames: renderFrames, options, font: await embeddedFont() }),
+  };
 
   await mkdir(directory, { recursive: true });
-  const snapshot = renderSnapshotSvg({ frame: finalFrame, options, font });
-  const recording = renderRecordingSvg({
-    frames: renderFrames,
-    options,
-    font,
-  });
-  const gif = await renderGif({ frames: renderFrames, options, font });
-  await Promise.all([
-    writeFile(join(directory, 'transcript.txt'), `${transcript}\n`),
-    writeFile(
-      join(directory, 'frames.json'),
-      `${JSON.stringify(frames, null, 2)}\n`
-    ),
-    writeFile(join(directory, 'session.cast'), serializeAsciicast(asciicast)),
-    writeFile(join(directory, 'snapshot.svg'), snapshot),
-    writeFile(join(directory, 'recording.svg'), recording),
-    writeFile(join(directory, 'recording.gif'), gif),
-  ]);
+  await Promise.all(
+    [...selected].map(async (name) =>
+      writeFile(
+        join(directory, TERMINAL_ARTIFACTS[name]),
+        await renderers[name]()
+      )
+    )
+  );
 };

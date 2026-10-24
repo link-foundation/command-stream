@@ -1,45 +1,61 @@
+import { pumpInheritedStdin } from './$.process-runner-stdin.mjs';
 // ProcessRunner execution methods - start, sync, async, and related methods
-// Part of the modular ProcessRunner architecture
-
 import cp from 'child_process';
+import { toStreamResult } from './$.result-streams.mjs';
 import { trace } from './$.trace.mjs';
-import { findAvailableShell, resolveSpawnCwd } from './$.shell.mjs';
-import { StreamUtils, safeWrite, asBuffer } from './$.stream-utils.mjs';
+import { normalizeBunExitSignal } from './$.process-runner-signal.mjs';
+import {
+  normalizeTimeout,
+  setupCommandTimeout,
+} from './$.process-runner-timeout.mjs';
+import {
+  buildCommandArgv,
+  describeCommand,
+  isShellArgvSpec,
+  isShellCommandSpec,
+  resolveSpawnCwd,
+} from './$.shell.mjs';
+import { StreamUtils, safeWrite } from './$.stream-utils.mjs';
 import { pumpReadable } from './$.quote.mjs';
-import { createResult } from './$.result.mjs';
-import { parseShellCommand, needsRealShell } from './shell-parser.mjs';
+import {
+  attachExitCodeAlias,
+  createCancelledResult,
+  createCommandError,
+  createExecutionErrorResult,
+  createResult,
+  determineFinalExitCode,
+  finishExecutionError,
+  getStdinString,
+  getSyncStdinInput,
+  isProcessLaunchError,
+  prepareSpawnErrorResult,
+} from './$.result.mjs';
+import {
+  parseShellCommand,
+  needsRealShell,
+  hasShellEscapes,
+  removeShellQuotes,
+} from './shell-parser.mjs';
 import {
   createExitPromise,
   drainPumpsAfterExit,
 } from './$.process-runner-exit.mjs';
+import { effectiveCwd, effectiveEnv } from './$.process-context.mjs';
+import {
+  startDetached,
+  startDetachedSync,
+} from './$.process-runner-detach.mjs';
 
 const isBun = typeof globalThis.Bun !== 'undefined';
-
-/**
- * Check for shell operators in command
- * @param {string} command - Command to check
- * @returns {boolean}
- */
+/** Check for shell operators in command. */
 function hasShellOperators(command) {
   return (
     command.includes('&&') ||
     command.includes('||') ||
     command.includes('(') ||
     command.includes(';') ||
+    command.includes('&') ||
     (command.includes('cd ') && command.includes('&&'))
-  );
-}
-
-/**
- * Check if command is a streaming pattern
- * @param {string} command - Command to check
- * @returns {boolean}
- */
-function isStreamingPattern(command) {
-  return (
-    command.includes('sleep') &&
-    command.includes(';') &&
-    (command.includes('echo') || command.includes('printf'))
   );
 }
 
@@ -50,14 +66,7 @@ function isStreamingPattern(command) {
  * @returns {boolean}
  */
 function shouldUseShellOperators(runner, command) {
-  const hasOps = hasShellOperators(command);
-  const isStreaming = isStreamingPattern(command);
-  return (
-    runner.options.shellOperators &&
-    hasOps &&
-    !isStreaming &&
-    !runner._isStreaming
-  );
+  return runner.options.shellOperators && hasShellOperators(command);
 }
 
 /**
@@ -121,8 +130,8 @@ function spawnWithBun(argv, config) {
     cwd,
     env,
     stdin: 'pipe',
-    stdout: 'pipe',
-    stderr: 'pipe',
+    stdout: config.stdout ?? 'pipe',
+    stderr: config.stderr ?? 'pipe',
     detached: process.platform !== 'win32',
   });
 }
@@ -134,7 +143,7 @@ function spawnWithBun(argv, config) {
  * @returns {object} Child process
  */
 function spawnWithNode(argv, config) {
-  const { cwd, env, isInteractive } = config;
+  const { cwd, env, isInteractive, shell } = config;
 
   trace(
     'ProcessRunner',
@@ -143,6 +152,7 @@ function spawnWithNode(argv, config) {
         command: argv[0],
         args: argv.slice(1),
         isInteractive,
+        shell,
         cwd,
         platform: process.platform,
       })}`
@@ -152,6 +162,7 @@ function spawnWithNode(argv, config) {
     return cp.spawn(argv[0], argv.slice(1), {
       cwd,
       env,
+      shell,
       stdio: 'inherit',
     });
   }
@@ -159,7 +170,8 @@ function spawnWithNode(argv, config) {
   const child = cp.spawn(argv[0], argv.slice(1), {
     cwd,
     env,
-    stdio: ['pipe', 'pipe', 'pipe'],
+    shell,
+    stdio: ['pipe', config.stdout ?? 'pipe', config.stderr ?? 'pipe'],
     detached: process.platform !== 'win32',
   });
 
@@ -185,12 +197,13 @@ function spawnWithNode(argv, config) {
  * @returns {object} Child process
  */
 function spawnChild(argv, config) {
-  const { stdin } = config;
+  const { stdin, shell } = config;
   // Make sure we never try to spawn from a deleted/inaccessible working
   // directory, which would make the OS-level spawn fail (issue #44).
   config = { ...config, cwd: resolveSpawnCwd(config.cwd) };
   const needsExplicitPipe = stdin !== 'inherit' && stdin !== 'ignore';
   const preferNodeForInput = isBun && needsExplicitPipe;
+  const preferNodeForShellArgv = isBun && shell;
 
   trace(
     'ProcessRunner',
@@ -198,13 +211,14 @@ function spawnChild(argv, config) {
       `About to spawn process | ${JSON.stringify({
         needsExplicitPipe,
         preferNodeForInput,
+        preferNodeForShellArgv,
         runtime: isBun ? 'Bun' : 'Node',
         command: argv[0],
         args: argv.slice(1),
       })}`
   );
 
-  if (preferNodeForInput) {
+  if (preferNodeForInput || preferNodeForShellArgv) {
     return spawnWithNode(argv, config);
   }
   return isBun ? spawnWithBun(argv, config) : spawnWithNode(argv, config);
@@ -215,27 +229,28 @@ function spawnChild(argv, config) {
  * @param {object} runner - ProcessRunner instance
  */
 function setupChildEventListeners(runner) {
-  if (!runner.child || typeof runner.child.on !== 'function') {
+  if (!runner._child || typeof runner._child.on !== 'function') {
     return;
   }
 
-  runner.child.on('spawn', () => {
+  runner._child.on('spawn', () => {
     trace(
       'ProcessRunner',
       () =>
         `Child process spawned successfully | ${JSON.stringify({
-          pid: runner.child.pid,
+          pid: runner._child.pid,
           command: runner.spec?.command?.slice(0, 50),
         })}`
     );
   });
 
-  runner.child.on('error', (error) => {
+  runner._child.on('error', (error) => {
+    runner._spawnError = error;
     trace(
       'ProcessRunner',
       () =>
         `Child process error event | ${JSON.stringify({
-          pid: runner.child?.pid,
+          pid: runner._child?.pid,
           error: error.message,
           code: error.code,
           errno: error.errno,
@@ -253,12 +268,12 @@ function setupChildEventListeners(runner) {
  * @returns {Promise}
  */
 function createStdoutPump(runner, childPid, signal) {
-  if (!runner.child.stdout) {
+  if (!runner._child.stdout) {
     return Promise.resolve();
   }
 
   return pumpReadable(
-    runner.child.stdout,
+    runner._child.stdout,
     (buf) => {
       trace(
         'ProcessRunner',
@@ -280,6 +295,7 @@ function createStdoutPump(runner, childPid, signal) {
       }
 
       runner._emitProcessedData('stdout', buf);
+      return runner._waitForStreamCapacity();
     },
     signal
   );
@@ -292,12 +308,12 @@ function createStdoutPump(runner, childPid, signal) {
  * @returns {Promise}
  */
 function createStderrPump(runner, childPid, signal) {
-  if (!runner.child.stderr) {
+  if (!runner._child.stderr) {
     return Promise.resolve();
   }
 
   return pumpReadable(
-    runner.child.stderr,
+    runner._child.stderr,
     (buf) => {
       trace(
         'ProcessRunner',
@@ -319,6 +335,7 @@ function createStderrPump(runner, childPid, signal) {
       }
 
       runner._emitProcessedData('stderr', buf);
+      return runner._waitForStreamCapacity();
     },
     signal
   );
@@ -339,7 +356,7 @@ function handleInheritStdin(runner, isInteractive) {
     return Promise.resolve();
   }
 
-  const isPipedIn = process.stdin && process.stdin.isTTY === false;
+  const isPipedIn = process.stdin && !process.stdin.isTTY;
   trace(
     'ProcessRunner',
     () =>
@@ -352,7 +369,7 @@ function handleInheritStdin(runner, isInteractive) {
   if (isPipedIn) {
     trace('ProcessRunner', () => `stdin: Pumping piped input to child process`);
     return runner._pumpStdinTo(
-      runner.child,
+      runner._child,
       runner.options.capture ? runner.inChunks : null
     );
   }
@@ -386,7 +403,7 @@ function handleStdin(runner, stdin, isInteractive) {
                 ? `string(${stdin.length})`
                 : 'other',
         isInteractive,
-        hasChildStdin: !!runner.child?.stdin,
+        hasChildStdin: !!runner._child?.stdin,
         processTTY: process.stdin.isTTY,
       })}`
   );
@@ -397,8 +414,8 @@ function handleStdin(runner, stdin, isInteractive) {
 
   if (stdin === 'ignore') {
     trace('ProcessRunner', () => `stdin: Ignoring and closing stdin`);
-    if (runner.child.stdin && typeof runner.child.stdin.end === 'function') {
-      runner.child.stdin.end();
+    if (runner._child.stdin && typeof runner._child.stdin.end === 'function') {
+      runner._child.stdin.end();
     }
     return Promise.resolve();
   }
@@ -431,48 +448,15 @@ function handleStdin(runner, stdin, isInteractive) {
 }
 
 /**
- * Determine final exit code
- * @param {number|null|undefined} code - Raw exit code
- * @param {boolean} cancelled - Was process cancelled
- * @returns {number}
- */
-function determineFinalExitCode(code, cancelled) {
-  trace(
-    'ProcessRunner',
-    () =>
-      `Raw exit code from child | ${JSON.stringify({
-        code,
-        codeType: typeof code,
-        cancelled,
-        isBun,
-      })}`
-  );
-
-  if (code !== undefined && code !== null) {
-    return code;
-  }
-
-  if (cancelled) {
-    trace(
-      'ProcessRunner',
-      () => `Process was killed, using SIGTERM exit code 143`
-    );
-    return 143;
-  }
-
-  trace('ProcessRunner', () => `Process exited without code, defaulting to 0`);
-  return 0;
-}
-
-/**
  * Build result data from runner state
  * @param {object} runner - ProcessRunner instance
  * @param {number} exitCode - Exit code
  * @returns {object}
  */
-function buildResultData(runner, exitCode) {
+function buildResultData(runner, exitCode, signal) {
   return {
     code: exitCode,
+    signal,
     stdout: runner.options.capture
       ? runner.outChunks && runner.outChunks.length > 0
         ? Buffer.concat(runner.outChunks).toString('utf8')
@@ -487,7 +471,7 @@ function buildResultData(runner, exitCode) {
       runner.options.capture && runner.inChunks
         ? Buffer.concat(runner.inChunks).toString('utf8')
         : undefined,
-    child: runner.child,
+    child: runner._child,
   };
 }
 
@@ -503,45 +487,15 @@ function throwErrexitIfNeeded(runner, globalShellSettings) {
 
   trace('ProcessRunner', () => `Errexit mode: throwing error`);
 
-  const error = new Error(
-    `Command failed with exit code ${runner.result.code}`
+  throw createCommandError(
+    `Command failed with exit code ${runner.result.code}`,
+    {
+      code: runner.result.code,
+      stdout: runner.result.stdout,
+      stderr: runner.result.stderr,
+      result: runner.result,
+    }
   );
-  error.code = runner.result.code;
-  error.stdout = runner.result.stdout;
-  error.stderr = runner.result.stderr;
-  error.result = runner.result;
-
-  throw error;
-}
-
-/**
- * Get stdin input for sync spawn
- * @param {string|Buffer} stdin - Stdin option
- * @returns {Buffer|undefined}
- */
-function getSyncStdinInput(stdin) {
-  if (typeof stdin === 'string') {
-    return Buffer.from(stdin);
-  }
-  if (Buffer.isBuffer(stdin)) {
-    return stdin;
-  }
-  return undefined;
-}
-
-/**
- * Get stdin string for result
- * @param {string|Buffer} stdin - Stdin option
- * @returns {string}
- */
-function getStdinString(stdin) {
-  if (typeof stdin === 'string') {
-    return stdin;
-  }
-  if (Buffer.isBuffer(stdin)) {
-    return stdin.toString('utf8');
-  }
-  return '';
 }
 
 /**
@@ -551,21 +505,31 @@ function getStdinString(stdin) {
  * @returns {object} Result object
  */
 function executeSyncBun(argv, options) {
-  const { cwd, env, stdin } = options;
-  const proc = Bun.spawnSync(argv, {
-    cwd,
-    env,
-    stdin: getSyncStdinInput(stdin),
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
+  const { cwd, env, stdin, timeout, killSignal } = options;
+  let proc;
+  try {
+    proc = Bun.spawnSync(argv, {
+      cwd,
+      env,
+      stdin: getSyncStdinInput(stdin),
+      stdout: 'pipe',
+      stderr: 'pipe',
+      timeout,
+      killSignal,
+    });
+  } catch (error) {
+    return createExecutionErrorResult(error);
+  }
 
+  const signal = normalizeBunExitSignal(proc.exitCode, proc.signalCode);
   const result = createResult({
-    code: proc.exitCode || 0,
+    code: determineFinalExitCode(proc.exitCode, signal),
+    signal,
     stdout: proc.stdout?.toString('utf8') || '',
     stderr: proc.stderr?.toString('utf8') || '',
     stdin: getStdinString(stdin),
   });
+  result.timedOut = Boolean(proc.exitedDueToTimeout);
   result.child = proc;
   return result;
 }
@@ -577,21 +541,38 @@ function executeSyncBun(argv, options) {
  * @returns {object} Result object
  */
 function executeSyncNode(argv, options) {
-  const { cwd, env, stdin } = options;
+  const { cwd, env, stdin, shell, timeout, killSignal } = options;
   const proc = cp.spawnSync(argv[0], argv.slice(1), {
     cwd,
     env,
+    shell,
     input: getSyncStdinInput(stdin),
     encoding: 'utf8',
     stdio: ['pipe', 'pipe', 'pipe'],
+    timeout,
+    killSignal,
   });
+  // A `timeout` kill sets `error` (ETIMEDOUT) next to the kill signal; report
+  // it as a signal exit like the async path does, not as a spawn failure.
+  const timedOut = proc.error?.code === 'ETIMEDOUT';
 
+  if (proc.error && !timedOut) {
+    const result = createExecutionErrorResult(proc.error);
+    result.child = proc;
+    return result;
+  }
+
+  const signal = isBun
+    ? normalizeBunExitSignal(proc.status, proc.signal)
+    : (proc.signal ?? null);
   const result = createResult({
-    code: proc.status || 0,
+    code: determineFinalExitCode(proc.status, signal),
+    signal,
     stdout: proc.stdout || '',
     stderr: proc.stderr || '',
     stdin: getStdinString(stdin),
   });
+  result.timedOut = timedOut;
   result.child = proc;
   return result;
 }
@@ -605,7 +586,9 @@ function executeSyncNode(argv, options) {
 function executeSyncProcess(argv, options) {
   // Guard against a deleted/inaccessible working directory (issue #44).
   options = { ...options, cwd: resolveSpawnCwd(options.cwd) };
-  return isBun ? executeSyncBun(argv, options) : executeSyncNode(argv, options);
+  return isBun && !options.shell
+    ? executeSyncBun(argv, options)
+    : executeSyncNode(argv, options);
 }
 
 /**
@@ -616,6 +599,9 @@ function executeSyncProcess(argv, options) {
  * @returns {object} Result
  */
 function processSyncResult(runner, result, globalShellSettings) {
+  // The sync spawn has already exited, but reports the pid it ran under.
+  runner._pid = result.child?.pid ?? runner._pid;
+
   if (runner.options.mirror) {
     if (result.stdout) {
       safeWrite(process.stdout, result.stdout);
@@ -638,15 +624,29 @@ function processSyncResult(runner, result, globalShellSettings) {
   runner.finish(result);
 
   if (globalShellSettings.errexit && result.code !== 0) {
-    const error = new Error(`Command failed with exit code ${result.code}`);
-    error.code = result.code;
-    error.stdout = result.stdout;
-    error.stderr = result.stderr;
-    error.result = result;
-    throw error;
+    throw createCommandError(`Command failed with exit code ${result.code}`, {
+      code: result.code,
+      stdout: result.stdout,
+      stderr: result.stderr,
+      result,
+    });
   }
 
   return result;
+}
+
+/**
+ * Stop a runner for an aborted `signal` or an expired `timeout`. Honors the
+ * configured killSignal (defaults to SIGTERM) so both use the same stop signal
+ * as an explicit kill().
+ * @param {object} runner - ProcessRunner instance
+ */
+function stopForAbort(runner) {
+  runner.kill();
+  trace('ProcessRunner', () => 'Process kill initiated due to abort');
+  if (runner._abortController && !runner._abortController.signal.aborted) {
+    runner._abortController.abort();
+  }
 }
 
 /**
@@ -654,6 +654,7 @@ function processSyncResult(runner, result, globalShellSettings) {
  * @param {object} runner - ProcessRunner instance
  */
 function setupExternalAbortSignal(runner) {
+  setupCommandTimeout(runner, () => stopForAbort(runner));
   const signal = runner.options.signal;
   if (!signal || typeof signal.addEventListener !== 'function') {
     return;
@@ -690,21 +691,7 @@ function setupExternalAbortSignal(runner) {
         })}`
     );
 
-    // Honor the configured killSignal (defaults to SIGTERM) so AbortSignal-based
-    // cancellation uses the same stop signal as an explicit kill().
-    runner.kill();
-    trace(
-      'ProcessRunner',
-      () => 'Process kill initiated due to external abort signal'
-    );
-
-    if (runner._abortController && !runner._abortController.signal.aborted) {
-      trace(
-        'ProcessRunner',
-        () => 'Aborting internal controller due to external signal'
-      );
-      runner._abortController.abort();
-    }
+    stopForAbort(runner);
   });
 
   if (signal.aborted) {
@@ -735,14 +722,7 @@ function reinitCaptureChunks(runner) {
 
   runner.outChunks = runner.options.capture ? [] : null;
   runner.errChunks = runner.options.capture ? [] : null;
-  runner.inChunks =
-    runner.options.capture && runner.options.stdin === 'inherit'
-      ? []
-      : runner.options.capture &&
-          (typeof runner.options.stdin === 'string' ||
-            Buffer.isBuffer(runner.options.stdin))
-        ? [Buffer.from(runner.options.stdin)]
-        : [];
+  runner.inChunks = [];
 }
 
 /**
@@ -862,7 +842,25 @@ async function handleShellMode(runner, deps) {
     () => `BRANCH: spec.mode => shell | ${JSON.stringify({})}`
   );
 
+  // Virtual handlers consume completed input. Keep manual streams, pid and
+  // cancellation on this runner by spawning its real process directly.
+  if (runner.options.stdin === 'pipe') {
+    trace('ProcessRunner', () => 'Manual stdin pipe: using the real shell');
+    return null;
+  }
   const useShellOps = shouldUseShellOperators(runner, command);
+  // Backslash escapes are removed by a real shell but not by our lightweight
+  // tokenizer, so such commands always go to the system shell rather than to
+  // the built-in commands (issue #49). needsRealShell() is asked
+  // unconditionally: gating it on useShellOps made the verdict depend on
+  // whether the command happened to also contain `&&`, `||`, `;`, `&` or `(`,
+  // so `echo hi > f` handed `>` and `f` to the built-in `echo` as two literal
+  // arguments while `echo $(echo hi) > f` did not (issue #46).
+  // `$fy` is a literal virtual command name, not an environment expansion.
+  // Analyze its arguments normally so redirects/expansions still use a shell.
+  const analyzedCommand = command.replace(/^(\s*)\$fy(?=\s|$)/, '$1fy');
+  const requiresRealShell =
+    needsRealShell(analyzedCommand) || hasShellEscapes(command);
 
   trace(
     'ProcessRunner',
@@ -870,18 +868,18 @@ async function handleShellMode(runner, deps) {
       `Shell operator detection | ${JSON.stringify({
         hasShellOperators: hasShellOperators(command),
         shellOperatorsEnabled: runner.options.shellOperators,
-        isStreamingPattern: isStreamingPattern(command),
         isStreaming: runner._isStreaming,
         shouldUseShellOperators: useShellOps,
+        requiresRealShell,
         command: command.slice(0, 100),
       })}`
   );
 
-  if (
-    !runner.options._bypassVirtual &&
-    useShellOps &&
-    !needsRealShell(command)
-  ) {
+  if (requiresRealShell) {
+    return null;
+  }
+
+  if (!runner.options._bypassVirtual && useShellOps) {
     const result = await tryEnhancedShellParser(runner, command);
     if (result) {
       return result;
@@ -933,19 +931,24 @@ async function handleShellMode(runner, deps) {
 async function executeChildProcess(runner, argv, config) {
   const { stdin, isInteractive } = config;
 
-  runner.child = spawnChild(argv, config);
+  runner._child = spawnChild(argv, {
+    ...config,
+    stdout: runner.options.stdout,
+    stderr: runner.options.stderr,
+  });
+  runner._pid = runner._child?.pid; // recorded before _cleanup() drops `child`
 
-  if (runner.child) {
+  if (runner._child) {
     trace(
       'ProcessRunner',
       () =>
         `Child process created | ${JSON.stringify({
-          pid: runner.child.pid,
-          detached: runner.child.options?.detached,
-          killed: runner.child.killed,
-          hasStdout: !!runner.child.stdout,
-          hasStderr: !!runner.child.stderr,
-          hasStdin: !!runner.child.stdin,
+          pid: runner._child.pid,
+          detached: runner._child.options?.detached,
+          killed: runner._child.killed,
+          hasStdout: !!runner._child.stdout,
+          hasStderr: !!runner._child.stderr,
+          hasStdin: !!runner._child.stdin,
           platform: process.platform,
           command: runner.spec?.command?.slice(0, 100),
         })}`
@@ -953,22 +956,23 @@ async function executeChildProcess(runner, argv, config) {
     setupChildEventListeners(runner);
   }
 
-  const childPid = runner.child?.pid;
+  const childPid = runner._child?.pid;
   const pumpAbort = new AbortController();
   const outPump = createStdoutPump(runner, childPid, pumpAbort.signal);
   const errPump = createStderrPump(runner, childPid, pumpAbort.signal);
   const stdinPumpPromise = handleStdin(runner, stdin, isInteractive);
-  const exited = createExitPromise(runner.child, runner);
+  const exited = createExitPromise(runner._child, runner);
 
-  const code = await exited;
+  const { code, signal } = await exited;
   await drainPumpsAfterExit(
     runner,
     [outPump, errPump, stdinPumpPromise],
     pumpAbort
   );
 
-  const finalExitCode = determineFinalExitCode(code, runner._cancelled);
-  const resultData = buildResultData(runner, finalExitCode);
+  const spawnErrorCode = prepareSpawnErrorResult(runner);
+  const finalExitCode = spawnErrorCode ?? determineFinalExitCode(code, signal);
+  const resultData = buildResultData(runner, finalExitCode, signal);
 
   trace(
     'ProcessRunner',
@@ -976,6 +980,7 @@ async function executeChildProcess(runner, argv, config) {
       `Process completed | ${JSON.stringify({
         command: runner.command,
         finalExitCode,
+        signal,
         captured: runner.options.capture,
         hasStdout: !!resultData.stdout,
         hasStderr: !!resultData.stderr,
@@ -983,7 +988,7 @@ async function executeChildProcess(runner, argv, config) {
         stderrLength: resultData.stderr?.length || 0,
         stdoutPreview: resultData.stdout?.slice(0, 100),
         stderrPreview: resultData.stderr?.slice(0, 100),
-        childPid: runner.child?.pid,
+        childPid: runner._child?.pid,
         cancelled: runner._cancelled,
         cancellationSignal: runner._cancellationSignal,
         platform: process.platform,
@@ -1019,7 +1024,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
           options,
           started: this.started,
           hasPromise: !!this.promise,
-          hasChild: !!this.child,
+          hasChild: !!this._child,
           command: this.spec?.command?.slice(0, 50),
         })}`
     );
@@ -1050,11 +1055,11 @@ export function attachExecutionMethods(ProcessRunner, deps) {
 
     if (mode === 'sync') {
       trace('ProcessRunner', () => `BRANCH: mode => sync`);
-      return this._startSync();
+      return toStreamResult(this._startSync());
     }
 
     trace('ProcessRunner', () => `BRANCH: mode => async`);
-    return this._startAsync();
+    return this._startAsync().then(toStreamResult);
   };
 
   ProcessRunner.prototype.sync = function () {
@@ -1086,6 +1091,29 @@ export function attachExecutionMethods(ProcessRunner, deps) {
   };
 
   ProcessRunner.prototype._doStartAsync = async function () {
+    // Keep external-process options stable when another task changes or resets
+    // the process-wide defaults while this command is running (issue #170).
+    const shellSettings = { ...globalShellSettings };
+
+    // The await/then path can reach here without start()'s option merge.
+    setupExternalAbortSignal(this);
+    // Preserve the public lifecycle contract: accessing a stream starts the
+    // runner synchronously even though command execution is asynchronous.
+    this.started = true;
+    this._mode = 'async';
+    this._effectiveCwd = this.options.cwd;
+    this._effectiveEnv = effectiveEnv(this);
+
+    if (this._cancelled) {
+      return (
+        this.result ??
+        this.finish(createCancelledResult(this._cancellationSignal))
+      );
+    }
+    if (this.options.detached) {
+      return startDetached(this);
+    }
+
     trace(
       'ProcessRunner',
       () =>
@@ -1094,15 +1122,6 @@ export function attachExecutionMethods(ProcessRunner, deps) {
           command: this.spec.command?.slice(0, 100),
         })}`
     );
-
-    this.started = true;
-    this._mode = 'async';
-
-    // Ensure an external AbortSignal (options.signal) is honored regardless of
-    // how the runner was started. The await/then path reaches here without
-    // going through start()'s option-merge branch, so register the listener
-    // here too (idempotent via the _externalAbortSetup guard).
-    setupExternalAbortSignal(this);
 
     try {
       const { cwd, env, stdin } = this.options;
@@ -1122,21 +1141,20 @@ export function attachExecutionMethods(ProcessRunner, deps) {
           this.spec.destination
         );
       }
-
-      // Handle shell mode special cases
-      if (this.spec.mode === 'shell') {
+      const shellArgv = isShellArgvSpec(this.spec);
+      if (isShellCommandSpec(this.spec)) {
         const shellResult = await handleShellMode(this, deps);
+        if (this._cancelled) {
+          return this.result;
+        }
         if (shellResult) {
-          return shellResult;
+          return this.finish(shellResult);
         }
       }
 
       // Build command arguments
-      const shell = findAvailableShell();
-      const argv =
-        this.spec.mode === 'shell'
-          ? [shell.cmd, ...shell.args, this.spec.command]
-          : [this.spec.file, ...this.spec.args];
+      const childEnv = effectiveEnv(this) ?? env;
+      const argv = buildCommandArgv(this.spec, childEnv, this.options);
 
       trace(
         'ProcessRunner',
@@ -1144,14 +1162,13 @@ export function attachExecutionMethods(ProcessRunner, deps) {
           `Constructed argv | ${JSON.stringify({
             mode: this.spec.mode,
             argv,
+            shellArgv,
             originalCommand: this.spec.command,
           })}`
       );
 
       // Log command if tracing enabled
-      const traceCmd =
-        this.spec.mode === 'shell' ? this.spec.command : argv.join(' ');
-      logShellTrace(globalShellSettings, traceCmd);
+      logShellTrace(shellSettings, describeCommand(this.spec));
 
       // Detect interactive mode
       const isInteractive = isInteractiveMode(stdin, this.options);
@@ -1171,10 +1188,11 @@ export function attachExecutionMethods(ProcessRunner, deps) {
 
       // Execute child process
       const result = await executeChildProcess(this, argv, {
-        cwd,
-        env,
+        cwd: effectiveCwd(this) ?? cwd,
+        env: childEnv,
         stdin,
         isInteractive,
+        shell: shellArgv,
       });
 
       this.finish(result);
@@ -1188,7 +1206,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
           })}`
       );
 
-      throwErrexitIfNeeded(this, globalShellSettings);
+      throwErrexitIfNeeded(this, shellSettings);
 
       return this.result;
     } catch (error) {
@@ -1204,76 +1222,53 @@ export function attachExecutionMethods(ProcessRunner, deps) {
           })}`
       );
 
-      if (!this.finished) {
-        const errorResult = createResult({
-          code: error.code ?? 1,
-          stdout: error.stdout ?? '',
-          stderr: error.stderr ?? error.message ?? '',
-          stdin: '',
-        });
-        this.finish(errorResult);
+      const errorResult = finishExecutionError(this, error);
+
+      // Rejections escaping here include failures to launch a process, whose
+      // `code` stays the POSIX errno string. `exitCode` always reports the
+      // shell-compatible status the result carries (issue #38).
+      attachExitCodeAlias(error, errorResult?.code);
+
+      // Match the library's default shell-like error contract for failures to
+      // launch a direct executable. `errexit` continues to opt into rejection,
+      // and programming/internal errors are never swallowed.
+      if (isProcessLaunchError(error) && !shellSettings.errexit) {
+        return this.result;
       }
 
       throw error;
     }
   };
 
-  ProcessRunner.prototype._pumpStdinTo = async function (child, captureChunks) {
-    trace('ProcessRunner', () => `_pumpStdinTo ENTER`);
-    if (!child.stdin) {
-      return;
-    }
-
-    const bunWriter =
-      isBun && child.stdin && typeof child.stdin.getWriter === 'function'
-        ? child.stdin.getWriter()
-        : null;
-
-    for await (const chunk of process.stdin) {
-      const buf = asBuffer(chunk);
-      captureChunks && captureChunks.push(buf);
-      if (bunWriter) {
-        await bunWriter.write(buf);
-      } else if (typeof child.stdin.write === 'function') {
-        StreamUtils.addStdinErrorHandler(child.stdin, 'child stdin buffer');
-        StreamUtils.safeStreamWrite(child.stdin, buf, 'child stdin buffer');
-      } else if (isBun && typeof Bun.write === 'function') {
-        await Bun.write(child.stdin, buf);
-      }
-    }
-
-    if (bunWriter) {
-      await bunWriter.close();
-    } else if (typeof child.stdin.end === 'function') {
-      child.stdin.end();
-    }
-  };
+  ProcessRunner.prototype._pumpStdinTo = pumpInheritedStdin;
 
   ProcessRunner.prototype._writeToStdin = async function (buf) {
     trace('ProcessRunner', () => `_writeToStdin | len=${buf?.length || 0}`);
+    // A child may die before the asynchronous Node write completes.
+    StreamUtils.addStdinErrorHandler(this._child.stdin, 'child stdin buffer');
     const bytes =
       buf instanceof Uint8Array
         ? buf
         : new Uint8Array(buf.buffer, buf.byteOffset ?? 0, buf.byteLength);
 
-    if (await StreamUtils.writeToStream(this.child.stdin, bytes, 'stdin')) {
-      if (StreamUtils.isBunStream(this.child.stdin)) {
+    if (await StreamUtils.writeToStream(this._child.stdin, bytes, 'stdin')) {
+      if (StreamUtils.isBunStream(this._child.stdin)) {
         // Stream was already closed by writeToStream utility - no action needed
-      } else if (StreamUtils.isNodeStream(this.child.stdin)) {
+      } else if (StreamUtils.isNodeStream(this._child.stdin)) {
         try {
-          this.child.stdin.end();
+          this._child.stdin.end();
         } catch (_endError) {
           /* Expected when stream is already closed */
         }
       }
     } else if (isBun && typeof Bun.write === 'function') {
-      await Bun.write(this.child.stdin, buf);
+      await Bun.write(this._child.stdin, buf);
     }
   };
 
   ProcessRunner.prototype._forwardTTYStdin = function () {
     trace('ProcessRunner', () => `_forwardTTYStdin ENTER`);
-    if (!process.stdin.isTTY || !this.child.stdin) {
+    if (!process.stdin.isTTY || !this._child.stdin) {
       return;
     }
 
@@ -1288,8 +1283,8 @@ export function attachExecutionMethods(ProcessRunner, deps) {
           this._sendSigintToChild();
           return;
         }
-        if (this.child.stdin?.write) {
-          this.child.stdin.write(chunk);
+        if (this._child.stdin?.write) {
+          this._child.stdin.write(chunk);
         }
       };
 
@@ -1304,10 +1299,10 @@ export function attachExecutionMethods(ProcessRunner, deps) {
       process.stdin.on('data', onData);
 
       const childExit = isBun
-        ? this.child.exited
+        ? this._child.exited
         : new Promise((resolve) => {
-            this.child.once('close', resolve);
-            this.child.once('exit', resolve);
+            this._child.once('close', resolve);
+            this._child.once('exit', resolve);
           });
 
       childExit.then(cleanup).catch(cleanup);
@@ -1319,17 +1314,17 @@ export function attachExecutionMethods(ProcessRunner, deps) {
   };
 
   ProcessRunner.prototype._sendSigintToChild = function () {
-    if (!this.child?.pid) {
+    if (!this._child?.pid) {
       return;
     }
     try {
       if (isBun) {
-        this.child.kill('SIGINT');
+        this._child.kill('SIGINT');
       } else {
         try {
-          process.kill(-this.child.pid, 'SIGINT');
+          process.kill(-this._child.pid, 'SIGINT');
         } catch (_e) {
-          process.kill(this.child.pid, 'SIGINT');
+          process.kill(this._child.pid, 'SIGINT');
         }
       }
     } catch (_err) {
@@ -1354,13 +1349,10 @@ export function attachExecutionMethods(ProcessRunner, deps) {
 
     const cmd = parts[0];
     const args = parts.slice(1).map((arg) => {
-      if (
-        (arg.startsWith('"') && arg.endsWith('"')) ||
-        (arg.startsWith("'") && arg.endsWith("'"))
-      ) {
-        return { value: arg.slice(1, -1), quoted: true, quoteChar: arg[0] };
-      }
-      return { value: arg, quoted: false };
+      // POSIX quote removal so `label:'help wanted'` reaches a built-in as the
+      // single argument `label:help wanted`, not with literal quotes (#48).
+      const { value, quoted, quoteChar } = removeShellQuotes(arg);
+      return { value, quoted, quoteChar: quoteChar ?? undefined, raw: arg };
     });
 
     return { cmd, args, type: 'simple' };
@@ -1404,13 +1396,9 @@ export function attachExecutionMethods(ProcessRunner, deps) {
 
         const cmd = parts[0];
         const args = parts.slice(1).map((arg) => {
-          if (
-            (arg.startsWith('"') && arg.endsWith('"')) ||
-            (arg.startsWith("'") && arg.endsWith("'"))
-          ) {
-            return { value: arg.slice(1, -1), quoted: true, quoteChar: arg[0] };
-          }
-          return { value: arg, quoted: false };
+          // POSIX quote removal (see _parseCommand) applied per pipeline stage.
+          const { value, quoted, quoteChar } = removeShellQuotes(arg);
+          return { value, quoted, quoteChar: quoteChar ?? undefined, raw: arg };
         });
 
         return { cmd, args };
@@ -1432,20 +1420,27 @@ export function attachExecutionMethods(ProcessRunner, deps) {
 
     this.started = true;
     this._mode = 'sync';
+    if (this.options.detached) {
+      return startDetachedSync(this);
+    }
+    const shellSettings = { ...globalShellSettings };
 
-    const { cwd, env, stdin } = this.options;
-    const shell = findAvailableShell();
-    const argv =
-      this.spec.mode === 'shell'
-        ? [shell.cmd, ...shell.args, this.spec.command]
-        : [this.spec.file, ...this.spec.args];
+    const { cwd, stdin } = this.options;
+    const env = effectiveEnv(this);
+    const shellArgv = isShellArgvSpec(this.spec);
+    const argv = buildCommandArgv(this.spec, env, this.options);
 
-    const traceCmd =
-      this.spec.mode === 'shell' ? this.spec.command : argv.join(' ');
-    logShellTrace(globalShellSettings, traceCmd);
+    logShellTrace(shellSettings, describeCommand(this.spec));
 
-    const result = executeSyncProcess(argv, { cwd, env, stdin });
-    return processSyncResult(this, result, globalShellSettings);
+    const result = executeSyncProcess(argv, {
+      cwd,
+      env,
+      stdin,
+      shell: shellArgv,
+      timeout: normalizeTimeout(this.options.timeout) || undefined,
+      killSignal: this.options.killSignal,
+    });
+    return processSyncResult(this, result, shellSettings);
   };
 
   // Promise interface
@@ -1454,7 +1449,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
     if (!this.promise) {
       this.promise = this._startAsync();
     }
-    return this.promise.then(onFulfilled, onRejected);
+    return this.promise.then(toStreamResult).then(onFulfilled, onRejected);
   };
 
   ProcessRunner.prototype.catch = function (onRejected) {
@@ -1462,7 +1457,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
     if (!this.promise) {
       this.promise = this._startAsync();
     }
-    return this.promise.catch(onRejected);
+    return this.promise.then(toStreamResult).catch(onRejected);
   };
 
   ProcessRunner.prototype.finally = function (onFinally) {
@@ -1470,7 +1465,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
     if (!this.promise) {
       this.promise = this._startAsync();
     }
-    return this.promise.finally(() => {
+    return this.promise.then(toStreamResult).finally(() => {
       if (!this.finished) {
         this.finish(
           createResult({

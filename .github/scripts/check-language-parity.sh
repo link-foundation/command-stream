@@ -2,11 +2,10 @@
 #
 # Language parity check.
 #
-# command-stream ships two implementations that must stay in lock-step: the
-# JavaScript library under js/src/** and the Rust library under rust/src/**.
-# This script fails when a pull request changes one language's source without
-# touching the other's, so that behavioral changes are always made in both
-# languages (see issue #155 review feedback).
+# command-stream ships two implementations that must stay in lock-step. Source
+# changes and benchmark changes are checked independently, so a token benchmark
+# edit cannot satisfy a behavioral source change (or vice versa). This keeps
+# both the implementation and its measured claims available in both languages.
 #
 # Escape hatch: add the `parity-exempt` label to the PR for changes that are
 # legitimately single-language (the workflow skips this check when the label is
@@ -29,47 +28,84 @@ if git rev-parse --verify --quiet "origin/${BASE_REF}" >/dev/null; then
   BASE="origin/${BASE_REF}"
 elif git rev-parse --verify --quiet "${BASE_REF}" >/dev/null; then
   BASE="${BASE_REF}"
+elif [ -n "${CI:-}" ]; then
+  # Skipping would report a pass the check never made (issue #216).
+  echo "::error::Could not resolve base ref '${BASE_REF}'; cannot check parity."
+  exit 1
 else
   echo "::warning::Could not resolve base ref '${BASE_REF}'; skipping parity check."
   exit 0
 fi
 
 MERGE_BASE="$(git merge-base "${BASE}" HEAD 2>/dev/null || echo "${BASE}")"
-CHANGED="$(git diff --name-only "${MERGE_BASE}" HEAD)"
+# --no-renames lists both sides of a move, so source moved out of js/src or
+# rust/src still counts as a change there (issue #216).
+CHANGED="$(git diff --name-only --no-renames "${MERGE_BASE}" HEAD)"
 
 echo "Comparing against ${BASE} (merge-base ${MERGE_BASE})"
 echo "Changed files:"
 echo "${CHANGED}" | sed 's/^/  /'
 
-js_changed=false
-rust_changed=false
+js_source_changed=false
+rust_source_changed=false
+js_benchmarks_changed=false
+rust_benchmarks_changed=false
 while IFS= read -r f; do
   [ -z "${f}" ] && continue
   case "${f}" in
-    js/src/*) js_changed=true ;;
-    rust/src/*) rust_changed=true ;;
+    js/src/*) js_source_changed=true ;;
+    rust/src/*) rust_source_changed=true ;;
+    js/benchmarks/* | js/tests/benchmark-*) js_benchmarks_changed=true ;;
+    # Dependency updates: JavaScript benchmark dependencies live in
+    # js/package.json, outside the benchmark paths. A new benchmark target
+    # still adds a source file under rust/benchmarks/.
+    rust/benchmarks/Cargo.lock | rust/benchmarks/Cargo.toml) ;;
+    rust/benchmarks/*) rust_benchmarks_changed=true ;;
   esac
 done <<EOF
 ${CHANGED}
 EOF
 
-echo "js/src changed:   ${js_changed}"
-echo "rust/src changed: ${rust_changed}"
+echo "js/src changed:          ${js_source_changed}"
+echo "rust/src changed:        ${rust_source_changed}"
+echo "js benchmarks changed:   ${js_benchmarks_changed}"
+echo "rust benchmarks changed: ${rust_benchmarks_changed}"
 
-if [ "${js_changed}" = "true" ] && [ "${rust_changed}" != "true" ]; then
-  echo "::error::JavaScript source (js/src/**) changed but Rust source (rust/src/**) did not."
-  echo "command-stream keeps the JavaScript and Rust implementations in parity."
-  echo "Please make the equivalent change under rust/src/**, or add the"
-  echo "'parity-exempt' label to this PR if the change is intentionally JS-only."
-  exit 1
-fi
+check_pair() {
+  local js_changed="$1"
+  local rust_changed="$2"
+  local js_scope="$3"
+  local rust_scope="$4"
+  local category="$5"
 
-if [ "${rust_changed}" = "true" ] && [ "${js_changed}" != "true" ]; then
-  echo "::error::Rust source (rust/src/**) changed but JavaScript source (js/src/**) did not."
-  echo "command-stream keeps the JavaScript and Rust implementations in parity."
-  echo "Please make the equivalent change under js/src/**, or add the"
-  echo "'parity-exempt' label to this PR if the change is intentionally Rust-only."
-  exit 1
-fi
+  if [ "${js_changed}" = "true" ] && [ "${rust_changed}" != "true" ]; then
+    echo "::error::JavaScript ${category} (${js_scope}) changed but Rust ${category} (${rust_scope}) did not."
+    echo "command-stream keeps the JavaScript and Rust implementations in parity."
+    echo "Please make the equivalent change under ${rust_scope}, or add the"
+    echo "'parity-exempt' label to this PR if the change is intentionally JavaScript-only."
+    exit 1
+  fi
+
+  if [ "${rust_changed}" = "true" ] && [ "${js_changed}" != "true" ]; then
+    echo "::error::Rust ${category} (${rust_scope}) changed but JavaScript ${category} (${js_scope}) did not."
+    echo "command-stream keeps the JavaScript and Rust implementations in parity."
+    echo "Please make the equivalent change under ${js_scope}, or add the"
+    echo "'parity-exempt' label to this PR if the change is intentionally Rust-only."
+    exit 1
+  fi
+}
+
+check_pair \
+  "${js_source_changed}" \
+  "${rust_source_changed}" \
+  'js/src/**' \
+  'rust/src/**' \
+  'source'
+check_pair \
+  "${js_benchmarks_changed}" \
+  "${rust_benchmarks_changed}" \
+  'js/benchmarks/** or js/tests/benchmark-*' \
+  'rust/benchmarks/**' \
+  'benchmarks'
 
 echo "Language parity check passed."

@@ -4,9 +4,27 @@
  * Batched test runner that runs tests in smaller groups to avoid interference
  */
 
-import { execSync } from 'child_process';
+import { spawnSync } from 'child_process';
 import { readdirSync } from 'fs';
 import { join } from 'path';
+
+// Run `bun test` without a shell, so a checkout path with spaces or shell
+// metacharacters stays one argument. Bun prints its summary on stderr, so the
+// returned output is both streams, as `2>&1` used to give; a failing run throws
+// with that output on `error.stdout`, like execSync did.
+function runBunTest(paths) {
+  const result = spawnSync('bun', ['test', ...paths], { encoding: 'utf-8' });
+  if (result.error) {
+    throw result.error;
+  }
+  const output = `${result.stdout}${result.stderr}`;
+  if (result.status !== 0) {
+    const error = new Error(`bun test exited with ${result.status}`);
+    error.stdout = output;
+    throw error;
+  }
+  return output;
+}
 
 const testsDir = join(process.cwd(), 'tests');
 const testFiles = readdirSync(testsDir)
@@ -31,11 +49,11 @@ const failedFiles = [];
 batches.forEach((batch, index) => {
   console.log(`\n📦 Batch ${index + 1}/${batches.length}: ${batch.join(', ')}`);
 
-  const files = batch.map((f) => join(testsDir, f)).join(' ');
+  const files = batch.map((f) => join(testsDir, f));
 
   try {
     // Run batch synchronously and capture output
-    const output = execSync(`bun test ${files} 2>&1`, { encoding: 'utf-8' });
+    const output = runBunTest(files);
 
     // Parse the output to find pass/fail counts
     const passMatch = output.match(/(\d+)\s+pass/);

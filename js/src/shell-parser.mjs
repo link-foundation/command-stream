@@ -23,6 +23,105 @@ const TokenType = {
 };
 
 /**
+ * Perform POSIX quote removal on a single already-tokenized word.
+ *
+ * A shell word may carry quotes anywhere inside it, not just wrapped around
+ * the whole thing: `label:'help wanted'`, `--flag="a b"` and `a'b c'd` are all
+ * one word each. The shell strips the quote characters and concatenates the
+ * quoted and unquoted pieces into a single argument. Our tokenizer keeps the
+ * quotes in the word (so it can split correctly and hand a valid command back
+ * to a real shell when needed); this function turns that raw word into the
+ * literal value a built-in command should receive, exactly as `/bin/sh` would.
+ *
+ * Rules mirrored from POSIX:
+ *   - Outside quotes, a backslash escapes the next character (it becomes
+ *     literal and loses any quoting role). On Windows the backslash is the
+ *     path separator, so an unquoted backslash is kept literal there - eating
+ *     it would corrupt paths such as `cd C:\Users\foo`.
+ *   - Inside '...', every character is literal, including backslash.
+ *   - Inside "...", a backslash only escapes $, `, ", \ and newline; before
+ *     anything else it stays a literal backslash.
+ *
+ * @param {string} word - Raw word including any quote characters
+ * @returns {{value: string, quoted: boolean, quoteChar: (string|null)}}
+ *   `value` is the quote-removed text, `quoted` is true when any quoting or
+ *   escaping was applied, and `quoteChar` is the first quote character seen
+ *   (kept for callers that re-serialize simple wholly-quoted words).
+ */
+/**
+ * Read the body of a double-quoted segment starting just after the opening
+ * quote. Backslash only escapes the small POSIX set inside double quotes; any
+ * other backslash stays literal.
+ *
+ * @param {string} word - The full word being scanned
+ * @param {number} start - Index of the first character inside the quotes
+ * @returns {{value: string, next: number}} The unescaped body and the index
+ *   just past the closing quote (or the end of the word if unterminated).
+ */
+function readDoubleQuotedSegment(word, start) {
+  let value = '';
+  let i = start;
+  while (i < word.length && word[i] !== '"') {
+    if (word[i] === '\\' && isDoubleQuoteEscape(word[i + 1])) {
+      value += word[i + 1];
+      i += 2;
+      continue;
+    }
+    value += word[i];
+    i++;
+  }
+  return { value, next: i + 1 };
+}
+
+export function removeShellQuotes(word) {
+  let value = '';
+  let quoted = false;
+  let quoteChar = null;
+  let i = 0;
+
+  while (i < word.length) {
+    const char = word[i];
+
+    if (char === "'") {
+      quoted = true;
+      if (quoteChar === null) {
+        quoteChar = "'";
+      }
+      i++;
+      while (i < word.length && word[i] !== "'") {
+        value += word[i];
+        i++;
+      }
+      i++; // skip the closing quote (if any)
+      continue;
+    }
+
+    if (char === '"') {
+      quoted = true;
+      if (quoteChar === null) {
+        quoteChar = '"';
+      }
+      const segment = readDoubleQuotedSegment(word, i + 1);
+      value += segment.value;
+      i = segment.next; // position past the closing quote (if any)
+      continue;
+    }
+
+    if (char === '\\' && i + 1 < word.length && process.platform !== 'win32') {
+      quoted = true;
+      value += word[i + 1];
+      i += 2;
+      continue;
+    }
+
+    value += char;
+    i++;
+  }
+
+  return { value, quoted, quoteChar };
+}
+
+/**
  * Parse a word token from the command string, handling quotes and escapes
  * @param {string} command - The command string
  * @param {number} startIndex - Starting position
@@ -150,6 +249,18 @@ function tokenize(command) {
 
     if (i >= command.length) {
       break;
+    }
+
+    // A lone ampersand is a background-process operator, which this parser
+    // intentionally leaves to the real shell. Guard here as well as in
+    // needsRealShell() so malformed input can never leave the tokenizer at the
+    // same index forever.
+    if (
+      command[i] === '&' &&
+      command[i - 1] !== '&' &&
+      command[i + 1] !== '&'
+    ) {
+      throw new Error('Background commands require a real shell');
     }
 
     // Check for operators
@@ -341,21 +452,12 @@ class ShellParser {
 
     const cmd = words[0];
     const args = words.slice(1).map((word) => {
-      // Remove quotes if present
-      if (
-        (word.startsWith('"') && word.endsWith('"')) ||
-        (word.startsWith("'") && word.endsWith("'"))
-      ) {
-        return {
-          value: word.slice(1, -1),
-          quoted: true,
-          quoteChar: word[0],
-        };
-      }
-      return {
-        value: word,
-        quoted: false,
-      };
+      // POSIX quote removal: strip quotes wherever they appear in the word and
+      // concatenate the pieces, so `label:'help wanted'` becomes one argument
+      // `label:help wanted` (issue #48). `raw` keeps the original text for the
+      // paths that re-serialize the command back to a real shell.
+      const { value, quoted, quoteChar } = removeShellQuotes(word);
+      return { value, quoted, quoteChar: quoteChar ?? undefined, raw: word };
     });
 
     const result = {
@@ -413,28 +515,173 @@ export function parseShellCommand(command) {
   }
 }
 
+function scanQuotedFeature(command, index, quote) {
+  const char = command[index];
+
+  if (quote === "'") {
+    return {
+      quote: char === quote ? null : quote,
+      skip: 0,
+      unsupported: false,
+    };
+  }
+  if (char === '\\') {
+    // Inside double quotes a backslash escapes $ ` " \ and newline. Our
+    // lightweight tokenizer keeps words verbatim and never unescapes them, so
+    // handing such a command to the built-in commands would leak the
+    // backslashes into the arguments. Delegate to a real shell instead, which
+    // applies exactly the POSIX rules.
+    return {
+      quote,
+      skip: 1,
+      unsupported: isDoubleQuoteEscape(command[index + 1]),
+    };
+  }
+  if (char === quote) {
+    return { quote: null, skip: 0, unsupported: false };
+  }
+
+  // Parameter and command substitution still occur in double quotes.
+  return {
+    quote,
+    skip: 0,
+    unsupported: char === '`' || char === '$',
+  };
+}
+
 /**
- * Check if a command needs shell features we don't handle
+ * Characters a backslash may escape inside double quotes, per POSIX: only
+ * these keep the backslash meaningful - anything else stays literal.
+ *
+ * @param {string|undefined} char - The character following the backslash
+ * @returns {boolean} true when the pair is a real double-quote escape
+ */
+function isDoubleQuoteEscape(char) {
+  return (
+    char === '$' ||
+    char === '`' ||
+    char === '"' ||
+    char === '\\' ||
+    char === '\n'
+  );
+}
+
+/**
+ * Detect backslash escapes that a real shell removes but our lightweight
+ * tokenizer keeps verbatim.
+ *
+ * Two cases matter:
+ *  - inside `"..."`, a backslash before $ ` " \\ or a newline;
+ *  - outside quotes, any backslash escape - including the POSIX `'\\''` idiom
+ *    used to embed an apostrophe in a single-quoted string.
+ *
+ * The built-in (virtual) command path would pass those backslashes on to the
+ * command, so `echo "5 \\$US"` would print the backslash while a shell prints
+ * `5 $US`. Commands like this are routed to the system shell instead, which is
+ * the only way to get exactly the POSIX result - important now that
+ * interpolating a value into a quoted position escapes it (issue #49).
+ *
+ * @param {string} command - The full command string
+ * @returns {boolean} true when the command must be run by a real shell
+ */
+export function hasShellEscapes(command) {
+  if (typeof command !== 'string' || !command.includes('\\')) {
+    return false;
+  }
+  let quote = null;
+  for (let i = 0; i < command.length; i++) {
+    const char = command[i];
+    if (quote === "'") {
+      // Inside '...' a backslash is an ordinary character.
+      if (char === "'") {
+        quote = null;
+      }
+      continue;
+    }
+    if (quote === '"') {
+      if (char === '\\') {
+        if (isDoubleQuoteEscape(command[i + 1])) {
+          return true;
+        }
+        i++;
+        continue;
+      }
+      if (char === '"') {
+        quote = null;
+      }
+      continue;
+    }
+    if (char === '\\') {
+      // Outside quotes a backslash escapes whatever follows it.
+      if (i + 1 < command.length) {
+        return true;
+      }
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+    }
+  }
+  return false;
+}
+
+function isSingleAmpersand(command, index) {
+  return (
+    command[index] === '&' &&
+    command[index - 1] !== '&' &&
+    command[index + 1] !== '&'
+  );
+}
+
+function isUnsupportedUnquotedFeature(command, index) {
+  const char = command[index];
+  if ('`$~*?[<>'.includes(char) || isSingleAmpersand(command, index)) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Check if a command needs shell features we don't handle.
+ *
+ * Redirection (`>`, `>>`, `<`, `2>`, `&>`, `<<`, ...) counts as such a
+ * feature. The built-in (virtual) commands take a plain argument list, so a
+ * redirection left in that list is passed through as a literal argument:
+ * `echo hello > out.txt` would print `hello > out.txt` and write no file, and
+ * `git push ... 2>&1` would report success while nothing was pushed. Sending
+ * the whole command to the system shell is the only way to get exactly the
+ * POSIX result (issue #46).
+ *
+ * @param {string} command - The full command string
+ * @returns {boolean} true when the command must be run by a real shell
  */
 export function needsRealShell(command) {
-  // Check for features we don't handle yet
-  const unsupported = [
-    '`', // Command substitution
-    '$(', // Command substitution
-    '${', // Variable expansion
-    '~', // Home expansion (at start of word)
-    '*', // Glob patterns
-    '?', // Glob patterns
-    '[', // Glob patterns
-    '2>', // stderr redirection
-    '&>', // Combined redirection
-    '>&', // File descriptor duplication
-    '<<', // Here documents
-    '<<<', // Here strings
-  ];
+  let quote = null;
+  for (let i = 0; i < command.length; i++) {
+    const char = command[i];
 
-  for (const feature of unsupported) {
-    if (command.includes(feature)) {
+    if (quote) {
+      const scan = scanQuotedFeature(command, i, quote);
+      if (scan.unsupported) {
+        return true;
+      }
+      quote = scan.quote;
+      i += scan.skip;
+      continue;
+    }
+
+    if (char === '\\') {
+      i++;
+      continue;
+    }
+
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+
+    if (isUnsupportedUnquotedFeature(command, i)) {
       return true;
     }
   }
@@ -442,4 +689,4 @@ export function needsRealShell(command) {
   return false;
 }
 
-export default { parseShellCommand, needsRealShell };
+export default { parseShellCommand, needsRealShell, hasShellEscapes };

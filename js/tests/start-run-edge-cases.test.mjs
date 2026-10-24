@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
+import { Readable } from 'node:stream';
 import { isWindows } from './test-helper.mjs'; // Automatically sets up beforeEach/afterEach cleanup
 import { $, shell } from '../src/$.mjs';
 
@@ -28,7 +29,7 @@ describe('Start/Run Edge Cases and Advanced Usage', () => {
       mode: 'async',
     });
 
-    expect(result.stdout).toBe('complex test\n');
+    expect(result.stdout?.toString()).toBe('complex test\n');
     expect(result.code).toBe(0);
   });
 
@@ -38,7 +39,7 @@ describe('Start/Run Edge Cases and Advanced Usage', () => {
     async () => {
       const result = await $`ls -la /tmp`.start({ capture: false });
 
-      expect(result.stdout).toBeUndefined();
+      expect(result.stdout?.toString()).toBeUndefined();
       expect(result.code).toBe(0);
     }
   );
@@ -48,16 +49,16 @@ describe('Start/Run Edge Cases and Advanced Usage', () => {
       capture: false,
     });
 
-    expect(result.stdout).toBeUndefined();
-    expect(result.stderr).toBeUndefined();
+    expect(result.stdout?.toString()).toBeUndefined();
+    expect(result.stderr?.toString()).toBeUndefined();
     expect(result.code).not.toBe(0); // ls should fail
   });
 
   test('should handle stderr with capture: true', async () => {
     const result = await $`ls /nonexistent-path-98765`.start({ capture: true });
 
-    expect(result.stdout).toBe(''); // No stdout for failed ls
-    expect(typeof result.stderr).toBe('string');
+    expect(result.stdout?.toString()).toBe(''); // No stdout for failed ls
+    expect(result.stderr).toBeInstanceOf(Readable);
     expect(result.stderr.length).toBeGreaterThan(0);
     expect(result.code).not.toBe(0);
   });
@@ -67,11 +68,11 @@ describe('Start/Run Edge Cases and Advanced Usage', () => {
 
     // First call should work
     const result1 = await runner.start({ capture: true });
-    expect(result1.stdout).toBe('multiple calls\n');
+    expect(result1.stdout?.toString()).toBe('multiple calls\n');
 
     // Second call should return the same result (cached)
     const result2 = await runner.start({ capture: false }); // Options ignored
-    expect(result2.stdout).toBe('multiple calls\n'); // Still captured
+    expect(result2.stdout?.toString()).toBe('multiple calls\n'); // Still captured
 
     // Results should be the same object reference
     expect(result1).toBe(result2);
@@ -81,8 +82,8 @@ describe('Start/Run Edge Cases and Advanced Usage', () => {
     const result1 = await $`echo "async mode"`.start({ mode: 'async' });
     const result2 = $`echo "sync mode"`.start({ mode: 'sync' });
 
-    expect(result1.stdout).toBe('async mode\n');
-    expect(result2.stdout).toBe('sync mode\n');
+    expect(result1.stdout?.toString()).toBe('async mode\n');
+    expect(result2.stdout?.toString()).toBe('sync mode\n');
   });
 
   test('should preserve original behavior when no options passed', async () => {
@@ -90,9 +91,9 @@ describe('Start/Run Edge Cases and Advanced Usage', () => {
     const withRun = await $`echo "with run"`.run();
     const directAwait = await $`echo "direct await"`;
 
-    expect(withStart.stdout).toBe('with start\n');
-    expect(withRun.stdout).toBe('with run\n');
-    expect(directAwait.stdout).toBe('direct await\n');
+    expect(withStart.stdout?.toString()).toBe('with start\n');
+    expect(withRun.stdout?.toString()).toBe('with run\n');
+    expect(directAwait.stdout?.toString()).toBe('direct await\n');
 
     // All should have same structure
     expect(Object.keys(withStart)).toEqual(Object.keys(withRun));
@@ -104,7 +105,7 @@ describe('Start/Run Edge Cases and Advanced Usage', () => {
       .pipe($`cat`)
       .start({ mirror: false });
 
-    expect(result.stdout).toBe('hello world\n');
+    expect(result.stdout?.toString()).toBe('hello world\n');
     expect(result.code).toBe(0);
   });
 
@@ -134,7 +135,7 @@ describe('Start/Run Edge Cases and Advanced Usage', () => {
     const endTime = Date.now();
     const duration = endTime - startTime;
 
-    expect(result.stdout).toBeUndefined();
+    expect(result.stdout?.toString()).toBeUndefined();
     expect(result.code).toBe(0);
     expect(duration).toBeLessThan(1000); // Should complete quickly
   });
@@ -146,7 +147,7 @@ describe('Start/Run Edge Cases and Advanced Usage', () => {
       mirror: false,
     });
 
-    expect(result.stdout).toBe('');
+    expect(result.stdout?.toString()).toBe('');
     expect(result.code).toBe(0);
   });
 });

@@ -13,6 +13,8 @@
 //! - `quote` - Shell quoting utilities
 //! - `utils` (this module) - Command results and virtual command helpers
 
+use crate::result_streams::{CapturedInput, CapturedOutput};
+use std::collections::HashMap;
 use std::env;
 use std::path::{Path, PathBuf};
 
@@ -21,49 +23,175 @@ pub use crate::ansi::{AnsiConfig, AnsiUtils};
 pub use crate::quote::quote;
 pub use crate::trace::{is_trace_enabled, trace, trace_lazy};
 
+/// Re-export invocation-local directory variables inside POSIX shells.
+///
+/// Some shells, notably the macOS system shell, import `OLDPWD` as an
+/// internal variable but drop its export flag during startup. Prefixing the
+/// command keeps both variables visible to the real child process.
+#[cfg(unix)]
+pub(crate) fn with_exported_process_context(
+    command: &str,
+    env: Option<&HashMap<String, String>>,
+) -> String {
+    let Some(env) = env else {
+        return command.to_string();
+    };
+    let assignments = ["PWD", "OLDPWD"]
+        .into_iter()
+        .filter_map(|name| {
+            env.get(name).map(|value| {
+                let value = value.replace('\'', "'\\''");
+                format!("{name}='{value}'")
+            })
+        })
+        .collect::<Vec<_>>();
+
+    if assignments.is_empty() {
+        command.to_string()
+    } else {
+        format!("export {}; {command}", assignments.join(" "))
+    }
+}
+
+#[cfg(not(unix))]
+pub(crate) fn with_exported_process_context(
+    command: &str,
+    _env: Option<&HashMap<String, String>>,
+) -> String {
+    command.to_string()
+}
+
+#[derive(Debug, Clone)]
+struct ShellConfig {
+    cmd: String,
+    args: Vec<String>,
+    raw_command_arg: bool,
+}
+
+fn find_available_shell() -> ShellConfig {
+    #[cfg(windows)]
+    let shells: &[(&str, &[&str], bool)] = &[
+        (r"C:\Program Files\Git\bin\bash.exe", &["-c"], false),
+        (r"C:\Program Files\Git\usr\bin\bash.exe", &["-c"], false),
+        (r"C:\Program Files (x86)\Git\bin\bash.exe", &["-c"], false),
+        ("bash.exe", &["-c"], false),
+        ("wsl.exe", &["bash", "-c"], false),
+        ("powershell.exe", &["-Command"], false),
+        ("pwsh.exe", &["-Command"], false),
+        ("cmd.exe", &["/c"], true),
+    ];
+
+    #[cfg(not(windows))]
+    let shells: &[(&str, &[&str], bool)] = &[
+        ("/bin/sh", &["-c"], false),
+        ("/usr/bin/sh", &["-c"], false),
+        ("/bin/bash", &["-c"], false),
+        ("sh", &["-c"], false),
+    ];
+
+    for (cmd, args, raw_command_arg) in shells {
+        if Path::new(cmd).exists() || which::which(cmd).is_ok() {
+            return ShellConfig {
+                cmd: (*cmd).to_string(),
+                args: args.iter().map(|arg| (*arg).to_string()).collect(),
+                raw_command_arg: *raw_command_arg,
+            };
+        }
+    }
+
+    #[cfg(windows)]
+    return ShellConfig {
+        cmd: "cmd.exe".to_string(),
+        args: vec!["/c".to_string()],
+        raw_command_arg: true,
+    };
+
+    #[cfg(not(windows))]
+    ShellConfig {
+        cmd: "/bin/sh".to_string(),
+        args: vec!["-c".to_string()],
+        raw_command_arg: false,
+    }
+}
+
+#[cfg(windows)]
+fn append_command_arg(process: &mut tokio::process::Command, command: &str, raw_command_arg: bool) {
+    if raw_command_arg {
+        // `cmd.exe /c` does not use the C runtime's argument decoder. Passing
+        // the command through `arg` would therefore expose Rust's backslash
+        // escapes as literal characters. The extra outer quotes are required
+        // to preserve a quoted executable path at the start of the command.
+        use std::os::windows::process::CommandExt;
+        process.as_std_mut().raw_arg(format!("\"{command}\""));
+    } else {
+        process.arg(command);
+    }
+}
+
+#[cfg(not(windows))]
+fn append_command_arg(
+    process: &mut tokio::process::Command,
+    command: &str,
+    _raw_command_arg: bool,
+) {
+    process.arg(command);
+}
+
+/// Build a command using the best platform shell and its argument convention.
+pub(crate) fn shell_command(
+    command: &str,
+    env: Option<&HashMap<String, String>>,
+) -> tokio::process::Command {
+    let shell = find_available_shell();
+    let mut process = tokio::process::Command::new(&shell.cmd);
+    process.args(&shell.args);
+    let command = with_exported_process_context(command, env);
+    append_command_arg(&mut process, &command, shell.raw_command_arg);
+    process
+}
+
 /// Result type for virtual command operations
 #[derive(Debug, Clone)]
 pub struct CommandResult {
-    pub stdout: String,
-    pub stderr: String,
+    pub stdout: CapturedOutput,
+    pub stderr: CapturedOutput,
+    pub stdin: CapturedInput,
     pub code: i32,
 }
 
 impl CommandResult {
+    /// Create a result with readable output snapshots and a writable input record.
+    pub fn new(
+        stdout: impl Into<CapturedOutput>,
+        stderr: impl Into<CapturedOutput>,
+        code: i32,
+    ) -> Self {
+        Self {
+            stdout: stdout.into(),
+            stderr: stderr.into(),
+            stdin: CapturedInput::default(),
+            code,
+        }
+    }
+
     /// Create a success result with stdout output
     pub fn success(stdout: impl Into<String>) -> Self {
-        CommandResult {
-            stdout: stdout.into(),
-            stderr: String::new(),
-            code: 0,
-        }
+        Self::new(stdout.into(), "", 0)
     }
 
     /// Create an empty success result
     pub fn success_empty() -> Self {
-        CommandResult {
-            stdout: String::new(),
-            stderr: String::new(),
-            code: 0,
-        }
+        Self::new("", "", 0)
     }
 
     /// Create an error result with stderr output
     pub fn error(stderr: impl Into<String>) -> Self {
-        CommandResult {
-            stdout: String::new(),
-            stderr: stderr.into(),
-            code: 1,
-        }
+        Self::new("", stderr.into(), 1)
     }
 
     /// Create an error result with custom exit code
     pub fn error_with_code(stderr: impl Into<String>, code: i32) -> Self {
-        CommandResult {
-            stdout: String::new(),
-            stderr: stderr.into(),
-            code,
-        }
+        Self::new("", stderr.into(), code)
     }
 
     /// Check if the command was successful
@@ -77,6 +205,33 @@ impl CommandResult {
     /// `exitCode` alias exposed by the JavaScript implementation (issue #36).
     pub fn exit_code(&self) -> i32 {
         self.code
+    }
+
+    /// Turn a failing result into [`crate::Error::CommandFailed`].
+    ///
+    /// This is the Rust counterpart of the JavaScript `errexit` mode: a
+    /// non-zero status becomes an error whose exit status is readable through
+    /// both [`crate::Error::code`] and [`crate::Error::exit_code`] (issue
+    /// #38). Successful results pass through unchanged.
+    ///
+    /// ```
+    /// use command_stream::utils::CommandResult;
+    ///
+    /// let error = CommandResult::error_with_code("", 42)
+    ///     .error_for_status()
+    ///     .unwrap_err();
+    /// assert_eq!(error.code(), Some(42));
+    /// assert_eq!(error.exit_code(), error.code());
+    /// ```
+    pub fn error_for_status(self) -> crate::Result<CommandResult> {
+        if self.is_success() {
+            return Ok(self);
+        }
+
+        Err(crate::Error::command_failed(
+            self.code,
+            format!("Command failed with exit code {}", self.code),
+        ))
     }
 }
 
@@ -236,5 +391,22 @@ mod tests {
         let config = AnsiConfig::default();
         assert!(config.preserve_ansi);
         assert!(config.preserve_control_chars);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn safely_exports_invocation_directory_variables() {
+        let env = HashMap::from([
+            ("PWD".to_string(), "/tmp/new dir".to_string()),
+            (
+                "OLDPWD".to_string(),
+                "/tmp/old' dir\n$() `cmd`; end".to_string(),
+            ),
+        ]);
+
+        assert_eq!(
+            with_exported_process_context("printf done", Some(&env)),
+            "export PWD='/tmp/new dir' OLDPWD='/tmp/old'\\'' dir\n$() `cmd`; end'; printf done"
+        );
     }
 }

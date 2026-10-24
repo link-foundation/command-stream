@@ -153,7 +153,7 @@ describe('.text() method for Bun.$ compatibility', () => {
     const result = await $`echo "consistency test"`;
     const text = await result.text();
 
-    expect(text).toBe(result.stdout);
+    expect(text).toBe(result.stdout.toString());
   });
 
   test('.text() can be called multiple times', async () => {

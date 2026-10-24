@@ -28,10 +28,28 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::Stdio;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::process::Command;
 
 use crate::trace::trace_lazy;
 use crate::{CommandResult, Result, RunOptions, StdinOption};
+
+struct VirtualCommandResult {
+    result: CommandResult,
+    cd_context: Option<crate::commands::cd::CdContext>,
+}
+
+fn pipeline_exit_code(exit_codes: &[i32], pipefail: bool) -> i32 {
+    let last = exit_codes.last().copied().unwrap_or(0);
+    if pipefail {
+        exit_codes
+            .iter()
+            .rev()
+            .copied()
+            .find(|code| *code != 0)
+            .unwrap_or(last)
+    } else {
+        last
+    }
+}
 
 /// A pipeline of commands to be executed sequentially
 ///
@@ -72,6 +90,10 @@ impl Pipeline {
     }
 
     /// Add a command to the pipeline
+    // `std::ops::Add` is not a fit for a consuming builder step, and renaming
+    // this method would break the published 0.x API and diverge from the
+    // JavaScript `.add()` it mirrors.
+    #[allow(clippy::should_implement_trait)]
     pub fn add(mut self, command: impl Into<String>) -> Self {
         self.commands.push(command.into());
         self
@@ -110,11 +132,7 @@ impl Pipeline {
     /// Execute the pipeline and return the result
     pub async fn run(self) -> Result<CommandResult> {
         if self.commands.is_empty() {
-            return Ok(CommandResult {
-                stdout: String::new(),
-                stderr: "No commands in pipeline".to_string(),
-                code: 1,
-            });
+            return Ok(CommandResult::new("", "No commands in pipeline", 1));
         }
 
         trace_lazy("Pipeline", || {
@@ -122,12 +140,12 @@ impl Pipeline {
         });
 
         let mut current_stdin = self.stdin.clone();
-        let mut last_result = CommandResult {
-            stdout: String::new(),
-            stderr: String::new(),
-            code: 0,
-        };
+        let mut effective_cwd = self.cwd.clone();
+        let mut effective_env = self.env.clone();
+        let mut last_result = CommandResult::new("", "", 0);
         let mut accumulated_stderr = String::new();
+        let mut exit_codes = Vec::with_capacity(self.commands.len());
+        let pipefail = crate::get_shell_settings().await.pipefail;
 
         for (i, cmd_str) in self.commands.iter().enumerate() {
             let is_last = i == self.commands.len() - 1;
@@ -145,30 +163,41 @@ impl Pipeline {
             let first_word = cmd_str.split_whitespace().next().unwrap_or("");
             if crate::commands::are_virtual_commands_enabled() {
                 if let Some(result) = self
-                    .try_virtual_command(first_word, cmd_str, &current_stdin)
+                    .try_virtual_command(
+                        first_word,
+                        cmd_str,
+                        &current_stdin,
+                        effective_cwd.as_ref(),
+                        effective_env.as_ref(),
+                    )
                     .await
                 {
-                    if result.code != 0 {
-                        return Ok(CommandResult {
-                            stdout: result.stdout,
-                            stderr: accumulated_stderr + &result.stderr,
-                            code: result.code,
-                        });
-                    }
-                    current_stdin = Some(result.stdout.clone());
+                    let VirtualCommandResult { result, cd_context } = result;
+                    exit_codes.push(result.code);
+                    current_stdin = Some(result.stdout.to_string());
                     accumulated_stderr.push_str(&result.stderr);
+                    if result.code == 0 {
+                        if let Some(context) = cd_context {
+                            let env =
+                                effective_env.get_or_insert_with(|| std::env::vars().collect());
+                            env.insert(
+                                "OLDPWD".to_string(),
+                                context.oldpwd.to_string_lossy().to_string(),
+                            );
+                            env.insert(
+                                "PWD".to_string(),
+                                context.cwd.to_string_lossy().to_string(),
+                            );
+                            effective_cwd = Some(context.cwd);
+                        }
+                    }
                     last_result = result;
                     continue;
                 }
             }
 
             // Execute via shell
-            let shell = find_available_shell();
-            let mut cmd = Command::new(&shell.cmd);
-            for arg in &shell.args {
-                cmd.arg(arg);
-            }
-            cmd.arg(cmd_str);
+            let mut cmd = crate::utils::shell_command(cmd_str, effective_env.as_ref());
 
             // Configure stdio
             cmd.stdin(Stdio::piped());
@@ -177,12 +206,12 @@ impl Pipeline {
 
             // Set working directory. Fall back to a valid directory when the
             // inherited working directory has been deleted (issue #44).
-            if let Some(cwd) = crate::resolve_spawn_cwd(self.cwd.as_ref()) {
+            if let Some(cwd) = crate::resolve_spawn_cwd(effective_cwd.as_ref()) {
                 cmd.current_dir(cwd);
             }
 
             // Set environment
-            if let Some(ref env_vars) = self.env {
+            if let Some(ref env_vars) = effective_env {
                 for (key, value) in env_vars {
                     cmd.env(key, value);
                 }
@@ -229,29 +258,18 @@ impl Pipeline {
             let code = status.code().unwrap_or(-1);
 
             accumulated_stderr.push_str(&stderr_content);
-
-            if code != 0 {
-                return Ok(CommandResult {
-                    stdout: stdout_content,
-                    stderr: accumulated_stderr,
-                    code,
-                });
-            }
+            exit_codes.push(code);
 
             // Set up stdin for next command
             current_stdin = Some(stdout_content.clone());
-            last_result = CommandResult {
-                stdout: stdout_content,
-                stderr: String::new(),
-                code,
-            };
+            last_result = CommandResult::new(stdout_content, "", code);
         }
 
-        Ok(CommandResult {
-            stdout: last_result.stdout,
-            stderr: accumulated_stderr,
-            code: last_result.code,
-        })
+        Ok(CommandResult::new(
+            last_result.stdout,
+            accumulated_stderr,
+            pipeline_exit_code(&exit_codes, pipefail),
+        ))
     }
 
     /// Try to execute a virtual command
@@ -260,83 +278,50 @@ impl Pipeline {
         cmd_name: &str,
         full_cmd: &str,
         stdin: &Option<String>,
-    ) -> Option<CommandResult> {
-        let parts: Vec<&str> = full_cmd.split_whitespace().collect();
-        let args: Vec<String> = parts.iter().skip(1).map(|s| s.to_string()).collect();
+        cwd: Option<&PathBuf>,
+        env: Option<&HashMap<String, String>>,
+    ) -> Option<VirtualCommandResult> {
+        // Respect quotes and perform POSIX quote removal (issue #48), matching
+        // the non-pipeline virtual-command path.
+        let words = crate::shell_parser::split_command_words(full_cmd);
+        let args: Vec<String> = words.into_iter().skip(1).collect();
 
         let ctx = crate::commands::CommandContext {
             args,
             stdin: stdin.clone(),
-            cwd: self.cwd.clone(),
-            env: self.env.clone(),
+            cwd: cwd.cloned(),
+            env: env.cloned(),
             output_tx: None,
             is_cancelled: None,
         };
 
-        match cmd_name {
-            "echo" => Some(crate::commands::echo(ctx).await),
-            "pwd" => Some(crate::commands::pwd(ctx).await),
-            "cd" => Some(crate::commands::cd(ctx).await),
-            "true" => Some(crate::commands::r#true(ctx).await),
-            "false" => Some(crate::commands::r#false(ctx).await),
-            "sleep" => Some(crate::commands::sleep(ctx).await),
-            "cat" => Some(crate::commands::cat(ctx).await),
-            "ls" => Some(crate::commands::ls(ctx).await),
-            "mkdir" => Some(crate::commands::mkdir(ctx).await),
-            "rm" => Some(crate::commands::rm(ctx).await),
-            "touch" => Some(crate::commands::touch(ctx).await),
-            "cp" => Some(crate::commands::cp(ctx).await),
-            "mv" => Some(crate::commands::mv(ctx).await),
-            "basename" => Some(crate::commands::basename(ctx).await),
-            "dirname" => Some(crate::commands::dirname(ctx).await),
-            "env" => Some(crate::commands::env(ctx).await),
-            "exit" => Some(crate::commands::exit(ctx).await),
-            "which" => Some(crate::commands::which(ctx).await),
-            "yes" => Some(crate::commands::yes(ctx).await),
-            "seq" => Some(crate::commands::seq(ctx).await),
-            "test" => Some(crate::commands::test(ctx).await),
-            "$fy" => Some(crate::commands::fy(ctx).await),
-            _ => None,
-        }
-    }
-}
-
-/// Shell configuration
-#[derive(Debug, Clone)]
-struct ShellConfig {
-    cmd: String,
-    args: Vec<String>,
-}
-
-/// Find an available shell
-fn find_available_shell() -> ShellConfig {
-    let is_windows = cfg!(windows);
-
-    if is_windows {
-        ShellConfig {
-            cmd: "cmd.exe".to_string(),
-            args: vec!["/c".to_string()],
-        }
-    } else {
-        let shells = [
-            ("/bin/sh", "-c"),
-            ("/usr/bin/sh", "-c"),
-            ("/bin/bash", "-c"),
-        ];
-
-        for (cmd, arg) in shells {
-            if std::path::Path::new(cmd).exists() {
-                return ShellConfig {
-                    cmd: cmd.to_string(),
-                    args: vec![arg.to_string()],
-                };
-            }
-        }
-
-        ShellConfig {
-            cmd: "/bin/sh".to_string(),
-            args: vec!["-c".to_string()],
-        }
+        let (result, cd_context) = match cmd_name {
+            "echo" => (crate::commands::echo(ctx).await, None),
+            "pwd" => (crate::commands::pwd(ctx).await, None),
+            "cd" => crate::commands::cd::resolve_cd(ctx).await,
+            "true" => (crate::commands::r#true(ctx).await, None),
+            "false" => (crate::commands::r#false(ctx).await, None),
+            "sleep" => (crate::commands::sleep(ctx).await, None),
+            "cat" => (crate::commands::cat(ctx).await, None),
+            "ls" => (crate::commands::ls(ctx).await, None),
+            "mkdir" => (crate::commands::mkdir(ctx).await, None),
+            "rm" => (crate::commands::rm(ctx).await, None),
+            "touch" => (crate::commands::touch(ctx).await, None),
+            "cp" => (crate::commands::cp(ctx).await, None),
+            "mv" => (crate::commands::mv(ctx).await, None),
+            "basename" => (crate::commands::basename(ctx).await, None),
+            "dirname" => (crate::commands::dirname(ctx).await, None),
+            "env" => (crate::commands::env(ctx).await, None),
+            "exit" => (crate::commands::exit(ctx).await, None),
+            "which" => (crate::commands::which(ctx).await, None),
+            "yes" => (crate::commands::yes(ctx).await, None),
+            "seq" => (crate::commands::seq(ctx).await, None),
+            "tee" => (crate::commands::tee(ctx).await, None),
+            "test" => (crate::commands::test(ctx).await, None),
+            "$fy" => (crate::commands::fy(ctx).await, None),
+            _ => return None,
+        };
+        Some(VirtualCommandResult { result, cd_context })
     }
 }
 
@@ -372,19 +357,13 @@ impl PipelineBuilder {
     pub async fn run(mut self) -> Result<CommandResult> {
         // First, run the initial command
         let first_result = self.first.run().await?;
-
-        if first_result.code != 0 {
-            return Ok(first_result);
-        }
+        let pipefail = crate::get_shell_settings().await.pipefail;
+        let mut exit_codes = vec![first_result.code];
 
         // Then run the rest as a pipeline
-        let mut current_stdin = Some(first_result.stdout);
-        let mut accumulated_stderr = first_result.stderr;
-        let mut last_result = CommandResult {
-            stdout: String::new(),
-            stderr: String::new(),
-            code: 0,
-        };
+        let mut current_stdin = Some(first_result.stdout.to_string());
+        let mut accumulated_stderr = first_result.stderr.to_string();
+        let mut last_result = first_result;
 
         for cmd_str in &self.additional {
             let mut runner = crate::ProcessRunner::new(
@@ -399,23 +378,31 @@ impl PipelineBuilder {
 
             let result = runner.run().await?;
             accumulated_stderr.push_str(&result.stderr);
+            exit_codes.push(result.code);
 
-            if result.code != 0 {
-                return Ok(CommandResult {
-                    stdout: result.stdout,
-                    stderr: accumulated_stderr,
-                    code: result.code,
-                });
-            }
-
-            current_stdin = Some(result.stdout.clone());
+            current_stdin = Some(result.stdout.to_string());
             last_result = result;
         }
 
-        Ok(CommandResult {
-            stdout: last_result.stdout,
-            stderr: accumulated_stderr,
-            code: last_result.code,
-        })
+        Ok(CommandResult::new(
+            last_result.stdout,
+            accumulated_stderr,
+            pipeline_exit_code(&exit_codes, pipefail),
+        ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::pipeline_exit_code;
+
+    #[test]
+    fn pipeline_status_uses_last_stage_by_default() {
+        assert_eq!(pipeline_exit_code(&[3, 0], false), 0);
+    }
+
+    #[test]
+    fn pipefail_uses_rightmost_failing_stage() {
+        assert_eq!(pipeline_exit_code(&[2, 7, 0], true), 7);
     }
 }

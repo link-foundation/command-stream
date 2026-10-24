@@ -1,0 +1,15 @@
+let retained = 41;
+assert_eq!(retained + 1, 42);
+struct Example { value: i32 }
+let value = Example { value: retained + 1 };
+assert_eq!(value.value, 42);
+let result = command_stream::s!("echo rust-repl").await?;
+assert_eq!(result.stdout.as_str(), "rust-repl\n");
+let output = tokio::time::timeout(std::time::Duration::from_secs(5), CommandBuilder::new("echo").arg("builder").run()).await??;
+assert_eq!(output.stdout.as_str(), "builder\n");
+let second = tokio::time::timeout(std::time::Duration::from_secs(5), CommandBuilder::new("echo").arg("second").run()).await??;
+assert_eq!(second.stdout.as_str(), "second\n");
+let pipeline = DataStream::from_values(vec![1, 2]).map(|n| n * 2).collect().await;
+assert_eq!(pipeline, vec![2, 4]);
+println!("RUST_REPL_VERIFIED");
+:quit

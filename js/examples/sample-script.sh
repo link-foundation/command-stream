@@ -14,7 +14,7 @@ mkdir -p "$PROJECT_DIR"
 cd "$PROJECT_DIR"
 
 # Initialize project
-echo "Initializing project..." 
+echo "Initializing project..."
 touch package.json
 echo '{"name": "test-project", "version": "1.0.0"}' > package.json
 

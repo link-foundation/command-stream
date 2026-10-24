@@ -4,6 +4,7 @@
 import { trace } from './$.trace.mjs';
 
 const isBun = typeof globalThis.Bun !== 'undefined';
+const streamsWithStdinErrorHandler = new WeakSet();
 
 // Stream utility functions for safe operations and error handling
 export const StreamUtils = {
@@ -24,6 +25,12 @@ export const StreamUtils = {
    */
   addStdinErrorHandler(stream, contextName = 'stdin', onNonEpipeError = null) {
     if (stream && typeof stream.on === 'function') {
+      if (!onNonEpipeError) {
+        if (streamsWithStdinErrorHandler.has(stream)) {
+          return;
+        }
+        streamsWithStdinErrorHandler.add(stream);
+      }
       stream.on('error', (error) => {
         const handled = this.handleStreamError(
           error,
@@ -272,6 +279,9 @@ export const StreamUtils = {
         );
       }
     } else if (this.isNodeStream(stream)) {
+      // A child can close stdin before reading the input. Node-style streams
+      // report EPIPE asynchronously, outside the try/catch around write().
+      this.addStdinErrorHandler(stream, contextName);
       try {
         stream.write(data);
         return true;
@@ -286,6 +296,30 @@ export const StreamUtils = {
     return false;
   },
 };
+
+/**
+ * Stdio mode keywords accepted by the `stdin` option.
+ *
+ * They select how stdin is wired up and are never input data, so a virtual
+ * command must not receive them as its stdin contents (issue #14).
+ */
+const STDIN_MODES = new Set(['inherit', 'ignore', 'pipe']);
+
+/**
+ * Resolve the `stdin` option into the data a command should read.
+ * @param {object} options - Runner options
+ * @returns {string} Input data, or '' when `stdin` selects a stdio mode
+ */
+export function stdinDataFromOptions(options = {}) {
+  const { stdin } = options;
+  if (typeof stdin === 'string') {
+    return STDIN_MODES.has(stdin) ? '' : stdin;
+  }
+  if (Buffer.isBuffer(stdin)) {
+    return stdin.toString('utf8');
+  }
+  return '';
+}
 
 /**
  * Safe write to a stream with parent stream monitoring

@@ -1,11 +1,18 @@
 // ProcessRunner stream and kill methods - streaming and process termination
 // Part of the modular ProcessRunner architecture
 
-import os from 'os';
+import { spawnSync } from 'node:child_process';
 import { trace } from './$.trace.mjs';
-import { createResult } from './$.result.mjs';
+import { createResult, getSignalExitCode } from './$.result.mjs';
+import { StreamPipeline } from './stream-processing.mjs';
 
 const isBun = typeof globalThis.Bun !== 'undefined';
+
+/**
+ * Default milliseconds a child is given to handle the kill signal before
+ * SIGKILL follows. Mirrors the Rust `kill_grace_ms` default.
+ */
+const DEFAULT_KILL_GRACE = 100;
 
 /**
  * Send a signal to a process and its group
@@ -18,15 +25,43 @@ function sendSignalToProcess(pid, sig, runtime) {
   const operations = [];
   const prefix = runtime === 'Bun' ? 'Bun ' : '';
 
+  if (process.platform === 'win32') {
+    // Windows does not support negative PIDs for process groups. Stop the
+    // complete tree before the direct child exits and its descendants lose
+    // their parent relationship.
+    const result = spawnSync('taskkill', ['/PID', String(pid), '/T', '/F'], {
+      stdio: 'ignore',
+      windowsHide: true,
+    });
+    if (result.status === 0) {
+      operations.push('taskkill tree');
+      return operations;
+    }
+    trace(
+      'ProcessRunner',
+      () =>
+        `taskkill failed for process ${pid}: ${result.error?.message || `exit ${result.status}`}`
+    );
+  }
+
+  const deliveredSignal = process.platform === 'win32' ? 'SIGKILL' : sig;
   try {
-    process.kill(pid, sig);
-    trace('ProcessRunner', () => `Sent ${sig} to ${prefix}process ${pid}`);
-    operations.push(`${sig} to process`);
+    process.kill(pid, deliveredSignal);
+    trace(
+      'ProcessRunner',
+      () => `Sent ${deliveredSignal} to ${prefix}process ${pid}`
+    );
+    operations.push(`${deliveredSignal} to process`);
   } catch (err) {
     trace(
       'ProcessRunner',
-      () => `Error sending ${sig} to ${prefix}process: ${err.message}`
+      () =>
+        `Error sending ${deliveredSignal} to ${prefix}process: ${err.message}`
     );
+  }
+
+  if (process.platform === 'win32') {
+    return operations;
   }
 
   try {
@@ -47,50 +82,138 @@ function sendSignalToProcess(pid, sig, runtime) {
 }
 
 /**
+ * Check whether a process still exists, without signalling it.
+ * @param {number} pid - Process ID
+ * @returns {boolean} True when the process is still alive
+ */
+function processIsAlive(pid) {
+  try {
+    // Signal 0 performs the permission and existence checks without delivery.
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Is anything from the original command still running?
+ *
+ * The check must cover the same target the signal was delivered to: the direct
+ * child *and* its process group. A shell wrapper frequently dies on the first
+ * signal while the grandchild doing the real work survives and is reparented to
+ * init; looking only at the direct child would report "already gone" and skip
+ * the escalation, leaving that grandchild running forever.
+ *
+ * @param {number} pid - Process ID of the direct child / group leader
+ * @returns {boolean} True when the process or any group member is still alive
+ */
+function processTreeIsAlive(pid) {
+  return processIsAlive(pid) || processIsAlive(-pid);
+}
+
+/**
+ * Schedule the forceful SIGKILL escalation that guarantees termination.
+ *
+ * The escalation is deliberately deferred: sending SIGKILL in the same tick as
+ * the requested signal means a child that handles SIGTERM (to flush output,
+ * remove a lock file, stop its own children) is destroyed before its handler
+ * can run, so a "graceful" stop was never actually graceful.
+ *
+ * @param {number} pid - Process ID
+ * @param {number} graceMilliseconds - Time to wait before SIGKILL
+ * @param {string} runtime - Runtime identifier for logging
+ */
+function scheduleForcefulEscalation(pid, graceMilliseconds, runtime) {
+  const timer = setTimeout(() => {
+    if (!processTreeIsAlive(pid)) {
+      trace(
+        'ProcessRunner',
+        () => `Process ${pid} exited within the grace period; no SIGKILL needed`
+      );
+      return;
+    }
+    trace(
+      'ProcessRunner',
+      () => `Grace period elapsed, escalating to SIGKILL for process ${pid}`
+    );
+    sendSignalToProcess(pid, 'SIGKILL', runtime);
+  }, graceMilliseconds);
+
+  // The escalation must never be the reason the process stays alive: an
+  // unref'd timer lets the runtime exit as soon as everything else is done.
+  timer.unref?.();
+}
+
+/**
  * Kill a child process with escalating signals
  * @param {object} child - Child process object
  * @param {string} [signal] - Signal to send first (default 'SIGTERM')
+ * @param {number} [graceMilliseconds] - Time the child is given to handle the
+ *   signal before SIGKILL follows (default 100)
  */
-function killChildProcess(child, signal = 'SIGTERM') {
+export function killChildProcess(
+  child,
+  signal = 'SIGTERM',
+  graceMilliseconds = DEFAULT_KILL_GRACE
+) {
   if (!child || !child.pid) {
     return;
   }
 
   const runtime = isBun ? 'Bun' : 'Node';
+  const pid = child.pid;
   trace(
     'ProcessRunner',
     () =>
-      `Killing ${runtime} process | ${JSON.stringify({ pid: child.pid, signal }, null, 2)}`
+      `Killing ${runtime} process | ${JSON.stringify({ pid, signal, graceMilliseconds }, null, 2)}`
   );
 
-  // Send the configured signal first, then escalate to SIGKILL to guarantee
-  // termination even if the process ignores or handles the first signal.
-  // When the configured signal already is SIGKILL we skip the redundant second
-  // delivery.
-  const killOperations = [];
-  killOperations.push(...sendSignalToProcess(child.pid, signal, runtime));
-  if (signal !== 'SIGKILL') {
-    killOperations.push(...sendSignalToProcess(child.pid, 'SIGKILL', runtime));
-  }
+  // SIGKILL cannot be handled, so there is nothing to wait for. A zero grace
+  // period means the child is given no opportunity to handle the signal
+  // either, so the requested signal is not delivered at all: anything done
+  // between it and SIGKILL is a window the child can be scheduled in, which
+  // would make "no grace" a race the child can win rather than a guarantee.
+  // The reported exit code still comes from the signal that was requested.
+  const forceful = signal === 'SIGKILL' || !(graceMilliseconds > 0);
+  const killOperations = sendSignalToProcess(
+    pid,
+    forceful ? 'SIGKILL' : signal,
+    runtime
+  );
 
   trace(
     'ProcessRunner',
     () => `${runtime} kill operations attempted: ${killOperations.join(', ')}`
   );
 
-  if (isBun) {
-    try {
-      child.kill();
-      trace(
-        'ProcessRunner',
-        () => `Called child.kill() for Bun process ${child.pid}`
-      );
-    } catch (err) {
-      trace(
-        'ProcessRunner',
-        () => `Error calling child.kill(): ${err.message}`
-      );
+  // taskkill and the direct-child fallback are both forceful on Windows.
+  // Retrying after a grace period could kill a different process that reused
+  // the terminated child's PID.
+  if (process.platform === 'win32') {
+    child.removeAllListeners?.();
+    return;
+  }
+
+  if (forceful) {
+    if (isBun) {
+      try {
+        child.kill();
+        trace(
+          'ProcessRunner',
+          () => `Called child.kill() for Bun process ${pid}`
+        );
+      } catch (err) {
+        trace(
+          'ProcessRunner',
+          () => `Error calling child.kill(): ${err.message}`
+        );
+      }
     }
+  } else {
+    // Otherwise escalate to SIGKILL once the grace period has passed, so
+    // termination is still guaranteed for a process that ignores the signal.
+    scheduleForcefulEscalation(pid, graceMilliseconds, runtime);
   }
 
   child.removeAllListeners?.();
@@ -183,30 +306,6 @@ function cleanupVirtualGenerator(generator, signal) {
 }
 
 /**
- * Get exit code for signal
- *
- * Uses the conventional 128 + signal-number mapping (so SIGTERM → 143,
- * SIGKILL → 137, SIGINT → 130, SIGHUP → 129, …) resolved from the runtime's
- * signal table so any configured signal reports a faithful exit code.
- * @param {string} signal - Signal name
- * @returns {number} Exit code
- */
-function getSignalExitCode(signal) {
-  const signals = os.constants?.signals || {};
-  if (typeof signals[signal] === 'number') {
-    return 128 + signals[signal];
-  }
-  // Fallbacks for runtimes that do not expose the signal table.
-  if (signal === 'SIGKILL') {
-    return 137;
-  }
-  if (signal === 'SIGTERM') {
-    return 143;
-  }
-  return 130;
-}
-
-/**
  * Kill the runner and create result
  * @param {object} runner - ProcessRunner instance
  * @param {string} signal - Kill signal
@@ -216,6 +315,15 @@ function killRunner(runner, signal) {
   runner._cancellationSignal = signal;
   killPipelineComponents(runner.spec, signal);
 
+  if (
+    runner._activeNestedRunner &&
+    !runner._activeNestedRunner.finished &&
+    typeof runner._activeNestedRunner.kill === 'function'
+  ) {
+    trace('ProcessRunner', () => 'Killing active nested command');
+    runner._activeNestedRunner.kill(signal);
+  }
+
   if (runner._cancelResolve) {
     trace('ProcessRunner', () => 'Resolving cancel promise');
     runner._cancelResolve();
@@ -224,11 +332,11 @@ function killRunner(runner, signal) {
   abortController(runner._abortController);
   cleanupVirtualGenerator(runner._virtualGenerator, signal);
 
-  if (runner.child && !runner.finished) {
-    trace('ProcessRunner', () => `Killing child process ${runner.child.pid}`);
+  if (runner._child && !runner.finished) {
+    trace('ProcessRunner', () => `Killing child process ${runner._child.pid}`);
     try {
-      killChildProcess(runner.child, signal);
-      runner.child = null;
+      killChildProcess(runner._child, signal, runner.options?.killGrace);
+      runner._child = null;
     } catch (err) {
       trace('ProcessRunner', () => `Error killing process: ${err.message}`);
       console.error('Error killing process:', err.message);
@@ -237,6 +345,7 @@ function killRunner(runner, signal) {
 
   const result = createResult({
     code: getSignalExitCode(signal),
+    signal,
     stdout: '',
     stderr: `Process killed with ${signal}`,
     stdin: '',
@@ -254,22 +363,46 @@ export function attachStreamKillMethods(ProcessRunner) {
     yield* this.stream();
   };
 
-  ProcessRunner.prototype.stream = async function* () {
+  ProcessRunner.prototype.stream = function (options = {}) {
+    const runner = this;
+    return new StreamPipeline(
+      () => runner._iterateStream(options),
+      true,
+      () => {
+        if (runner.started && !runner.finished) {
+          runner.kill();
+        }
+      }
+    );
+  };
+
+  ProcessRunner.prototype._iterateStream = async function* (options = {}) {
+    const { highWaterMark, highWaterBytes } = streamLimits(options);
     trace('ProcessRunner', () => `stream ENTER | started=${this.started}`);
     this._isStreaming = true;
     this._awaited = true;
-    if (!this.started) {
-      this._startAsync();
-    }
 
     let buffer = [];
     let resolve, _reject;
     let ended = false;
     let killed = false;
+    const capacityWaiters = new Set();
+    let bufferedBytes = 0;
+    const pressure = () =>
+      (buffer.length < highWaterMark && bufferedBytes < highWaterBytes) ||
+      ended ||
+      killed
+        ? Promise.resolve()
+        : new Promise((res) => {
+            capacityWaiters.add(res);
+          });
+    this._streamConsumers ??= new Set();
+    this._streamConsumers.add(pressure);
 
     const onData = (chunk) => {
       if (!killed) {
         buffer.push(chunk);
+        bufferedBytes += chunkBytes(chunk);
         if (resolve) {
           resolve();
           resolve = _reject = null;
@@ -277,13 +410,13 @@ export function attachStreamKillMethods(ProcessRunner) {
       }
     };
 
-    // Yield an explicit { type: 'exit', code } chunk when the process exits so
+    // Yield an explicit { type: 'exit', code, signal } chunk when the process exits so
     // consumers can observe the exit code from within the async iterator (see
     // issue #155). 'exit' is emitted by finish() right after 'end', so the
     // chunk is queued before the iterator drains and terminates.
-    const onExit = (code) => {
+    const onExit = (code, signal) => {
       if (!killed) {
-        buffer.push({ type: 'exit', code });
+        buffer.push({ type: 'exit', code, signal });
         if (resolve) {
           resolve();
           resolve = _reject = null;
@@ -293,6 +426,8 @@ export function attachStreamKillMethods(ProcessRunner) {
 
     const onEnd = () => {
       ended = true;
+      capacityWaiters.forEach((resolve) => resolve());
+      capacityWaiters.clear();
       if (resolve) {
         resolve();
         resolve = _reject = null;
@@ -304,12 +439,29 @@ export function attachStreamKillMethods(ProcessRunner) {
     this.on('end', onEnd);
 
     try {
+      // Startup can finish synchronously when options.signal is already
+      // aborted, so subscribe before starting to retain data/end/exit events.
+      if (!this.started) {
+        this._startAsync();
+      }
+
+      // A previous start(), await, or kill() may have finished before the
+      // iterator subscribed. Replay its exit status, without duplicating
+      // the exit chunk when the listeners observed completion during startup.
+      if (this.finished && !ended) {
+        onExit(this.result.code, this.result.signal);
+        onEnd();
+      }
+
       while (!ended || buffer.length > 0) {
         if (killed) {
           break;
         }
         if (buffer.length > 0) {
           const chunk = buffer.shift();
+          bufferedBytes -= chunkBytes(chunk);
+          capacityWaiters.forEach((resolve) => resolve());
+          capacityWaiters.clear();
           this._streamYielding = true;
           yield chunk;
           this._streamYielding = false;
@@ -321,6 +473,9 @@ export function attachStreamKillMethods(ProcessRunner) {
         }
       }
     } finally {
+      this._streamConsumers.delete(pressure);
+      capacityWaiters.forEach((resolve) => resolve());
+      capacityWaiters.clear();
       this.off('data', onData);
       this.off('exit', onExit);
       this.off('end', onEnd);
@@ -346,4 +501,18 @@ export function attachStreamKillMethods(ProcessRunner) {
     }
     killRunner(this, effectiveSignal);
   };
+}
+
+function chunkBytes(chunk) {
+  return chunk.data?.byteLength ?? 0;
+}
+function streamLimits({ highWaterMark = 32, highWaterBytes = 1024 * 1024 }) {
+  if (
+    ![highWaterMark, highWaterBytes].every(
+      (value) => Number.isSafeInteger(value) && value > 0
+    )
+  ) {
+    throw new RangeError('Stream high water marks must be positive integers');
+  }
+  return { highWaterMark, highWaterBytes };
 }

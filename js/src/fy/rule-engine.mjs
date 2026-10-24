@@ -72,6 +72,7 @@ export class RuleEngine {
    *   target language, post-processes the captured source text, or both.
    */
   constructor(network, ruleSet, options = {}) {
+    this.preserveLayout = options.preserveLayout ?? false;
     this.network = network;
     this.ruleSet = ruleSet;
     this.language = options.language ?? 'JavaScript';
@@ -210,7 +211,7 @@ export class RuleEngine {
           continue;
         }
 
-        const indent = currentIndent(output);
+        const indent = this.preserveLayout ? '' : currentIndent(output);
         let value;
         if (variadic) {
           const children = this.network.link(target)?.references() ?? [];

@@ -1,3 +1,5 @@
+import { trace } from './$.trace.mjs';
+
 const parseMessages = (stream, receive) => {
   let pending = '';
   stream.setEncoding('utf8');
@@ -13,11 +15,79 @@ const parseMessages = (stream, receive) => {
   });
 };
 
+// Process exit can precede buffered status delivery. Bun/Windows can also omit
+// stdout end and process close. After exit, allow buffered data to drain until
+// 100 ms of silence (at most 1 s), then release pipes even when EOF never arrives.
+const watchHostExit = (host, receive) => {
+  let exitCode;
+  let stdoutEnded = false;
+  let stderrEnded = false;
+  let finished = false;
+  let quietTimer;
+  let deadlineTimer;
+  const finish = (code) => {
+    if (finished) {
+      return;
+    }
+    finished = true;
+    clearTimeout(quietTimer);
+    clearTimeout(deadlineTimer);
+    host.stdin.destroy();
+    host.stdout.destroy();
+    host.stderr.destroy();
+    receive(code);
+  };
+  const finishWithoutEof = () => {
+    trace('PTY', 'host pipes did not signal EOF; releasing drained pipes');
+    finish(exitCode);
+  };
+  const deferUntilQuiet = () => {
+    if (exitCode !== undefined && !finished) {
+      clearTimeout(quietTimer);
+      quietTimer = setTimeout(finishWithoutEof, 100);
+    }
+  };
+  const drained = () => {
+    if (exitCode !== undefined && stdoutEnded && stderrEnded) {
+      finish(exitCode);
+    }
+  };
+  host.on('exit', (code) => {
+    trace('PTY', `host exit: ${code}`);
+    exitCode = code;
+    if (!finished) {
+      deadlineTimer = setTimeout(finishWithoutEof, 1000);
+      deferUntilQuiet();
+    }
+    drained();
+  });
+  host.stdout.on('data', deferUntilQuiet);
+  host.stderr.on('data', deferUntilQuiet);
+  host.stdout.on('end', () => {
+    trace('PTY', 'host stdout drained');
+    stdoutEnded = true;
+    drained();
+  });
+  host.stderr.on('end', () => {
+    trace('PTY', 'host stderr drained');
+    stderrEnded = true;
+    drained();
+  });
+  host.on('close', (code) => {
+    trace('PTY', `host close: ${code}`);
+    finish(code);
+  });
+};
+
 export const spawnTerminalPty = async (
   file,
   args,
   options,
-  { hostPath: hostPathOverride, nodeBinary: nodeBinaryOverride } = {}
+  {
+    hostPath: hostPathOverride,
+    nodeBinary: nodeBinaryOverride,
+    spawn: spawnOverride,
+  } = {}
 ) => {
   const [{ spawn }, { dirname }, { fileURLToPath }] = await Promise.all([
     import('node:child_process'),
@@ -29,7 +99,7 @@ export const spawnTerminalPty = async (
     fileURLToPath(new URL('./terminal-pty-host.mjs', import.meta.url));
   const nodeBinary =
     nodeBinaryOverride ?? process.env.COMMAND_STREAM_NODE_BINARY ?? 'node';
-  const host = spawn(nodeBinary, [hostPath], {
+  const host = (spawnOverride ?? spawn)(nodeBinary, [hostPath], {
     cwd: dirname(hostPath),
     env: process.env,
     stdio: ['pipe', 'pipe', 'pipe'],
@@ -91,7 +161,7 @@ export const spawnTerminalPty = async (
       }
     }
   });
-  host.on('exit', (exitCode) => {
+  watchHostExit(host, (exitCode) => {
     if (!terminalExitReceived && !exited) {
       exited = true;
       const error = new Error(

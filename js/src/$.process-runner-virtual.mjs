@@ -1,28 +1,28 @@
+import { commandIterator, isCommandIterable } from './$.command-output.mjs';
 // ProcessRunner virtual command methods - virtual command execution
 // Part of the modular ProcessRunner architecture
 
 import { trace } from './$.trace.mjs';
-import { safeWrite } from './$.stream-utils.mjs';
+import { safeWrite, stdinDataFromOptions } from './$.stream-utils.mjs';
+import {
+  applyVirtualProcessContext,
+  effectiveCwd,
+  effectiveEnv,
+} from './$.process-context.mjs';
+import {
+  attachExitCodeAlias,
+  createCommandError,
+  createResult,
+  executionErrorExitCode,
+} from './$.result.mjs';
 
 /**
  * Get stdin data from options
  * @param {object} options - Runner options
  * @returns {string} Stdin data
  */
-/** Stdio *modes*, which are configuration rather than data to feed a command. */
-const STDIN_MODES = new Set(['inherit', 'pipe', 'ignore']);
-
 function getStdinData(options) {
-  if (typeof options.stdin === 'string' && STDIN_MODES.has(options.stdin)) {
-    return '';
-  }
-  if (options.stdin && typeof options.stdin === 'string') {
-    return options.stdin;
-  }
-  if (options.stdin && Buffer.isBuffer(options.stdin)) {
-    return options.stdin.toString('utf8');
-  }
-  return '';
+  return stdinDataFromOptions(options);
 }
 
 /**
@@ -83,24 +83,32 @@ function emitOutput(runner, type, data) {
  * @param {object} shellSettings - Global shell settings
  * @returns {object} Result object
  */
-function handleVirtualError(runner, error, shellSettings) {
-  let exitCode = error.code ?? 1;
+function handleVirtualError(runner, error, shellSettings, shouldFinish) {
+  // Handlers may throw system errors whose `code` is a POSIX errno string, so
+  // normalize the status to a number before reporting it.
+  let exitCode = executionErrorExitCode(error);
   if (runner._cancelled && runner._cancellationSignal) {
     exitCode = getCancellationExitCode(runner._cancellationSignal);
   }
 
-  const result = {
+  // Built through createResult so the nested `error.result` carries the
+  // `exitCode` alias as well (issues #36 and #38).
+  const result = createResult({
     code: exitCode,
     stdout: error.stdout ?? '',
     stderr: error.stderr ?? error.message,
     stdin: '',
-  };
+  });
 
   emitOutput(runner, 'stderr', result.stderr);
-  runner.finish(result);
+  if (shouldFinish) {
+    runner.finish(result);
+  }
 
   if (shellSettings.errexit) {
     error.result = result;
+    // `exitCode` is an alias for `code` for better compatibility (issue #38)
+    attachExitCodeAlias(error, exitCode);
     throw error;
   }
 
@@ -115,21 +123,9 @@ function handleVirtualError(runner, error, shellSettings) {
  * @param {string} stdinData - Stdin data
  * @returns {Promise<object>} Result object
  */
-async function runGeneratorHandler(runner, handler, argValues, stdinData) {
+async function runGeneratorHandler(runner, stdinData, output) {
   const chunks = [];
-  const commandOptions = {
-    cwd: runner.options.cwd,
-    env: runner.options.env,
-    options: runner.options,
-    isCancelled: () => runner._cancelled,
-  };
-
-  const generator = handler({
-    args: argValues,
-    stdin: stdinData,
-    abortSignal: runner._abortController?.signal,
-    ...commandOptions,
-  });
+  const generator = output;
   runner._virtualGenerator = generator;
 
   const cancelPromise = new Promise((resolve) => {
@@ -137,7 +133,7 @@ async function runGeneratorHandler(runner, handler, argValues, stdinData) {
   });
 
   try {
-    const iterator = generator[Symbol.asyncIterator]();
+    const iterator = commandIterator(generator);
     let done = false;
 
     while (!done && !runner._cancelled) {
@@ -157,12 +153,12 @@ async function runGeneratorHandler(runner, handler, argValues, stdinData) {
 
       if (!done && !runner._cancelled && !runner._streamBreaking) {
         const buf = Buffer.from(result.value);
-        chunks.push(buf);
-
-        if (runner.options.mirror) {
-          safeWrite(process.stdout, buf);
+        if (runner.options.capture) {
+          chunks.push(buf);
         }
-        runner._emitProcessedData('stdout', buf);
+
+        emitOutput(runner, 'stdout', buf);
+        await runner._waitForStreamCapacity();
       }
     }
   } finally {
@@ -190,8 +186,8 @@ async function runGeneratorHandler(runner, handler, argValues, stdinData) {
  */
 async function runRegularHandler(runner, handler, argValues, stdinData) {
   const commandOptions = {
-    cwd: runner.options.cwd,
-    env: runner.options.env,
+    cwd: effectiveCwd(runner),
+    env: effectiveEnv(runner) ?? process.env,
     options: runner.options,
     isCancelled: () => runner._cancelled,
   };
@@ -217,6 +213,14 @@ async function runRegularHandler(runner, handler, argValues, stdinData) {
     }
   }
 
+  if (isCommandIterable(result)) {
+    return runGeneratorHandler(runner, stdinData, result);
+  }
+
+  emitOutput(runner, 'stdout', result.stdout);
+  emitOutput(runner, 'stderr', result.stderr);
+  await runner._waitForStreamCapacity();
+
   result = {
     ...result,
     code: result.code ?? 0,
@@ -224,9 +228,6 @@ async function runRegularHandler(runner, handler, argValues, stdinData) {
     stderr: runner.options.capture ? (result.stderr ?? '') : undefined,
     stdin: runner.options.capture ? stdinData : undefined,
   };
-
-  emitOutput(runner, 'stdout', result.stdout);
-  emitOutput(runner, 'stderr', result.stderr);
 
   return result;
 }
@@ -242,7 +243,8 @@ export function attachVirtualCommandMethods(ProcessRunner, deps) {
   ProcessRunner.prototype._runVirtual = async function (
     cmd,
     args,
-    originalCommand = null
+    originalCommand = null,
+    shouldFinish = false
   ) {
     trace('ProcessRunner', () => `_runVirtual | cmd=${cmd}`);
 
@@ -256,6 +258,8 @@ export function attachVirtualCommandMethods(ProcessRunner, deps) {
       if (this.options.stdin === 'pipe') {
         const modifiedOptions = {
           ...this.options,
+          cwd: effectiveCwd(this),
+          env: effectiveEnv(this),
           stdin: 'pipe',
           _bypassVirtual: true,
         };
@@ -279,25 +283,34 @@ export function attachVirtualCommandMethods(ProcessRunner, deps) {
         console.log(`${originalCommand || `${cmd} ${argValues.join(' ')}`}`);
       }
 
-      const isGenerator = handler.constructor.name === 'AsyncGeneratorFunction';
-      const result = isGenerator
-        ? await runGeneratorHandler(this, handler, argValues, stdinData)
-        : await runRegularHandler(this, handler, argValues, stdinData);
+      const result = await runRegularHandler(
+        this,
+        handler,
+        argValues,
+        stdinData
+      );
 
-      this.finish(result);
+      applyVirtualProcessContext(this, result);
+
+      if (shouldFinish) {
+        this.finish(result);
+      }
 
       if (globalShellSettings.errexit && result.code !== 0) {
-        const error = new Error(`Command failed with exit code ${result.code}`);
-        error.code = result.code;
-        error.stdout = result.stdout;
-        error.stderr = result.stderr;
-        error.result = result;
-        throw error;
+        throw createCommandError(
+          `Command failed with exit code ${result.code}`,
+          {
+            code: result.code,
+            stdout: result.stdout,
+            stderr: result.stderr,
+            result,
+          }
+        );
       }
 
       return result;
     } catch (error) {
-      return handleVirtualError(this, error, globalShellSettings);
+      return handleVirtualError(this, error, globalShellSettings, shouldFinish);
     }
   };
 }

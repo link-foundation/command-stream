@@ -6,6 +6,17 @@ on:
       - main
     paths:
       - 'js/**'
+      - 'fixtures/fy/**'
+      # ESLint runs from the repository root, so it also lints these; without
+      # them here a lint error in an experiment or in claude-profiles.mjs first
+      # surfaced on an unrelated pull request that happened to touch js/**.
+      - 'eslint.config.js'
+      - 'claude-profiles.mjs'
+      - 'experiments/**'
+      - 'extensions/**'
+      - 'scripts/**'
+      - 'conformance/**'
+      - '.github/scripts/**'
       - '.github/workflows/js.yml'
       - 'README.md'
       - 'LICENSE'
@@ -13,6 +24,17 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - 'js/**'
+      - 'fixtures/fy/**'
+      # ESLint runs from the repository root, so it also lints these; without
+      # them here a lint error in an experiment or in claude-profiles.mjs first
+      # surfaced on an unrelated pull request that happened to touch js/**.
+      - 'eslint.config.js'
+      - 'claude-profiles.mjs'
+      - 'experiments/**'
+      - 'extensions/**'
+      - 'scripts/**'
+      - 'conformance/**'
+      - '.github/scripts/**'
       - '.github/workflows/js.yml'
       - 'README.md'
       - 'LICENSE'
@@ -39,29 +61,39 @@ on:
         required: false
         type: string
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+# Least-privilege default. The jobs that write (release, instant-release,
+# changeset-pr) raise their own scopes.
+permissions:
+  contents: read
+
+# Concurrency is declared per job, not here: a workflow-level cancellable group
+# would also cancel a release that has already begun publishing to npm. Read-only
+# checks use cancellable `check-*` groups, writers share one repository-wide
+# non-cancellable group so a started writer always finishes.
 
 jobs:
   changeset-check:
     name: Check for JavaScript changesets
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     if: github.event_name == 'pull_request'
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-changeset-check
+      cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: latest
 
       - name: Install dependencies
         working-directory: js
-        run: bun install
+        run: bun install --frozen-lockfile
 
       - name: Check for changesets
         working-directory: js
@@ -70,30 +102,52 @@ jobs:
           GITHUB_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          if [[ "${{ github.head_ref }}" == "changeset-release/"* ]]; then
-            echo "Skipping changeset check for automated release PR"
-            exit 0
-          fi
-
+          bun scripts/check-version.mjs
           bun scripts/validate-changeset.mjs
 
   lint:
     name: Lint and format JavaScript
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
     needs: [changeset-check]
-    if: always() && (github.event_name == 'push' || needs.changeset-check.result == 'success')
+    # `!cancelled()` rather than `always()`: a cancelled changeset-check must not
+    # leave this job running.
+    if: ${{ !cancelled() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changeset-check.result == 'success') }}
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-lint
+      cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
+        with:
+          # The merge simulation below needs the base branch's history.
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Run the checks below against the real merge result rather than a
+      # possibly stale merge preview, and fail on a conflict here rather than at
+      # merge time. Rationale in .github/scripts/simulate-fresh-merge.sh.
+      - name: Simulate a fresh merge with the base branch
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash .github/scripts/simulate-fresh-merge.sh
+
+      - name: Check registry publish credentials
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        run: node .github/scripts/publish-preflight.mjs npm
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: latest
 
       - name: Install dependencies
         working-directory: js
-        run: bun install
+        run: bun install --frozen-lockfile
 
       - name: Run ESLint
         working-directory: js
@@ -107,121 +161,403 @@ jobs:
         working-directory: js
         run: bun run check:duplication
 
+      - name: Check TypeScript declarations
+        working-directory: js
+        run: bun run check:types
+
+      # Runs the exact versioning command the release job runs after a merge,
+      # on the same runner image, and discards the result. Without it a change
+      # that breaks `changeset version` (issue #216: Changesets 3 spawning a
+      # Deno formatter the runner does not have) only fails on main.
+      - name: Dry-run release versioning
+        working-directory: js
+        run: |
+          bun run changeset:version
+          git status --short
+          git checkout -- .
+
   test:
-    name: Test JavaScript (${{ matrix.runtime }} on ${{ matrix.os }})
+    # The Node entries differ only by version, so the version has to be part of
+    # the name; without it three jobs shared the name "Test JavaScript (node on
+    # ubuntu-24.04)" and a required-check rule could not name a single one.
+    name: Test JavaScript (${{ matrix.runtime }}${{ matrix.node-version && format(' {0}', matrix.node-version) || '' }} on ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
-    needs: [changeset-check]
-    if: always() && (github.event_name == 'push' || needs.changeset-check.result == 'success')
+    needs: [lint]
+    if: ${{ !cancelled() && needs.lint.result == 'success' }}
+    # The matrix values are part of the group so the entries stay parallel and
+    # only a superseded run of the *same* entry is cancelled.
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-test-${{ matrix.os }}-${{ matrix.runtime }}-${{ matrix.node-version || 'default' }}
+      cancel-in-progress: true
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-24.04, macos-15, windows-2025]
         runtime: [bun]
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             runtime: node
-            node-version: 20
-          - os: ubuntu-latest
+            node-version: 26
+          - os: ubuntu-24.04
             runtime: node
             node-version: 22
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             runtime: node
             node-version: 24
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
+        with:
+          # The merge simulation below needs the base branch's history.
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Run the checks below against the real merge result rather than a
+      # possibly stale merge preview, and fail on a conflict here rather than at
+      # merge time. Rationale in .github/scripts/simulate-fresh-merge.sh.
+      - name: Simulate a fresh merge with the base branch
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash .github/scripts/simulate-fresh-merge.sh
 
       - name: Setup Bun
         if: matrix.runtime == 'bun'
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: latest
 
       - name: Setup Node.js PTY host
         if: matrix.runtime == 'bun'
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7.0.0
         with:
           node-version: '24.x'
 
       - name: Install system dependencies (Ubuntu)
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-24.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y jq
+          sudo apt-get install -y jq tmux screen openssh-server
 
       - name: Install system dependencies (macOS)
-        if: matrix.os == 'macos-latest'
+        if: matrix.os == 'macos-15'
         run: brew install jq
 
       - name: Install system dependencies (Windows)
-        if: matrix.os == 'windows-latest'
+        if: matrix.os == 'windows-2025'
         run: choco install jq -y
+
+      # The zx compatibility suite (issue #26) runs a Deno smoke test and a
+      # `deno publish --dry-run`; both skip when Deno is missing.
+      - name: Setup Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+        with:
+          deno-version: v2.x
 
       - name: Install dependencies (Bun)
         if: matrix.runtime == 'bun'
         working-directory: js
-        run: bun install
+        run: bun install --frozen-lockfile
+
+      - name: Verify terminal lifecycle with diagnostics (Bun)
+        if: matrix.runtime == 'bun'
+        timeout-minutes: 2
+        shell: bash
+        env:
+          COMMAND_STREAM_TRACE: 'true'
+        run: |
+          set -o pipefail
+          mkdir -p ci-test-logs
+          bun test js/tests/terminal-capture.test.mjs js/tests/terminal-changes.test.mjs --timeout 10000 2>&1 | tee ci-test-logs/lifecycle.log
 
       - name: Run tests (Bun)
         if: matrix.runtime == 'bun'
-        run: bun test js/tests/ --timeout 10000
+        timeout-minutes: 15
+        shell: bash
         env:
           COMMAND_STREAM_TRACE: ${{ vars.COMMAND_STREAM_TRACE || 'false' }}
+          CI_SCRIPTS_DEBUG: ${{ vars.CI_SCRIPTS_DEBUG || 'false' }}
+        run: |
+          set -o pipefail
+          mkdir -p ci-test-logs
+          bun test js/tests/ --timeout 10000 --reporter=junit --reporter-outfile=ci-test-logs/junit.xml 2>&1 | tee ci-test-logs/bun.log
+
+      - name: Preserve Bun test diagnostics
+        if: ${{ always() && matrix.runtime == 'bun' }}
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: bun-tests-${{ matrix.os }}
+          path: ci-test-logs/
+          retention-days: 7
+
+      - name: Verify interactive shells, multiplexers and SSH
+        if: matrix.os == 'ubuntu-24.04' && matrix.runtime == 'bun'
+        run: |
+          node experiments/issue-9/check-transports.mjs
+          node experiments/issue-9/check-ssh.mjs
 
       - name: Setup Node.js
         if: matrix.runtime == 'node'
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7.0.0
         with:
           node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies (Node)
+        if: matrix.runtime == 'node'
+        working-directory: js
+        run: npm ci
 
       - name: Test Node.js compatibility
         if: matrix.runtime == 'node'
         run: |
           node -e "
           import('./js/src/\$.mjs')
-            .then(() => console.log('Module loads successfully in Node.js ${{ matrix.node-version }}'))
+            .then(() => console.log('Module loads successfully in Node.js ' + process.version))
             .catch((error) => {
               console.error('Module failed to load:', error.message);
               process.exit(1);
             });
           "
+          node -e "
+          const commandStream = require('./js/src/\$.cjs');
+          if (typeof commandStream !== 'function') {
+            console.error('CommonJS entry did not export a callable \$');
+            process.exit(1);
+          }
+          console.log('CommonJS entry loads successfully in Node.js ' + process.version);
+          "
+          node --test js/tests/node-terminal-artifacts.mjs
+          node --test js/tests/terminal-changes.test.mjs
+          node --test js/tests/node-commonjs-entry.mjs
+          node --test js/tests/node-process-regressions.mjs
+          node --test js/tests/windows-tree-kill.test.mjs
+          node --test js/tests/node-windows-kill.mjs
+          node --test js/tests/stdin-epipe.test.mjs
+          node --test js/tests/process-runner-signal-exit.test.mjs
+          node --test js/tests/github-cli-body.test.mjs
+          node --test js/tests/virtual-exit.test.mjs
+
+      # The zx-compatible API (issue #26) ports google/zx's own test suite; the
+      # files run one at a time because several upstream cases are timing based.
+      - name: Run zx compatibility suite (Node)
+        if: matrix.runtime == 'node'
+        timeout-minutes: 15
+        shell: bash
+        run: node --test --test-concurrency=1 js/tests/zx/*.test.mjs
+
+      - name: Run Execa compatibility suite (Node)
+        if: matrix.runtime == 'node'
+        timeout-minutes: 10
+        shell: bash
+        run: node --test --test-concurrency=1 js/tests/execa/*.test.mjs js/tests/execa-compat.test.mjs
+
+  production-install:
+    name: Production install (Node ${{ matrix.node-version }}, ${{ matrix.mode }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    needs: [lint]
+    if: ${{ !cancelled() && needs.lint.result == 'success' }}
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-production-install-${{ matrix.node-version }}-${{ matrix.mode }}
+      cancel-in-progress: true
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [22, 24, 26]
+        mode: [scripts-enabled, scripts-disabled, omit-optional]
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Simulate a fresh merge with the base branch
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash .github/scripts/simulate-fresh-merge.sh
+
+      - name: Setup Node.js for packing
+        uses: actions/setup-node@v7.0.0
+        with:
+          node-version: '24.x'
+
+      - name: Pack the published artifact
+        working-directory: js
+        run: |
+          mkdir -p ../ci-install-logs
+          npm pack --ignore-scripts --pack-destination ../ci-install-logs
+
+      - name: Install locally and globally without a build toolchain
+        env:
+          NODE_VERSION: ${{ matrix.node-version }}
+          INSTALL_MODE: ${{ matrix.mode }}
+        run: |
+          set -euo pipefail
+          archive="$(find "$PWD/ci-install-logs" -name '*.tgz' -print -quit)"
+          docker run --rm --memory=512m --cpus=2 \
+            -v "$PWD:/repo:ro" -v "$archive:/package.tgz:ro" \
+            "node:${NODE_VERSION}-bookworm-slim" \
+            bash /repo/js/scripts/test-production-install.sh /package.tgz "$INSTALL_MODE" \
+            2>&1 | tee ci-install-logs/install.log
+
+      - name: Preserve production installation diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: production-install-${{ matrix.node-version }}-${{ matrix.mode }}
+          path: ci-install-logs/install.log
+          if-no-files-found: error
+
+  deno-cdn:
+    name: Import HTTP package on Deno with esm.sh dependencies
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    needs: [lint]
+    if: ${{ !cancelled() && needs.lint.result == 'success' }}
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-deno-cdn
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Simulate a fresh merge with the base branch
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash .github/scripts/simulate-fresh-merge.sh
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7.0.0
+        with:
+          node-version: '24.x'
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: latest
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+        with:
+          deno-version: v2.x
+
+      - name: Install dependencies
+        working-directory: js
+        run: bun install --frozen-lockfile
+
+      - name: Test current checkout with CDN resolution
+        shell: bash
+        env:
+          COMMAND_STREAM_CDN_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          COMMAND_STREAM_CDN_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -o pipefail
+          mkdir -p ci-test-logs
+          node js/scripts/test-deno-cdn.mjs 2>&1 | tee ci-test-logs/deno-cdn.log
+
+      - name: Preserve Deno CDN diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: deno-cdn
+          path: ci-test-logs/
+          retention-days: 7
+
+  process-tree:
+    name: Process trees (Node ${{ matrix.node-version }} on ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-process-tree-${{ matrix.os }}-${{ matrix.node-version }}
+      cancel-in-progress: true
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, windows-2025]
+        node-version: ['22.x', '24.x', '26.x']
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Simulate a fresh merge with the base branch
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash .github/scripts/simulate-fresh-merge.sh
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7.0.0
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies for process tests
+        # These regressions use the core runner, without building native PTY
+        # extensions or the terminal font assets.
+        working-directory: js
+        run: npm ci --ignore-scripts
+
+      - name: Run descendant termination regressions
+        run: node --test js/tests/windows-tree-kill.test.mjs js/tests/node-windows-kill.mjs js/tests/stdin-epipe.test.mjs
 
   release:
     name: Release JavaScript package
-    needs: [lint, test]
+    needs: [lint, test, process-tree, production-install, deno-cdn]
     # Required because lint/test depend on the pull-request-only changeset-check
     # job, which is skipped on push events.
     if: |
-      always() && !cancelled() &&
+      !cancelled() &&
       github.ref == 'refs/heads/main' &&
       github.event_name == 'push' &&
       needs.lint.result == 'success' &&
-      needs.test.result == 'success'
-    runs-on: ubuntu-latest
+      needs.test.result == 'success' &&
+      needs.process-tree.result == 'success' &&
+      needs.production-install.result == 'success' &&
+      needs.deno-cdn.result == 'success'
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
       contents: write
       pull-requests: write
       id-token: write
+    # Shared by every job in this repository that pushes to main or publishes.
+    # `cancel-in-progress: false` lets a started release finish; the next writer
+    # waits instead of interrupting a half-published version.
+    concurrency:
+      group: main-writer-${{ github.repository }}-main
+      cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v6
+      # This job pushes to main and creates the release, so it needs the
+      # credential actions/checkout persists in .git/config. Everything else in
+      # this repository sets persist-credentials: false; zizmor runs at
+      # --min-confidence low so a checkout that forgets it fails the audit, and
+      # the six writer jobs that legitimately need it say so here.
+      - uses: actions/checkout@v7.0.1 # zizmor: ignore[artipacked]
         with:
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7.0.0
         with:
           node-version: '24.x'
           registry-url: 'https://registry.npmjs.org'
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: latest
 
       - name: Install dependencies
         working-directory: js
-        run: bun install
+        run: bun install --frozen-lockfile
 
       - name: Update npm for OIDC trusted publishing
         working-directory: js
@@ -233,14 +569,16 @@ jobs:
         run: |
           CHANGESET_COUNT=$(find .changeset -name "*.md" ! -name "README.md" | wc -l)
           echo "Found $CHANGESET_COUNT JavaScript changeset file(s)"
-          echo "has_changesets=$([[ $CHANGESET_COUNT -gt 0 ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
-          echo "changeset_count=$CHANGESET_COUNT" >> $GITHUB_OUTPUT
+          echo "has_changesets=$([[ $CHANGESET_COUNT -gt 0 ]] && echo 'true' || echo 'false')" >> "$GITHUB_OUTPUT"
+          echo "changeset_count=$CHANGESET_COUNT" >> "$GITHUB_OUTPUT"
 
       - name: Check if release is needed
         id: check_release
         working-directory: js
         env:
           HAS_CHANGESETS: ${{ steps.check_changesets.outputs.has_changesets }}
+          # Read-only lookup of the js-v<version> GitHub release (issue #216).
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bun scripts/check-release-needed.mjs
 
       - name: Merge multiple changesets
@@ -262,10 +600,14 @@ jobs:
         # changeset is present, so it also covers the #166 "failed to do any
         # deploy" restart, where a changeset existed locally but the bump had
         # already been consumed on origin/main, leaving v0.10.2 stranded.
+        # `github_release_missing` re-runs this path for a version already on
+        # npm whose GitHub release was never created (npm 1.0.0-1.4.0, #216);
+        # the publish is then a no-op that reports the version as published.
         if: >-
           steps.version.outputs.version_committed == 'true' ||
           steps.version.outputs.already_released == 'true' ||
-          steps.check_release.outputs.current_unpublished == 'true'
+          steps.check_release.outputs.current_unpublished == 'true' ||
+          steps.check_release.outputs.github_release_missing == 'true'
         id: publish
         working-directory: js
         run: bun scripts/publish-to-npm.mjs --should-pull
@@ -275,50 +617,71 @@ jobs:
         working-directory: js
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: bun scripts/create-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}" --tag-prefix js-v
+          PUBLISHED_VERSION: ${{ steps.publish.outputs.published_version }}
+          REPOSITORY: ${{ github.repository }}
+        run: bun scripts/create-github-release.mjs --release-version "$PUBLISHED_VERSION" --repository "$REPOSITORY" --tag-prefix js-v
 
       - name: Format JavaScript GitHub release notes
         if: steps.publish.outputs.published == 'true'
         working-directory: js
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: bun scripts/format-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}" --commit-sha "${{ github.sha }}" --tag-prefix js-v
+          PUBLISHED_VERSION: ${{ steps.publish.outputs.published_version }}
+          REPOSITORY: ${{ github.repository }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: bun scripts/format-github-release.mjs --release-version "$PUBLISHED_VERSION" --repository "$REPOSITORY" --commit-sha "$COMMIT_SHA" --tag-prefix js-v
 
       - name: Verify npm availability
         # Guards against the #166 false positive: a release/tag must correspond
         # to a version that is actually installable from npm.
         if: steps.publish.outputs.published == 'true'
         working-directory: js
-        run: bun scripts/wait-for-npm.mjs --release-version "${{ steps.publish.outputs.published_version }}"
+        env:
+          PUBLISHED_VERSION: ${{ steps.publish.outputs.published_version }}
+        run: bun scripts/wait-for-npm.mjs --release-version "$PUBLISHED_VERSION"
 
   instant-release:
     name: Instant JavaScript release
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'instant'
-    runs-on: ubuntu-latest
+    needs: [lint, test, process-tree, production-install, deno-cdn]
+    if: >-
+      !cancelled() && github.ref == 'refs/heads/main' &&
+      github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'instant' &&
+      needs.lint.result == 'success' && needs.test.result == 'success' &&
+      needs.process-tree.result == 'success' && needs.production-install.result == 'success' &&
+      needs.deno-cdn.result == 'success'
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
       contents: write
       pull-requests: write
       id-token: write
+    concurrency:
+      group: main-writer-${{ github.repository }}-main
+      cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v6
+      # This job pushes to main and creates the release, so it needs the
+      # credential actions/checkout persists in .git/config. Everything else in
+      # this repository sets persist-credentials: false; zizmor runs at
+      # --min-confidence low so a checkout that forgets it fails the audit, and
+      # the six writer jobs that legitimately need it say so here.
+      - uses: actions/checkout@v7.0.1 # zizmor: ignore[artipacked]
         with:
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7.0.0
         with:
           node-version: '24.x'
           registry-url: 'https://registry.npmjs.org'
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: latest
 
       - name: Install dependencies
         working-directory: js
-        run: bun install
+        run: bun install --frozen-lockfile
 
       - name: Update npm for OIDC trusted publishing
         working-directory: js
@@ -327,7 +690,10 @@ jobs:
       - name: Version package and commit to main
         id: version
         working-directory: js
-        run: bun scripts/version-and-commit.mjs --mode instant --bump-type "${{ github.event.inputs.bump_type }}" --description "${{ github.event.inputs.description }}"
+        env:
+          BUMP_TYPE: ${{ github.event.inputs.bump_type }}
+          RELEASE_DESCRIPTION: ${{ github.event.inputs.description }}
+        run: bun scripts/version-and-commit.mjs --mode instant --bump-type "$BUMP_TYPE" --description "$RELEASE_DESCRIPTION"
 
       - name: Publish to npm
         if: steps.version.outputs.version_committed == 'true' || steps.version.outputs.already_released == 'true'
@@ -340,54 +706,72 @@ jobs:
         working-directory: js
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: bun scripts/create-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}" --tag-prefix js-v
+          PUBLISHED_VERSION: ${{ steps.publish.outputs.published_version }}
+          REPOSITORY: ${{ github.repository }}
+        run: bun scripts/create-github-release.mjs --release-version "$PUBLISHED_VERSION" --repository "$REPOSITORY" --tag-prefix js-v
 
       - name: Format JavaScript GitHub release notes
         if: steps.publish.outputs.published == 'true'
         working-directory: js
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: bun scripts/format-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}" --commit-sha "${{ github.sha }}" --tag-prefix js-v
+          PUBLISHED_VERSION: ${{ steps.publish.outputs.published_version }}
+          REPOSITORY: ${{ github.repository }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: bun scripts/format-github-release.mjs --release-version "$PUBLISHED_VERSION" --repository "$REPOSITORY" --commit-sha "$COMMIT_SHA" --tag-prefix js-v
 
       - name: Verify npm availability
         # Guards against the #166 false positive: a release/tag must correspond
         # to a version that is actually installable from npm.
         if: steps.publish.outputs.published == 'true'
         working-directory: js
-        run: bun scripts/wait-for-npm.mjs --release-version "${{ steps.publish.outputs.published_version }}"
+        env:
+          PUBLISHED_VERSION: ${{ steps.publish.outputs.published_version }}
+        run: bun scripts/wait-for-npm.mjs --release-version "$PUBLISHED_VERSION"
 
   changeset-pr:
     name: Create JavaScript changeset PR
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'changeset-pr'
-    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'changeset-pr'
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: write
       pull-requests: write
+    concurrency:
+      group: main-writer-${{ github.repository }}-main
+      cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v6
+      # This job pushes to main and creates the release, so it needs the
+      # credential actions/checkout persists in .git/config. Everything else in
+      # this repository sets persist-credentials: false; zizmor runs at
+      # --min-confidence low so a checkout that forgets it fails the audit, and
+      # the six writer jobs that legitimately need it say so here.
+      - uses: actions/checkout@v7.0.1 # zizmor: ignore[artipacked]
         with:
           fetch-depth: 0
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: latest
 
       - name: Install dependencies
         working-directory: js
-        run: bun install
+        run: bun install --frozen-lockfile
 
       - name: Create changeset file
         working-directory: js
-        run: bun scripts/create-manual-changeset.mjs --bump-type "${{ github.event.inputs.bump_type }}" --description "${{ github.event.inputs.description }}"
+        env:
+          BUMP_TYPE: ${{ github.event.inputs.bump_type }}
+          RELEASE_DESCRIPTION: ${{ github.event.inputs.description }}
+        run: bun scripts/create-manual-changeset.mjs --bump-type "$BUMP_TYPE" --description "$RELEASE_DESCRIPTION"
 
       - name: Format changeset with Prettier
         working-directory: js
         run: bunx prettier --write ".changeset/*.md"
 
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v8
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: 'chore: add changeset for manual JavaScript ${{ github.event.inputs.bump_type }} release'

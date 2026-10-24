@@ -149,6 +149,458 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## [1.10.0] - 2026-10-23
+
+### Added
+
+- `RunOptions::timeout` and `StreamingRunner::timeout` stop a command with its kill signal once the limit passes; `timed_out()` reports it (#227).
+- `RunOptions::env_remove`, `StreamingRunner::env_remove`/`env_remove_all` and `TerminalCaptureOptions::env_remove`/`env_clear` remove variables from the child's environment (#229).
+- `StreamingRunner::stdin_pipe` with `OutputStream::write_stdin`/`close_stdin` keeps stdin open while output streams, and `ProcessRunner::from_argv` runs an exact argv that works with `StdinOption::Pipe` (#230).
+- `TerminalCaptureOptions::artifacts` selects the artifact files to write, plus a new `recording.gif` artifact, `aspect_ratio` and `on_trace` (#231).
+- `StreamingRunner::detach` and `ProcessRunner::spawn_detached` start a fire-and-forget command and return its pid (#232).
+
+### Changed
+
+- crates.io releases publish through trusted publishing (OIDC) and fall back to the `CARGO_REGISTRY_TOKEN` secret (#226).
+- Update vt100 to 0.18, tokio to 1.54 and libc to 0.2.191; vt100 stays internal to terminal capture.
+
+## [1.9.0] - 2026-10-12
+
+### Added
+
+- Replayable ANSI buffer deltas, bounded live session subscriptions, snapshots and per-write frames.
+- Validated terminal dimensions and consistent initial COLUMNS/LINES settings for PTY children.
+
+## [1.8.0] - 2026-10-11
+
+### Added
+
+- Size-or-deadline stream batching with bounded output channels and cancellation on consumer drop.
+- A sliding_window alias for existing sliding windows, with JavaScript/Rust stream-processing examples and competitor comparisons.
+
+## [1.7.0] - 2026-10-11
+
+### Added
+
+- Native Rust `repl` and `dev` commands, Evcxr startup with the complete public crate and Tokio, and configurable local crate loading.
+- `dev`, `DevOptions`, `DevEvent`, `DevController`, `start_repl`, `ReplOptions`, and `RustRepl` APIs with debounced file creation/edit/deletion detection, build-output exclusions, and child shutdown before restarts.
+- Real Rust evaluator integration coverage in Linux CI.
+
+## [1.6.0] - 2026-10-11
+
+Add exact-argv CommandBuilder and fy module generation, bounded DataStream
+operators and analytics, virtual terminal buffers, and typed command environments
+with middleware, composition, inheritance, and reloadable command manifests.
+
+## [1.5.5] - 2026-10-11
+
+### Changed
+
+- Refresh serde_json to 1.0.152 in the library, benchmark and release-script
+  manifests to satisfy dependency freshness checks.
+
+## [1.5.4] - 2026-10-10
+
+### Changed
+
+- Refresh the version validation script's TOML dependency to keep the dependency
+  freshness check passing.
+
+## [1.5.3] - 2026-10-07
+
+### Changed
+
+- Make the signal handling tests wait until each child has installed its trap
+  before signalling it, and poll for handler markers and heartbeats with a
+  bounded wait instead of fixed sleeps, matching the JavaScript suite.
+
+### Fixed
+
+- The changelog fragment check now accepts only `.md` files directly in
+  `rust/changelog.d/`, the only ones the release reads, and rejects a `bump:`
+  value other than `patch`, `minor` or `major` instead of releasing it as the
+  default patch bump.
+- A fragment added while another is removed in the same pull request is no
+  longer missed by git's rename detection, an existing fragment moved
+  unchanged still does not count as a new one, and code moved out of the
+  source tree still counts as a code change.
+
+## [1.5.2] - 2026-10-07
+
+### Changed
+
+- Update every direct runtime, development, benchmark, and release-script
+  dependency to its latest stable release, including nix 0.31.3, vt100 0.16.2,
+  and which 8.0.6. Refresh both Cargo lockfiles.
+- Migrate release scripts to ureq 3 headers, status errors, and body readers,
+  and toml 1.1. Use rust-script 0.36 in CI.
+- Check dependency freshness in CI on pull requests, main, and weekly. A Rust
+  manifest-line blocker must reference an open GitHub issue.
+- Bound native-child cancellation regression tests and retain opt-in termination
+  and output-draining traces for diagnosing Windows hangs.
+- Stop cancelled output collection from waiting indefinitely for inherited
+  pipes after child exit. Preserve buffered output and continue draining during
+  graceful shutdown.
+
+## [1.5.1] - 2026-10-06
+
+### Fixed
+
+- Stop descendant processes on Windows when a process runner is killed or a streaming command is cancelled or dropped.
+- Escalate POSIX streaming cancellation to stop descendants that ignore the requested signal after their parent exits.
+
+## [1.5.0] - 2026-10-06
+
+### Added
+
+- Add portable native `head`, `tail`, `sort` and `uniq` commands, with shared
+  JavaScript/Rust conformance cases and progressive output channels.
+- Add the asynchronous `shelljs::ShellJs` session API, directory stack, text and
+  filesystem helpers, error/configuration handling, migration examples and a
+  bounded buffered-versus-streaming benchmark.
+
+## [1.4.1] - 2026-10-05
+
+### Fixed
+
+- Reject unknown Git and registry state during release checks, require new PR changelog fragments, and keep publish credentials out of command arguments.
+- Split large source and script modules while preserving public exports and behavior.
+- Reject unrelated staged or untracked release changes and create release tags only after successful push/rebase retries.
+
+## [1.4.0] - 2026-10-05
+
+### Added
+
+- Add `execa` module and general API exports for exact-argv async/sync commands,
+  reusable defaults, binary input/output, line views, combined output,
+  rejection, timeout, cancellation, bounded capture and live process streams.
+
+### Fixed
+
+- Write streaming stdin concurrently with stdout/stderr readers to prevent a
+  full-duplex pipe deadlock; preserve native signal metadata separately from
+  numeric exit codes and support replacing a streaming process environment.
+
+## [1.3.0] - 2026-10-05
+
+### Added
+
+- `command_stream::zx`: a zx-compatible API (issue #26) with the `zx!` macro
+  and `Shell` (the `$`), `ProcessPromise` (piping to processes and files,
+  `nothrow`, `quiet`, `timeout`, `kill`), `ProcessOutput` (zx-style accessors
+  and error messages), scoped `within`/`configure`/`cd`, the shell presets
+  and the goods (`sleep`, `retry`, `exp_backoff`, `spinner`, `echo`,
+  `tempdir`, `tempfile`, `which`, `glob`, `parse_argv`/`minimist`, `dotenv`,
+  `transform_markdown`, `log`). Its tests port the zx unit vectors.
+- `RunOptions::prefer_local` uses the same project-local executable resolver
+  as the zx and Bun shells, so the default `ProcessRunner` and
+  `StreamingRunner` can find local binaries.
+
+## [1.2.0] - 2026-09-29
+
+### Added
+
+- `command_stream::bun_shell`: a port of Bun Shell (`Bun.$`) with the same
+  template-literal API shape (`shell(&["echo ", ""], vec![name.into()])`,
+  `ShellCommand::quiet/nothrow/cwd/env/text`, `ShellOutput`, `ShellError`),
+  checked against the shared `conformance/bun-shell` corpus
+  (`cargo test --test bun_shell_conformance -- --ignored`).
+
+## [1.1.1] - 2026-09-28
+
+### Fixed
+
+- Release script now also bumps the crate version in `rust/benchmarks/Cargo.lock`, so the benchmark workflow's `--locked` checks keep passing after a Rust release.
+
+## [1.1.0] - 2026-09-25
+
+### Added
+
+- Collect an exact-argument `StreamingRunner` synchronously with `collect_blocking()`.
+
+## [1.0.0] - 2026-09-24
+
+### Changed
+
+- Expose readable stdout and stderr snapshots and a writable stdin record on completed command results.
+
+## [0.25.0] - 2026-09-21
+
+### Added
+
+- `ProcessRunner::child()` and the borrowed `ProcessChild` handle, with access
+  to Tokio's native child and signal-aware `kill()` / `kill_with()` methods that
+  preserve the runner's process-group, grace-period, and escalation behavior.
+- Cross-language tests and executable documentation for child-handle access and
+  cancellation (issue #20).
+
+## [0.24.0] - 2026-09-16
+
+### Added
+
+- Added live stdin writes with `ProcessRunner::write_stdin` and `ProcessRunner::close_stdin`.
+- Added executable Rust counterparts for every feature in the generated language-parity guide.
+
+### Fixed
+
+- Pipelines now use the last stage's status by default and the rightmost failure with `pipefail`.
+- Shell sequence operators are executed with shell-compatible behavior.
+- `VirtualCommandRegistry::with_builtins` now returns the complete built-in catalog.
+
+## [0.23.0] - 2026-09-16
+
+### Added
+
+- `ProcessRunner::pid()` reporting the process id of a started command, matching
+  the JavaScript `command.pid` property (issue #18). The id is recorded at spawn
+  time, so it stays readable after `run()` has consumed the child handle, and is
+  `None` for built-in commands, which spawn no process.
+- `OutputStream::pid()` and `OutputStream::wait_for_pid()` for streamed
+  commands, whose child is spawned inside a background task: `pid()` reports what
+  is known now, `wait_for_pid()` waits for the spawn and returns `None` if it
+  fails.
+- A `## Process ID of a Running Command` section in the README covering what the
+  id names and why built-in commands have none, plus a runnable
+  `examples/process_pid_access.rs`.
+
+## [0.22.1] - 2026-09-16
+
+### Added
+
+- Tests covering parallel execution of sleeping commands (issue #22). Two and
+  three commands started together — through the built-in `sleep`, through real
+  `/bin/sleep` processes, and through `sh -c` scripts that sleep between writes
+  — must all finish, keep their own output and environment, and overlap in time
+  instead of running one after another.
+
+## [0.22.0] - 2026-09-16
+
+### Added
+
+- `ProcessRunner::kill_with(signal)` to stop a running command with an explicit
+  signal, matching `OutputStream::kill_with` and the JavaScript `kill(signal)`.
+- A `## Signals` section in the README covering the delivery model, the
+  `kill_signal` / `kill_grace_ms` options and the `128 + signal` exit codes,
+  plus a runnable `examples/signals_graceful_shutdown.rs`.
+
+### Fixed
+
+- `ProcessRunner::kill()` sent `SIGKILL` unconditionally and ignored the
+  configured `kill_signal`, so a child that trapped `SIGTERM` was destroyed
+  before its handler could run. It now delivers the configured signal to the
+  process group, waits `kill_grace_ms`, and escalates to `SIGKILL` only if the
+  process is still running.
+- `ProcessRunner` did not start its child in its own process group, so killing
+  it never reached grandchildren: the worker behind a `sh -c` wrapper kept
+  running. The child now leads its own group, as `StreamingRunner` already did.
+  A command sharing the caller's terminal is deliberately left in the caller's
+  group so that CTRL+C keeps reaching it.
+- `kill_grace_ms: 0` still let the child run its handler: awaiting a zero-length
+  timeout yields to the runtime, and that gap was enough for a shell to run its
+  trap. `SIGKILL` now follows in the same step as the signal.
+- Killing a command left grandchildren running on macOS. Group membership was
+  looked up with `getpgid` at signal time, by which point the `sh` wrapper had
+  usually exited; macOS reports `ESRCH` for a process in that state, so the
+  group - including the still-running worker - was never signalled. Whether the
+  child leads its own group is now recorded when it is spawned.
+
+## [0.20.0] - 2026-09-15
+
+### Added
+
+- `tee` built-in command, mirroring the JavaScript implementation and GNU
+  coreutils: `-a`/`--append`, `-i`/`--ignore-interrupts`, clustered short
+  flags, `--` as an option terminator, and a bare `-` treated as a file named
+  `-`. A write failure is reported on stderr and sets exit code 1 while the
+  remaining files are still written.
+- Tests covering the `StdinOption` invariant that keeps stdio modes and input
+  content in separate variants, so a mode can never be read as command input.
+
+## [0.19.0] - 2026-09-15
+
+### Added
+
+- Add a reproducible Rust benchmark suite for performance, crate footprint,
+  feature coverage, and real-world process workloads, with CI base/head reports.
+
+## [0.18.6] - 2026-09-15
+
+### Fixed
+
+- Guarantee that successful stderr-only CLI output remains separately captured,
+  including pull request URLs, while `2>&1` retains normal shell merge behavior.
+
+## [0.18.5] - 2026-09-15
+
+### Added
+
+- `Error::code()` and its `Error::exit_code()` alias report the exit status of a
+  failed command, and `CommandResult::error_for_status()` turns a non-zero
+  result into that error.
+
+## [0.18.4] - 2026-09-14
+
+### Fixed
+
+- Lock in exact complex Markdown arguments across direct argv execution and
+  shell-safe macro interpolation.
+
+## [0.18.3] - 2026-09-14
+
+### Added
+
+- Added a pinned 14-project Rust competitor compatibility corpus, complete
+  per-test disposition manifest, reproducible discovery snapshot, and
+  missing-feature audit.
+
+### Fixed
+
+- Propagated exact-executable spawn errors from `StreamingRunner::collect()` instead of returning a false success.
+- Preserved quoted command strings passed through `cmd.exe /c`, including
+  executable paths that require Windows shell quoting.
+
+## [0.18.2] - 2026-09-13
+
+### Fixed
+
+- Preserve stdout and stderr text without inventing a trailing newline.
+- Keep multiline interpolations literal across echo, printf, redirection, and nested shell programs.
+
+## [0.18.1] - 2026-09-13
+
+### Fixed
+
+- Reject terminal interactions that contain neither an action nor a wait
+  before opening a PTY or sending live input.
+
+## [0.18.0] - 2026-09-06
+
+### Fixed
+
+- Interpolate every value as exactly one literal argument, like `"$var"` in a
+  POSIX shell. `quote` no longer treats a value that starts and ends with a
+  matching quote as ready-made shell syntax, so paths with spaces (and
+  pre-quoted paths) reach the command intact (issue #41). This also fixes
+  `quote("\"it's\"")`, which used to emit the unterminated string `'"it's"'`,
+  and closes an injection where a value like `"' ; touch /tmp/pwned ; '"` was
+  spliced into the command and executed.
+
+### Added
+
+- `is_pre_quoted_passthrough_enabled` and `COMMAND_STREAM_PREQUOTED_PASSTHROUGH=1`
+  restore the previous pre-quoted passthrough for balanced values only.
+
+## [0.17.4] - 2026-09-05
+
+### Fixed
+
+- Perform POSIX quote removal per argument so interpolated values containing
+  spaces (e.g. `gh issue list --label "help wanted"`) reach virtual commands as
+  a single argument with quotes stripped, matching `/bin/sh` behavior (#48).
+- Fix a tokenizer infinite loop on a lone `&` (as in `2>&1` or backgrounding),
+  which the word scanner previously neither consumed nor treated as an operator.
+- Keep an unquoted backslash literal on Windows so virtual commands such as
+  `cd C:\Users\foo` still receive a valid path (POSIX backslash escaping is
+  unchanged on other platforms).
+
+## [0.17.3] - 2026-09-05
+
+### Fixed
+
+- Redirections and expansions are no longer swallowed by virtual commands
+  (#46). `ProcessRunner` dispatched to a virtual command before checking
+  whether the command needed a real shell, and arguments came from splitting on
+  whitespace, so `echo hello > out.txt` printed `hello > out.txt` instead of
+  writing the file and `git push origin main 2>&1` reported success while
+  nothing had been pushed. `needs_real_shell` now recognises `>` and `<` in all
+  their forms, and the real-shell check runs before virtual dispatch, matching
+  `/bin/sh`.
+
+## [0.17.2] - 2026-09-05
+
+### Fixed
+
+- `bytes` bumped to 1.12.1, clearing RUSTSEC-2026-0007 (integer overflow in `BytesMut::reserve`). The advisory went unnoticed because nothing in the pipeline audited the lockfile; `cargo audit` now runs on every push, pull request and weekly.
+- `ls` no longer computes a file type character it never used, and iterates directory entries with `.flatten()` instead of matching on each `Result`.
+
+### Changed
+
+- The Rust pipeline denies warnings: `RUSTFLAGS`/`RUSTDOCFLAGS` are `-Dwarnings`, clippy runs with `-- -D warnings`, and `cargo doc --no-deps` gates the rustdoc-only lints. Clippy previously printed 15 warnings and exited 0. `Cargo.toml` forbids `unsafe_code` and warns on `clippy::all`.
+- `CommandContext::cwd` is covered by tests: `pwd` honours it, and `ls` resolves both a relative path and its default argument against it.
+
+## [0.17.1] - 2026-09-04
+
+### Fixed
+- Track runner and pipeline virtual `cd` changes in invocation-local cwd and environment state, including overlapping commands and explicit working directories, without mutating the host working directory or `PWD`/`OLDPWD`.
+
+## [0.17.0] - 2026-09-04
+
+### Fixed
+- Quote interpolated values according to the shell quoting context they land in:
+  a value inside quotes written by the author is spliced in as escaped literal
+  text, like `"$var"` in a POSIX shell, so `s!("bash -c \"{}\"", script)` runs
+  the script instead of failing on an extra layer of quotes (issue #49).
+
+### Added
+- `QuoteContext`, `scan_quote_context`, `quote_for_context`,
+  `escape_for_single_quotes`, `escape_for_double_quotes`, `has_shell_escapes`
+  and `is_quote_context_enabled` are exported from the crate root.
+- `COMMAND_STREAM_QUOTE_CONTEXT=0` restores the previous behavior of always
+  quoting every interpolated value.
+
+## [0.16.0] - 2026-08-11
+
+### Added
+
+- Add `StreamingRunner::from_argv` for shell-free streaming execution with exact executable and argument boundaries on every platform.
+
+## [0.15.0] - 2026-08-07
+
+### Added
+- `open_terminal` returns a `TerminalSession` that keeps a PTY open with no implicit timeout, so input that only becomes available later can be sent with `send`, awaited with `wait_for` (the same readiness matcher as `interactions`, including the idle wait), and finalized with `close`/`finish`.
+
+### Changed
+- `TerminalCaptureOptions::timeout` is now `Option<Duration>` (`Some(30s)` by default, `None` for sessions), and `capture_terminal` is implemented on top of `TerminalSession`.
+
 ## [0.14.0] - 2026-07-25
 
 ### Added

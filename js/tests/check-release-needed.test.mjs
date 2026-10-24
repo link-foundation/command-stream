@@ -9,8 +9,13 @@
 // check-release-needed.mjs adds the self-healing path: with no changesets, it
 // probes npm and, when the current version is not published, emits
 // should_release=true + skip_bump=true so the workflow runs a catch-up publish.
+//
+// Issue #216: npm 1.0.0-1.4.0 never got a js-v<version> GitHub release, because
+// nothing retried the release once the version was on npm. A mock GitHub API
+// (never the real one, which would make these tests depend on live releases)
+// answers the release lookup.
 
-import { test, expect, beforeAll } from 'bun:test';
+import { test, expect, beforeAll, afterAll } from 'bun:test';
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -28,6 +33,27 @@ const ALREADY_PUBLISHED_VERSION = '0.9.5';
 // Linux and macOS and skip Windows, mirroring publish-to-npm.test.mjs.
 const isWindows = process.platform === 'win32';
 let networkAvailable = !isWindows;
+
+// Release tags the mock GitHub API knows; anything else is a 404. Requests under
+// `/outage/` stand for a GitHub outage.
+const GITHUB_RELEASES = new Set([`js-v${ALREADY_PUBLISHED_VERSION}`]);
+const githubRequests = [];
+const github = Bun.serve({
+  port: 0,
+  fetch(request) {
+    const { pathname } = new URL(request.url);
+    githubRequests.push(pathname);
+    const tag = decodeURIComponent(pathname.split('/releases/tags/')[1] || '');
+    if (pathname.startsWith('/outage/')) {
+      return new Response('unavailable', { status: 503 });
+    }
+    if (!GITHUB_RELEASES.has(tag)) {
+      return Response.json({ message: 'Not Found' }, { status: 404 });
+    }
+    return Response.json({ id: 1, tag_name: tag });
+  },
+});
+afterAll(() => github.stop(true));
 
 beforeAll(() => {
   if (isWindows) {
@@ -49,9 +75,10 @@ beforeAll(() => {
  * @param {object} opts
  * @param {string} opts.version - version written to the temp package.json
  * @param {string} opts.hasChangesets - value of the HAS_CHANGESETS env var
- * @returns {{status:number, stdout:string, stderr:string, output:string}}
+ * @param {Record<string, string>} [opts.env] - extra environment
+ * @returns {Promise<{status:number, stdout:string, stderr:string, output:string}>}
  */
-function runCheck({ version, hasChangesets }) {
+async function runCheck({ version, hasChangesets, env = {} }) {
   const dir = mkdtempSync(join(tmpdir(), 'issue166-release-needed-'));
   writeFileSync(
     join(dir, 'package.json'),
@@ -60,31 +87,36 @@ function runCheck({ version, hasChangesets }) {
   const outputFile = join(dir, 'gh-output.txt');
   writeFileSync(outputFile, '');
 
-  const res = spawnSync('bun', [SCRIPT], {
+  // Asynchronous, so the in-process mock GitHub API can answer.
+  const child = Bun.spawn(['bun', SCRIPT], {
     cwd: dir,
-    encoding: 'utf8',
+    stdout: 'pipe',
+    stderr: 'pipe',
     timeout: 120000,
     env: {
       ...process.env,
       GITHUB_OUTPUT: outputFile,
       HAS_CHANGESETS: hasChangesets,
+      GITHUB_API_URL: github.url.href,
+      GITHUB_REPOSITORY: 'link-foundation/command-stream',
+      ...env,
     },
   });
+  const [stdout, stderr, status] = await Promise.all([
+    new Response(child.stdout).text(),
+    new Response(child.stderr).text(),
+    child.exited,
+  ]);
 
   const output = existsSync(outputFile) ? readFileSync(outputFile, 'utf8') : '';
-  return {
-    status: res.status,
-    stdout: res.stdout || '',
-    stderr: res.stderr || '',
-    output,
-  };
+  return { status, stdout, stderr, output };
 }
 
-test('self-heals: no changesets + version not on npm → should_release=true, skip_bump=true, current_unpublished=true', () => {
+test('self-heals: no changesets + version not on npm → should_release=true, skip_bump=true, current_unpublished=true', async () => {
   if (!networkAvailable) {
     return;
   } // offline: skip
-  const { status, output } = runCheck({
+  const { status, output } = await runCheck({
     version: UNPUBLISHED_VERSION,
     hasChangesets: 'false',
   });
@@ -95,11 +127,11 @@ test('self-heals: no changesets + version not on npm → should_release=true, sk
   expect(status).toBe(0);
 }, 130000);
 
-test('no release: no changesets + version already on npm → should_release=false, current_unpublished=false', () => {
+test('no release: no changesets + version already on npm and GitHub → should_release=false, current_unpublished=false', async () => {
   if (!networkAvailable) {
     return;
   } // offline: skip
-  const { status, output } = runCheck({
+  const { status, output } = await runCheck({
     version: ALREADY_PUBLISHED_VERSION,
     hasChangesets: 'false',
   });
@@ -107,16 +139,60 @@ test('no release: no changesets + version already on npm → should_release=fals
   expect(output).toContain('should_release=false');
   expect(output).toContain('skip_bump=false');
   expect(output).toContain('current_unpublished=false');
+  expect(output).not.toContain('github_release_missing');
+  expect(githubRequests).toContain(
+    `/repos/link-foundation/command-stream/releases/tags/js-v${ALREADY_PUBLISHED_VERSION}`
+  );
   expect(status).toBe(0);
 }, 130000);
 
-test('changesets present + version already on npm → should_release=true, skip_bump=false, current_unpublished=false', () => {
+test('#216: no changesets + version on npm but no GitHub release → release runs again without a bump', async () => {
+  if (!networkAvailable) {
+    return;
+  } // offline: skip
+  GITHUB_RELEASES.delete(`js-v${ALREADY_PUBLISHED_VERSION}`);
+  try {
+    const { status, output } = await runCheck({
+      version: ALREADY_PUBLISHED_VERSION,
+      hasChangesets: 'false',
+    });
+    expect(output).toContain('current_unpublished=false');
+    expect(output).toContain('github_release_missing=true');
+    expect(output).toContain('should_release=true');
+    expect(output).toContain('skip_bump=true');
+    expect(status).toBe(0);
+  } finally {
+    GITHUB_RELEASES.add(`js-v${ALREADY_PUBLISHED_VERSION}`);
+  }
+}, 130000);
+
+test('#216: an unknown GitHub release state never triggers a release', async () => {
+  if (!networkAvailable) {
+    return;
+  } // offline: skip
+  for (const env of [
+    { GITHUB_REPOSITORY: '' },
+    { GITHUB_API_URL: `${github.url.href}outage/` },
+  ]) {
+    const { status, output, stderr } = await runCheck({
+      version: ALREADY_PUBLISHED_VERSION,
+      hasChangesets: 'false',
+      env,
+    });
+    expect(output).toContain('should_release=false');
+    expect(output).not.toContain('github_release_missing');
+    expect(stderr).toContain('GitHub release state unknown');
+    expect(status).toBe(0);
+  }
+}, 130000);
+
+test('changesets present + version already on npm → should_release=true, skip_bump=false, current_unpublished=false', async () => {
   if (!networkAvailable) {
     return;
   } // offline: skip
   // An explicit changeset for an already-published version means a NEW version
   // will be produced by the bump, so a release is needed and the bump runs.
-  const { status, output } = runCheck({
+  const { status, output } = await runCheck({
     version: ALREADY_PUBLISHED_VERSION,
     hasChangesets: 'true',
   });
@@ -127,7 +203,7 @@ test('changesets present + version already on npm → should_release=true, skip_
   expect(status).toBe(0);
 }, 130000);
 
-test('#166 restart case: changesets present locally but current version not on npm → current_unpublished=true', () => {
+test('#166 restart case: changesets present locally but current version not on npm → current_unpublished=true', async () => {
   if (!networkAvailable) {
     return;
   } // offline: skip
@@ -137,7 +213,7 @@ test('#166 restart case: changesets present locally but current version not on n
   // still detect that the current version is unpublished so the workflow runs a
   // catch-up publish. The template's design (which skips the npm probe whenever
   // has_changesets is true) misses this; current_unpublished closes the gap.
-  const { status, output } = runCheck({
+  const { status, output } = await runCheck({
     version: UNPUBLISHED_VERSION,
     hasChangesets: 'true',
   });

@@ -23,6 +23,7 @@ bump: patch
 ---
 
 ### Fixed
+
 - Description of bug fix
 ```
 
@@ -44,21 +45,27 @@ bump: minor
 ---
 
 ### Added
+
 - Description of new feature
 
 ### Changed
+
 - Description of change to existing functionality
 
 ### Fixed
+
 - Description of bug fix
 
 ### Removed
+
 - Description of removed feature
 
 ### Deprecated
+
 - Description of deprecated feature
 
 ### Security
+
 - Description of security fix
 ```
 
@@ -72,6 +79,7 @@ bump: minor
 ---
 
 ### Added
+
 - New async processing mode for batch operations
 ```
 
@@ -83,6 +91,7 @@ bump: patch
 ---
 
 ### Fixed
+
 - Fixed memory leak in connection pool handling
 ```
 
@@ -94,9 +103,11 @@ bump: major
 ---
 
 ### Changed
+
 - Renamed `process()` to `process_async()` - this is a breaking change
 
 ### Removed
+
 - Removed deprecated `legacy_mode` option
 ```
 

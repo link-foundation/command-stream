@@ -158,6 +158,14 @@ The simplest examples to get started:
 - `ctrl-c-virtual-command.mjs` - Virtual command CTRL+C
 - `ctrl-c-concurrent-processes.mjs` - Multiple concurrent processes
 
+### 🔤 Quoting and Paths
+
+- `multiline-content.mjs` - Exact multiline file writes with `printf` or stdin (GitHub issue #37)
+- `paths-with-spaces.mjs` - File paths with spaces need no manual quoting (GitHub issue #41)
+- `quote-context-bash-c.mjs` - Interpolating inside your own quotes (GitHub issue #49)
+- `json-interpolation.mjs` - Pass JSON literally and redirect it without manual escaping (GitHub issue #39)
+- `github-cli-markdown-body.mjs` - Create a GitHub issue from complex Markdown directly or through stdin (GitHub issue #40)
+
 ### 🔧 Syntax Comparisons
 
 **Feature Comparisons:**
@@ -165,6 +173,12 @@ The simplest examples to get started:
 - `syntax-basic-comparison.mjs` - Basic $ vs $({ options }) comparison
 - `syntax-piping-comparison.mjs` - Command chaining comparison
 - `syntax-multiple-listeners.mjs` - Multiple event listeners comparison
+
+### 🆔 Process Management
+
+**PID Access:**
+
+- `process-pid-access.mjs` - Reading `command.pid`: when it becomes available, what it names, and how to use it
 
 ### 🧪 Testing and Debugging
 
@@ -314,11 +328,21 @@ The simplest examples to get started:
 - ✅ **No resource leaks** - Virtual commands are properly closed
 - ✅ **Clean exit** - No hanging processes after iteration stops
 
+### 🆔 Process Management
+
+- ✅ **PID access** - Read the process id via `command.pid`
+- ✅ **Process lifecycle** - Recorded at spawn time, so it stays readable after the command finishes
+- ✅ **Every execution path** - Same value from `await`, `sync()`, `stream()` and the `streams` getters
+- ✅ **Built-in commands** - `undefined` for commands that run in-process and spawn nothing
+
 ## Usage Examples
 
 ```bash
 # Run a basic example
 bun js/examples/ping-streaming-simple.mjs
+
+# Learn how to get process PIDs
+node js/examples/process-pid-access.mjs
 
 # Test ANSI color handling
 node js/examples/colors-default-preserved.mjs

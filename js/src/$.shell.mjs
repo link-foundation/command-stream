@@ -10,6 +10,89 @@ import { trace } from './$.trace.mjs';
 let cachedShell = null;
 
 /**
+ * Check whether a shell spec supplies an executable and argument vector.
+ * @param {object} spec - ProcessRunner command specification
+ * @returns {boolean}
+ */
+export function isShellArgvSpec(spec) {
+  return spec.mode === 'shell' && typeof spec.file === 'string';
+}
+
+/**
+ * Check whether a shell spec supplies a completed command string.
+ * @param {object} spec - ProcessRunner command specification
+ * @returns {boolean}
+ */
+export function isShellCommandSpec(spec) {
+  return spec.mode === 'shell' && !isShellArgvSpec(spec);
+}
+
+/**
+ * Re-export invocation-local directory variables inside POSIX shells.
+ *
+ * Some shells, notably the macOS system shell, import OLDPWD as an internal
+ * variable but drop its export flag during startup. Prefixing the command
+ * keeps both variables visible to the real child without touching process.env.
+ *
+ * @param {string} command - Command passed to the platform shell
+ * @param {object|undefined|null} env - Effective invocation environment
+ * @returns {string} Command with invocation-local directory variables exported
+ */
+export function withExportedProcessContext(command, env) {
+  if (process.platform === 'win32' || !env) {
+    return command;
+  }
+
+  const assignments = ['PWD', 'OLDPWD'].flatMap((name) => {
+    if (env[name] === undefined) {
+      return [];
+    }
+    const value = String(env[name]).replace(/'/g, "'\\''");
+    return [`${name}='${value}'`];
+  });
+
+  return assignments.length > 0
+    ? `export ${assignments.join(' ')}; ${command}`
+    : command;
+}
+
+/**
+ * Build the command vector for a ProcessRunner command specification.
+ * @param {object} spec - ProcessRunner command specification
+ * @param {object|undefined|null} env - Effective invocation environment
+ * @param {{ loginShell?: boolean }} [options] - `loginShell` adds `-l`
+ * @returns {string[]}
+ */
+export function buildCommandArgv(spec, env, options = {}) {
+  if (isShellArgvSpec(spec)) {
+    return [spec.file, ...(spec.args ?? [])];
+  }
+
+  if (isShellCommandSpec(spec)) {
+    const shell = findAvailableShell();
+    return [
+      shell.cmd,
+      ...shellArgs(shell, options.loginShell),
+      withExportedProcessContext(spec.command, env),
+    ];
+  }
+
+  return [spec.file, ...spec.args];
+}
+
+/**
+ * Describe a command for xtrace/verbose output. Built from the spec alone so
+ * the trace never includes values taken from the invocation environment.
+ * @param {object} spec - ProcessRunner command specification
+ * @returns {string}
+ */
+export function describeCommand(spec) {
+  return isShellCommandSpec(spec)
+    ? spec.command
+    : [spec.file, ...(spec.args ?? [])].join(' ');
+}
+
+/**
  * Pick a directory that is known to exist for spawning a child process.
  * @returns {string} An existing fallback directory
  */
@@ -108,6 +191,19 @@ export function resolveSpawnCwd(cwd) {
 }
 
 /**
+ * Shell flags for a command string. POSIX shells (`-c`) become login shells
+ * with `-l` only on request; Windows shells have no login mode.
+ * @param {{ cmd: string, args: string[] }} shell - Detected shell
+ * @param {boolean} [loginShell] - Run the shell as a login shell
+ * @returns {string[]}
+ */
+export function shellArgs(shell, loginShell = false) {
+  return loginShell && shell.args.length === 1 && shell.args[0] === '-c'
+    ? ['-l', '-c']
+    : shell.args;
+}
+
+/**
  * Find an available shell by checking multiple options in order
  * Returns the shell command and arguments to use
  * @returns {{ cmd: string, args: string[] }} Shell command and arguments
@@ -150,34 +246,35 @@ export function findAvailableShell() {
     { cmd: 'cmd.exe', args: ['/c'], checkPath: false },
   ];
 
-  // Unix-specific shells
+  // Unix-specific shells. `-c` without `-l`: a login shell reads /etc/profile
+  // and ~/.profile, which reorder the caller's PATH (macOS path_helper) and can
+  // print into stdout (issue #228). `loginShell: true` opts back in.
   const unixShells = [
     // Try absolute paths first (most reliable)
-    { cmd: '/bin/sh', args: ['-l', '-c'], checkPath: true },
-    { cmd: '/usr/bin/sh', args: ['-l', '-c'], checkPath: true },
-    { cmd: '/bin/bash', args: ['-l', '-c'], checkPath: true },
-    { cmd: '/usr/bin/bash', args: ['-l', '-c'], checkPath: true },
-    { cmd: '/bin/zsh', args: ['-l', '-c'], checkPath: true },
-    { cmd: '/usr/bin/zsh', args: ['-l', '-c'], checkPath: true },
+    { cmd: '/bin/sh', args: ['-c'], checkPath: true },
+    { cmd: '/usr/bin/sh', args: ['-c'], checkPath: true },
+    { cmd: '/bin/bash', args: ['-c'], checkPath: true },
+    { cmd: '/usr/bin/bash', args: ['-c'], checkPath: true },
+    { cmd: '/bin/zsh', args: ['-c'], checkPath: true },
+    { cmd: '/usr/bin/zsh', args: ['-c'], checkPath: true },
     // macOS specific paths
-    { cmd: '/usr/local/bin/bash', args: ['-l', '-c'], checkPath: true },
-    { cmd: '/usr/local/bin/zsh', args: ['-l', '-c'], checkPath: true },
+    { cmd: '/usr/local/bin/bash', args: ['-c'], checkPath: true },
+    { cmd: '/usr/local/bin/zsh', args: ['-c'], checkPath: true },
     // Linux brew paths
     {
       cmd: '/home/linuxbrew/.linuxbrew/bin/bash',
-      args: ['-l', '-c'],
+      args: ['-c'],
       checkPath: true,
     },
     {
       cmd: '/home/linuxbrew/.linuxbrew/bin/zsh',
-      args: ['-l', '-c'],
+      args: ['-c'],
       checkPath: true,
     },
     // Try shells in PATH as fallback (which might not work in all environments)
-    // Using separate -l and -c flags for better compatibility
-    { cmd: 'sh', args: ['-l', '-c'], checkPath: false },
-    { cmd: 'bash', args: ['-l', '-c'], checkPath: false },
-    { cmd: 'zsh', args: ['-l', '-c'], checkPath: false },
+    { cmd: 'sh', args: ['-c'], checkPath: false },
+    { cmd: 'bash', args: ['-c'], checkPath: false },
+    { cmd: 'zsh', args: ['-c'], checkPath: false },
   ];
 
   // Select shells based on platform
@@ -234,7 +331,7 @@ export function findAvailableShell() {
       'ShellDetection',
       () => 'WARNING: No shell found, using /bin/sh as fallback'
     );
-    cachedShell = { cmd: '/bin/sh', args: ['-l', '-c'] };
+    cachedShell = { cmd: '/bin/sh', args: ['-c'] };
   }
   return cachedShell;
 }

@@ -1,6 +1,7 @@
 import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
 import { beforeTestCleanup, afterTestCleanup } from './test-cleanup.mjs';
 import { isWindows } from './test-helper.mjs';
+import { realpathSync } from 'fs';
 import {
   $,
   shell,
@@ -9,6 +10,7 @@ import {
   listCommands,
   enableVirtualCommands,
 } from '../src/$.mjs';
+import builtinLs from '../src/commands/$.ls.mjs';
 
 // Helper function to setup shell settings
 function setupShellSettings() {
@@ -39,7 +41,7 @@ describe('Virtual Commands System', () => {
 
       const result = await $`greet Alice`;
 
-      expect(result.stdout).toBe('Hello, Alice!\n');
+      expect(result.stdout?.toString()).toBe('Hello, Alice!\n');
       expect(result.code).toBe(0);
 
       // Cleanup
@@ -87,14 +89,10 @@ describe('Virtual Commands System', () => {
     test.skipIf(isWindows)('should execute virtual cd command', async () => {
       const originalCwd = process.cwd();
 
-      try {
-        const result = await $`cd /tmp`;
-        expect(result.code).toBe(0);
-        expect(process.cwd()).not.toBe(originalCwd);
-        expect(process.cwd()).toMatch(/tmp/);
-      } finally {
-        process.chdir(originalCwd);
-      }
+      const result = await $`cd /tmp && pwd`;
+      expect(result.code).toBe(0);
+      expect(realpathSync(result.stdout.trim())).toBe(realpathSync('/tmp'));
+      expect(process.cwd()).toBe(originalCwd);
     });
 
     test('should execute virtual pwd command', async () => {
@@ -106,13 +104,13 @@ describe('Virtual Commands System', () => {
     test('should execute virtual echo command', async () => {
       const result = await $`echo Hello World`;
       expect(result.code).toBe(0);
-      expect(result.stdout).toBe('Hello World\n');
+      expect(result.stdout?.toString()).toBe('Hello World\n');
     });
 
     test('should execute echo with -n flag', async () => {
       const result = await $`echo -n Hello`;
       expect(result.code).toBe(0);
-      expect(result.stdout).toBe('Hello');
+      expect(result.stdout?.toString()).toBe('Hello');
     });
 
     test('should execute virtual sleep command', async () => {
@@ -138,7 +136,7 @@ describe('Virtual Commands System', () => {
     test('should execute virtual which command', async () => {
       const result = await $`which echo`;
       expect(result.code).toBe(0);
-      expect(result.stdout).toBe('echo: shell builtin\n');
+      expect(result.stdout?.toString()).toBe('echo: shell builtin\n');
     });
 
     test('should execute virtual exit command', async () => {
@@ -152,7 +150,7 @@ describe('Virtual Commands System', () => {
     test('should execute virtual env command', async () => {
       const result = await $`env`;
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('PATH=');
+      expect(result.stdout?.toString()).toContain('PATH=');
     });
 
     test('should execute virtual test command', async () => {
@@ -179,14 +177,18 @@ describe('Virtual Commands System', () => {
       }));
 
       const result = await $`ls`;
-      expect(result.stdout).toBe('virtual ls output\n');
+      expect(result.stdout?.toString()).toBe('virtual ls output\n');
 
       // Cleanup - should fall back to system ls
       unregister('ls');
 
       const systemResult = await $`ls`;
-      expect(systemResult.stdout).not.toBe('virtual ls output\n');
+      expect(systemResult.stdout?.toString()).not.toBe('virtual ls output\n');
       expect(systemResult.code).toBe(0); // System ls should work
+
+      // The registry is process-wide, so put the built-in back. Leaving it
+      // unregistered would silently hand `ls` to the system in every later test.
+      register('ls', builtinLs);
     });
 
     test('should fall back to system commands when virtual not found', async () => {
@@ -194,7 +196,7 @@ describe('Virtual Commands System', () => {
       // Let's test with a command we definitely didn't override
       const result = await $`date`;
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('202'); // Should contain year
+      expect(result.stdout?.toString()).toContain('202'); // Should contain year
     });
   });
 
@@ -271,7 +273,7 @@ describe('Virtual Commands System', () => {
 
       const result = await $`fail`;
       expect(result.code).toBe(1);
-      expect(result.stderr).toContain('Virtual command failed');
+      expect(result.stderr?.toString()).toContain('Virtual command failed');
 
       // Cleanup
       unregister('fail');
@@ -310,7 +312,7 @@ describe('Virtual Commands System', () => {
       }));
 
       const result = await $`args-test one "two three" four`;
-      expect(result.stdout).toBe('Args: [one, two three, four]\n');
+      expect(result.stdout?.toString()).toBe('Args: [one, two three, four]\n');
 
       // Cleanup
       unregister('args-test');
@@ -323,7 +325,7 @@ describe('Virtual Commands System', () => {
       }));
 
       const result = await $`echo "test input" | stdin-test`;
-      expect(result.stdout).toBe('Received: test input\n\n');
+      expect(result.stdout?.toString()).toBe('Received: test input\n\n');
 
       // Cleanup
       unregister('stdin-test');

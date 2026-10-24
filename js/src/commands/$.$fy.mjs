@@ -1,108 +1,58 @@
-/**
- * `$fy` — shell to mjs translator.
- *
- * This module is only the command-line surface. The translation itself is
- * rule-based and lives in `../fy/`: the script is first formalized as a
- * link-foundation/meta-language links network, then rewritten into JavaScript
- * by a `TranslationRuleSet`.
- */
-
+/** Virtual surface; keep parser dependencies out of normal library imports. */
 import { readFileSync, writeFileSync } from 'node:fs';
+import { basename, resolve } from 'node:path';
+import { parseFyArguments, FY_USAGE } from '../fy/cli-options.mjs';
 
-const USAGE = `$fy - Convert shell scripts to command-stream JavaScript modules
-
-Usage:
-  $fy <input.sh>              # Translate and print to stdout
-  $fy <input.sh> <output.mjs> # Translate and save to a file
-  echo "ls -la" | $fy         # Translate from stdin
-
-Options:
-  --no-shebang                Omit the leading #!/usr/bin/env node line
-  -h, --help                  Show this help
-
-Examples:
-  $fy deploy.sh                    # Print the translated deploy script
-  $fy build.sh build.mjs           # Translate build.sh into build.mjs
-  echo "cd /tmp && ls" | $fy       # Translate a one-liner from stdin
-
-The translation is driven by substitution rules over a meta-language links
-network, so pipelines, &&/||, if/while/until/for/case, functions, redirects,
-variable assignments and \${...} expansions all translate structurally rather
-than textually.
-`;
-
-/**
- * Renders translation diagnostics as shell-style warnings.
- *
- * @param {string[]} diagnostics Messages collected by the rule engine.
- * @returns {string} Text for stderr (empty when there is nothing to report).
- */
-function formatDiagnostics(diagnostics) {
-  const unique = [...new Set(diagnostics)];
-  return unique.map((message) => `$fy: warning: ${message}\n`).join('');
-}
-
-/**
- * The `$fy` virtual command.
- *
- * @param {{args?: string[], stdin?: string|Buffer}} invocation Command input.
- * @returns {Promise<{stdout?: string, stderr?: string, code: number}>} Command
- *   result.
- */
-export async function $fy({ args = [], stdin } = {}) {
-  const options = { shebang: !args.includes('--no-shebang') };
-  const positional = args.filter((argument) => !argument.startsWith('-'));
-  // A file argument always wins: `$fy in.sh` must read `in.sh` even when the
-  // command happens to inherit a non-empty stdin from its caller.
-  const hasStdin =
-    positional.length === 0 && stdin !== undefined && String(stdin).length > 0;
-
-  if (args.includes('-h') || args.includes('--help')) {
-    return { stdout: USAGE, code: 0 };
-  }
-  if (!hasStdin && positional.length === 0) {
-    return { stderr: USAGE, code: 1 };
-  }
-
-  let source;
-  if (hasStdin) {
-    source = String(stdin);
-  } else {
+export async function $fy({ args = [], stdin, cwd } = {}) {
+  try {
+    const { options, positional } = parseFyArguments(args);
+    if (options.help) {
+      return { stdout: FY_USAGE, code: 0 };
+    }
+    const [input, output] = positional;
+    const fromStdin = !input || input === '-';
+    if (!fromStdin) {
+      options.name = basename(input);
+    }
+    if (fromStdin && (stdin === undefined || String(stdin).length === 0)) {
+      return { stderr: FY_USAGE, code: 1 };
+    }
+    let source;
     try {
-      source = readFileSync(positional[0], 'utf8');
+      source = fromStdin
+        ? String(stdin)
+        : readFileSync(resolve(cwd ?? process.cwd(), input), 'utf8');
     } catch (error) {
       return {
-        stderr: `$fy: cannot read '${positional[0]}': ${error.message}\n`,
+        stderr: `$fy: cannot read '${input}': ${error.message}\n`,
         code: 1,
       };
     }
-  }
-
-  let translated;
-  try {
-    // Loaded on demand: the translator pulls in `meta-language`, which must not
-    // become an import-time dependency of the library itself.
-    const { translateShellToMjs } = await import('../fy/index.mjs');
-    translated = translateShellToMjs(source, options);
+    const { translateSource, translateShellToMjs } =
+      await import('../fy/index.mjs');
+    const translated = options.structural
+      ? translateShellToMjs(source, options)
+      : translateSource(source, options);
+    const stderr = [...new Set(translated.diagnostics)]
+      .map((message) => `$fy: warning: ${message}\n`)
+      .join('');
+    if (!output) {
+      return { stdout: translated.code, stderr, code: 0 };
+    }
+    try {
+      writeFileSync(resolve(cwd ?? process.cwd(), output), translated.code, {
+        flag: 'wx',
+        mode: 0o755,
+      });
+    } catch (error) {
+      return {
+        stderr: `${stderr}$fy: cannot write '${output}': ${error.message}\n`,
+        code: 1,
+      };
+    }
+    return { stdout: `Translated to '${output}'\n`, stderr, code: 0 };
   } catch (error) {
     return { stderr: `$fy: translation failed: ${error.message}\n`, code: 1 };
   }
-
-  const stderr = formatDiagnostics(translated.diagnostics);
-  const outputFile = hasStdin ? undefined : positional[1];
-  if (!outputFile) {
-    return { stdout: translated.code, stderr, code: 0 };
-  }
-
-  try {
-    writeFileSync(outputFile, translated.code);
-  } catch (error) {
-    return {
-      stderr: `${stderr}$fy: cannot write '${outputFile}': ${error.message}\n`,
-      code: 1,
-    };
-  }
-  return { stdout: `Translated to '${outputFile}'\n`, stderr, code: 0 };
 }
-
 export default $fy;

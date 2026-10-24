@@ -4,7 +4,8 @@
 
 use command_stream::{create, exec, run, ProcessRunner, RunOptions, StdinOption};
 use std::collections::HashMap;
-use std::path::PathBuf;
+#[cfg(unix)]
+use std::time::Duration;
 use tempfile::TempDir;
 
 // ============================================================================
@@ -29,6 +30,58 @@ async fn test_echo_with_multiple_words() {
 async fn test_command_with_arguments() {
     let result = run("echo -n test").await.unwrap();
     assert!(result.is_success());
+    assert_eq!(result.stdout, "test");
+}
+
+#[tokio::test]
+async fn test_real_shell_preserves_missing_final_newlines() {
+    // Windows deliberately prefers Git Bash too, keeping the command language
+    // consistent with the JavaScript implementation and the documented
+    // cross-language examples.
+    let command = "printf stdout; printf stderr >&2";
+
+    let result = exec(
+        command,
+        RunOptions {
+            mirror: false,
+            ..Default::default()
+        },
+    )
+    .await
+    .unwrap();
+
+    assert!(result.is_success());
+    assert_eq!(result.stdout, "stdout");
+    assert_eq!(result.stderr, "stderr");
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn test_real_shell_drains_full_stderr_pipe_before_stdout() {
+    const CHUNK: &str = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+    const REPEATS: usize = 4096;
+    let command = format!(
+        "i=0; while [ \"$i\" -lt {REPEATS} ]; do printf '{CHUNK}'; i=$((i + 1)); done >&2; printf stdout"
+    );
+
+    let result = tokio::time::timeout(
+        Duration::from_secs(10),
+        exec(
+            command,
+            RunOptions {
+                mirror: false,
+                ..Default::default()
+            },
+        ),
+    )
+    .await
+    .expect("process deadlocked while stderr exceeded pipe capacity")
+    .unwrap();
+
+    assert!(result.is_success());
+    assert_eq!(result.stdout, "stdout");
+    assert_eq!(result.stderr.len(), CHUNK.len() * REPEATS);
+    assert!(result.stderr.bytes().all(|byte| byte == b'e'));
 }
 
 #[tokio::test]
@@ -142,6 +195,42 @@ async fn test_custom_environment_variable() {
     let result = runner.run().await.unwrap();
     assert!(result.is_success());
     assert!(result.stdout.contains("test_value"));
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn test_process_runner_exports_directory_environment_safely() {
+    let oldpwd = "old dir ' $(printf injected) `printf injected`; end";
+    let env_vars = HashMap::from([
+        (
+            "PWD".to_string(),
+            std::env::current_dir()
+                .unwrap()
+                .to_string_lossy()
+                .to_string(),
+        ),
+        ("OLDPWD".to_string(), oldpwd.to_string()),
+    ]);
+    let mut runner = ProcessRunner::new(
+        "/usr/bin/env",
+        RunOptions {
+            mirror: false,
+            env: Some(env_vars),
+            ..Default::default()
+        },
+    );
+
+    let result = runner.run().await.unwrap();
+
+    assert!(result.is_success(), "child failed: {}", result.stderr);
+    assert!(
+        result
+            .stdout
+            .lines()
+            .any(|line| line == format!("OLDPWD={oldpwd}")),
+        "child environment did not preserve OLDPWD: {}",
+        result.stdout
+    );
 }
 
 // ============================================================================

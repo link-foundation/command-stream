@@ -40,8 +40,8 @@ describe('raw() function - Disable auto-escape', () => {
     test('should execute command with && operator', async () => {
       const cmd = raw('echo "step1" && echo "step2"');
       const result = await $`${cmd}`;
-      expect(result.stdout).toContain('step1');
-      expect(result.stdout).toContain('step2');
+      expect(result.stdout?.toString()).toContain('step1');
+      expect(result.stdout?.toString()).toContain('step2');
       expect(result.code).toBe(0);
     });
 
@@ -61,8 +61,8 @@ describe('raw() function - Disable auto-escape', () => {
     test('should execute command with semicolon', async () => {
       const cmd = raw('echo "first"; echo "second"');
       const result = await $`${cmd}`;
-      expect(result.stdout).toContain('first');
-      expect(result.stdout).toContain('second');
+      expect(result.stdout?.toString()).toContain('first');
+      expect(result.stdout?.toString()).toContain('second');
       expect(result.code).toBe(0);
     });
 
@@ -93,8 +93,8 @@ describe('raw() function - Disable auto-escape', () => {
       const userInput = 'test; rm -rf /';
       const result = await $`${raw('echo "User said:"')} ${userInput}`;
       // User input should be safely quoted even when mixed with raw
-      expect(result.stdout).toContain('User said:');
-      expect(result.stdout).toContain('test; rm -rf /');
+      expect(result.stdout?.toString()).toContain('User said:');
+      expect(result.stdout?.toString()).toContain('test; rm -rf /');
       // Command should not execute the rm part
       expect(result.code).toBe(0);
     });
@@ -103,8 +103,8 @@ describe('raw() function - Disable auto-escape', () => {
       const cmd1 = raw('echo "part1"');
       const cmd2 = raw('&& echo "part2"');
       const result = await $`${cmd1} ${cmd2}`;
-      expect(result.stdout).toContain('part1');
-      expect(result.stdout).toContain('part2');
+      expect(result.stdout?.toString()).toContain('part1');
+      expect(result.stdout?.toString()).toContain('part2');
     });
   });
 
@@ -114,13 +114,13 @@ describe('raw() function - Disable auto-escape', () => {
 
       // With raw() - executes both commands
       const rawResult = await $`${raw(cmdString)}`;
-      expect(rawResult.stdout).toContain('test');
-      expect(rawResult.stdout).toContain('test2');
+      expect(rawResult.stdout?.toString()).toContain('test');
+      expect(rawResult.stdout?.toString()).toContain('test2');
 
       // Without raw() - treats as literal string
       const normalResult = await $`echo ${cmdString}`;
       expect(normalResult.stdout.trim()).toBe(cmdString);
-      expect(normalResult.stdout).not.toMatch(/test\s+test2/); // Should be one line
+      expect(normalResult.stdout?.toString()).not.toMatch(/test\s+test2/); // Should be one line
     });
 
     test('raw() allows pipes, normal interpolation escapes them', async () => {
@@ -132,8 +132,8 @@ describe('raw() function - Disable auto-escape', () => {
 
       // Without raw() - treats pipe as literal
       const normalResult = await $`echo ${cmdString}`;
-      expect(normalResult.stdout).toContain('|');
-      expect(normalResult.stdout).toContain('wc');
+      expect(normalResult.stdout?.toString()).toContain('|');
+      expect(normalResult.stdout?.toString()).toContain('wc');
     });
 
     test('raw() allows command substitution, normal interpolation escapes it', async () => {
@@ -154,8 +154,8 @@ describe('raw() function - Disable auto-escape', () => {
       const cmd = raw('echo "single\'quote" "double\\"quote"');
       const result = await $`${cmd}`;
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('single');
-      expect(result.stdout).toContain('quote');
+      expect(result.stdout?.toString()).toContain('single');
+      expect(result.stdout?.toString()).toContain('quote');
     });
 
     test('should handle raw() with environment variables', async () => {
@@ -168,8 +168,8 @@ describe('raw() function - Disable auto-escape', () => {
     test('should handle raw() with newlines', async () => {
       const cmd = raw('echo "line1"\necho "line2"');
       const result = await $`${cmd}`;
-      expect(result.stdout).toContain('line1');
-      expect(result.stdout).toContain('line2');
+      expect(result.stdout?.toString()).toContain('line1');
+      expect(result.stdout?.toString()).toContain('line2');
     });
 
     test('should handle raw() at different positions', async () => {
@@ -179,11 +179,11 @@ describe('raw() function - Disable auto-escape', () => {
 
       // In middle
       const result2 = await $`echo start ${raw('&& echo "middle"')} end`;
-      expect(result2.stdout).toContain('middle');
+      expect(result2.stdout?.toString()).toContain('middle');
 
       // At end
       const result3 = await $`echo start ${raw('&& echo "end"')}`;
-      expect(result3.stdout).toContain('end');
+      expect(result3.stdout?.toString()).toContain('end');
     });
   });
 
@@ -195,12 +195,12 @@ describe('raw() function - Disable auto-escape', () => {
       };
 
       const buildResult = await $`${config.buildCommand}`;
-      expect(buildResult.stdout).toContain('Building');
-      expect(buildResult.stdout).toContain('Done');
+      expect(buildResult.stdout?.toString()).toContain('Building');
+      expect(buildResult.stdout?.toString()).toContain('Done');
 
       const testResult = await $`${config.testCommand}`;
-      expect(testResult.stdout).toContain('Testing');
-      expect(testResult.stdout).toContain('Passed');
+      expect(testResult.stdout?.toString()).toContain('Testing');
+      expect(testResult.stdout?.toString()).toContain('Passed');
     });
 
     test('complex shell pipelines', async () => {
@@ -226,7 +226,7 @@ describe('raw() function - Disable auto-escape', () => {
       const result = await $`echo ${malicious}`;
 
       // Should safely output the string, not execute rm
-      expect(result.stdout).toContain('; rm -rf /tmp/test');
+      expect(result.stdout?.toString()).toContain('; rm -rf /tmp/test');
       expect(result.code).toBe(0);
     });
 
@@ -238,8 +238,8 @@ describe('raw() function - Disable auto-escape', () => {
       const result = await $`${dangerous}`;
 
       // Both parts execute because raw() disables escaping
-      expect(result.stdout).toContain('safe');
-      expect(result.stdout).toContain('dangerous');
+      expect(result.stdout?.toString()).toContain('safe');
+      expect(result.stdout?.toString()).toContain('dangerous');
     });
   });
 

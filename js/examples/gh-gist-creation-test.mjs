@@ -67,10 +67,10 @@ async function createGist() {
     // Extract gist ID from URL (last line should be the URL)
     const outputLines = createResult.stdout.trim().split('\n');
     const gistUrl =
-      outputLines.find((line) => line.includes('gist.github.com')) ||
+      outputLines.find((line) => line.startsWith('https://gist.github.com/')) ||
       outputLines[outputLines.length - 1];
 
-    if (!gistUrl || !gistUrl.includes('gist.github.com')) {
+    if (!gistUrl || !gistUrl.startsWith('https://gist.github.com/')) {
       throw new Error(`Invalid gist URL returned: ${gistUrl}`);
     }
 

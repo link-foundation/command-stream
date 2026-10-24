@@ -14,6 +14,26 @@ import { waitForNpmVersion } from '../scripts/wait-for-npm.mjs';
 
 const noopSleep = async () => {};
 
+test('transient registry errors consume the bounded polling budget', async () => {
+  let calls = 0;
+  expect(
+    await waitForNpmVersion({
+      packageName: 'command-stream',
+      version: '1.4.0',
+      checkAvailability: () => {
+        if (++calls === 1) {
+          throw new Error('HTTP 503');
+        }
+        return true;
+      },
+      maxAttempts: 3,
+      sleepFn: noopSleep,
+      stdout: () => {},
+    })
+  ).toBe(true);
+  expect(calls).toBe(2);
+});
+
 test('returns true as soon as the version is visible', async () => {
   let calls = 0;
   const available = await waitForNpmVersion({
