@@ -15,8 +15,8 @@ in PR #236, preserving the existing full API.
 - [x] Document the entry choice and measurement command; add a release changeset.
 - [x] Diagnose existing CI failures using timestamp/SHA-matched downloaded logs,
       fix their causes, and verify the specific failures.
-- [ ] Run local suites and quality checks sequentially within the memory limit.
-- [ ] Review the complete PR diff, merge any default-branch updates, commit and
+- [x] Run local suites and quality checks sequentially within the memory limit.
+- [x] Review the complete PR diff, merge any default-branch updates, commit and
       push only to issue-235-32c1444df9bd.
 - [ ] Update PR title/body with reproduction and verification evidence, await
       passing final-head CI, mark ready, and confirm a clean working tree.
@@ -71,4 +71,5 @@ Local raw logs stay in the ignored `ci-logs/` directory. Final suite totals and
 final-head CI run links are maintained in the
 [PR description](https://github.com/link-foundation/command-stream/pull/236).
 The remaining workflow checklist above records the status at implementation;
-the PR is the live verification record.
+the PR is the live verification record. See [the CI follow-up](CI-PLAN.md) for
+the Deno cold-build timeout investigation and retry regression coverage.
