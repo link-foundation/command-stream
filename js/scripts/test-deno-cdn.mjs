@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs';
 import { builtinModules } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { CdnProbeError, retryCdnProbe } from './deno-cdn-retry.mjs';
+import { probeHostedCdn } from './deno-cdn-hosted.mjs';
 
 const packageDirectory = new URL('../', import.meta.url);
 const manifest = JSON.parse(
@@ -104,7 +105,10 @@ if (process.env.COMMAND_STREAM_CDN_REVISION) {
       .map((name) => `${name}@${manifest.dependencies[name]}`)
       .join(',')
   );
-  await runProbe(url.href);
+  await probeHostedCdn(url.href, {
+    probe: runProbe,
+    eventName: process.env.GITHUB_EVENT_NAME,
+  });
 }
 
 async function runProbe(url) {

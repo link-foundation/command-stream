@@ -50,6 +50,17 @@ still runs the three checks that read the whole tree.
   is skipped when a dependency is skipped, and _any_ non-`success()` condition
   lifts that — so `always()` adds nothing except the risk of running after a
   real failure.
+- **The Deno CDN job always executes the checkout over HTTP with real esm.sh
+  dependencies.** It also imports the immutable branch commit through esm.sh's
+  GitHub builder. If that exact import returns HTTP 500, a separate request must
+  confirm `mkdir /esm/npm/.install-<digits>: no space left on device` before a
+  pull request can skip only the hosted compilation probe with a warning.
+  Dependency failures, other HTTP errors, compiler errors and runtime failures
+  remain fatal. Pushes to `main`, manual dispatches and local runs remain fatal
+  even for the confirmed storage outage, and print the required manual action:
+  ask the esm.sh operator to free storage under `/esm/npm`, then rerun the Deno
+  CDN job. No credentials are needed for the mandatory checkout probe. Regression
+  coverage lives in `js/tests/deno-cdn-hosted.test.mjs`.
 - **A pull-request job that reads the tree merges the base branch first.**
   A pull-request run checks out `refs/pull/N/merge`, computed when the branch
   was last synchronised; if `main` moved since, the checks pass on a combination
