@@ -2,6 +2,9 @@
 
 ## Literal command builders
 
+See the [complete command builder API](COMMAND-BUILDER.md) for fluent methods,
+functional transforms, argv arrays, presets, sync execution and overrides.
+
 ```js
 import $ from 'command-stream';
 const cat = $.command('cat', 'file with spaces');

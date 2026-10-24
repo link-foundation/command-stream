@@ -465,6 +465,11 @@ export interface CommandTag {
   (strings: TemplateStringsArray, ...values: TemplateValue[]): ProcessRunner;
 }
 
+/** Tagged shell preset with the same exact-argv builder defaults. */
+export interface ConfiguredCommandTag extends CommandTag {
+  command: import('./advanced.cjs').CommandFactory;
+}
+
 /** `cross-spawn`, re-exported as `spawn` and `$.spawn`. */
 export interface CrossSpawn {
   (
@@ -511,7 +516,7 @@ export interface Dollar extends CommandTag {
   readonly execa: ExecaExports['execa'];
   /** Access all Execa methods and bind reusable defaults. */
   readonly execaCompat: typeof execaCompat;
-  (options: ProcessOptions): CommandTag;
+  (options: ProcessOptions): ConfiguredCommandTag;
   spawn: CrossSpawn;
   /** zx compatibility mode: the `$` of `command-stream/zx`. */
   readonly zx: typeof import('./zx-api.cjs').$;
@@ -562,7 +567,9 @@ export declare function spawnDetached(
 ): Promise<DetachedProcess>;
 
 /** Create a tagged template with default options. */
-export declare function create(defaultOptions?: ProcessOptions): CommandTag;
+export declare function create(
+  defaultOptions?: ProcessOptions
+): ConfiguredCommandTag;
 export declare function create(
   name: string,
   handler: import('./advanced.cjs').CommandHandler,
@@ -1037,6 +1044,8 @@ export {
   testing,
 } from './advanced.cjs';
 export type {
+  CommandArgument,
+  CommandStdio,
   CommandFactory,
   CommandStream,
   CommandHandler,

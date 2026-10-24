@@ -1111,16 +1111,10 @@
             "file": "js/examples/features/command-builder.mjs",
             "api": ["command", "CommandBuilder"],
             "alternatives": {
-              "bun-shell": {
-                "unsupported": "No command-stream transform API; invoke the executable with separate arguments"
-              },
-              "zx": {
-                "unsupported": "No command-stream transform API; invoke the executable with separate arguments"
-              },
+              "bun-shell": "await Bun.spawn(['printf', '%s', 'literal ; text']).exited; // exact argv",
+              "zx": "await $`printf %s ${\"literal ; text\"}`; // escaped shell interpolation",
               "execa": "await execa('printf', ['%s', 'literal ; text']);",
-              "shelljs": {
-                "unsupported": "No command-stream transform API; invoke the executable with separate arguments"
-              },
+              "shelljs": "shell.cmd('printf', '%s', 'literal ; text'); // exact argv",
               "child_process": "spawn('printf', ['%s', 'literal ; text']);"
             },
             "source": "import { command } from '../../src/$.mjs';\nimport { example } from './_harness.mjs';\nawait example(\n  { id: 'command-builder', title: 'Build commands with literal arguments' },\n  async ({ record }) => {\n    const builder = command(\n      process.execPath,\n      '-e',\n      'console.log(process.argv[1])',\n      'hello ; $HOME'\n    );\n    record('literal argument', (await (await builder).text()).trim());\n    record(\n      'exit code',\n      await command(process.execPath, '-e', 'process.exit(7)')\n        .pipe(command.exitCode)\n        .run()\n    );\n  }\n);",

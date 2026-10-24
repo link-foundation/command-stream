@@ -16,17 +16,31 @@ import type { Readable, Writable } from 'node:stream';
 import { EventEmitter } from 'node:events';
 import type { ChildProcess, SpawnOptions } from 'node:child_process';
 
+export type CommandArgument = string | number | bigint | boolean;
+export type CommandStdio = 'pipe' | 'inherit' | 'ignore';
+
 export class CommandBuilder<T = StreamResult> implements PromiseLike<T> {
   constructor(
     file: string,
-    args?: readonly string[],
+    args?: readonly CommandArgument[],
     options?: ProcessOptions,
     select?: (result: StreamResult) => T
   );
   readonly file: string;
+  readonly cmd: string;
   readonly args: readonly string[];
   readonly options: Readonly<ProcessOptions>;
+  arg(...args: CommandArgument[]): CommandBuilder<T>;
   with(options: ProcessOptions): CommandBuilder<T>;
+  stdin(input: ProcessOptions['stdin']): CommandBuilder<T>;
+  stdout(mode: CommandStdio): CommandBuilder<T>;
+  stderr(mode: CommandStdio): CommandBuilder<T>;
+  cwd(path: string): CommandBuilder<T>;
+  env(vars: NodeJS.ProcessEnv): CommandBuilder<T>;
+  capture(enabled?: boolean): CommandBuilder<T>;
+  mirror(enabled?: boolean): CommandBuilder<T>;
+  exitCode(): CommandBuilder<number>;
+  pipe(): CommandBuilder<T>;
   pipe<A>(
     a: (builder: CommandBuilder<T>) => CommandBuilder<A>
   ): CommandBuilder<A>;
@@ -34,25 +48,282 @@ export class CommandBuilder<T = StreamResult> implements PromiseLike<T> {
     a: (builder: CommandBuilder<T>) => CommandBuilder<A>,
     b: (builder: CommandBuilder<A>) => CommandBuilder<B>
   ): CommandBuilder<B>;
+  pipe<A, B, C>(
+    a: (builder: CommandBuilder<T>) => CommandBuilder<A>,
+    b: (builder: CommandBuilder<A>) => CommandBuilder<B>,
+    c: (builder: CommandBuilder<B>) => CommandBuilder<C>
+  ): CommandBuilder<C>;
+  pipe<A, B, C, D>(
+    a: (builder: CommandBuilder<T>) => CommandBuilder<A>,
+    b: (builder: CommandBuilder<A>) => CommandBuilder<B>,
+    c: (builder: CommandBuilder<B>) => CommandBuilder<C>,
+    d: (builder: CommandBuilder<C>) => CommandBuilder<D>
+  ): CommandBuilder<D>;
+  pipe<A, B, C, D, E>(
+    a: (builder: CommandBuilder<T>) => CommandBuilder<A>,
+    b: (builder: CommandBuilder<A>) => CommandBuilder<B>,
+    c: (builder: CommandBuilder<B>) => CommandBuilder<C>,
+    d: (builder: CommandBuilder<C>) => CommandBuilder<D>,
+    e: (builder: CommandBuilder<D>) => CommandBuilder<E>
+  ): CommandBuilder<E>;
+  pipe<A, B, C, D, E, F>(
+    a: (builder: CommandBuilder<T>) => CommandBuilder<A>,
+    b: (builder: CommandBuilder<A>) => CommandBuilder<B>,
+    c: (builder: CommandBuilder<B>) => CommandBuilder<C>,
+    d: (builder: CommandBuilder<C>) => CommandBuilder<D>,
+    e: (builder: CommandBuilder<D>) => CommandBuilder<E>,
+    f: (builder: CommandBuilder<E>) => CommandBuilder<F>
+  ): CommandBuilder<F>;
+  pipe<A, B, C, D, E, F, G>(
+    a: (builder: CommandBuilder<T>) => CommandBuilder<A>,
+    b: (builder: CommandBuilder<A>) => CommandBuilder<B>,
+    c: (builder: CommandBuilder<B>) => CommandBuilder<C>,
+    d: (builder: CommandBuilder<C>) => CommandBuilder<D>,
+    e: (builder: CommandBuilder<D>) => CommandBuilder<E>,
+    f: (builder: CommandBuilder<E>) => CommandBuilder<F>,
+    g: (builder: CommandBuilder<F>) => CommandBuilder<G>
+  ): CommandBuilder<G>;
+  pipe<A, B, C, D, E, F, G, H>(
+    a: (builder: CommandBuilder<T>) => CommandBuilder<A>,
+    b: (builder: CommandBuilder<A>) => CommandBuilder<B>,
+    c: (builder: CommandBuilder<B>) => CommandBuilder<C>,
+    d: (builder: CommandBuilder<C>) => CommandBuilder<D>,
+    e: (builder: CommandBuilder<D>) => CommandBuilder<E>,
+    f: (builder: CommandBuilder<E>) => CommandBuilder<F>,
+    g: (builder: CommandBuilder<F>) => CommandBuilder<G>,
+    h: (builder: CommandBuilder<G>) => CommandBuilder<H>
+  ): CommandBuilder<H>;
+  pipe<A, B, C, D, E, F, G, H, I>(
+    a: (builder: CommandBuilder<T>) => CommandBuilder<A>,
+    b: (builder: CommandBuilder<A>) => CommandBuilder<B>,
+    c: (builder: CommandBuilder<B>) => CommandBuilder<C>,
+    d: (builder: CommandBuilder<C>) => CommandBuilder<D>,
+    e: (builder: CommandBuilder<D>) => CommandBuilder<E>,
+    f: (builder: CommandBuilder<E>) => CommandBuilder<F>,
+    g: (builder: CommandBuilder<F>) => CommandBuilder<G>,
+    h: (builder: CommandBuilder<G>) => CommandBuilder<H>,
+    i: (builder: CommandBuilder<H>) => CommandBuilder<I>
+  ): CommandBuilder<I>;
+  pipe<A, B, C, D, E, F, G, H, I, J>(
+    a: (builder: CommandBuilder<T>) => CommandBuilder<A>,
+    b: (builder: CommandBuilder<A>) => CommandBuilder<B>,
+    c: (builder: CommandBuilder<B>) => CommandBuilder<C>,
+    d: (builder: CommandBuilder<C>) => CommandBuilder<D>,
+    e: (builder: CommandBuilder<D>) => CommandBuilder<E>,
+    f: (builder: CommandBuilder<E>) => CommandBuilder<F>,
+    g: (builder: CommandBuilder<F>) => CommandBuilder<G>,
+    h: (builder: CommandBuilder<G>) => CommandBuilder<H>,
+    i: (builder: CommandBuilder<H>) => CommandBuilder<I>,
+    j: (builder: CommandBuilder<I>) => CommandBuilder<J>
+  ): CommandBuilder<J>;
+  pipe<A, B, C, D, E, F, G, H, I, J, K>(
+    a: (builder: CommandBuilder<T>) => CommandBuilder<A>,
+    b: (builder: CommandBuilder<A>) => CommandBuilder<B>,
+    c: (builder: CommandBuilder<B>) => CommandBuilder<C>,
+    d: (builder: CommandBuilder<C>) => CommandBuilder<D>,
+    e: (builder: CommandBuilder<D>) => CommandBuilder<E>,
+    f: (builder: CommandBuilder<E>) => CommandBuilder<F>,
+    g: (builder: CommandBuilder<F>) => CommandBuilder<G>,
+    h: (builder: CommandBuilder<G>) => CommandBuilder<H>,
+    i: (builder: CommandBuilder<H>) => CommandBuilder<I>,
+    j: (builder: CommandBuilder<I>) => CommandBuilder<J>,
+    k: (builder: CommandBuilder<J>) => CommandBuilder<K>
+  ): CommandBuilder<K>;
+  pipe<A, B, C, D, E, F, G, H, I, J, K, L>(
+    a: (builder: CommandBuilder<T>) => CommandBuilder<A>,
+    b: (builder: CommandBuilder<A>) => CommandBuilder<B>,
+    c: (builder: CommandBuilder<B>) => CommandBuilder<C>,
+    d: (builder: CommandBuilder<C>) => CommandBuilder<D>,
+    e: (builder: CommandBuilder<D>) => CommandBuilder<E>,
+    f: (builder: CommandBuilder<E>) => CommandBuilder<F>,
+    g: (builder: CommandBuilder<F>) => CommandBuilder<G>,
+    h: (builder: CommandBuilder<G>) => CommandBuilder<H>,
+    i: (builder: CommandBuilder<H>) => CommandBuilder<I>,
+    j: (builder: CommandBuilder<I>) => CommandBuilder<J>,
+    k: (builder: CommandBuilder<J>) => CommandBuilder<K>,
+    l: (builder: CommandBuilder<K>) => CommandBuilder<L>
+  ): CommandBuilder<L>;
+  pipe<A, B, C, D, E, F, G, H, I, J, K, L, M>(
+    a: (builder: CommandBuilder<T>) => CommandBuilder<A>,
+    b: (builder: CommandBuilder<A>) => CommandBuilder<B>,
+    c: (builder: CommandBuilder<B>) => CommandBuilder<C>,
+    d: (builder: CommandBuilder<C>) => CommandBuilder<D>,
+    e: (builder: CommandBuilder<D>) => CommandBuilder<E>,
+    f: (builder: CommandBuilder<E>) => CommandBuilder<F>,
+    g: (builder: CommandBuilder<F>) => CommandBuilder<G>,
+    h: (builder: CommandBuilder<G>) => CommandBuilder<H>,
+    i: (builder: CommandBuilder<H>) => CommandBuilder<I>,
+    j: (builder: CommandBuilder<I>) => CommandBuilder<J>,
+    k: (builder: CommandBuilder<J>) => CommandBuilder<K>,
+    l: (builder: CommandBuilder<K>) => CommandBuilder<L>,
+    m: (builder: CommandBuilder<L>) => CommandBuilder<M>
+  ): CommandBuilder<M>;
+  pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N>(
+    a: (builder: CommandBuilder<T>) => CommandBuilder<A>,
+    b: (builder: CommandBuilder<A>) => CommandBuilder<B>,
+    c: (builder: CommandBuilder<B>) => CommandBuilder<C>,
+    d: (builder: CommandBuilder<C>) => CommandBuilder<D>,
+    e: (builder: CommandBuilder<D>) => CommandBuilder<E>,
+    f: (builder: CommandBuilder<E>) => CommandBuilder<F>,
+    g: (builder: CommandBuilder<F>) => CommandBuilder<G>,
+    h: (builder: CommandBuilder<G>) => CommandBuilder<H>,
+    i: (builder: CommandBuilder<H>) => CommandBuilder<I>,
+    j: (builder: CommandBuilder<I>) => CommandBuilder<J>,
+    k: (builder: CommandBuilder<J>) => CommandBuilder<K>,
+    l: (builder: CommandBuilder<K>) => CommandBuilder<L>,
+    m: (builder: CommandBuilder<L>) => CommandBuilder<M>,
+    n: (builder: CommandBuilder<M>) => CommandBuilder<N>
+  ): CommandBuilder<N>;
+  pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O>(
+    a: (builder: CommandBuilder<T>) => CommandBuilder<A>,
+    b: (builder: CommandBuilder<A>) => CommandBuilder<B>,
+    c: (builder: CommandBuilder<B>) => CommandBuilder<C>,
+    d: (builder: CommandBuilder<C>) => CommandBuilder<D>,
+    e: (builder: CommandBuilder<D>) => CommandBuilder<E>,
+    f: (builder: CommandBuilder<E>) => CommandBuilder<F>,
+    g: (builder: CommandBuilder<F>) => CommandBuilder<G>,
+    h: (builder: CommandBuilder<G>) => CommandBuilder<H>,
+    i: (builder: CommandBuilder<H>) => CommandBuilder<I>,
+    j: (builder: CommandBuilder<I>) => CommandBuilder<J>,
+    k: (builder: CommandBuilder<J>) => CommandBuilder<K>,
+    l: (builder: CommandBuilder<K>) => CommandBuilder<L>,
+    m: (builder: CommandBuilder<L>) => CommandBuilder<M>,
+    n: (builder: CommandBuilder<M>) => CommandBuilder<N>,
+    o: (builder: CommandBuilder<N>) => CommandBuilder<O>
+  ): CommandBuilder<O>;
+  pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P>(
+    a: (builder: CommandBuilder<T>) => CommandBuilder<A>,
+    b: (builder: CommandBuilder<A>) => CommandBuilder<B>,
+    c: (builder: CommandBuilder<B>) => CommandBuilder<C>,
+    d: (builder: CommandBuilder<C>) => CommandBuilder<D>,
+    e: (builder: CommandBuilder<D>) => CommandBuilder<E>,
+    f: (builder: CommandBuilder<E>) => CommandBuilder<F>,
+    g: (builder: CommandBuilder<F>) => CommandBuilder<G>,
+    h: (builder: CommandBuilder<G>) => CommandBuilder<H>,
+    i: (builder: CommandBuilder<H>) => CommandBuilder<I>,
+    j: (builder: CommandBuilder<I>) => CommandBuilder<J>,
+    k: (builder: CommandBuilder<J>) => CommandBuilder<K>,
+    l: (builder: CommandBuilder<K>) => CommandBuilder<L>,
+    m: (builder: CommandBuilder<L>) => CommandBuilder<M>,
+    n: (builder: CommandBuilder<M>) => CommandBuilder<N>,
+    o: (builder: CommandBuilder<N>) => CommandBuilder<O>,
+    p: (builder: CommandBuilder<O>) => CommandBuilder<P>
+  ): CommandBuilder<P>;
+  pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q>(
+    a: (builder: CommandBuilder<T>) => CommandBuilder<A>,
+    b: (builder: CommandBuilder<A>) => CommandBuilder<B>,
+    c: (builder: CommandBuilder<B>) => CommandBuilder<C>,
+    d: (builder: CommandBuilder<C>) => CommandBuilder<D>,
+    e: (builder: CommandBuilder<D>) => CommandBuilder<E>,
+    f: (builder: CommandBuilder<E>) => CommandBuilder<F>,
+    g: (builder: CommandBuilder<F>) => CommandBuilder<G>,
+    h: (builder: CommandBuilder<G>) => CommandBuilder<H>,
+    i: (builder: CommandBuilder<H>) => CommandBuilder<I>,
+    j: (builder: CommandBuilder<I>) => CommandBuilder<J>,
+    k: (builder: CommandBuilder<J>) => CommandBuilder<K>,
+    l: (builder: CommandBuilder<K>) => CommandBuilder<L>,
+    m: (builder: CommandBuilder<L>) => CommandBuilder<M>,
+    n: (builder: CommandBuilder<M>) => CommandBuilder<N>,
+    o: (builder: CommandBuilder<N>) => CommandBuilder<O>,
+    p: (builder: CommandBuilder<O>) => CommandBuilder<P>,
+    q: (builder: CommandBuilder<P>) => CommandBuilder<Q>
+  ): CommandBuilder<Q>;
+  pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R>(
+    a: (builder: CommandBuilder<T>) => CommandBuilder<A>,
+    b: (builder: CommandBuilder<A>) => CommandBuilder<B>,
+    c: (builder: CommandBuilder<B>) => CommandBuilder<C>,
+    d: (builder: CommandBuilder<C>) => CommandBuilder<D>,
+    e: (builder: CommandBuilder<D>) => CommandBuilder<E>,
+    f: (builder: CommandBuilder<E>) => CommandBuilder<F>,
+    g: (builder: CommandBuilder<F>) => CommandBuilder<G>,
+    h: (builder: CommandBuilder<G>) => CommandBuilder<H>,
+    i: (builder: CommandBuilder<H>) => CommandBuilder<I>,
+    j: (builder: CommandBuilder<I>) => CommandBuilder<J>,
+    k: (builder: CommandBuilder<J>) => CommandBuilder<K>,
+    l: (builder: CommandBuilder<K>) => CommandBuilder<L>,
+    m: (builder: CommandBuilder<L>) => CommandBuilder<M>,
+    n: (builder: CommandBuilder<M>) => CommandBuilder<N>,
+    o: (builder: CommandBuilder<N>) => CommandBuilder<O>,
+    p: (builder: CommandBuilder<O>) => CommandBuilder<P>,
+    q: (builder: CommandBuilder<P>) => CommandBuilder<Q>,
+    r: (builder: CommandBuilder<Q>) => CommandBuilder<R>
+  ): CommandBuilder<R>;
+  pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S>(
+    a: (builder: CommandBuilder<T>) => CommandBuilder<A>,
+    b: (builder: CommandBuilder<A>) => CommandBuilder<B>,
+    c: (builder: CommandBuilder<B>) => CommandBuilder<C>,
+    d: (builder: CommandBuilder<C>) => CommandBuilder<D>,
+    e: (builder: CommandBuilder<D>) => CommandBuilder<E>,
+    f: (builder: CommandBuilder<E>) => CommandBuilder<F>,
+    g: (builder: CommandBuilder<F>) => CommandBuilder<G>,
+    h: (builder: CommandBuilder<G>) => CommandBuilder<H>,
+    i: (builder: CommandBuilder<H>) => CommandBuilder<I>,
+    j: (builder: CommandBuilder<I>) => CommandBuilder<J>,
+    k: (builder: CommandBuilder<J>) => CommandBuilder<K>,
+    l: (builder: CommandBuilder<K>) => CommandBuilder<L>,
+    m: (builder: CommandBuilder<L>) => CommandBuilder<M>,
+    n: (builder: CommandBuilder<M>) => CommandBuilder<N>,
+    o: (builder: CommandBuilder<N>) => CommandBuilder<O>,
+    p: (builder: CommandBuilder<O>) => CommandBuilder<P>,
+    q: (builder: CommandBuilder<P>) => CommandBuilder<Q>,
+    r: (builder: CommandBuilder<Q>) => CommandBuilder<R>,
+    s: (builder: CommandBuilder<R>) => CommandBuilder<S>
+  ): CommandBuilder<S>;
+  pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, U>(
+    a: (builder: CommandBuilder<T>) => CommandBuilder<A>,
+    b: (builder: CommandBuilder<A>) => CommandBuilder<B>,
+    c: (builder: CommandBuilder<B>) => CommandBuilder<C>,
+    d: (builder: CommandBuilder<C>) => CommandBuilder<D>,
+    e: (builder: CommandBuilder<D>) => CommandBuilder<E>,
+    f: (builder: CommandBuilder<E>) => CommandBuilder<F>,
+    g: (builder: CommandBuilder<F>) => CommandBuilder<G>,
+    h: (builder: CommandBuilder<G>) => CommandBuilder<H>,
+    i: (builder: CommandBuilder<H>) => CommandBuilder<I>,
+    j: (builder: CommandBuilder<I>) => CommandBuilder<J>,
+    k: (builder: CommandBuilder<J>) => CommandBuilder<K>,
+    l: (builder: CommandBuilder<K>) => CommandBuilder<L>,
+    m: (builder: CommandBuilder<L>) => CommandBuilder<M>,
+    n: (builder: CommandBuilder<M>) => CommandBuilder<N>,
+    o: (builder: CommandBuilder<N>) => CommandBuilder<O>,
+    p: (builder: CommandBuilder<O>) => CommandBuilder<P>,
+    q: (builder: CommandBuilder<P>) => CommandBuilder<Q>,
+    r: (builder: CommandBuilder<Q>) => CommandBuilder<R>,
+    s: (builder: CommandBuilder<R>) => CommandBuilder<S>,
+    t: (builder: CommandBuilder<S>) => CommandBuilder<U>
+  ): CommandBuilder<U>;
   pipe(
-    ...transforms: Array<(builder: CommandBuilder<any>) => CommandBuilder<any>>
-  ): CommandBuilder<any>;
-  runner(): ProcessRunner;
-  run(): Promise<T>;
+    ...transforms: Array<(builder: CommandBuilder<T>) => CommandBuilder<T>>
+  ): CommandBuilder<T>;
+  runner(options?: ProcessOptions): ProcessRunner;
+  run(options?: ProcessOptions): Promise<T>;
+  sync(options?: ProcessOptions): T;
   then<R1 = T, R2 = never>(
     resolve?: ((value: T) => R1 | PromiseLike<R1>) | null,
     reject?: ((error: any) => R2 | PromiseLike<R2>) | null
   ): Promise<R1 | R2>;
   stream(options?: StreamOptions): CommandStream;
   toString(): string;
+  buildCommand(): string;
 }
 export interface CommandFactory {
-  (file: string, ...args: string[]): CommandBuilder;
+  (file: string, ...args: CommandArgument[]): CommandBuilder;
+  (
+    file: string,
+    args: readonly CommandArgument[],
+    options?: ProcessOptions
+  ): CommandBuilder;
+  with(options: ProcessOptions): CommandFactory;
+  options(
+    options: ProcessOptions
+  ): <T>(builder: CommandBuilder<T>) => CommandBuilder<T>;
+  arg(
+    ...args: CommandArgument[]
+  ): <T>(builder: CommandBuilder<T>) => CommandBuilder<T>;
   stdout(
-    mode: 'pipe' | 'inherit' | 'ignore'
+    mode: CommandStdio
   ): <T>(builder: CommandBuilder<T>) => CommandBuilder<T>;
   stderr(
-    mode: 'pipe' | 'inherit' | 'ignore'
+    mode: CommandStdio
   ): <T>(builder: CommandBuilder<T>) => CommandBuilder<T>;
   cwd(path: string): <T>(builder: CommandBuilder<T>) => CommandBuilder<T>;
   env(
@@ -60,6 +331,12 @@ export interface CommandFactory {
   ): <T>(builder: CommandBuilder<T>) => CommandBuilder<T>;
   stdin(
     stdin: ProcessOptions['stdin']
+  ): <T>(builder: CommandBuilder<T>) => CommandBuilder<T>;
+  capture(
+    enabled?: boolean
+  ): <T>(builder: CommandBuilder<T>) => CommandBuilder<T>;
+  mirror(
+    enabled?: boolean
   ): <T>(builder: CommandBuilder<T>) => CommandBuilder<T>;
   exitCode(builder: CommandBuilder<any>): CommandBuilder<number>;
 }

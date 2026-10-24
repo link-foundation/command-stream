@@ -88,7 +88,7 @@ All 37 examples were executed in JavaScript and Rust. JavaScript was checked in 
 | [Execa compatibility mode](features/execa-compat.md)                 | ✓              | —     | —   | ✓     | —       | —                  |
 | [ShellJS compatibility mode](features/shelljs-compat.md)             | ✓              | —     | —   | —     | ✓       | —                  |
 | [Native head, tail, sort and uniq](features/native-text.md)          | ✓              | —     | ✓   | ✓     | ✓       | ✓                  |
-| [Build commands with literal arguments](features/command-builder.md) | ✓              | —     | —   | ✓     | —       | ✓                  |
+| [Build commands with literal arguments](features/command-builder.md) | ✓              | ✓     | ✓   | ✓     | ✓       | ✓                  |
 | [Process streams incrementally](features/stream-processing.md)       | ✓              | ✓     | ✓   | ✓     | ✓       | ✓                  |
 | [Track virtual terminal frames](features/terminal-buffer.md)         | ✓              | —     | —   | —     | —       | —                  |
 | [Compose and extend virtual commands](features/command-packages.md)  | ✓              | —     | —   | —     | —       | —                  |

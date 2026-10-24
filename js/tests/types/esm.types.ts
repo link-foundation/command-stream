@@ -68,7 +68,7 @@ import $, {
   type AnsiConfig,
   type CommandError,
   type CommandResult,
-  type CommandTag,
+  type ConfiguredCommandTag,
   type DetachedProcess,
   type OutputChunk,
   type ParsedAsciicast,
@@ -114,7 +114,7 @@ export async function taggedTemplates(): Promise<void> {
     timeout: 5000,
     loginShell: false,
   });
-  expectType<Equal<typeof withOptions, CommandTag>>();
+  expectType<Equal<typeof withOptions, ConfiguredCommandTag>>();
   expectType<Equal<ReturnType<typeof withOptions>, ProcessRunner>>();
 
   const tag = create({ capture: true, env: { PATH: '/bin' } });

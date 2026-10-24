@@ -695,19 +695,11 @@ export const features = [
     file: 'js/examples/features/command-builder.mjs',
     api: ['command', 'CommandBuilder'],
     alternatives: {
-      'bun-shell': {
-        unsupported:
-          'No command-stream transform API; invoke the executable with separate arguments',
-      },
-      zx: {
-        unsupported:
-          'No command-stream transform API; invoke the executable with separate arguments',
-      },
+      'bun-shell':
+        "await Bun.spawn(['printf', '%s', 'literal ; text']).exited; // exact argv",
+      zx: 'await $`printf %s ${"literal ; text"}`; // escaped shell interpolation',
       execa: "await execa('printf', ['%s', 'literal ; text']);",
-      shelljs: {
-        unsupported:
-          'No command-stream transform API; invoke the executable with separate arguments',
-      },
+      shelljs: "shell.cmd('printf', '%s', 'literal ; text'); // exact argv",
       child_process: "spawn('printf', ['%s', 'literal ; text']);",
     },
   },

@@ -38,6 +38,10 @@ The [stream processing guide](./docs/stream-processing-guide.md) covers both
 languages, deadline batching, backpressure, live analytics, and comparisons
 with existing streaming APIs.
 
+The [complete API and feature comparison](./js/docs/COMPARISON.md) covers the
+tracked JavaScript and Rust alternatives; the [builder guide](./js/docs/COMMAND-BUILDER.md)
+documents the command construction and execution styles.
+
 ## Repository Layout
 
 | Path       | Purpose                                                    |

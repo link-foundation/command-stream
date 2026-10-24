@@ -17,6 +17,8 @@ The shared advanced APIs include `CommandBuilder`, `DataStream`,
 `terminal::TerminalBuffer`, and `CommandEnvironment`. See the
 [advanced workflows guide](../js/docs/ADVANCED-WORKFLOWS.md#rust-equivalents) and
 `examples/language_features.rs` for executable examples.
+[Compare the complete Rust APIs](docs/COMPARISON.md) with all fourteen projects
+in the pinned competitor audit, including their specialized capabilities.
 [Source translation and competitor migration](../js/docs/FY.md) use the same
 options in both implementations.
 

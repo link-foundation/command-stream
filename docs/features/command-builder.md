@@ -88,11 +88,15 @@ exit code: 7
 
 ### [Bun.$](https://bun.com/docs/runtime/shell)
 
-Not supported — No command-stream transform API; invoke the executable with separate arguments.
+```js
+await Bun.spawn(['printf', '%s', 'literal ; text']).exited; // exact argv
+```
 
 ### [zx](https://github.com/google/zx)
 
-Not supported — No command-stream transform API; invoke the executable with separate arguments.
+```js
+await $`printf %s ${'literal ; text'}`; // escaped shell interpolation
+```
 
 ### [execa](https://github.com/sindresorhus/execa)
 
@@ -102,7 +106,9 @@ await execa('printf', ['%s', 'literal ; text']);
 
 ### [ShellJS](https://github.com/shelljs/shelljs)
 
-Not supported — No command-stream transform API; invoke the executable with separate arguments.
+```js
+shell.cmd('printf', '%s', 'literal ; text'); // exact argv
+```
 
 ### [node:child_process](https://nodejs.org/api/child_process.html)
 

@@ -452,6 +452,32 @@ describe('ported public process behavior', () => {
   );
 
   port(
+    'environment-clear-and-remove',
+    'replaces inherited environment and removes explicitly undefined keys',
+    async () => {
+      const [parentKey] = Object.keys(process.env);
+      expect(parentKey).toBeDefined();
+      const env = {
+        COMMAND_STREAM_CORPUS_ALPHA: 'one',
+        [parentKey]: undefined,
+      };
+      for (const sync of [false, true]) {
+        const runner = fixtureRunner(
+          'env',
+          [parentKey, 'COMMAND_STREAM_CORPUS_ALPHA'],
+          { env }
+        );
+        const result = sync ? runner.sync() : await runner;
+        expect(result.code).toBe(0);
+        expect(JSON.parse(result.stdout)).toEqual({
+          [parentKey]: null,
+          COMMAND_STREAM_CORPUS_ALPHA: 'one',
+        });
+      }
+    }
+  );
+
+  port(
     'stdout-stderr-separation',
     'captures stdout-only, stderr-only, and mixed output independently',
     async () => {

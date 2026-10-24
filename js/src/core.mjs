@@ -165,7 +165,7 @@ function $tagged(strings, ...values) {
     );
 
     // Return a new tagged template function with those options
-    return (innerStrings, ...innerValues) => {
+    const tagged = (innerStrings, ...innerValues) => {
       trace(
         'API',
         () =>
@@ -193,6 +193,8 @@ function $tagged(strings, ...values) {
       );
       return runner;
     };
+    tagged.command = command.with(options);
+    return tagged;
   }
 
   // Normal tagged template literal usage
@@ -258,6 +260,7 @@ function create(defaultOptions = {}, handler, metadata) {
     return runner;
   };
 
+  tagged.command = command.with(defaultOptions);
   trace('API', () => `create EXIT | ${JSON.stringify({}, null, 2)}`);
   return tagged;
 }

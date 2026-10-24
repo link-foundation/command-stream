@@ -1,9 +1,8 @@
-#[cfg(not(windows))]
 use super::support::fixture_path;
 use super::support::{decode_hex_lines, fixture_runner, hex, run_fixture, shell_fixture_command};
 #[cfg(not(windows))]
 use command_stream::cmd;
-use command_stream::{run_sync, OutputChunk, Pipeline, StreamingRunner};
+use command_stream::{run_sync, CommandBuilder, OutputChunk, Pipeline, StreamingRunner};
 use std::collections::HashMap;
 use std::ffi::OsString;
 use std::time::Duration;
@@ -30,6 +29,7 @@ pub const BEHAVIOR_CASE_IDS: &[&str] = &[
     "safe-template-interpolation",
     "cwd-string",
     "environment",
+    "environment-clear-and-remove",
     "stdout-stderr-separation",
     "newline-preservation",
     "unicode-output",
@@ -129,6 +129,44 @@ async fn environment_passes_explicit_values_to_the_child() {
     .unwrap();
 
     assert_eq!(decode_hex_lines(&result.stdout), ["one", "héllø☃"]);
+}
+
+#[tokio::test]
+async fn builder_environment_clear_remove_and_native_key_rules() {
+    let parent_key = std::env::vars_os()
+        .map(|(key, _)| key)
+        .find(|key| key != "COMMAND_STREAM_ENV_TEST" && key != "command_stream_env_test")
+        .expect("the test runner has an inherited environment");
+    let builder = || {
+        CommandBuilder::new(fixture_path())
+            .arg("env-state")
+            .arg(&parent_key)
+            .args(["COMMAND_STREAM_ENV_TEST", "command_stream_env_test"])
+            .env("DISCARDED_BEFORE_CLEAR", "discarded")
+            .env_clear()
+            .env("COMMAND_STREAM_ENV_TEST", "first")
+            .env("command_stream_env_test", "second")
+            .env_remove("COMMAND_STREAM_ENV_TEST")
+    };
+    // On Windows environment names are case-insensitive; on Unix they are
+    // distinct. Preserve native ordering and key comparison on both platforms.
+    let expected = if cfg!(windows) {
+        "absent\nabsent\nabsent\n"
+    } else {
+        "absent\nabsent\npresent:7365636f6e64\n"
+    };
+    for _ in 0..16 {
+        let command = builder();
+        assert_eq!(command.run().await.unwrap().stdout, expected);
+        assert_eq!(command.run_sync().unwrap().stdout, expected);
+    }
+    let restored = builder().env("COMMAND_STREAM_ENV_TEST", "restored");
+    assert!(restored
+        .run()
+        .await
+        .unwrap()
+        .stdout
+        .contains("726573746f726564"));
 }
 
 #[tokio::test]

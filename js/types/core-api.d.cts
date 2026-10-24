@@ -44,9 +44,13 @@ export {
 } from './api.cjs';
 
 export type {
+  CommandArgument,
+  CommandStdio,
+  CommandFactory,
   CommandResult,
   CommandSpec,
   CommandTag,
+  ConfiguredCommandTag,
   ProcessOptions,
   ProcessRunnerEvents,
   StartOptions,
@@ -79,7 +83,7 @@ export interface Dollar
       | 'compose'
       | 'spawn'
     > {
-  (options: Api.ProcessOptions): Api.CommandTag;
+  (options: Api.ProcessOptions): Api.ConfiguredCommandTag;
 }
 
 export declare const $: Dollar;

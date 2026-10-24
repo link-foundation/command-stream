@@ -489,6 +489,14 @@ export const portedCases = [
     ],
   },
   {
+    id: 'environment-clear-and-remove',
+    competitors: ['deno-command'],
+    upstream: [
+      'tests/unit/command_test.ts',
+      'tests/unit_node/child_process_test.ts',
+    ],
+  },
+  {
     // Every zx unit is ported one-to-one under js/tests/zx against the
     // zx-compatible layer (`command-stream/zx`, issue #26).
     id: 'zx-compatible-api',
@@ -527,10 +535,6 @@ export const missingFeatures = [
   {
     id: 'cross-platform-inline-environment-syntax',
     competitors: ['cross-env'],
-  },
-  {
-    id: 'environment-clear-and-remove',
-    competitors: ['deno-command'],
   },
   {
     id: 'process-credentials',
