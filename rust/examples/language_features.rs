@@ -18,6 +18,7 @@ use std::error::Error;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::time::Duration;
 
 const PARITY_START: &str = "<<<PARITY_JSON";
 const PARITY_END: &str = "PARITY_JSON>>>";
@@ -106,6 +107,93 @@ async fn options() -> ExampleResult {
     Ok(vec![observation("stdin and cwd options", result.stdout)])
 }
 // endfeature:options
+
+// feature:timeouts
+async fn timeouts() -> ExampleResult {
+    // Stopped with the kill signal (SIGTERM) once 200ms have passed.
+    let mut slow = ProcessRunner::new(
+        "sleep 5",
+        RunOptions {
+            timeout: Some(Duration::from_millis(200)),
+            ..quiet_options()
+        },
+    );
+    let result = slow.run().await?;
+
+    let mut quick = ProcessRunner::new(
+        "echo in time",
+        RunOptions {
+            timeout: Some(Duration::from_secs(5)),
+            ..quiet_options()
+        },
+    );
+    let in_time = quick.run().await?;
+    Ok(vec![
+        observation("exit code", result.code),
+        observation("timed out", slow.timed_out()),
+        observation("finished in time", in_time.stdout),
+        observation("quick command timed out", quick.timed_out()),
+    ])
+}
+// endfeature:timeouts
+
+// feature:env-removal
+async fn env_removal() -> ExampleResult {
+    let env: HashMap<String, String> = std::env::vars()
+        .chain([
+            ("DEMO_KEEP".to_string(), "kept".to_string()),
+            ("DEMO_DROP".to_string(), "dropped".to_string()),
+        ])
+        .collect();
+    let kept = exec(
+        "printenv DEMO_KEEP",
+        RunOptions {
+            env: Some(env.clone()),
+            ..quiet_options()
+        },
+    )
+    .await?;
+
+    // `env -u DEMO_DROP`: the variable is absent, not merely empty.
+    let removed = StreamingRunner::from_argv("printenv", ["DEMO_DROP"])
+        .env(env)
+        .env_remove("DEMO_DROP")
+        .collect()
+        .await?;
+    Ok(vec![
+        observation("kept variable", kept.stdout),
+        observation("removed variable exit code", removed.code),
+    ])
+}
+// endfeature:env-removal
+
+// feature:detached
+async fn detached() -> ExampleResult {
+    let dir = std::env::temp_dir().join(format!("command-stream-detached-{}", std::process::id()));
+    std::fs::create_dir_all(&dir)?;
+    let marker = dir.join("done.txt");
+
+    // Returns as soon as the process has spawned; it is not awaited.
+    let pid = StreamingRunner::new("sleep 0.2 && echo finished > done.txt")
+        .cwd(&dir)
+        .detach()?;
+    let running = !marker.exists();
+
+    for _ in 0..100 {
+        if marker.exists() {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+    let written = std::fs::read_to_string(&marker)?;
+    std::fs::remove_dir_all(&dir)?;
+    Ok(vec![
+        observation("pid is a number", pid.is_some_and(|pid| pid > 0)),
+        observation("still running when detach returns", running),
+        observation("what the background command wrote", written),
+    ])
+}
+// endfeature:detached
 
 // feature:function-api
 async fn function_api() -> ExampleResult {
@@ -202,8 +290,10 @@ async fn events() -> ExampleResult {
 
 // feature:stdin-streaming
 async fn stdin_streaming() -> ExampleResult {
-    let mut runner = ProcessRunner::new(
+    // `from_argv` runs the program with exactly these arguments, no shell.
+    let mut runner = ProcessRunner::from_argv(
         "cat",
+        Vec::<String>::new(),
         RunOptions {
             mirror: false,
             stdin: StdinOption::Pipe,
@@ -215,7 +305,24 @@ async fn stdin_streaming() -> ExampleResult {
     runner.write_stdin("second line\n").await?;
     runner.close_stdin().await?;
     let result = runner.run().await?;
-    Ok(vec![observation("what cat echoed back", result.stdout)])
+
+    // A streaming command keeps stdin open with `stdin_pipe`, so input can
+    // answer output.
+    let mut stream = StreamingRunner::from_argv("cat", Vec::<String>::new())
+        .stdin_pipe()
+        .stream();
+    stream.write_stdin("ping\n").await?;
+    let mut answered = Vec::new();
+    while let Some(chunk) = stream.next().await {
+        if let OutputChunk::Stdout(data) = chunk {
+            answered.extend(data);
+            stream.close_stdin().await?;
+        }
+    }
+    Ok(vec![
+        observation("what cat echoed back", result.stdout),
+        observation("streamed reply", String::from_utf8(answered)?),
+    ])
 }
 // endfeature:stdin-streaming
 
@@ -777,6 +884,9 @@ async fn execute(id: &str) -> ExampleResult {
         "sync-execution" => sync_execution().await,
         "exit-codes" => exit_codes().await,
         "options" => options().await,
+        "timeouts" => timeouts().await,
+        "env-removal" => env_removal().await,
+        "detached" => detached().await,
         "function-api" => function_api().await,
         "cancellation" => cancellation().await,
         "async-iteration" => async_iteration().await,

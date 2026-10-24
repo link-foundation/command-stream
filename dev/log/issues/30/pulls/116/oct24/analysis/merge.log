@@ -1,0 +1,14 @@
+Auto-merging docs/site/index.html
+Auto-merging js/README.md
+Auto-merging js/src/$.mjs
+CONFLICT (content): Merge conflict in js/src/$.mjs
+Auto-merging js/src/command-packages.mjs
+CONFLICT (content): Merge conflict in js/src/command-packages.mjs
+Auto-merging js/tests/types/cjs.types.cts
+Auto-merging js/tests/types/esm.types.ts
+Auto-merging rust/Cargo.lock
+Auto-merging rust/README.md
+CONFLICT (content): Merge conflict in rust/README.md
+Auto-merging rust/benchmarks/Cargo.lock
+Auto-merging rust/examples/language_features.rs
+Automatic merge failed; fix conflicts and then commit the result.

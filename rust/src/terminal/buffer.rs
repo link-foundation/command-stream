@@ -1,5 +1,6 @@
 //! Independent virtual terminal buffer with bounded frame notifications.
 use serde::{Deserialize, Serialize};
+use std::num::NonZeroU16;
 use tokio::sync::broadcast;
 
 #[derive(Default)]
@@ -40,8 +41,25 @@ impl vt100::Callbacks for TerminalResponses {
 
 pub(crate) type TerminalParser = vt100::Parser<TerminalResponses>;
 
+/// vt100 takes sizes as `NonZeroU16`; callers reject zero sizes with
+/// [`valid_dimensions`] first, so the fallback of 1 is never reached there.
+pub(crate) fn nonzero(value: u16) -> NonZeroU16 {
+    NonZeroU16::new(value).unwrap_or(NonZeroU16::MIN)
+}
+
+/// The screen size as `(rows, cols)`.
+pub(crate) fn screen_size(screen: &vt100::Screen) -> (u16, u16) {
+    let (rows, cols) = screen.size();
+    (rows.get(), cols.get())
+}
+
 pub(crate) fn terminal_parser(rows: u16, cols: u16, scrollback: usize) -> TerminalParser {
-    vt100::Parser::new_with_callbacks(rows, cols, scrollback, TerminalResponses::default())
+    vt100::Parser::new_with_callbacks(
+        nonzero(rows),
+        nonzero(cols),
+        scrollback,
+        TerminalResponses::default(),
+    )
 }
 
 pub(crate) fn take_terminal_input(parser: &mut TerminalParser) -> Vec<u8> {
@@ -93,10 +111,10 @@ impl BufferPublisher {
     }
 
     pub fn frame(screen: &vt100::Screen) -> BufferFrame {
-        let (rows, cols) = screen.size();
+        let (rows, cols) = screen_size(screen);
         BufferFrame {
             text: screen.contents(),
-            ansi: screen.state_formatted(),
+            ansi: screen.state_formatted().into_bytes(),
             rows,
             cols,
             cursor: screen.cursor_position(),
@@ -128,7 +146,7 @@ impl BufferPublisher {
                 ansi.extend_from_slice(&frame.ansi);
                 ansi
             } else {
-                screen.state_diff(&self.previous)
+                screen.state_diff(&self.previous).into_bytes()
             },
         };
         self.previous = screen.clone();
@@ -154,7 +172,7 @@ impl TerminalBuffer {
     }
     pub fn text(&self, color: bool) -> String {
         if color {
-            String::from_utf8_lossy(&self.parser.screen().contents_formatted()).into_owned()
+            self.parser.screen().contents_formatted()
         } else {
             self.parser.screen().contents()
         }
@@ -177,7 +195,9 @@ impl TerminalBuffer {
     }
     pub fn resize(&mut self, rows: u16, cols: u16) {
         assert!(valid_dimensions(rows, cols));
-        self.parser.screen_mut().set_size(rows, cols);
+        self.parser
+            .screen_mut()
+            .set_size(nonzero(rows), nonzero(cols));
         self.flush();
     }
     pub fn flush(&mut self) {

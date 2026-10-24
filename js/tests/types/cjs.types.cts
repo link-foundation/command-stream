@@ -20,6 +20,7 @@ export async function commonJs(): Promise<void> {
   const created: $.CommandTag = $.create({ capture: true });
   const direct = new $.ProcessRunner({ mode: 'shell', command: 'true' });
   const shResult: Promise<$.StreamResult> = $.sh('echo hi');
+  const detached: Promise<$.DetachedProcess> = $.spawnDetached('sleep 1');
   const registry = $.register('noop', async () => ({}));
   expectType<Equal<typeof registry, Map<string, $.VirtualCommandHandler>>>();
   const settings: $.ShellSettings = $.shell.settings();
@@ -30,7 +31,7 @@ export async function commonJs(): Promise<void> {
   // @ts-expect-error - options are type checked
   $({ capture: 'yes' });
 
-  use(quiet, created, direct, shResult, settings, quoted);
+  use(quiet, created, direct, shResult, detached, settings, quoted);
 }
 
 import bun = require('command-stream/bun');

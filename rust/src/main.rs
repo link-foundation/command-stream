@@ -2,9 +2,9 @@
 //!
 //! A simple CLI wrapper for the command-stream library.
 
-use command_stream::{fy, run};
+use command_stream::run;
 use std::env;
-use std::io::Write;
+use std::io::{IsTerminal, Read};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -26,20 +26,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     if args[0] == "fy" {
-        if args.len() != 3 {
-            return Err("Usage: command-stream fy input.sh output.mjs".into());
-        }
-        let source = tokio::fs::read_to_string(&args[1]).await?;
-        let mut options = std::fs::OpenOptions::new();
-        options.write(true).create_new(true);
-        #[cfg(unix)]
+        let parsed = command_stream::fy::cli::parse_arguments(&args[1..]);
+        let mut ctx = command_stream::commands::CommandContext::new(args[1..].to_vec());
+        if parsed.as_ref().is_ok_and(|parsed| {
+            !parsed.help && parsed.positional.first().is_none_or(|path| path == "-")
+        }) && !std::io::stdin().is_terminal()
         {
-            use std::os::unix::fs::OpenOptionsExt;
-            options.mode(0o755);
+            let mut source = String::new();
+            std::io::stdin().read_to_string(&mut source)?;
+            ctx.stdin = Some(source);
         }
-        let mut file = options.open(&args[2])?;
-        file.write_all(fy(&source).as_bytes())?;
-        return Ok(());
+        let result = command_stream::commands::fy(ctx).await;
+        print!("{}", result.stdout);
+        eprint!("{}", result.stderr);
+        std::process::exit(result.code);
     }
 
     let command = args.join(" ");

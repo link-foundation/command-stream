@@ -1,26 +1,31 @@
 #!/usr/bin/env node
-import { readFile, writeFile } from 'node:fs/promises';
-import { fy } from './fy.mjs';
-import { basename } from 'node:path';
+import { $fy } from './commands/$.$fy.mjs';
 
 export async function fyCli(args = process.argv.slice(2)) {
-  const [file, output] = args;
-  if (!file || args.length > 2) {
-    throw new Error('Usage: $fy input.sh [output.mjs]');
+  let stdin;
+  // Argument parsing determines whether a file takes precedence over stdin.
+  const { parseFyArguments } = await import('./fy/cli-options.mjs');
+  const { options, positional } = parseFyArguments(args);
+  if (
+    !options.help &&
+    (!positional[0] || positional[0] === '-') &&
+    !process.stdin.isTTY
+  ) {
+    const chunks = [];
+    for await (const chunk of process.stdin) {
+      chunks.push(Buffer.from(chunk));
+    }
+    stdin = Buffer.concat(chunks).toString('utf8');
   }
-  const source = await readFile(file, 'utf8');
-  const shell =
-    source.match(
-      /^#!\s*(?:\/usr\/bin\/env\s+)?(?:.*\/)?(bash|dash|sh|zsh)\s*$/m
-    )?.[1] ?? 'sh';
-  const result = fy(source, { shell, name: basename(file) });
-  if (output) {
-    await writeFile(output, result, { mode: 0o755, flag: 'wx' });
-  } else {
-    process.stdout.write(result);
+  const result = await $fy({ args, stdin });
+  if (result.stdout) {
+    process.stdout.write(result.stdout);
   }
+  if (result.stderr) {
+    process.stderr.write(result.stderr);
+  }
+  process.exitCode = result.code;
 }
-
 if (
   import.meta.main ||
   process.argv[1]?.replaceAll('\\', '/').endsWith('/fy-cli.mjs')

@@ -56,7 +56,10 @@ while IFS= read -r f; do
     js/src/*) js_source_changed=true ;;
     rust/src/*) rust_source_changed=true ;;
     js/benchmarks/* | js/tests/benchmark-*) js_benchmarks_changed=true ;;
-    rust/benchmarks/Cargo.lock) ;;
+    # Dependency updates: JavaScript benchmark dependencies live in
+    # js/package.json, outside the benchmark paths. A new benchmark target
+    # still adds a source file under rust/benchmarks/.
+    rust/benchmarks/Cargo.lock | rust/benchmarks/Cargo.toml) ;;
     rust/benchmarks/*) rust_benchmarks_changed=true ;;
   esac
 done <<EOF

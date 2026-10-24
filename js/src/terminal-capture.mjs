@@ -1,5 +1,6 @@
 import {
   readAsciicast,
+  resolveTerminalArtifacts,
   unrollTerminalFrames,
   writeTerminalArtifacts,
 } from './terminal-artifacts.mjs';
@@ -439,6 +440,7 @@ const persistArtifacts = async ({
   transcript,
   asciicast,
   artifactOptions,
+  artifacts,
 }) => {
   if (artifactDirectory) {
     await writeTerminalArtifacts({
@@ -447,6 +449,7 @@ const persistArtifacts = async ({
       transcript,
       asciicast,
       options: artifactOptions,
+      artifacts,
     });
   }
 };
@@ -622,6 +625,7 @@ const createTerminalSessionApi = ({
   completion,
   artifactDirectory,
   artifactOptions,
+  artifacts,
   events,
 }) => {
   let finalized;
@@ -653,6 +657,7 @@ const createTerminalSessionApi = ({
         transcript,
         asciicast,
         artifactOptions,
+        artifacts,
       });
 
       return captureResult({
@@ -780,12 +785,14 @@ export const openTerminal = async ({
   timeoutMilliseconds,
   artifactDirectory,
   artifactOptions,
+  artifacts,
   onTrace,
   label = 'openTerminal',
 } = {}) => {
   if (!file) {
     throw new TypeError(`${label} requires a file`);
   }
+  resolveTerminalArtifacts(artifacts, label);
   for (const interaction of interactions) {
     validateInteraction(interaction);
   }
@@ -900,6 +907,7 @@ export const openTerminal = async ({
     completion,
     artifactDirectory,
     artifactOptions,
+    artifacts,
     events,
   });
 };

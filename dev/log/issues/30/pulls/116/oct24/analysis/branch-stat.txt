@@ -1,0 +1,83 @@
+ .../30/pulls/116/analysis/ci-investigation.md      |  69 ++++
+ .../dependency-freshness-38272183588.log.gz        | Bin 0 -> 15917 bytes
+ .../30/pulls/116/analysis/language-parity.md       |  47 +++
+ .../116/analysis/name-validation-before.log.gz     | Bin 0 -> 555 bytes
+ .../30/pulls/116/analysis/old-ci-annotations.json  |   1 +
+ .../issues/30/pulls/116/analysis/old-ci-jobs.json  |   1 +
+ .../analysis/parity-superseded-38272183541.log.gz  | Bin 0 -> 14233 bytes
+ .../issues/30/pulls/116/analysis/requirements.md   |  46 +++
+ .../30/pulls/116/analysis/rust-38274443983.log.gz  | Bin 0 -> 181280 bytes
+ .../pulls/116/analysis/rust-parity-before.log.gz   | Bin 0 -> 1886 bytes
+ .../116/analysis/rust-streaming-before.log.gz      | Bin 0 -> 586 bytes
+ dev/log/issues/30/pulls/116/oct24/PLAN.md          |  34 ++
+ .../pulls/116/oct24/analysis/issue-comments.json   |   1 +
+ .../issues/30/pulls/116/oct24/analysis/issue.json  |   1 +
+ .../30/pulls/116/oct24/analysis/merge-before.log   | 116 ++++++
+ .../issues/30/pulls/116/oct24/analysis/merge.log   |  14 +
+ .../30/pulls/116/oct24/analysis/npm-auth.log       |   4 +
+ .../30/pulls/116/oct24/analysis/pr-comments.jsonl  |  12 +
+ .../116/oct24/analysis/registry-discovery.json     |   5 +
+ .../30/pulls/116/oct24/analysis/related-prs.json   |   1 +
+ .../30/pulls/116/oct24/analysis/requirements.md    |  66 ++++
+ .../pulls/116/oct24/analysis/review-comments.json  |   1 +
+ .../30/pulls/116/oct24/analysis/reviews.json       |   1 +
+ .../116/oct24/analysis/shared-core-before.log      | 116 ++++++
+ dev/log/issues/30/pulls/116/validation/README.md   |  69 ++++
+ .../30/pulls/116/validation/cargo-update.log.gz    | Bin 0 -> 120 bytes
+ .../116/validation/dependency-declarations.log.gz  | Bin 0 -> 77 bytes
+ .../pulls/116/validation/ecosystem-focused.log.gz  | Bin 0 -> 1450 bytes
+ .../follow-up-cancelled-output-recheck.log.gz      | Bin 0 -> 270 bytes
+ .../116/validation/follow-up-docs-check.log.gz     | Bin 0 -> 60 bytes
+ .../validation/follow-up-docs-validation.log.gz    | Bin 0 -> 2410 bytes
+ .../116/validation/follow-up-duplication.log.gz    | Bin 0 -> 2847 bytes
+ .../pulls/116/validation/follow-up-js-all.log.gz   | Bin 0 -> 78420 bytes
+ .../validation/follow-up-name-validation.log.gz    | Bin 0 -> 71 bytes
+ .../116/validation/follow-up-npm-experiment.log.gz | Bin 0 -> 88 bytes
+ .../pulls/116/validation/follow-up-parity.log.gz   | Bin 0 -> 438 bytes
+ .../pulls/116/validation/follow-up-prettier.log.gz | Bin 0 -> 82 bytes
+ .../pulls/116/validation/follow-up-rust-all.log.gz | Bin 0 -> 13595 bytes
+ .../116/validation/follow-up-rust-clippy.log.gz    | Bin 0 -> 142 bytes
+ .../pulls/116/validation/follow-up-rust-doc.log.gz | Bin 0 -> 279 bytes
+ .../follow-up-rust-ecosystem-demo.log.gz           | Bin 0 -> 232 bytes
+ .../follow-up-rust-enterprise-demo.log.gz          | Bin 0 -> 263 bytes
+ .../validation/follow-up-rust-first-final.log.gz   | Bin 0 -> 4783 bytes
+ .../116/validation/follow-up-rust-focused.log.gz   | Bin 0 -> 947 bytes
+ .../116/validation/npm-isolated-clippy.log.gz      | Bin 0 -> 141 bytes
+ .../116/validation/npm-isolated-experiment.log.gz  | Bin 0 -> 88 bytes
+ .../116/validation/npm-isolated-rust-all.log.gz    | Bin 0 -> 13670 bytes
+ .../pulls/116/validation/npm-isolated-test.log.gz  | Bin 0 -> 489 bytes
+ .../116/validation/updated-bench-check.log.gz      | Bin 0 -> 1226 bytes
+ .../30/pulls/116/validation/updated-clippy.log.gz  | Bin 0 -> 272 bytes
+ .../pulls/116/validation/updated-rust-all.log.gz   | Bin 0 -> 13713 bytes
+ docs/VIRTUAL-COMMAND-COMPARISON.md                 |  75 ++++
+ docs/features/command-packages.md                  | 218 ++++++++++-
+ docs/site/index.html                               |  10 +-
+ experiments/issue-30/name-validation.mjs           |  25 ++
+ experiments/issue-30/npm-manifest.mjs              |  65 ++++
+ js/.changeset/virtual-command-validation.md        |   7 +
+ js/README.md                                       |   2 +-
+ js/docs/VIRTUAL-COMMAND-ECOSYSTEM.md               | 214 +++++++++++
+ js/examples/enterprise-virtual-commands.mjs        |  44 +++
+ js/examples/features/command-packages.mjs          | 113 +++++-
+ js/examples/test-hot-reload-cmd.mjs                |  11 +
+ js/examples/virtual-ecosystem-demo.mjs             |  54 +++
+ js/src/command-registry.mjs                        |   6 +-
+ js/src/core.mjs                                    |   2 +-
+ js/tests/types/cjs.types.cts                       |   4 +
+ js/tests/types/esm.types.ts                        |   8 +
+ js/tests/virtual-ecosystem.test.mjs                | 223 +++++++++++
+ rust/README.md                                     |   3 +
+ .../20261012_141000_virtual_ecosystem.md           |  19 +
+ rust/docs/VIRTUAL-COMMAND-ECOSYSTEM.md             | 179 +++++++++
+ rust/examples/enterprise_virtual_commands.rs       |  76 ++++
+ rust/examples/language_features.rs                 |  97 ++++-
+ rust/examples/packages/mod.rs                      | 233 ++++++++++++
+ rust/examples/virtual_ecosystem.rs                 |  55 +++
+ rust/src/command_packages.rs                       | 421 +++++++++++++++++++--
+ rust/src/command_packages/marketplace.rs           | 139 +++++++
+ rust/src/command_packages/watch.rs                 |  82 ++++
+ rust/tests/command_packages.rs                     | 253 +++++++++++++
+ rust/tests/example_packages.rs                     | 133 +++++++
+ rust/tests/package_streaming.rs                    |  96 +++++
+ rust/tests/virtual_ecosystem.rs                    | 258 +++++++++++++
+ 82 files changed, 3676 insertions(+), 54 deletions(-)

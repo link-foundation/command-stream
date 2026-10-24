@@ -5,7 +5,15 @@
 // be used where `!cancelled()` is meant, and that matrix job names must stay
 // distinguishable.
 import { describe, test, expect } from 'bun:test';
-import { readFileSync, readdirSync } from 'fs';
+import {
+  readFileSync,
+  readdirSync,
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  rmSync,
+} from 'fs';
+import { tmpdir } from 'os';
 import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { execFileSync } from 'child_process';
@@ -830,6 +838,60 @@ describe('the release versioning step is exercised before a merge', () => {
   // `changeset version` -- the only command that formats the changelog.
   const js = workflows.find((w) => w.name === 'js.yml');
   const runs = (job) => (job.steps ?? []).map((step) => step.run ?? '');
+
+  test('release preparation can synchronize after a concurrent Rust release', () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'release-sync-'));
+    const git = (...args) =>
+      execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
+    try {
+      mkdirSync(join(cwd, 'js', '.changeset'), { recursive: true });
+      for (const name of ['shell', 'fy']) {
+        writeFileSync(
+          join(cwd, 'js', '.changeset', `${name}.md`),
+          `---\n'command-stream': minor\n---\n\nAdd ${name}.\n`
+        );
+      }
+      git('init', '-q');
+      git('config', 'user.name', 'Test');
+      git('config', 'user.email', 'test@example.com');
+      git('add', '.');
+      git('commit', '-qm', 'pending JavaScript changesets');
+      const base = git('rev-parse', 'HEAD');
+      writeFileSync(join(cwd, 'rust-version'), '1.10.1\n');
+      git('add', '.');
+      git('commit', '-qm', 'concurrent Rust release');
+      const remote = git('rev-parse', 'HEAD');
+      git('update-ref', 'refs/remotes/origin/main', remote);
+      git('reset', '--hard', base);
+
+      const steps = runs(js.doc.jobs.release);
+      const versionStep = steps.findIndex((run) =>
+        run.includes('scripts/version-and-commit.mjs --mode changeset')
+      );
+      expect(versionStep).toBeGreaterThan(-1);
+      for (const run of steps.slice(0, versionStep)) {
+        if (run.includes('scripts/merge-changesets.mjs')) {
+          execFileSync(
+            process.execPath,
+            [join(repoRoot, 'js', 'scripts', 'merge-changesets.mjs')],
+            { cwd: join(cwd, 'js'), stdio: 'pipe' }
+          );
+        }
+      }
+      git('rebase', 'origin/main');
+      expect(git('rev-parse', 'HEAD')).toBe(remote);
+      expect(git('status', '--porcelain')).toBe('');
+
+      const version = readText(
+        join(repoRoot, 'js', 'scripts', 'version-and-commit.mjs')
+      );
+      const merge = version.indexOf('bun scripts/merge-changesets.mjs');
+      expect(merge).toBeGreaterThan(version.indexOf('git rebase origin/main'));
+      expect(merge).toBeLessThan(version.indexOf('bun run changeset:version'));
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
 
   test('the lint job dry-runs the versioning script after the fresh merge', () => {
     const steps = runs(js.doc.jobs.lint);

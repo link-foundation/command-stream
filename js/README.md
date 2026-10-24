@@ -16,6 +16,9 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 
 ## Features
 
+The [command builder guide](docs/COMMAND-BUILDER.md) documents literal argv,
+fluent and functional configuration, presets, run/await/sync and streams.
+
 - 🐚 **Shell-like by Default**: Commands behave exactly like running in terminal (stdout→stdout, stderr→stderr, stdin→stdin)
 - 🎛️ **Fully Controllable**: Override default behavior with options (`mirror`, `capture`, `stdin`)
 - 🚀 **Multiple Usage Patterns**: Classic await, async iteration, EventEmitter, .pipe() method, and mixed patterns
@@ -30,54 +33,15 @@ A modern $ shell utility library with streaming, async iteration, and EventEmitt
 
 ## Comparison with Other Libraries
 
-| Feature                        | [**command-stream**](https://github.com/link-foundation/command-stream)                                 | [**execa**](https://github.com/sindresorhus/execa)                                    | [**cross-spawn**](https://github.com/moxystudio/node-cross-spawn)                                 | [**Bun.$**](https://github.com/oven-sh/bun)                | [**ShellJS**](https://github.com/shelljs/shelljs)                                         | [**zx**](https://github.com/google/zx)                                          |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| **📦 NPM Package**             | [![npm](https://img.shields.io/npm/v/command-stream.svg)](https://www.npmjs.com/package/command-stream) | [![npm](https://img.shields.io/npm/v/execa.svg)](https://www.npmjs.com/package/execa) | [![npm](https://img.shields.io/npm/v/cross-spawn.svg)](https://www.npmjs.com/package/cross-spawn) | N/A (Built-in)                                             | [![npm](https://img.shields.io/npm/v/shelljs.svg)](https://www.npmjs.com/package/shelljs) | [![npm](https://img.shields.io/npm/v/zx.svg)](https://www.npmjs.com/package/zx) |
-| **⭐ GitHub Stars**            | [**⭐ 2** (Please ⭐ us!)](https://github.com/link-foundation/command-stream)                           | [⭐ 7,264](https://github.com/sindresorhus/execa)                                     | [⭐ 1,149](https://github.com/moxystudio/node-cross-spawn)                                        | [⭐ 80,169](https://github.com/oven-sh/bun) (Full Runtime) | [⭐ 14,375](https://github.com/shelljs/shelljs)                                           | [⭐ 44,569](https://github.com/google/zx)                                       |
-| **📊 Monthly Downloads**       | **893** (New project!)                                                                                  | **381M**                                                                              | **409M**                                                                                          | N/A (Built-in)                                             | **35M**                                                                                   | **4.2M**                                                                        |
-| **📈 Total Downloads**         | **Growing**                                                                                             | **6B+**                                                                               | **5.4B**                                                                                          | N/A (Built-in)                                             | **596M**                                                                                  | **37M**                                                                         |
-| **Runtime Support**            | ✅ Bun + Node.js (+ Deno for `command-stream/bun`)                                                      | ✅ Node.js                                                                            | ✅ Node.js                                                                                        | 🟡 Bun only                                                | ✅ Node.js                                                                                | ✅ Node.js                                                                      |
-| **Template Literals**          | ✅ `` $`cmd` ``                                                                                         | ✅ `` $`cmd` ``                                                                       | ❌ Function calls                                                                                 | ✅ `` $`cmd` ``                                            | ❌ Function calls                                                                         | ✅ `` $`cmd` ``                                                                 |
-| **Real-time Streaming**        | ✅ Live output                                                                                          | 🟡 Limited                                                                            | ✅ Native ChildProcess stdout/stderr streams                                                      | ❌ Buffer only                                             | ❌ Buffer only                                                                            | ❌ Buffer only                                                                  |
-| **Synchronous Execution**      | ✅ `.sync()` with events                                                                                | ✅ `execaSync`                                                                        | ✅ `spawnSync`                                                                                    | ❌ No                                                      | ✅ Sync by default                                                                        | ❌ No                                                                           |
-| **Async Iteration**            | ✅ `for await (chunk of $.stream())`                                                                    | ❌ No                                                                                 | ✅ Node readable streams support async iteration                                                  | ❌ No                                                      | ❌ No                                                                                     | ✅ Stdout lines: ``for await (const line of $`cmd`)``                           |
-| **EventEmitter Pattern**       | ✅ `.on('data', ...)`                                                                                   | 🟡 Limited events                                                                     | ✅ Native ChildProcess and stream events                                                          | ❌ No                                                      | ❌ No                                                                                     | ❌ No                                                                           |
-| **Mixed Patterns**             | ✅ Events + await/sync                                                                                  | ❌ No                                                                                 | ❌ No                                                                                             | ❌ No                                                      | ❌ No                                                                                     | ❌ No                                                                           |
-| **Bun.$ Compatibility**        | ✅ **Full API** in [`command-stream/bun`](docs/BUN_SHELL.md), tested with Bun's own tests               | ❌ No                                                                                 | ❌ No                                                                                             | ✅ Native API                                              | ❌ No                                                                                     | ❌ No                                                                           |
-| **Shell Injection Protection** | ✅ Smart auto-quoting                                                                                   | ✅ Safe by default                                                                    | ✅ Safe by default                                                                                | ✅ Built-in                                                | 🟡 Manual escaping                                                                        | ✅ Safe by default                                                              |
-| **Cross-platform**             | ✅ macOS/Linux/Windows                                                                                  | ✅ Yes                                                                                | ✅ **Specialized** cross-platform                                                                 | ✅ Yes                                                     | ✅ Yes                                                                                    | ✅ Yes                                                                          |
-| **Performance**                | [Measured](benchmarks/README.md)                                                                        | [Measured](benchmarks/README.md)                                                      | [Measured](benchmarks/README.md)                                                                  | [Measured](benchmarks/README.md)                           | [Measured](benchmarks/README.md)                                                          | [Measured](benchmarks/README.md)                                                |
-| **Memory Efficiency**          | [Measured](benchmarks/README.md)                                                                        | [Measured](benchmarks/README.md)                                                      | [Measured](benchmarks/README.md)                                                                  | [Measured](benchmarks/README.md)                           | [Measured](benchmarks/README.md)                                                          | [Measured](benchmarks/README.md)                                                |
-| **Error Handling**             | ✅ Configurable (`set -e`/`set +e`, non-zero OK by default)                                             | ✅ Throws on error                                                                    | ❌ Basic (exit codes)                                                                             | ✅ Throws on error                                         | ✅ Configurable                                                                           | ✅ Throws on error                                                              |
-| **Shell Settings**             | ✅ `set -e`/`set +e` equivalent                                                                         | ❌ No                                                                                 | ❌ No                                                                                             | ❌ No                                                      | 🟡 Limited (`set()`)                                                                      | ❌ No                                                                           |
-| **Stdout Support**             | ✅ Real-time streaming + events                                                                         | ✅ Node.js streams + interleaved                                                      | ✅ Inherited/buffered                                                                             | ✅ Shell redirection + buffered                            | ✅ Direct output                                                                          | ✅ Readable streams + `.pipe.stdout`                                            |
-| **Stderr Support**             | ✅ Real-time streaming + events                                                                         | ✅ Streams + interleaved output                                                       | ✅ Inherited/buffered                                                                             | ✅ Redirection + `.quiet()` access                         | ✅ Error output                                                                           | ✅ Readable streams + `.pipe.stderr`                                            |
-| **Stdin Support**              | ✅ string/Buffer/inherit/ignore                                                                         | ✅ Input/output streams                                                               | ✅ Full stdio support                                                                             | ✅ Pipe operations                                         | 🟡 Basic                                                                                  | ✅ Basic stdin                                                                  |
-| **Built-in Commands**          | ✅ **26 commands**: cat, ls, mkdir, rm, mv, cp, touch, basename, dirname, seq, yes + all Bun.$ commands | ❌ Uses system                                                                        | ❌ Uses system                                                                                    | ✅ echo, cd, etc.                                          | ✅ **20+ commands**: cat, ls, mkdir, rm, mv, cp, etc.                                     | ❌ Uses system                                                                  |
-| **Virtual Commands Engine**    | ✅ **Revolutionary**: Register JavaScript functions as shell commands with full pipeline support        | ❌ No custom commands                                                                 | ❌ No custom commands                                                                             | ❌ No extensibility                                        | ❌ No custom commands                                                                     | ❌ No custom commands                                                           |
-| **Pipeline/Piping Support**    | ✅ **Advanced**: System + Built-ins + Virtual + Mixed + `.pipe()` method                                | ✅ Programmatic `.pipe()` + multi-destination                                         | ✅ Child streams can be piped                                                                     | ✅ Standard shell piping                                   | ✅ Shell piping + `.to()` method                                                          | ✅ Shell piping + `.pipe()` method                                              |
-| **Bundle Size**                | [Measured](benchmarks/README.md)                                                                        | [Measured](benchmarks/README.md)                                                      | [Measured](benchmarks/README.md)                                                                  | [Measured](benchmarks/README.md)                           | [Measured](benchmarks/README.md)                                                          | [Measured](benchmarks/README.md)                                                |
-| **Signal Handling**            | ✅ **Advanced SIGINT/SIGTERM forwarding** with cleanup                                                  | 🟡 Basic                                                                              | ✅ **Excellent** cross-platform                                                                   | 🟡 Basic                                                   | 🟡 Basic                                                                                  | 🟡 Basic                                                                        |
-| **Process Management**         | ✅ **Robust child process lifecycle** with proper termination                                           | ✅ Good                                                                               | ✅ **Excellent** spawn wrapper                                                                    | ❌ Basic                                                   | 🟡 Limited                                                                                | 🟡 Limited                                                                      |
-| **Debug Tracing**              | ✅ **Comprehensive VERBOSE logging** for CI/debugging                                                   | 🟡 Limited                                                                            | ❌ No                                                                                             | ❌ No                                                      | 🟡 Basic                                                                                  | ❌ No                                                                           |
-| **Test Coverage**              | ✅ **518+ tests, 1165+ assertions**                                                                     | ✅ Excellent                                                                          | ✅ Good                                                                                           | 🟡 Good coverage                                           | ✅ Good                                                                                   | 🟡 Good                                                                         |
-| **CI Reliability**             | ✅ **Platform-specific handling** (macOS/Ubuntu)                                                        | ✅ Good                                                                               | ✅ **Excellent**                                                                                  | 🟡 Basic                                                   | ✅ Good                                                                                   | 🟡 Basic                                                                        |
-| **Documentation**              | ✅ **Comprehensive examples + guides**                                                                  | ✅ Excellent                                                                          | 🟡 Basic                                                                                          | ✅ Good                                                    | ✅ Good                                                                                   | 🟡 Limited                                                                      |
-| **TypeScript**                 | ✅ **Bundled strict declarations** (ESM + CommonJS), typed events, streams and virtual commands         | ✅ Full support                                                                       | ✅ Built-in                                                                                       | ✅ Built-in                                                | 🟡 Community types                                                                        | ✅ Full support                                                                 |
-| **License**                    | ✅ **Unlicense (Public Domain)**                                                                        | 🟡 MIT                                                                                | 🟡 MIT                                                                                            | 🟡 MIT (+ LGPL dependencies)                               | 🟡 BSD-3-Clause                                                                           | 🟡 Apache 2.0                                                                   |
+The [complete feature and API comparison](docs/COMPARISON.md) covers command
+construction, all execution styles, streaming, configuration, process control,
+compatibility layers and development tools across the tracked competitors.
+It credits competitors' literal argv, streams, async iteration and plugin APIs,
+and links to primary references and the executable compatibility audits.
 
-Performance, memory, and package-size values depend on the runtime and host.
-Use the [reproducible benchmark playground](benchmarks/README.md) for measured
-same-host comparisons, raw statistics, and an interactive report rather than
-static estimates.
-
-**📊 Popularity & Adoption:**
-
-- **⭐ GitHub Stars:** [Bun: 80,169](https://github.com/oven-sh/bun) • [zx: 44,569](https://github.com/google/zx) • [ShellJS: 14,375](https://github.com/shelljs/shelljs) • [execa: 7,264](https://github.com/sindresorhus/execa) • [cross-spawn: 1,149](https://github.com/moxystudio/node-cross-spawn) • [**command-stream: 2 ⭐ us!**](https://github.com/link-foundation/command-stream)
-- **📈 Total Downloads:** [execa: 6B+](https://www.npmjs.com/package/execa) • [cross-spawn: 5.4B](https://www.npmjs.com/package/cross-spawn) • [ShellJS: 596M](https://www.npmjs.com/package/shelljs) • [zx: 37M](https://www.npmjs.com/package/zx) • [command-stream: Growing](https://www.npmjs.com/package/command-stream)
-- **📊 Monthly Downloads:** [cross-spawn: 409M](https://www.npmjs.com/package/cross-spawn) • [execa: 381M](https://www.npmjs.com/package/execa) • [ShellJS: 35M](https://www.npmjs.com/package/shelljs) • [zx: 4.2M](https://www.npmjs.com/package/zx) • [command-stream: 893 (growing!)](https://www.npmjs.com/package/command-stream)
-
-**⭐ Help Us Grow!** If command-stream's **revolutionary virtual commands** and **advanced streaming capabilities** help your project, [**please star us on GitHub**](https://github.com/link-foundation/command-stream) to help the project grow!
+Use the [benchmark playground](benchmarks/README.md) for measured process latency,
+memory and package size on the same host. The [core entry](docs/CORE.md) keeps
+shell-only imports below the enforced module budget.
 
 ### Tracked compatibility corpus
 
@@ -91,18 +55,11 @@ Run the focused executable corpus with `bun run test:competitors`.
 
 ### Why Choose command-stream?
 
-- **🆓 Truly Free**: **Unlicense (Public Domain)** - No restrictions, no attribution required, use however you want
-- **🚀 Revolutionary Virtual Commands**: **World's first** fully customizable virtual commands engine - register JavaScript functions as shell commands!
-- **🔗 Advanced Pipeline System**: **Only library** where virtual commands work seamlessly in pipelines with built-ins and system commands
-- **🔧 Built-in Commands**: **18 essential commands** work identically across all platforms - no system dependencies!
-- **📡 Real-time Processing**: Typed stdout, stderr, and exit chunks through async iteration
-- **🔄 Flexible Patterns**: Multiple usage patterns (await, events, iteration, mixed)
-- **🐚 Shell Replacement**: Dynamic error handling with `set -e`/`set +e` equivalents for .sh file replacement
-- **⚡ Bun Optimized**: Designed for Bun with Node.js fallback compatibility
-- **💾 Memory Efficient**: Streaming prevents large buffer accumulation
-- **🛡️ Production Ready**: **518+ tests, 1165+ assertions** with comprehensive coverage including CI reliability
-- **🎯 Advanced Signal Handling**: Robust SIGINT/SIGTERM forwarding with proper child process cleanup
-- **🔍 Debug-Friendly**: Comprehensive VERBOSE tracing for CI debugging and troubleshooting
+- Combine literal command builders, shell templates, events, sync execution and
+  async iteration through a shared runner.
+- Reuse scripts through the Bun, zx, ShellJS, Execa and cross-spawn APIs.
+- Add virtual commands, packages, stream analytics, terminal tools and a debugger.
+- Use the Unlicense and maintained JavaScript and Rust implementations.
 
 ## Built-in Commands (🚀 NEW!)
 
@@ -199,6 +156,20 @@ bun add command-stream # Bun
 Core execution works without native builds or lifecycle scripts. See
 [optional PTY installation](docs/INSTALLATION.md) for terminal setup.
 
+### Lightweight shell entry point
+
+Import `$` and virtual commands without loading compatibility, terminal or
+REPL features:
+
+```javascript
+import { $ } from 'command-stream/core';
+const result = await $({ mirror: false })`echo ${'hello core'}`;
+```
+
+CommonJS: `const $ = require('command-stream/core')`. Core shares process and
+virtual-command state with the full entry. See [the core guide](docs/CORE.md)
+for available APIs, import budgets and measurement commands.
+
 ### Lightweight ProcessRunner entry point
 
 Consumers that only need direct process execution can import `ProcessRunner`
@@ -214,8 +185,8 @@ const runner = new ProcessRunner(
 const result = await runner;
 ```
 
-The main `command-stream` entry point remains the supported import for `$` and
-terminal capture features.
+The main `command-stream` entry point provides the full API, including terminal
+capture and compatibility features.
 
 ## Module Formats (ESM and CommonJS)
 
@@ -630,6 +601,12 @@ await $withInput`cat`; // Pipes the input to cat
 const $withEnv = $({ env: { ...process.env, MY_VAR: 'value' } });
 await $withEnv`printenv MY_VAR`; // Prints: value
 
+// `env` replaces the environment; an `undefined` value removes a variable
+const $withoutKey = $({
+  env: { ...process.env, ANTHROPIC_API_KEY: undefined },
+});
+await $withoutKey`printenv ANTHROPIC_API_KEY`; // Exit code 1: not set
+
 // Custom working directory
 const $inTmp = $({ cwd: '/tmp' });
 await $inTmp`pwd`; // Prints: /tmp
@@ -746,7 +723,7 @@ command itself runs as its child:
 
 ```console
 $ ps -o args= -p 51234
-/bin/sh -l -c /bin/sleep 5
+/bin/sh -c /bin/sleep 5
 ```
 
 Do not depend on the wrapper being there. Some shells replace themselves with
@@ -757,7 +734,7 @@ process the library spawned to run your command.
 The shell is spawned as the leader of its own process group, so the group id
 equals the pid. That is what lets `kill()` reach the command underneath the
 wrapper (see
-[Grandchildren and process groups](#grandchildren-and-process-groups)), and it
+[Grandchildren and process groups](docs/SIGNALS.md#grandchildren-and-process-groups)), and it
 means you can signal the group yourself:
 
 ```javascript
@@ -990,6 +967,22 @@ timestamps; pauses longer than `idleTimeLimit` are trimmed.
 GIF is provided for consumers that cannot play CSS-animated SVG. The format is
 limited to 256 colors per frame, so truecolor recordings can show color
 banding. Prefer `recording.svg` when full color fidelity is important.
+
+Pass `artifacts` to choose which of these files are written; it defaults to all
+of them. The names are `transcript` (`transcript.txt`), `frames`
+(`frames.json`), `cast` (`session.cast`), `snapshot` (`snapshot.svg`),
+`recording` (`recording.svg`) and `gif` (`recording.gif`). A renderer runs only
+when its artifact is requested, so leaving out `gif` skips the rasterisation
+that dominates the cost of writing artifacts. An unknown name rejects with a
+`TypeError` before the terminal is opened:
+
+```javascript
+await captureTerminal({
+  file: 'my-tui',
+  artifactDirectory: 'artifacts/ci',
+  artifacts: ['transcript', 'snapshot'], // no SVG recording, no GIF render
+});
+```
 
 The [committed recording sample](docs/screenshots/terminal-artifacts/recording.svg)
 uses the same public API and CSS animation path used by generated artifacts.
@@ -1776,9 +1769,12 @@ As with any shell-enabled process, pass only trusted `file` and `args` values; s
 - `stdin: 'inherit' | 'ignore' | string | Buffer` - How to handle stdin
 - `interactive: boolean` - Enable TTY forwarding for interactive commands (requires `stdin: 'inherit'` and TTY environment)
 - `cwd: string` - Working directory for command
-- `env: object` - Environment variables
+- `env: object` - The child's complete environment. It **replaces** the inherited environment rather than adding to it, so spread `process.env` to keep it: `{ ...process.env, MY_VAR: 'value' }`. To remove an inherited variable, leave it out or set it to `undefined`: `{ ...process.env, ANTHROPIC_API_KEY: undefined }` (the same applies to `captureTerminal()`/`openTerminal()` `env`, and to the built-in `env` command)
 - `exitPumpGrace: number` - Milliseconds to wait for buffered output to drain after the process exits before aborting stdio reads held open by a grandchild (default `100`; see [Async Iteration](#async-iteration-real-time-streaming))
 - `killSignal: string` - Signal used to stop the process when it is killed without an explicit signal — i.e. `kill()` with no argument, `break`ing out of a `stream()` loop, or an external `AbortSignal` firing (default `'SIGTERM'`). An explicit `kill(signal)` argument always overrides this. The reported exit code follows the conventional `128 + signal` mapping (e.g. `SIGTERM` → 143, `SIGINT` → 130, `SIGKILL` → 137)
+- `timeout: number` - Milliseconds after which the command is stopped with `killSignal`, exactly as if its `signal` had been aborted (default `0`, no timeout). It bounds simple commands, pipelines, `stream()` and `.sync()`. The command resolves (it does not reject) with the signal exit code and `result.timedOut === true`; every other result has `timedOut: false`. Negative, non-finite or non-number values throw a `TypeError`. See [Timeouts](#timeouts)
+- `loginShell: boolean` - Run command strings through a login shell (`sh -l -c`), which sources `/etc/profile` and `~/.profile` before every command (default `false`). Without it the command runs in the caller's environment exactly, so profile output cannot leak into captured stdout and profile `PATH` edits cannot shadow caller-provided tools
+- `detached: boolean` - Fire and forget: start the command in a new session with stdio ignored, `unref()` it, and resolve with `{ code: 0, pid, detached: true }` as soon as it has spawned instead of waiting for it to exit (default `false`). See [Detached commands](#detached-commands)
 - `killGrace: number` - Milliseconds to wait after delivering `killSignal` before escalating to `SIGKILL`, giving the child a chance to run its own signal handler and shut down cleanly (default `100`). Set to `0` to escalate immediately, with no chance to clean up (only `SIGKILL` is delivered). `SIGKILL` itself is never delayed. See [Sending Signals to a Running Command](#sending-signals-to-a-running-command)
 
 **Override defaults:**
@@ -1786,6 +1782,7 @@ As with any shell-enabled process, pass only trusted `file` and `args` values; s
 - Use `$({ options })` syntax for one-off configurations with template literals
 - Use `sh(command, options)` for one-off overrides with string commands
 - Use `create(defaultOptions)` to create custom `$` with different defaults
+- Use `spawnDetached(command, options)` (a string, an argv array or `{ file, args }`) to start a command that outlives the caller and get `{ pid }` back; `runner.spawnDetached()` does the same for a `ProcessRunner`
 
 ### Shell Settings API
 
@@ -2080,126 +2077,69 @@ cmd.kill('SIGINT'); // what CTRL+C sends
 cmd.kill('SIGHUP'); // any signal name works
 ```
 
-#### What `kill()` actually does
+On Linux and macOS, `kill()` signals the child and its process group, waits
+`killGrace` milliseconds (default `100`) so the child can run its own handler,
+escalates to `SIGKILL` if it is still alive, and reports `128 + signal`. On
+Windows it stops the tree with `taskkill /T /F`. `killSignal` sets the signal
+used by an argument-less `kill()`, a `break` out of a stream loop and an
+`AbortSignal`. The details, with examples, are in
+[docs/SIGNALS.md](docs/SIGNALS.md): what `kill()` does step by step, choosing
+the stop signal, tuning the grace period, the signal exit codes, and how
+grandchildren and process groups are reached.
 
-On Linux and macOS, `kill()` runs the following four steps:
+#### Timeouts
 
-1. The requested signal is delivered to the child **and its process group**, so
-   a grandchild behind a shell wrapper is reached too (see
-   [Grandchildren and process groups](#grandchildren-and-process-groups)).
-2. The child is given a grace period (`killGrace`, default `100`ms) to run its
-   own signal handler and exit on its own terms.
-3. If it is still alive when the grace period expires, `SIGKILL` follows, so a
-   process that ignores the signal is still guaranteed to terminate.
-4. The reported exit code is the conventional `128 + signal` value.
-
-On Windows, `kill()`, stream cancellation and an `AbortSignal` immediately stop the tree with `taskkill /PID <pid> /T /F` before the parent exits.
-`killGrace` applies only to POSIX shutdown. If `taskkill` fails, termination falls back to the direct child. Exit codes reflect the requested signal.
-
-Step 2 is what makes a shutdown _graceful_: without it, a child that traps
-SIGTERM to flush output, release a lock, or stop its own workers is destroyed
-before its handler can run.
+`timeout` stops a command that runs too long. It uses the same stop path as an
+aborted `signal`, so `killSignal` and `killGrace` apply, and awaiting resolves
+with the signal exit code instead of rejecting. `timedOut` tells a timeout apart
+from any other kill:
 
 ```javascript
-// A child that cleans up when asked to stop:
-const cmd = $`sh -c 'trap "echo cleaning up; exit 0" TERM; while true; do sleep 1; done'`;
-cmd.start();
-cmd.kill(); // the trap runs, prints "cleaning up", and exits
-
-const result = await cmd;
-console.log(result.code); // 143
-```
-
-#### Choosing the stop signal
-
-Pass a signal explicitly, or configure a default with the `killSignal` option so
-that an argument-less `kill()`, a `break` out of a stream loop, and an
-`AbortSignal` all use it:
-
-```javascript
-// Explicit per-call signal — overrides killSignal for this call only:
-cmd.kill('SIGINT'); // exit code 130
-
-// Configured default — used by kill(), break, and AbortSignal cancellation:
-const cmd = $({ killSignal: 'SIGINT' })`some-endless-stream`;
-for await (const chunk of cmd.stream()) {
-  if (chunk.type === 'stdout' && done(chunk))
-    cmd.kill(); // sends SIGINT
-  else if (chunk.type === 'exit') console.log(chunk.code); // 130
+const result = await $({ timeout: 5000 })`npm install`;
+if (result.timedOut) {
+  console.error(`gave up after 5s (${result.signal}, code ${result.code})`);
 }
 
-// AbortSignal style also honors killSignal — awaiting resolves promptly when
-// the signal fires (it does not hang) with the configured signal's exit code:
+// Combine with an AbortSignal: whichever fires first stops the command.
 const ac = new AbortController();
-const running = $({
-  signal: ac.signal,
-  killSignal: 'SIGINT',
-})`some-endless-stream`;
-setTimeout(() => ac.abort(), 1000); // stops with SIGINT
-console.log((await running).code); // 130
+await $({ timeout: 60_000, signal: ac.signal, killSignal: 'SIGINT' })`./build`;
+
+// Sync mode is bounded too.
+$({ timeout: 1000 })`sleep 10`.sync().timedOut; // true
 ```
 
-#### Tuning the grace period
+#### Detached commands
 
-`killGrace` is the number of milliseconds between the requested signal and the
-SIGKILL escalation:
+A detached command is fire and forget: it keeps running after your script
+exits, and you get its pid instead of its output. Use it to start a daemon,
+reopen an app after an update, or hand work to a process that outlives you:
 
 ```javascript
-// Give a slow shutdown more room:
-const cmd = $({ killGrace: 5000 })`./server --graceful-shutdown`;
+import { $, spawnDetached } from 'command-stream';
 
-// Opt out entirely — SIGKILL is sent immediately, with no chance to clean up:
-const cmd = $({ killGrace: 0 })`stuck-process`;
+const { pid } = await spawnDetached('./server --port 8080', {
+  cwd: '/srv/app',
+  env: { ...process.env, NODE_ENV: 'production' },
+});
+await spawnDetached(['open', '-a', 'MyApp']); // an argv array skips the shell
+
+// The same through $ and ProcessRunner:
+const result = await $({ detached: true })`./server --port 8080`;
+result.pid; // result is { code: 0, pid, detached: true, ... }
+await $`./server --port 8080`.spawnDetached(); // { pid }
 ```
 
-With `killGrace: 0` the requested signal is not delivered at all — only
-`SIGKILL` is. Delivering it first and then killing would leave a window the
-child can be scheduled in, which makes "no grace" a race rather than a
-guarantee. The reported exit code still reflects the signal you requested.
-
-`SIGKILL` is never delayed: it cannot be caught, so `kill('SIGKILL')` skips the
-grace period regardless of the `killGrace` value.
-
-#### Signal exit codes
-
-A process stopped by a signal reports `128 + signal`, the same convention POSIX
-shells use:
-
-| Signal    | Number | Exit code | Typical meaning                      |
-| --------- | ------ | --------- | ------------------------------------ |
-| `SIGHUP`  | 1      | `129`     | Terminal closed / reload config      |
-| `SIGINT`  | 2      | `130`     | CTRL+C                               |
-| `SIGQUIT` | 3      | `131`     | Quit from keyboard                   |
-| `SIGKILL` | 9      | `137`     | Forced termination, cannot be caught |
-| `SIGUSR1` | 10     | `138`     | Application-defined                  |
-| `SIGUSR2` | 12     | `140`     | Application-defined                  |
-| `SIGTERM` | 15     | `143`     | Polite request to stop (the default) |
-
-The code reflects the signal **you requested**, even when the SIGKILL escalation
-is what ultimately stopped the process — `kill('SIGTERM')` on a child that
-ignores SIGTERM still reports `143`, not `137`.
-
-#### Grandchildren and process groups
-
-Commands run through a shell, so `$\`sh -c '...'\`` is usually a shell wrapper
-with the real work in a grandchild. Signals are delivered to the whole process
-group rather than just the direct child, so the grandchild is stopped too —
-including the common case where the wrapper dies on the first signal and the
-grandchild is reparented to init.
-
-The one exception is interactive mode, where the command shares your terminal
-and is spawned into the caller's process group so that CTRL+C keeps reaching it.
-There `kill()` signals the direct child alone — but CTRL+C from the terminal
-already reaches the whole group anyway.
-
-There is a limit to this. If the shell itself exits and leaves a background
-worker behind, the command is finished as far as the runner is concerned, and
-Node and Bun have already reaped the shell — which frees its pid, and with it
-the group id, for reuse. A later `kill()` therefore signals nothing rather than
-risk signalling an unrelated process group, and the orphaned worker keeps
-running, exactly as it would if you had started it from your own shell. Keep the
-worker in the foreground (`... & wait`, or no `&` at all) if you want `kill()`
-to reach it.
+The promise resolves as soon as the process has spawned (it rejects when the
+program cannot be started) and never waits for it to exit. The child starts in
+a new session (`setsid` on Linux and macOS, its own process group and console
+on Windows) with stdin, stdout and stderr ignored, and it is `unref()`'d, so
+your event loop can exit, and a CTRL+C or a signal sent to your process group
+does not reach it. `cwd`, `env`, `preferLocal` and `loginShell` apply as usual.
+Virtual commands are not used: the command always runs as a real process. A
+string runs through the shell, so on Linux the pid can belong to the `sh`
+wrapper rather than the program (see
+[Process ID of a Running Command](#process-id-of-a-running-command)); pass an
+argv array when you need the program's own pid.
 
 #### Rust parity
 

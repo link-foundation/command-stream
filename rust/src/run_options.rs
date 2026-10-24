@@ -100,6 +100,23 @@ pub struct RunOptions {
     /// Mirrors the JavaScript `killGrace` option. This is the window in which a
     /// child running its own signal handler can shut down on its own terms.
     pub kill_grace_ms: u64,
+    /// Stop the command once this much time has passed since it started
+    /// (default `None`: unbounded).
+    ///
+    /// Mirrors the JavaScript `timeout` option. The child is stopped with
+    /// [`kill_signal`](Self::kill_signal), then `SIGKILL` after
+    /// [`kill_grace_ms`](Self::kill_grace_ms); the result carries the
+    /// `128 + signal` code (143 for `SIGTERM`) and
+    /// [`crate::ProcessRunner::timed_out`] reports `true`. The deadline is
+    /// enforced while [`crate::ProcessRunner::run`] is awaited and also bounds
+    /// built-in virtual commands.
+    pub timeout: Option<std::time::Duration>,
+    /// Variables removed from the child's environment, the equivalent of
+    /// `env -u NAME` (default empty).
+    ///
+    /// Removals are applied after [`env`](Self::env), so a name listed here
+    /// is absent even when `env` sets it.
+    pub env_remove: Vec<String>,
 }
 
 impl Default for RunOptions {
@@ -116,6 +133,8 @@ impl Default for RunOptions {
             trace: true,
             kill_signal: signal::DEFAULT_KILL_SIGNAL.to_string(),
             kill_grace_ms: signal::DEFAULT_KILL_GRACE_MS,
+            timeout: None,
+            env_remove: Vec::new(),
         }
     }
 }

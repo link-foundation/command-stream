@@ -20,6 +20,11 @@ The shared advanced APIs include `CommandBuilder`, `DataStream`,
 The [virtual command ecosystem guide](docs/VIRTUAL-COMMAND-ECOSYSTEM.md) covers
 typed and npm/manifest packages, registry discovery, streaming middleware,
 composition, hot reload, and the Rust ecosystem/enterprise examples.
+[Compare the complete Rust APIs](docs/COMPARISON.md) with all fourteen projects
+in the pinned competitor audit, including their specialized capabilities.
+[Source translation and competitor migration](../js/docs/FY.md) use the same
+options in both implementations.
+
 `command-stream fy input.sh output.mjs` generates an interpreter-backed Node module
 using `sh` and refuses to overwrite existing output.
 
@@ -205,6 +210,84 @@ Configure `cwd`, `env`, and `stdin` on the builder before collecting. Call
 `collect_blocking()` outside a Tokio runtime; async code uses `collect().await`.
 The [cross-spawn migration guide](../js/docs/CROSS_SPAWN_MIGRATION.md) maps ten
 common process use cases to both language implementations.
+
+## Live Stdin
+
+`StreamingRunner::stdin_pipe()` keeps the child's stdin open while the output
+is streamed, so input can be sent in reaction to output (issue #230). Write
+with `OutputStream::write_stdin` and finish with `close_stdin` so the child
+reads end-of-file; dropping the stream closes stdin too. Content passed to
+`stdin` or `stdin_bytes` is still written first.
+
+```rust,no_run
+use command_stream::{OutputChunk, StreamingRunner};
+
+# async fn example() -> command_stream::Result<()> {
+let mut stream = StreamingRunner::from_argv("cat", Vec::<String>::new())
+    .stdin_pipe()
+    .stream();
+stream.write_stdin(b"ping\n").await?;
+while let Some(chunk) = stream.next().await {
+    if let OutputChunk::Stdout(data) = chunk {
+        assert_eq!(data, b"ping\n");
+        stream.close_stdin().await?; // the child sees EOF and exits
+    }
+}
+# Ok(())
+# }
+```
+
+`ProcessRunner::from_argv(program, args, options)` is the exact-argv
+counterpart of `ProcessRunner::new`: nothing is parsed, expanded or quoted and
+virtual commands are never used. Combined with `StdinOption::Pipe` it drives a
+long-lived child over stdin, e.g. a JSON-lines protocol:
+
+```rust,no_run
+use command_stream::{ProcessRunner, RunOptions, StdinOption};
+
+# async fn example() -> command_stream::Result<()> {
+let mut runner = ProcessRunner::from_argv(
+    "my-agent",
+    ["--input-format", "stream-json"],
+    RunOptions { stdin: StdinOption::Pipe, mirror: false, ..Default::default() },
+);
+runner.start().await?;
+runner.write_stdin(b"{\"type\":\"user\"}\n").await?;
+runner.close_stdin().await?;
+let result = runner.run().await?;
+println!("{}", result.stdout);
+# Ok(())
+# }
+```
+
+## Removing Environment Variables
+
+`env` adds or overrides variables; `env_remove` drops inherited ones, the
+equivalent of `env -u NAME` (issue #229). Removals are applied after `env` and
+`clear_env`, so a removed name is absent even when the `env` map sets it.
+
+```rust,no_run
+use command_stream::{exec, RunOptions, StreamingRunner};
+
+# async fn example() -> command_stream::Result<()> {
+// Builder form: one name at a time, or several with `env_remove_all`.
+let result = StreamingRunner::from_argv("printenv", ["CLAUDECODE"])
+    .env_remove("CLAUDECODE")
+    .env_remove_all(["CLAUDE_CODE_ENTRYPOINT"])
+    .collect()
+    .await?;
+assert_eq!(result.code, 1); // printenv: variable not set
+
+// Options form for `exec`, `ProcessRunner` and the macros' runners.
+let options = RunOptions { env_remove: vec!["CLAUDECODE".into()], ..Default::default() };
+let result = exec("printenv CLAUDECODE", options).await?;
+assert_eq!(result.code, 1);
+# Ok(())
+# }
+```
+
+`TerminalCaptureOptions` accepts the same `env_remove` list, plus `env_clear`
+to start from an empty environment (see [TUI Capture](#tui-capture)).
 
 ## Process ID of a Running Command
 
@@ -496,6 +579,70 @@ is what ultimately stopped the process. Unknown signal names fall back to
 `SIGTERM`. Signals are a Unix concept; on Windows the escalation terminates the
 process directly.
 
+### Timeouts
+
+`RunOptions::timeout` and `StreamingRunner::timeout` bound a run (issue #227).
+When the limit passes, the child is stopped exactly as `kill()` would stop it:
+the configured `kill_signal`, then `SIGKILL` after the grace period. The result
+carries the `128 + signal` code (143 for the default `SIGTERM`) and
+`timed_out()` reports `true`; an explicit kill or a normal exit leaves it
+`false`.
+
+```rust,no_run
+use command_stream::{ProcessRunner, RunOptions, StreamingRunner};
+use std::time::Duration;
+
+# async fn example() -> command_stream::Result<()> {
+let mut runner = ProcessRunner::new(
+    "sleep 30",
+    RunOptions { timeout: Some(Duration::from_millis(200)), ..Default::default() },
+);
+let result = runner.run().await?;
+assert_eq!(result.code, 143);
+assert!(runner.timed_out());
+
+let mut stream = StreamingRunner::new("sleep 30")
+    .timeout(Duration::from_millis(200))
+    .stream();
+while stream.next().await.is_some() {}
+assert!(stream.timed_out());
+# Ok(())
+# }
+```
+
+## Detached Commands
+
+`StreamingRunner::detach()` and `ProcessRunner::spawn_detached()` start a
+command that outlives the caller and return its pid without waiting for it
+(issue #232). The child gets null stdio, leads a process group of its own on
+Unix (`CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS` on Windows), so a CTRL+C
+aimed at the caller's group misses it, and nothing the caller drops kills it. A
+background thread reaps it when it exits; if the caller exits first, the child
+keeps running. No Tokio runtime is needed.
+
+```rust,no_run
+use command_stream::{ProcessRunner, RunOptions, StreamingRunner};
+
+// Exact argv with a working directory and a trimmed environment.
+let pid = StreamingRunner::from_argv("my-server", ["--port", "8080"])
+    .cwd("/srv/app")
+    .env_remove("CLAUDECODE")
+    .detach()?;
+println!("server started as pid {pid:?}");
+
+// A shell command through ProcessRunner; the runner itself stays unstarted.
+let pid = ProcessRunner::new("sleep 60 && touch done", RunOptions::default())
+    .spawn_detached()?;
+println!("background job pid {pid:?}");
+# Ok::<(), command_stream::Error>(())
+```
+
+`cwd`, `env`, `clear_env`, `env_remove` and `prefer_local` apply as usual;
+stdin content, `stdin_pipe`, `timeout` and the kill settings do not, since
+nothing supervises a detached child. The JavaScript `spawnDetached()` makes the
+child a session leader (`setsid`) rather than only a process-group leader; both
+keep it out of the caller's terminal signals.
+
 ## Multiline Text and Exact Output
 
 The command macros treat an interpolated multiline string as one literal
@@ -593,9 +740,39 @@ println!("{}", capture.transcript);
 The capture contains the raw PTY output, consecutive-deduplicated frames, an
 ordered unrolled transcript, and asciicast v2 input/output/resize events. The
 artifact directory receives `transcript.txt`, `frames.json`, `session.cast`,
-`snapshot.svg`, and an animated `recording.svg`; timeout errors retain the
-partial capture and those diagnostic files. Use `capture_terminal_async` from
-an async application.
+`snapshot.svg`, an animated `recording.svg` and an animated `recording.gif`
+drawn with 8x8 bitmap glyphs; timeout errors retain the partial capture and
+those diagnostic files. Use `capture_terminal_async` from an async application.
+
+`artifacts` selects which of those files are written (`None` writes all of
+`TerminalArtifact::ALL`), and the renderers of unselected files are skipped
+(issue #231). `aspect_ratio` derives `rows` from `cols` as
+`max(1, round(cols / (2 * aspect_ratio)))`, like the JavaScript `aspectRatio`
+option. `on_trace` receives `output`, `interaction-scheduled`,
+`interaction-applied`, `timeout` and `exit` events as they happen.
+`env_remove` and `env_clear` trim the child's environment (issue #229);
+`TERM`, `COLUMNS`, `LINES` and `env` are still set after `env_clear`.
+
+```rust,no_run
+use command_stream::terminal::{
+    capture_terminal, TerminalArtifact, TerminalCaptureOptions, TerminalTraceCallback,
+};
+
+let capture = capture_terminal(TerminalCaptureOptions {
+    file: "claude".into(),
+    env_remove: vec!["CLAUDECODE".into()],
+    cols: 120,
+    aspect_ratio: Some(16.0 / 9.0),
+    artifact_directory: Some("artifacts/claude".into()),
+    artifacts: Some(vec![TerminalArtifact::Transcript, TerminalArtifact::Gif]),
+    on_trace: Some(TerminalTraceCallback::new(|trace| {
+        eprintln!("{:.3}s {}", trace.time, trace.event.kind());
+    })),
+    ..TerminalCaptureOptions::default()
+})?;
+println!("{} frames", capture.frames.len());
+# Ok::<(), command_stream::terminal::TerminalCaptureError>(())
+```
 
 ### Interactive sessions
 

@@ -15,6 +15,7 @@ import {
   collectDependencies,
   collectToolDependencies,
   checkDependencies,
+  outdatedFailures,
 } from '../../scripts/check-dependencies.mjs';
 
 const dependency = (version, extra = {}) => ({
@@ -274,8 +275,64 @@ describe('dependency freshness', () => {
       expect(nix.line).toBe(2);
       expect(nix.blocker).toEndWith('/issues/204');
       expect(deps.find((dep) => dep.name === 'ureq').line).toBe(3);
+      expect(deps.find((dep) => dep.name === 'execa').blocker).toBeUndefined();
+      writeFileSync(
+        join(root, 'js/dependency-blockers.json'),
+        JSON.stringify({
+          execa:
+            'https://github.com/sindresorhus/execa/issues/1265: type error',
+        })
+      );
+      expect(
+        collectDependencies(root).find((dep) => dep.name === 'execa').blocker
+      ).toBe('https://github.com/sindresorhus/execa/issues/1265');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  test('the repository blocks npm packages only with issue links', () => {
+    const blockers = JSON.parse(
+      readFileSync(join(import.meta.dir, '../dependency-blockers.json'), 'utf8')
+    );
+    for (const note of Object.values(blockers)) {
+      expect(note).toMatch(
+        /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/issues\/\d+: /
+      );
+    }
+  });
+});
+
+describe('installed npm dependencies', () => {
+  const row = (current, wanted, latest) => ({ current, wanted, latest });
+  const blockers = {
+    execa: 'https://github.com/sindresorhus/execa/issues/1265',
+  };
+
+  test('reports a newer release unless the package has a blocker', () => {
+    const outdated = { execa: row('10.1.1', '10.1.1', '10.2.0') };
+    expect(outdatedFailures(outdated)).toHaveLength(1);
+    expect(outdatedFailures(outdated, blockers)).toEqual([]);
+  });
+
+  test('fails closed when npm reports an error instead of packages', () => {
+    const error = { error: { code: 'ENOTFOUND', summary: 'getaddrinfo' } };
+    expect(outdatedFailures(error, blockers)).toEqual([
+      'npm outdated: getaddrinfo',
+    ]);
+    expect(
+      outdatedFailures({ execa: { current: '10.1.1' } }, blockers)
+    ).toHaveLength(1);
+  });
+
+  test('a blocker never excuses a lockfile behind its declaration', () => {
+    const outdated = {
+      execa: row('10.1.0', '10.1.1', '10.2.0'),
+      eslint: row(undefined, '10.13.0', '10.13.0'),
+    };
+    expect(outdatedFailures(outdated, blockers)).toEqual([
+      'js/package.json (execa): installed 10.1.0, wanted 10.1.1, latest 10.2.0',
+      'js/package.json (eslint): installed nothing, wanted 10.13.0, latest 10.13.0',
+    ]);
   });
 });

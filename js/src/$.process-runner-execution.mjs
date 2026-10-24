@@ -3,7 +3,10 @@ import { pumpInheritedStdin } from './$.process-runner-stdin.mjs';
 import cp from 'child_process';
 import { toStreamResult } from './$.result-streams.mjs';
 import { trace } from './$.trace.mjs';
-import { normalizeBunExitSignal } from './$.process-runner-signal.mjs';
+import {
+  normalizeTimeout,
+  setupCommandTimeout,
+} from './$.process-runner-timeout.mjs';
 import {
   buildCommandArgv,
   describeCommand,
@@ -17,12 +20,9 @@ import {
   attachExitCodeAlias,
   createCancelledResult,
   createCommandError,
-  createExecutionErrorResult,
   createResult,
   determineFinalExitCode,
   finishExecutionError,
-  getStdinString,
-  getSyncStdinInput,
   isProcessLaunchError,
   prepareSpawnErrorResult,
 } from './$.result.mjs';
@@ -37,6 +37,14 @@ import {
   drainPumpsAfterExit,
 } from './$.process-runner-exit.mjs';
 import { effectiveCwd, effectiveEnv } from './$.process-context.mjs';
+import {
+  executeSyncProcess,
+  processSyncResult,
+} from './$.process-runner-sync.mjs';
+import {
+  startDetached,
+  startDetachedSync,
+} from './$.process-runner-detach.mjs';
 
 const isBun = typeof globalThis.Bun !== 'undefined';
 /** Check for shell operators in command. */
@@ -491,131 +499,17 @@ function throwErrexitIfNeeded(runner, globalShellSettings) {
 }
 
 /**
- * Execute sync process using Bun
- * @param {Array} argv - Command arguments
- * @param {object} options - Spawn options
- * @returns {object} Result object
- */
-function executeSyncBun(argv, options) {
-  const { cwd, env, stdin } = options;
-  let proc;
-  try {
-    proc = Bun.spawnSync(argv, {
-      cwd,
-      env,
-      stdin: getSyncStdinInput(stdin),
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
-  } catch (error) {
-    return createExecutionErrorResult(error);
-  }
-
-  const signal = normalizeBunExitSignal(proc.exitCode, proc.signalCode);
-  const result = createResult({
-    code: determineFinalExitCode(proc.exitCode, signal),
-    signal,
-    stdout: proc.stdout?.toString('utf8') || '',
-    stderr: proc.stderr?.toString('utf8') || '',
-    stdin: getStdinString(stdin),
-  });
-  result.child = proc;
-  return result;
-}
-
-/**
- * Execute sync process using Node
- * @param {Array} argv - Command arguments
- * @param {object} options - Spawn options
- * @returns {object} Result object
- */
-function executeSyncNode(argv, options) {
-  const { cwd, env, stdin, shell } = options;
-  const proc = cp.spawnSync(argv[0], argv.slice(1), {
-    cwd,
-    env,
-    shell,
-    input: getSyncStdinInput(stdin),
-    encoding: 'utf8',
-    stdio: ['pipe', 'pipe', 'pipe'],
-  });
-
-  if (proc.error) {
-    const result = createExecutionErrorResult(proc.error);
-    result.child = proc;
-    return result;
-  }
-
-  const signal = isBun
-    ? normalizeBunExitSignal(proc.status, proc.signal)
-    : (proc.signal ?? null);
-  const result = createResult({
-    code: determineFinalExitCode(proc.status, signal),
-    signal,
-    stdout: proc.stdout || '',
-    stderr: proc.stderr || '',
-    stdin: getStdinString(stdin),
-  });
-  result.child = proc;
-  return result;
-}
-
-/**
- * Execute sync process with appropriate runtime
- * @param {Array} argv - Command arguments
- * @param {object} options - Spawn options
- * @returns {object} Result object
- */
-function executeSyncProcess(argv, options) {
-  // Guard against a deleted/inaccessible working directory (issue #44).
-  options = { ...options, cwd: resolveSpawnCwd(options.cwd) };
-  return isBun && !options.shell
-    ? executeSyncBun(argv, options)
-    : executeSyncNode(argv, options);
-}
-
-/**
- * Handle sync result processing
+ * Stop a runner for an aborted `signal` or an expired `timeout`. Honors the
+ * configured killSignal (defaults to SIGTERM) so both use the same stop signal
+ * as an explicit kill().
  * @param {object} runner - ProcessRunner instance
- * @param {object} result - Result object
- * @param {object} globalShellSettings - Shell settings
- * @returns {object} Result
  */
-function processSyncResult(runner, result, globalShellSettings) {
-  // The sync spawn has already exited, but reports the pid it ran under.
-  runner._pid = result.child?.pid ?? runner._pid;
-
-  if (runner.options.mirror) {
-    if (result.stdout) {
-      safeWrite(process.stdout, result.stdout);
-    }
-    if (result.stderr) {
-      safeWrite(process.stderr, result.stderr);
-    }
+function stopForAbort(runner) {
+  runner.kill();
+  trace('ProcessRunner', () => 'Process kill initiated due to abort');
+  if (runner._abortController && !runner._abortController.signal.aborted) {
+    runner._abortController.abort();
   }
-
-  runner.outChunks = result.stdout ? [Buffer.from(result.stdout)] : [];
-  runner.errChunks = result.stderr ? [Buffer.from(result.stderr)] : [];
-
-  if (result.stdout) {
-    runner._emitProcessedData('stdout', Buffer.from(result.stdout));
-  }
-  if (result.stderr) {
-    runner._emitProcessedData('stderr', Buffer.from(result.stderr));
-  }
-
-  runner.finish(result);
-
-  if (globalShellSettings.errexit && result.code !== 0) {
-    throw createCommandError(`Command failed with exit code ${result.code}`, {
-      code: result.code,
-      stdout: result.stdout,
-      stderr: result.stderr,
-      result,
-    });
-  }
-
-  return result;
 }
 
 /**
@@ -623,6 +517,7 @@ function processSyncResult(runner, result, globalShellSettings) {
  * @param {object} runner - ProcessRunner instance
  */
 function setupExternalAbortSignal(runner) {
+  setupCommandTimeout(runner, () => stopForAbort(runner));
   const signal = runner.options.signal;
   if (!signal || typeof signal.addEventListener !== 'function') {
     return;
@@ -659,21 +554,7 @@ function setupExternalAbortSignal(runner) {
         })}`
     );
 
-    // Honor the configured killSignal (defaults to SIGTERM) so AbortSignal-based
-    // cancellation uses the same stop signal as an explicit kill().
-    runner.kill();
-    trace(
-      'ProcessRunner',
-      () => 'Process kill initiated due to external abort signal'
-    );
-
-    if (runner._abortController && !runner._abortController.signal.aborted) {
-      trace(
-        'ProcessRunner',
-        () => 'Aborting internal controller due to external signal'
-      );
-      runner._abortController.abort();
-    }
+    stopForAbort(runner);
   });
 
   if (signal.aborted) {
@@ -838,7 +719,11 @@ async function handleShellMode(runner, deps) {
   // whether the command happened to also contain `&&`, `||`, `;`, `&` or `(`,
   // so `echo hi > f` handed `>` and `f` to the built-in `echo` as two literal
   // arguments while `echo $(echo hi) > f` did not (issue #46).
-  const requiresRealShell = needsRealShell(command) || hasShellEscapes(command);
+  // `$fy` is a literal virtual command name, not an environment expansion.
+  // Analyze its arguments normally so redirects/expansions still use a shell.
+  const analyzedCommand = command.replace(/^(\s*)\$fy(?=\s|$)/, '$1fy');
+  const requiresRealShell =
+    needsRealShell(analyzedCommand) || hasShellEscapes(command);
 
   trace(
     'ProcessRunner',
@@ -1088,6 +973,9 @@ export function attachExecutionMethods(ProcessRunner, deps) {
         this.finish(createCancelledResult(this._cancellationSignal))
       );
     }
+    if (this.options.detached) {
+      return startDetached(this);
+    }
 
     trace(
       'ProcessRunner',
@@ -1129,7 +1017,7 @@ export function attachExecutionMethods(ProcessRunner, deps) {
 
       // Build command arguments
       const childEnv = effectiveEnv(this) ?? env;
-      const argv = buildCommandArgv(this.spec, childEnv);
+      const argv = buildCommandArgv(this.spec, childEnv, this.options);
 
       trace(
         'ProcessRunner',
@@ -1395,12 +1283,15 @@ export function attachExecutionMethods(ProcessRunner, deps) {
 
     this.started = true;
     this._mode = 'sync';
+    if (this.options.detached) {
+      return startDetachedSync(this);
+    }
     const shellSettings = { ...globalShellSettings };
 
     const { cwd, stdin } = this.options;
     const env = effectiveEnv(this);
     const shellArgv = isShellArgvSpec(this.spec);
-    const argv = buildCommandArgv(this.spec, env);
+    const argv = buildCommandArgv(this.spec, env, this.options);
 
     logShellTrace(shellSettings, describeCommand(this.spec));
 
@@ -1409,6 +1300,10 @@ export function attachExecutionMethods(ProcessRunner, deps) {
       env,
       stdin,
       shell: shellArgv,
+      timeout: normalizeTimeout(this.options.timeout) || undefined,
+      killSignal: this.options.killSignal,
+      stdout: this.options.stdout,
+      stderr: this.options.stderr,
     });
     return processSyncResult(this, result, shellSettings);
   };

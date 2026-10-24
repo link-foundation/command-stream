@@ -12,6 +12,10 @@ import {
 import { StreamEmitter } from './$.stream-emitter.mjs';
 import { processOutput } from './$.ansi.mjs';
 import { ensureResultText } from './$.result.mjs';
+import {
+  clearCommandTimeout,
+  normalizeTimeout,
+} from './$.process-runner-timeout.mjs';
 
 const isBun = typeof globalThis.Bun !== 'undefined';
 
@@ -324,6 +328,8 @@ class ProcessRunner extends StreamEmitter {
       killGrace: 100,
       ...options,
     };
+    // Reject a malformed `timeout` up front instead of ignoring it (#227).
+    normalizeTimeout(this.options.timeout);
 
     this.outChunks = this.options.capture ? [] : null;
     this.errChunks = this.options.capture ? [] : null;
@@ -575,6 +581,11 @@ class ProcessRunner extends StreamEmitter {
     if (result && result.signal === undefined) {
       result.signal = null;
     }
+    // `timedOut` tells a `timeout` kill apart from other signals (issue #227).
+    if (result && typeof result === 'object' && !this.finished) {
+      result.timedOut = Boolean(this._timedOut || result.timedOut);
+    }
+    clearCommandTimeout(this);
     ensureResultText(result);
 
     trace(

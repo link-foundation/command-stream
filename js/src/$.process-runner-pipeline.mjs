@@ -11,13 +11,21 @@ import { Readable, Writable } from 'node:stream';
 import { createExitPromise } from './$.process-runner-exit.mjs';
 import { killChildProcess } from './$.process-runner-stream-kill.mjs';
 import { trace } from './$.trace.mjs';
-import { findAvailableShell, withExportedProcessContext } from './$.shell.mjs';
+import {
+  findAvailableShell,
+  shellArgs,
+  withExportedProcessContext,
+} from './$.shell.mjs';
 import {
   StreamUtils,
   safeWrite,
   stdinDataFromOptions,
 } from './$.stream-utils.mjs';
-import { createCommandError, createResult } from './$.result.mjs';
+import {
+  createCancelledResult,
+  createCommandError,
+  createResult,
+} from './$.result.mjs';
 import {
   applyVirtualProcessContext,
   effectiveCwd,
@@ -268,13 +276,14 @@ export function pipeStreamToProcess(stream, proc) {
  * Spawn shell command in Bun
  * @param {string} commandStr - Command string
  * @param {object} options - Options (cwd, env, stdin)
+ * @param {boolean} [loginShell] - Run the shell as a login shell
  * @returns {object} Process
  */
-function spawnShellCommand(commandStr, options) {
+function spawnShellCommand(commandStr, options, loginShell = false) {
   const shell = findAvailableShell();
   const argv = [
     shell.cmd,
-    ...shell.args.filter((arg) => arg !== '-l'),
+    ...shellArgs(shell, loginShell),
     withExportedProcessContext(commandStr, options.env),
   ];
   if (isBun) {
@@ -384,11 +393,15 @@ async function virtualPipelineStage(
 }
 
 function nativePipelineStage(runner, command, input, last, collector, pumps) {
-  const proc = spawnShellCommand(buildCommandParts(command).join(' '), {
-    cwd: effectiveCwd(runner),
-    env: effectiveEnv(runner),
-    stdin: input ? 'pipe' : 'ignore',
-  });
+  const proc = spawnShellCommand(
+    buildCommandParts(command).join(' '),
+    {
+      cwd: effectiveCwd(runner),
+      env: effectiveEnv(runner),
+      stdin: input ? 'pipe' : 'ignore',
+    },
+    runner.options.loginShell
+  );
   const stop = () =>
     killChildProcess(
       proc,
@@ -437,6 +450,28 @@ export function attachPipelineMethods(ProcessRunner, deps) {
   };
 
   ProcessRunner.prototype._runMixedStreamingPipeline = async function (
+    commands
+  ) {
+    try {
+      return await this._runMixedStreamingPipelineStages(commands);
+    } catch (error) {
+      // Virtual stages (e.g. `sleep`) reject when kill() aborts them. A killed
+      // pipeline reports the kill signal like a killed single command does,
+      // whether kill() came from the caller, `signal`, or `timeout` (#227).
+      if (!this._cancelled) {
+        throw error;
+      }
+      trace(
+        'ProcessRunner',
+        () => `Pipeline stage rejected after kill: ${error.message}`
+      );
+      // kill() normally finishes the runner itself; finish() returns that
+      // stored result and only builds one when kill() has not done so yet.
+      return this.finish(createCancelledResult(this._cancellationSignal));
+    }
+  };
+
+  ProcessRunner.prototype._runMixedStreamingPipelineStages = async function (
     commands
   ) {
     trace(

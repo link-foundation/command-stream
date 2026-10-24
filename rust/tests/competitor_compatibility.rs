@@ -264,7 +264,7 @@ fn every_selected_project_and_case_is_accounted_for() {
     }
 
     assert_eq!(referenced, known);
-    assert_eq!(PORTED_CASES.len(), 18);
+    assert_eq!(PORTED_CASES.len(), 19);
     assert_eq!(
         PORTED_CASES
             .iter()
@@ -272,7 +272,7 @@ fn every_selected_project_and_case_is_accounted_for() {
             .collect::<HashSet<_>>(),
         BEHAVIOR_CASE_IDS.iter().copied().collect::<HashSet<_>>()
     );
-    assert_eq!(MISSING_FEATURES.len(), 13);
+    assert_eq!(MISSING_FEATURES.len(), 12);
     assert_eq!(EXCLUDED_TEST_CLASSES.len(), 5);
     for class in EXCLUDED_TEST_CLASSES {
         assert!(!class.id.is_empty());

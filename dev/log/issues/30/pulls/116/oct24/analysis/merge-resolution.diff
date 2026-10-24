@@ -1,0 +1,63 @@
+diff --git a/js/examples/features/catalog.mjs b/js/examples/features/catalog.mjs
+index 2466451..6010e69 100644
+--- a/js/examples/features/catalog.mjs
++++ b/js/examples/features/catalog.mjs
+@@ -765,23 +765,23 @@ export const features = [
+     alternatives: {
+       'bun-shell': {
+         unsupported:
+-          'No validated command package, inheritance, middleware, or registry search API',
++          'Shell interop and built-ins are available; integrated package discovery, ownership restoration and atomic reload require application code',
+       },
+       zx: {
+         unsupported:
+-          'No validated command package, inheritance, middleware, or registry search API',
++          'Helpers, spawn hooks and streams are available; integrated package discovery, ownership restoration and atomic reload require application code',
+       },
+       execa: {
+         unsupported:
+-          'No validated command package, inheritance, middleware, or registry search API',
++          'Generator transforms and process streams are available; integrated package discovery, ownership restoration and atomic reload require application code',
+       },
+       shelljs: {
+         unsupported:
+-          'No validated command package, inheritance, middleware, or registry search API',
++          'npm plugins register pipeable shell methods; integrated package discovery, ownership restoration and atomic reload require application code',
+       },
+       child_process: {
+         unsupported:
+-          'No validated command package, inheritance, middleware, or registry search API',
++          'User functions and process streams can be composed; no integrated command-package registry or lifecycle API',
+       },
+     },
+   },
+diff --git a/js/src/command-registry.mjs b/js/src/command-registry.mjs
+index 199c5ad..847a818 100644
+--- a/js/src/command-registry.mjs
++++ b/js/src/command-registry.mjs
+@@ -3,7 +3,11 @@ import { virtualCommands } from './$.state.mjs';
+ export const commandMetadata = new Map();
+ 
+ export function validate(name, handler) {
+-  if (!/^[A-Za-z_][\w:.-]*$/.test(name) || typeof handler !== 'function') {
++  if (
++    typeof name !== 'string' ||
++    !/^[A-Za-z_][\w:.-]*$/.test(name) ||
++    typeof handler !== 'function'
++  ) {
+     throw new TypeError(`Invalid virtual command: ${name}`);
+   }
+ }
+diff --git a/js/src/core.mjs b/js/src/core.mjs
+index 6a019e6..940cd0d 100644
+--- a/js/src/core.mjs
++++ b/js/src/core.mjs
+@@ -225,7 +225,7 @@ function $tagged(strings, ...values) {
+ }
+ 
+ function create(defaultOptions = {}, handler, metadata) {
+-  if (typeof defaultOptions === 'string') {
++  if (typeof defaultOptions === 'string' || arguments.length > 1) {
+     return createCommand(defaultOptions, handler, metadata);
+   }
+   trace(

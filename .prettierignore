@@ -35,3 +35,8 @@ js/tests/zx/fixtures
 # Pinned third-party compatibility source; keep upstream diffs readable.
 js/src/shelljs/vendor
 js/types/SHELLJS-LICENSE
+
+# Source and expected-output translation fixtures are byte-exact.
+fixtures/fy/*.js
+fixtures/fy/*.cjs
+fixtures/fy/*.mjs

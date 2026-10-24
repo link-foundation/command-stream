@@ -1,6 +1,6 @@
 {
   "name": "command-stream",
-  "version": "2.4.0",
+  "version": "2.6.0",
   "description": "Modern $ shell utility library with streaming, async iteration, and EventEmitter support, optimized for Bun runtime",
   "type": "module",
   "main": "./src/$.cjs",
@@ -107,6 +107,31 @@
         "default": "./src/shelljs/index.cjs"
       },
       "default": "./src/shelljs/index.mjs"
+    },
+    "./cross-spawn": {
+      "import": {
+        "types": "./types/cross-spawn.d.ts",
+        "default": "./src/cross-spawn.mjs"
+      },
+      "require": {
+        "types": "./types/cross-spawn.d.cts",
+        "default": "./src/cross-spawn.cjs"
+      }
+    },
+    "./fy": {
+      "types": "./types/fy.d.ts",
+      "default": "./src/fy/index.mjs"
+    },
+    "./core": {
+      "import": {
+        "types": "./types/core.d.ts",
+        "default": "./src/core.mjs"
+      },
+      "require": {
+        "types": "./types/core.d.cts",
+        "default": "./src/core.cjs"
+      },
+      "default": "./src/core.mjs"
     }
   },
   "repository": {
@@ -186,24 +211,27 @@
     "chalk": "^6.0.1",
     "dejavu-fonts-ttf": "^2.37.3",
     "esbuild": "0.28.2",
-    "eslint": "^10.12.0",
+    "eslint": "^10.13.0",
     "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-prettier": "^5.5.6",
+    "eslint-plugin-prettier": "^5.5.7",
     "husky": "^9.1.7",
-    "jscpd": "^5.4.1",
+    "jscpd": "^5.4.2",
     "lint-staged": "^17.6.0",
     "prettier": "^3.9.10",
     "shelljs": "0.10.0",
     "subset-font": "^2.9.0",
     "typescript": "7.0.2",
-    "zx": "8.8.5"
+    "zx": "8.8.5",
+    "use-m": "8.16.4"
   },
   "dependencies": {
     "cross-spawn": "7.0.6",
     "@resvg/resvg-js": "^2.6.2",
     "@xterm/headless": "^6.0.0",
     "gifenc": "^1.0.3",
-    "execa": "10.1.0"
+    "execa": "10.2.1",
+    "meta-language": "^0.46.0",
+    "acorn": "8.19.0"
   },
   "optionalDependencies": {
     "node-pty": "^1.1.0"

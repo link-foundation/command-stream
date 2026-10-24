@@ -52,10 +52,24 @@ export async function checkCratePublisher({
   env = process.env,
   fetchFn = fetch,
 }) {
+  // Trusted publishing is the primary path (issue #226): the job must be able
+  // to request a GitHub OIDC token even while the token secrets remain as a
+  // fallback for releases made before the trusted publisher is registered.
+  if (
+    !env.ACTIONS_ID_TOKEN_REQUEST_URL ||
+    !env.ACTIONS_ID_TOKEN_REQUEST_TOKEN
+  ) {
+    throw new Error(
+      'crates.io trusted publishing requires GitHub id-token: write'
+    );
+  }
   const token = env.CARGO_REGISTRY_TOKEN || env.CARGO_TOKEN;
   if (!token) {
     throw new Error('Missing crates.io publish credential');
   }
+  // CRATES_IO_AUTH_OUTCOME is the outcome of rust-lang/crates-io-auth-action.
+  const source =
+    env.CRATES_IO_AUTH_OUTCOME === 'success' ? 'trusted-publishing' : 'token';
   const headers = {
     Authorization: token,
     'User-Agent': 'command-stream CI credential preflight',
@@ -91,6 +105,7 @@ export async function checkCratePublisher({
       'crates.io did not confirm the publish credential and scope'
     );
   }
+  return { source };
 }
 
 if (
@@ -107,7 +122,15 @@ if (
       if (!name) {
         throw new Error('Missing crate name');
       }
-      await checkCratePublisher({ packageName: name });
+      const { source } = await checkCratePublisher({ packageName: name });
+      if (source === 'token') {
+        console.log(
+          '::warning::crates.io trusted publishing token exchange failed; ' +
+            'the long-lived token fallback was checked instead. Register the ' +
+            'trusted publisher with `package-registry-manager setup ' +
+            '--repository . --registry crates-io --migrate --execute`.'
+        );
+      }
     } else {
       throw new Error(
         'Usage: node .github/scripts/publish-preflight.mjs npm|crates'

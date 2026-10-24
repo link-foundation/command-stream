@@ -187,6 +187,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+
+
+
+## [1.12.0] - 2026-10-24
+
+### Added
+
+- Complete reusable command builders with environment layers and removal,
+  functional configuration and synchronous execution alongside async execution.
+  Preserve native environment key rules by applying changes in configuration order.
+
+## [1.11.0] - 2026-10-24
+
+### Added
+
+- `$fy` virtual command: a shell-to-JavaScript translator implemented as a
+  rule-based translation over a link-foundation/meta-language links network
+  (formalize, then substitute). It mirrors the JavaScript implementation
+  byte-for-byte, which `rust/tests/fy.rs` and `js/tests/fy-tool.test.mjs` both
+  assert against the shared golden fixture in `fixtures/fy/`.
+
+- Source migration for zx, Execa, ShellJS, cross-spawn and Bun shell APIs,
+  with shared fixtures, native/virtual CLI options, stdin, exclusive output,
+  lossless command-stream + use-m shell modules, and structural compilation.
+- Upgrade meta-language to 1.0.0 and use its public dynamic-arity syntax API.
+
+## [1.10.1] - 2026-10-24
+
+### Changed
+
+- Update the Bun Shell conformance tests to fancy-regex 0.20.0 to keep the
+  development dependency current, and refresh compatible cc/smallvec versions
+  in both Rust lockfiles.
+
+## [1.10.0] - 2026-10-23
+
+### Added
+
+- `RunOptions::timeout` and `StreamingRunner::timeout` stop a command with its kill signal once the limit passes; `timed_out()` reports it (#227).
+- `RunOptions::env_remove`, `StreamingRunner::env_remove`/`env_remove_all` and `TerminalCaptureOptions::env_remove`/`env_clear` remove variables from the child's environment (#229).
+- `StreamingRunner::stdin_pipe` with `OutputStream::write_stdin`/`close_stdin` keeps stdin open while output streams, and `ProcessRunner::from_argv` runs an exact argv that works with `StdinOption::Pipe` (#230).
+- `TerminalCaptureOptions::artifacts` selects the artifact files to write, plus a new `recording.gif` artifact, `aspect_ratio` and `on_trace` (#231).
+- `StreamingRunner::detach` and `ProcessRunner::spawn_detached` start a fire-and-forget command and return its pid (#232).
+
+### Changed
+
+- crates.io releases publish through trusted publishing (OIDC) and fall back to the `CARGO_REGISTRY_TOKEN` secret (#226).
+- Update vt100 to 0.18, tokio to 1.54 and libc to 0.2.191; vt100 stays internal to terminal capture.
+
 ## [1.9.0] - 2026-10-12
 
 ### Added

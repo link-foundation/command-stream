@@ -191,6 +191,22 @@ pub const COMPETITORS: &[Competitor] = &[
 
 pub const PORTED_CASES: &[CorpusEntry] = &[
     CorpusEntry {
+        id: "environment-clear-and-remove",
+        competitors: &[
+            "rust-std-process",
+            "tokio-process",
+            "async-process",
+            "assert-cmd",
+            "duct",
+            "xshell",
+            "subprocess",
+        ],
+        upstream: &[
+            "tests/ui/process/process-remove-from-env.rs",
+            "tests/std.rs",
+        ],
+    },
+    CorpusEntry {
         id: "direct-exact-argv",
         competitors: &[
             "rust-std-process",
@@ -515,22 +531,6 @@ pub const MISSING_FEATURES: &[CorpusEntry] = &[
             "rexpect",
         ],
         upstream: &["tests/std.rs", "src/test.rs", "src/tests/communicate.rs"],
-    },
-    CorpusEntry {
-        id: "environment-clear-and-remove",
-        competitors: &[
-            "rust-std-process",
-            "tokio-process",
-            "async-process",
-            "assert-cmd",
-            "duct",
-            "xshell",
-            "subprocess",
-        ],
-        upstream: &[
-            "tests/ui/process/process-remove-from-env.rs",
-            "tests/std.rs",
-        ],
     },
     CorpusEntry {
         id: "custom-stdio-and-file-handles",

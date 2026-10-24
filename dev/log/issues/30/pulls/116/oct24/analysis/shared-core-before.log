@@ -1,0 +1,116 @@
+bun test v1.4.3 (c6da4a4d3)
+
+js/tests/virtual-ecosystem.test.mjs:
+34 | test.each(invalidNames.map((name) => [name]))(
+35 |   'command creation rejects non-string name %j before registry mutation',
+36 |   (name) => {
+37 |     const original = listCommands();
+38 |     for (const register of registrations) {
+39 |       expect(() => register(name, handler)).toThrow(TypeError);
+                                                 ^
+error: expect(received).toThrow(expected)
+
+Expected constructor: TypeError
+
+Received function did not throw
+Received value: [Function: tagged]
+
+      at <anonymous> (/tmp/gh-issue-solver-1792874961809/js/tests/virtual-ecosystem.test.mjs:39:45)
+(fail) command creation rejects non-string name null before registry mutation [6.20ms]
+34 | test.each(invalidNames.map((name) => [name]))(
+35 |   'command creation rejects non-string name %j before registry mutation',
+36 |   (name) => {
+37 |     const original = listCommands();
+38 |     for (const register of registrations) {
+39 |       expect(() => register(name, handler)).toThrow(TypeError);
+                                                 ^
+error: expect(received).toThrow(expected)
+
+Expected constructor: TypeError
+
+Received function did not throw
+Received value: [Function: tagged]
+
+      at <anonymous> (/tmp/gh-issue-solver-1792874961809/js/tests/virtual-ecosystem.test.mjs:39:45)
+(fail) command creation rejects non-string name  before registry mutation [2.96ms]
+34 | test.each(invalidNames.map((name) => [name]))(
+35 |   'command creation rejects non-string name %j before registry mutation',
+36 |   (name) => {
+37 |     const original = listCommands();
+38 |     for (const register of registrations) {
+39 |       expect(() => register(name, handler)).toThrow(TypeError);
+                                                 ^
+error: expect(received).toThrow(expected)
+
+Expected constructor: TypeError
+
+Received function did not throw
+Received value: [Function: tagged]
+
+      at <anonymous> (/tmp/gh-issue-solver-1792874961809/js/tests/virtual-ecosystem.test.mjs:39:45)
+(fail) command creation rejects non-string name 42 before registry mutation [2.81ms]
+34 | test.each(invalidNames.map((name) => [name]))(
+35 |   'command creation rejects non-string name %j before registry mutation',
+36 |   (name) => {
+37 |     const original = listCommands();
+38 |     for (const register of registrations) {
+39 |       expect(() => register(name, handler)).toThrow(TypeError);
+                                                 ^
+error: expect(received).toThrow(expected)
+
+Expected constructor: TypeError
+
+Received function did not throw
+Received value: [Function: tagged]
+
+      at <anonymous> (/tmp/gh-issue-solver-1792874961809/js/tests/virtual-ecosystem.test.mjs:39:45)
+(fail) command creation rejects non-string name true before registry mutation [3.36ms]
+34 | test.each(invalidNames.map((name) => [name]))(
+35 |   'command creation rejects non-string name %j before registry mutation',
+36 |   (name) => {
+37 |     const original = listCommands();
+38 |     for (const register of registrations) {
+39 |       expect(() => register(name, handler)).toThrow(TypeError);
+                                                 ^
+error: expect(received).toThrow(expected)
+
+Expected constructor: TypeError
+
+Received function did not throw
+Received value: [Function: tagged]
+
+      at <anonymous> (/tmp/gh-issue-solver-1792874961809/js/tests/virtual-ecosystem.test.mjs:39:45)
+(fail) command creation rejects non-string name {} before registry mutation [2.67ms]
+34 | test.each(invalidNames.map((name) => [name]))(
+35 |   'command creation rejects non-string name %j before registry mutation',
+36 |   (name) => {
+37 |     const original = listCommands();
+38 |     for (const register of registrations) {
+39 |       expect(() => register(name, handler)).toThrow(TypeError);
+                                                 ^
+error: expect(received).toThrow(expected)
+
+Expected constructor: TypeError
+
+Received function did not throw
+Received value: [Function: tagged]
+
+      at <anonymous> (/tmp/gh-issue-solver-1792874961809/js/tests/virtual-ecosystem.test.mjs:39:45)
+(fail) command creation rejects non-string name ["command"] before registry mutation [2.75ms]
+(pass) configured tags and valid custom command names still work [9.91ms]
+(pass) invalid names and handlers fail without registering partial commands [2.96ms]
+(pass) the reload example is an installable package with idempotent installation [12.79ms]
+(pass) composition rejects invalid handlers with a validation error: %j [3.23ms]
+(pass) composition rejects invalid handlers with a validation error: null [2.46ms]
+(pass) composition rejects invalid handlers with a validation error:  [2.38ms]
+(pass) composition rejects invalid handlers with a validation error:  [2.55ms]
+(pass) middleware and inheritance preserve incremental async-generator output [6.46ms]
+(pass) composition passes generator output to stdin and stops at failure [4.77ms]
+(pass) marketplace forwards registry, cancellation and bounded search size [4.33ms]
+(pass) virtual-ecosystem-demo.mjs completes in Node and Bun without registry access [695.74ms]
+(pass) enterprise-virtual-commands.mjs completes in Node and Bun without registry access [652.88ms]
+
+ 12 pass
+ 6 fail
+ 57 expect() calls
+Ran 18 tests across 1 file. [1.60s]

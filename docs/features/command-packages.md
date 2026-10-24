@@ -305,23 +305,23 @@ registry discovery: [{"description":"Git helpers","name":"tools","version":"1"}]
 
 ### [Bun.$](https://bun.com/docs/runtime/shell)
 
-Not supported — No validated command package, inheritance, middleware, or registry search API.
+Not supported — Shell interop and built-ins are available; integrated package discovery, ownership restoration and atomic reload require application code.
 
 ### [zx](https://github.com/google/zx)
 
-Not supported — No validated command package, inheritance, middleware, or registry search API.
+Not supported — Helpers, spawn hooks and streams are available; integrated package discovery, ownership restoration and atomic reload require application code.
 
 ### [execa](https://github.com/sindresorhus/execa)
 
-Not supported — No validated command package, inheritance, middleware, or registry search API.
+Not supported — Generator transforms and process streams are available; integrated package discovery, ownership restoration and atomic reload require application code.
 
 ### [ShellJS](https://github.com/shelljs/shelljs)
 
-Not supported — No validated command package, inheritance, middleware, or registry search API.
+Not supported — npm plugins register pipeable shell methods; integrated package discovery, ownership restoration and atomic reload require application code.
 
 ### [node:child_process](https://nodejs.org/api/child_process.html)
 
-Not supported — No validated command package, inheritance, middleware, or registry search API.
+Not supported — User functions and process streams can be composed; no integrated command-package registry or lifecycle API.
 
 ---
 

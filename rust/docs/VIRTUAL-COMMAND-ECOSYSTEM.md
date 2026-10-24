@@ -6,6 +6,8 @@ output, registry discovery and development reload. Rust uses typed async
 closures and exact-argv JSON manifests; JavaScript uses module exports and
 generators. The [JavaScript guide](../../js/docs/VIRTUAL-COMMAND-ECOSYSTEM.md)
 describes its corresponding interfaces.
+The [ecosystem comparison](../../docs/VIRTUAL-COMMAND-COMPARISON.md) documents
+competing custom-command APIs and the evidence for the integrated lifecycle.
 
 ## Create, extend and compose
 

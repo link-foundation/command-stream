@@ -19,6 +19,8 @@ declare const $: CommonJsDollar;
 declare namespace $ {
   export type CommandBuilder<T = CommandStream.StreamResult> =
     import('./advanced.cjs').CommandBuilder<T>;
+  export type CommandArgument = CommandStream.CommandArgument;
+  export type CommandStdio = CommandStream.CommandStdio;
   export type CommandFactory = import('./advanced.cjs').CommandFactory;
   export type StreamOptions = import('./advanced.cjs').StreamOptions;
   export type StreamStats = import('./advanced.cjs').StreamStats;
@@ -51,6 +53,8 @@ declare namespace $ {
   export type ChildWritableStream = CommandStream.ChildWritableStream;
   export type CommandError = CommandStream.CommandError;
   export type CommandResult = CommandStream.CommandResult;
+  export type DetachedProcess = CommandStream.DetachedProcess;
+  export type ConfiguredCommandTag = CommandStream.ConfiguredCommandTag;
   export type CommandSpec = CommandStream.CommandSpec;
   export type CommandTag = CommandStream.CommandTag;
   export type CrossSpawn = CommandStream.CrossSpawn;
@@ -86,6 +90,7 @@ declare namespace $ {
   export type StreamResult = CommandStream.StreamResult;
   export type SyncStartOptions = CommandStream.SyncStartOptions;
   export type TemplateValue = CommandStream.TemplateValue;
+  export type TerminalArtifactName = CommandStream.TerminalArtifactName;
   export type TerminalArtifactOptions = CommandStream.TerminalArtifactOptions;
   export type TerminalAsciicast = CommandStream.TerminalAsciicast;
   export type TerminalCaptureError = CommandStream.TerminalCaptureError;

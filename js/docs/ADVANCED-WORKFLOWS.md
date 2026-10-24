@@ -2,6 +2,9 @@
 
 ## Literal command builders
 
+See the [complete command builder API](COMMAND-BUILDER.md) for fluent methods,
+functional transforms, argv arrays, presets, sync execution and overrides.
+
 ```js
 import $ from 'command-stream';
 const cat = $.command('cat', 'file with spaces');
@@ -21,6 +24,9 @@ Run the builder itself for portable exact-argv execution.
 
 ## Shell-to-module translation
 
+See the [source translation guide](FY.md) for CLI options, competitor migration,
+`use-m` loading, and the structural rule-based translator.
+
 ```sh
 npx command-stream fy deploy.sh deploy.mjs
 node deploy.mjs staging
@@ -28,11 +34,11 @@ node deploy.mjs staging
 
 The `$fy` executable provides the same translation. `fy(source, {shell, name,
 module})` returns an executable module. This is interpreter-backed translation:
-the generated module imports command-stream and passes the complete shell source
+the generated CLI module loads command-stream through use-m and passes the complete shell source
 as a literal argument to the selected interpreter. Shell loops, expansions,
 heredocs, pipelines, stdin, positional arguments, environment, and exit status
 retain their shell behavior. It requires the original shell and command-stream
-to be installed. The CLI recognizes sh/bash/dash/zsh shebangs. It creates output
+to be available, plus the use-m loader. The CLI recognizes sh/bash/dash/zsh shebangs. It creates output
 files exclusively, so it does not overwrite an existing script. It does not
 rewrite shell control flow into native JavaScript syntax.
 

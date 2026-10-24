@@ -571,7 +571,7 @@
 {"id":"deno-command:tests/unit_node/child_process_test.ts:880:1:registration","disposition":{"kind":"ported","id":"abort-signal"}}
 {"id":"deno-command:tests/unit_node/child_process_test.ts:901:1:registration","disposition":{"kind":"ported","id":"abort-signal"}}
 {"id":"deno-command:tests/unit_node/child_process_test.ts:917:1:registration","disposition":{"kind":"ported","id":"environment"}}
-{"id":"deno-command:tests/unit_node/child_process_test.ts:950:1:registration","disposition":{"kind":"missing","id":"environment-clear-and-remove"}}
+{"id":"deno-command:tests/unit_node/child_process_test.ts:950:1:registration","disposition":{"kind":"ported","id":"environment-clear-and-remove"}}
 {"id":"deno-command:tests/unit_node/child_process_test.ts:985:1:registration","disposition":{"kind":"ported","id":"environment"}}
 {"id":"deno-command:tests/unit_node/child_process_test.ts:1020:1:registration","disposition":{"kind":"ported","id":"environment"}}
 {"id":"deno-command:tests/unit_node/child_process_test.ts:1039:1:registration","disposition":{"kind":"ported","id":"sync-execution"}}
@@ -639,8 +639,8 @@
 {"id":"deno-command:tests/unit/command_test.ts:751:1:registration","disposition":{"kind":"ported","id":"environment"}}
 {"id":"deno-command:tests/unit/command_test.ts:769:1:registration","disposition":{"kind":"ported","id":"environment"}}
 {"id":"deno-command:tests/unit/command_test.ts:793:1:registration","disposition":{"kind":"ported","id":"environment"}}
-{"id":"deno-command:tests/unit/command_test.ts:811:1:registration","disposition":{"kind":"missing","id":"environment-clear-and-remove"}}
-{"id":"deno-command:tests/unit/command_test.ts:838:1:registration","disposition":{"kind":"missing","id":"environment-clear-and-remove"}}
+{"id":"deno-command:tests/unit/command_test.ts:811:1:registration","disposition":{"kind":"ported","id":"environment-clear-and-remove"}}
+{"id":"deno-command:tests/unit/command_test.ts:838:1:registration","disposition":{"kind":"ported","id":"environment-clear-and-remove"}}
 {"id":"deno-command:tests/unit/command_test.ts:865:1:registration","disposition":{"kind":"missing","id":"process-credentials"}}
 {"id":"deno-command:tests/unit/command_test.ts:893:1:registration","disposition":{"kind":"missing","id":"windows-shebang-and-pathext-resolution"}}
 {"id":"deno-command:tests/unit/command_test.ts:924:1:registration","disposition":{"kind":"missing","id":"process-credentials"}}

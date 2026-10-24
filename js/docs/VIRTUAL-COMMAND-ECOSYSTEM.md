@@ -5,6 +5,8 @@ registry. They participate in shell templates and pipelines alongside built-in
 and system commands. All APIs below are available through ESM and CommonJS.
 The [Rust ecosystem guide](../../rust/docs/VIRTUAL-COMMAND-ECOSYSTEM.md) documents
 the equivalent typed, manifest/npm, streaming, discovery and hot-reload APIs.
+The [ecosystem comparison](../../docs/VIRTUAL-COMMAND-COMPARISON.md) credits
+competing implementations and maps the complete issue #30 workflow to tests.
 
 ## Create, inherit, and compose
 

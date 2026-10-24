@@ -24,7 +24,7 @@
 {"id":"rust-std-process:library/std/src/process/tests.rs:501:1:registration","disposition":{"kind":"ported","id":"environment"}}
 {"id":"rust-std-process:library/std/src/process/tests.rs:512:1:registration","disposition":{"kind":"ported","id":"environment"}}
 {"id":"rust-std-process:library/std/src/process/tests.rs:524:1:registration","disposition":{"kind":"inapplicable","id":"competitor-api-shape"}}
-{"id":"rust-std-process:library/std/src/process/tests.rs:533:1:registration","disposition":{"kind":"missing","id":"environment-clear-and-remove"}}
+{"id":"rust-std-process:library/std/src/process/tests.rs:533:1:registration","disposition":{"kind":"ported","id":"environment-clear-and-remove"}}
 {"id":"rust-std-process:library/std/src/process/tests.rs:539:1:registration","disposition":{"kind":"inapplicable","id":"competitor-api-shape"}}
 {"id":"rust-std-process:library/std/src/process/tests.rs:680:1:registration","disposition":{"kind":"missing","id":"shell-expression-composition-and-redirection"}}
 {"id":"rust-std-process:library/std/src/process/tests.rs:699:1:registration","disposition":{"kind":"missing","id":"shell-expression-composition-and-redirection"}}
@@ -50,7 +50,7 @@
 {"id":"rust-std-process:tests/ui/process/process-envs.rs:1:1:file","disposition":{"kind":"inapplicable","id":"upstream-runtime-regressions"}}
 {"id":"rust-std-process:tests/ui/process/process-exit.rs:1:1:file","disposition":{"kind":"inapplicable","id":"upstream-runtime-regressions"}}
 {"id":"rust-std-process:tests/ui/process/process-panic-after-fork.rs:1:1:file","disposition":{"kind":"inapplicable","id":"upstream-runtime-regressions"}}
-{"id":"rust-std-process:tests/ui/process/process-remove-from-env.rs:1:1:file","disposition":{"kind":"missing","id":"environment-clear-and-remove"}}
+{"id":"rust-std-process:tests/ui/process/process-remove-from-env.rs:1:1:file","disposition":{"kind":"ported","id":"environment-clear-and-remove"}}
 {"id":"rust-std-process:tests/ui/process/process-sigpipe.rs:1:1:file","disposition":{"kind":"missing","id":"custom-stdio-and-file-handles"}}
 {"id":"rust-std-process:tests/ui/process/process-spawn-failure.rs:1:1:file","disposition":{"kind":"ported","id":"spawn-error-propagation"}}
 {"id":"rust-std-process:tests/ui/process/process-spawn-nonexistent.rs:1:1:file","disposition":{"kind":"ported","id":"spawn-error-propagation"}}
@@ -94,7 +94,7 @@
 {"id":"async-process:tests/std.rs:245:1:registration","disposition":{"kind":"missing","id":"try-wait-and-shared-child-handle"}}
 {"id":"async-process:tests/std.rs:257:1:registration","disposition":{"kind":"missing","id":"try-wait-and-shared-child-handle"}}
 {"id":"async-process:tests/std.rs:270:1:registration","disposition":{"kind":"missing","id":"try-wait-and-shared-child-handle"}}
-{"id":"async-process:tests/std.rs:319:1:registration","disposition":{"kind":"missing","id":"environment-clear-and-remove"}}
+{"id":"async-process:tests/std.rs:319:1:registration","disposition":{"kind":"ported","id":"environment-clear-and-remove"}}
 {"id":"async-process:tests/std.rs:341:1:registration","disposition":{"kind":"ported","id":"environment"}}
 {"id":"async-process:tests/std.rs:358:1:registration","disposition":{"kind":"ported","id":"environment"}}
 {"id":"async-process:tests/std.rs:383:1:registration","disposition":{"kind":"ported","id":"stream-kill"}}
@@ -112,7 +112,7 @@
 {"id":"assert-cmd:tests/assert.rs:81:1:registration","disposition":{"kind":"ported","id":"stdout-stderr-separation"}}
 {"id":"assert-cmd:tests/assert.rs:119:1:registration","disposition":{"kind":"ported","id":"stdout-stderr-separation"}}
 {"id":"assert-cmd:tests/cargo.rs:6:1:registration","disposition":{"kind":"missing","id":"binary-input-and-lossless-output"}}
-{"id":"assert-cmd:tests/cargo.rs:13:1:registration","disposition":{"kind":"missing","id":"environment-clear-and-remove"}}
+{"id":"assert-cmd:tests/cargo.rs:13:1:registration","disposition":{"kind":"ported","id":"environment-clear-and-remove"}}
 {"id":"assert-cmd:tests/cargo.rs:20:1:registration","disposition":{"kind":"inapplicable","id":"competitor-api-shape"}}
 {"id":"assert-cmd:tests/cargo.rs:41:1:registration","disposition":{"kind":"inapplicable","id":"competitor-api-shape"}}
 {"id":"assert-cmd:tests/cargo.rs:50:1:registration","disposition":{"kind":"inapplicable","id":"competitor-api-shape"}}
@@ -141,9 +141,9 @@
 {"id":"duct:src/test.rs:320:1:registration","disposition":{"kind":"ported","id":"stdout-stderr-separation"}}
 {"id":"duct:src/test.rs:333:1:registration","disposition":{"kind":"ported","id":"cwd-string"}}
 {"id":"duct:src/test.rs:361:1:registration","disposition":{"kind":"ported","id":"environment"}}
-{"id":"duct:src/test.rs:370:1:registration","disposition":{"kind":"missing","id":"environment-clear-and-remove"}}
-{"id":"duct:src/test.rs:397:1:registration","disposition":{"kind":"missing","id":"environment-clear-and-remove"}}
-{"id":"duct:src/test.rs:417:1:registration","disposition":{"kind":"missing","id":"environment-clear-and-remove"}}
+{"id":"duct:src/test.rs:370:1:registration","disposition":{"kind":"ported","id":"environment-clear-and-remove"}}
+{"id":"duct:src/test.rs:397:1:registration","disposition":{"kind":"ported","id":"environment-clear-and-remove"}}
+{"id":"duct:src/test.rs:417:1:registration","disposition":{"kind":"ported","id":"environment-clear-and-remove"}}
 {"id":"duct:src/test.rs:455:1:registration","disposition":{"kind":"ported","id":"environment"}}
 {"id":"duct:src/test.rs:579:1:registration","disposition":{"kind":"missing","id":"custom-stdio-and-file-handles"}}
 {"id":"duct:src/test.rs:588:1:registration","disposition":{"kind":"inapplicable","id":"competitor-internals"}}
@@ -173,7 +173,7 @@
 {"id":"xshell:tests/it/compile_failures.rs:109:1:registration","disposition":{"kind":"ported","id":"safe-template-interpolation"}}
 {"id":"xshell:tests/it/compile_failures.rs:119:1:registration","disposition":{"kind":"missing","id":"array-and-splat-interpolation"}}
 {"id":"xshell:tests/it/env.rs:6:1:registration","disposition":{"kind":"ported","id":"environment"}}
-{"id":"xshell:tests/it/env.rs:58:1:registration","disposition":{"kind":"missing","id":"environment-clear-and-remove"}}
+{"id":"xshell:tests/it/env.rs:58:1:registration","disposition":{"kind":"ported","id":"environment-clear-and-remove"}}
 {"id":"xshell:tests/it/main.rs:30:1:registration","disposition":{"kind":"ported","id":"direct-exact-argv"}}
 {"id":"xshell:tests/it/main.rs:39:1:registration","disposition":{"kind":"inapplicable","id":"competitor-api-shape"}}
 {"id":"xshell:tests/it/main.rs:47:1:registration","disposition":{"kind":"ported","id":"direct-exact-argv"}}
@@ -391,8 +391,8 @@
 {"id":"subprocess:src/tests/posix.rs:74:1:registration","disposition":{"kind":"ported","id":"stream-kill"}}
 {"id":"subprocess:src/tests/posix.rs:83:1:registration","disposition":{"kind":"missing","id":"try-wait-and-shared-child-handle"}}
 {"id":"subprocess:src/tests/posix.rs:98:1:registration","disposition":{"kind":"missing","id":"native-exit-status-and-signal-metadata"}}
-{"id":"subprocess:src/tests/posix.rs:106:1:registration","disposition":{"kind":"missing","id":"environment-clear-and-remove"}}
-{"id":"subprocess:src/tests/posix.rs:118:1:registration","disposition":{"kind":"missing","id":"environment-clear-and-remove"}}
+{"id":"subprocess:src/tests/posix.rs:106:1:registration","disposition":{"kind":"ported","id":"environment-clear-and-remove"}}
+{"id":"subprocess:src/tests/posix.rs:118:1:registration","disposition":{"kind":"ported","id":"environment-clear-and-remove"}}
 {"id":"subprocess:src/tests/posix.rs:132:1:registration","disposition":{"kind":"missing","id":"custom-stdio-and-file-handles"}}
 {"id":"subprocess:src/tests/posix.rs:147:1:registration","disposition":{"kind":"missing","id":"native-exit-status-and-signal-metadata"}}
 {"id":"subprocess:src/tests/posix.rs:162:1:registration","disposition":{"kind":"missing","id":"native-exit-status-and-signal-metadata"}}

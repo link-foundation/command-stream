@@ -1,5 +1,40 @@
 # Changelog
 
+## 2.6.0
+
+### Minor Changes
+
+- Complete literal command builders with immutable fluent methods, argv arrays,
+  factory and shell presets, merged environment layers, per-run overrides and
+  synchronous execution. Honor inherited/ignored stdio and disabled capture in
+  sync calls, snapshot nested configuration, and preserve long pipeline types.
+  Document every API style and correct the library-wide competitor comparison.
+
+## 2.5.0
+
+### Minor Changes
+
+- Add process controls requested in issues #227-#232. The `timeout` option stops a command with its kill signal and reports `result.timedOut`; aborting a pipeline with a virtual stage now resolves with the signal exit code instead of rejecting. Command strings run in a non-login shell by default, so profile files no longer print into captured output or override the PATH from `env`; `loginShell: true` restores the old behaviour. An `env` value of `undefined` removes that variable from the child. Terminal capture takes an `artifacts` selection and skips renderers for files that are not selected. `spawnDetached()`, `runner.spawnDetached()` and `$({ detached: true })` start a fire-and-forget command in its own session and resolve with its `pid`. The execa compatibility layer uses execa 10.2.1, which fixes the declaration error with `exactOptionalPropertyTypes` reported in sindresorhus/execa#1265.
+
+  Add the `$fy` virtual command, a shell-to-JavaScript translator built as a
+  rule-based translation on top of link-foundation/meta-language: the script is
+  first formalized as a links network, then rewritten into a command-stream module
+  by a `TranslationRuleSet`. Pipelines, `&&`/`||`, `if`/`while`/`until`/`for`/`case`,
+  functions, redirects, assignments and `${...}` expansions translate structurally
+  rather than textually, and untranslated constructs are reported as diagnostics.
+
+  Add source migration for zx, Execa, ShellJS, cross-spawn and Bun shell APIs.
+  The CLI defaults to lossless interpreter execution through command-stream +
+  use-m, supports stdin and source selection, and refuses to overwrite output.
+  Expose the rule-based APIs at command-stream/fy and cross-spawn compatibility
+  at command-stream/cross-spawn. Keep structural compilation under --structural.
+
+  Add `command-stream/core` with ESM and CommonJS exports for `$`, ProcessRunner,
+  virtual commands and streaming helpers, sharing state with the full entry while
+  avoiding compatibility, terminal, package installer and development module loading.
+
+  Update Execa to 10.2.1 after its upstream strict TypeScript declaration fix.
+
 ## 2.4.0
 
 ### Minor Changes

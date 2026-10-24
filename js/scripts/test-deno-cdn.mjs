@@ -6,6 +6,7 @@ import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { builtinModules } from 'node:module';
 import { fileURLToPath } from 'node:url';
+import { CdnProbeError, retryCdnProbe } from './deno-cdn-retry.mjs';
 
 const packageDirectory = new URL('../', import.meta.url);
 const manifest = JSON.parse(
@@ -107,17 +108,27 @@ if (process.env.COMMAND_STREAM_CDN_REVISION) {
 }
 
 async function runProbe(url) {
+  await retryCdnProbe(() => runProbeOnce(url));
+}
+
+async function runProbeOnce(url) {
   const probe = fileURLToPath(
     new URL('../../experiments/issue-219/cdn-import.mjs', import.meta.url)
   );
   const child = spawn('deno', ['run', '-A', '--no-lock', probe, url], {
-    stdio: 'inherit',
+    stdio: ['inherit', 'inherit', 'pipe'],
+  });
+  let stderr = '';
+  child.stderr.on('data', (chunk) => {
+    process.stderr.write(chunk);
+    // Keep a bounded diagnostic tail while preserving the full CI log.
+    stderr = (stderr + chunk.toString()).slice(-65536);
   });
   const code = await new Promise((resolve, reject) => {
     child.on('error', reject);
-    child.on('exit', resolve);
+    child.on('close', resolve);
   });
   if (code !== 0) {
-    throw new Error(`Deno CDN smoke test exited with ${code}`);
+    throw new CdnProbeError(code, stderr);
   }
 }

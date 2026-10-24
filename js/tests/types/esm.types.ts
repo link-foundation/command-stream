@@ -61,13 +61,15 @@ import $, {
   shell,
   shelljs,
   spawn,
+  spawnDetached,
   unregister,
   unrollTerminalFrames,
   unset,
   type AnsiConfig,
   type CommandError,
   type CommandResult,
-  type CommandTag,
+  type ConfiguredCommandTag,
+  type DetachedProcess,
   type OutputChunk,
   type ParsedAsciicast,
   type ProcessOptions,
@@ -94,6 +96,7 @@ export async function taggedTemplates(): Promise<void> {
   expectType<Equal<typeof result.code, number>>();
   expectType<Equal<typeof result.exitCode, number>>();
   expectType<Equal<typeof result.signal, NodeJS.Signals | null>>();
+  expectType<Equal<typeof result.timedOut, boolean>>();
 
   // Captured output behaves like a string.
   const text: string | undefined = result.stdout?.trim();
@@ -108,8 +111,10 @@ export async function taggedTemplates(): Promise<void> {
     cwd: '/tmp',
     stdin: 'data',
     preferLocal: true,
+    timeout: 5000,
+    loginShell: false,
   });
-  expectType<Equal<typeof withOptions, CommandTag>>();
+  expectType<Equal<typeof withOptions, ConfiguredCommandTag>>();
   expectType<Equal<ReturnType<typeof withOptions>, ProcessRunner>>();
 
   const tag = create({ capture: true, env: { PATH: '/bin' } });
@@ -121,6 +126,8 @@ export async function taggedTemplates(): Promise<void> {
   $({ stdin: 42 });
   // @ts-expect-error - killSignal must be a signal name
   $({ killSignal: 'SIGNOPE' });
+  // @ts-expect-error - timeout is a number of milliseconds
+  $({ timeout: '5s' });
   // @ts-expect-error - preferLocal accepts paths or a boolean
   $({ preferLocal: 42 });
   // @ts-expect-error - $ is not a plain function of a string
@@ -142,6 +149,24 @@ export async function entryPoints(): Promise<void> {
   await exec('node', '--version');
   // @ts-expect-error - run takes a string or an argv array
   await run(42);
+
+  // Fire and forget (issue #232).
+  expectType<
+    Equal<Awaited<ReturnType<typeof spawnDetached>>, DetachedProcess>
+  >();
+  const detached: number = (await spawnDetached('sleep 1', { cwd: '/tmp' }))
+    .pid;
+  await spawnDetached(['sleep', '1'] as const);
+  await spawnDetached({ file: 'sleep', args: ['1'] }, { env: {} });
+  const detachedResult = await $({ detached: true })`sleep 1`;
+  const detachedPid: number | undefined = detachedResult.pid;
+  const flagged: boolean | undefined = detachedResult.detached;
+  const fromRunner: DetachedProcess = await $`sleep 1`.spawnDetached();
+  use(detached, detachedPid, flagged, fromRunner);
+  // @ts-expect-error - spawnDetached needs a command
+  await spawnDetached(42);
+  // @ts-expect-error - detached is a boolean
+  $({ detached: 'yes' });
 
   const child: ChildProcess = spawn('node', ['--version'], { stdio: 'pipe' });
   const same: typeof spawn = $.spawn;
@@ -383,6 +408,14 @@ export async function terminal(): Promise<void> {
 
   // @ts-expect-error - file is required
   await captureTerminal({ cols: 80 });
+  await captureTerminal({
+    file: 'node',
+    env: { ...process.env, ANTHROPIC_API_KEY: undefined },
+    artifactDirectory: 'artifacts',
+    artifacts: ['transcript', 'snapshot', 'gif'],
+  });
+  // @ts-expect-error - unknown artifact name
+  await captureTerminal({ file: 'node', artifacts: ['video'] });
   use(transcript, firstLine, unrolled);
 }
 

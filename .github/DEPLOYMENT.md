@@ -31,14 +31,29 @@ JavaScript PRs that change package code must add exactly one changeset in
 The Rust crate lives in `rust/` and is published to crates.io as
 `command-stream`.
 
-Configure one of these GitHub Actions secrets at the repository or organization
-level:
+crates.io publishing uses trusted publishing through GitHub Actions OIDC
+(issue #226). Configure the trusted publisher on crates.io for:
+
+- Repository: `link-foundation/command-stream`
+- Workflow file: `rust.yml`
+- Environment: none
+
+`package-registry-manager setup --repository . --registry crates-io --migrate
+--execute` registers the publisher. The `release` and `instant-release` jobs
+have `id-token: write` and run `rust-lang/crates-io-auth-action` (pinned to the
+v1.0.5 commit) right before `rust/scripts/publish-crate.rs`. The step's
+short-lived token is passed as `CARGO_REGISTRY_TOKEN`, and the action's post
+step revokes it.
+
+Until the trusted publisher is registered and the first OIDC release has
+succeeded, the publish step falls back to these secrets, in this order:
 
 - `CARGO_REGISTRY_TOKEN` - Cargo's native environment variable name, preferred
 - `CARGO_TOKEN` - backwards-compatible fallback used by older organization
   workflows
 
-The Rust workflow maps both names and runs Rust release scripts from
+Once an OIDC release has gone through, the secrets can be deleted. The fallback
+expression then evaluates to the OIDC token alone. Rust release scripts run from
 `rust/scripts/`. Rust GitHub releases are tagged as `rust-v<version>`.
 
 Rust PRs that change crate code must add a changelog fragment in
@@ -93,8 +108,10 @@ cargo package --allow-dirty
 - Missing Rust changelog: add one `rust/changelog.d/*.md` file.
 - npm trusted publishing failure: verify npm trusted publisher settings match
   `.github/workflows/js.yml`.
-- crates.io authentication failure: verify `CARGO_REGISTRY_TOKEN` or
-  `CARGO_TOKEN` is available to Actions.
+- crates.io authentication failure: verify that the crates.io trusted
+  publisher matches `rust.yml`. The preflight warns when the OIDC exchange
+  failed and the `CARGO_REGISTRY_TOKEN` / `CARGO_TOKEN` fallback was checked
+  instead.
 - crate version already exists: rerun the Rust workflow if a previous release
   partially completed; the Rust scripts check crates.io and GitHub release
   artifacts before deciding whether to bump.
@@ -103,7 +120,10 @@ cargo package --allow-dirty
 
 On `main`, the first lint job checks registry credentials before running package
 checks. JavaScript exchanges a GitHub OIDC identity for a package-specific npm
-publish token and discards it. Rust sends publish metadata without an archive to the crates.io publish endpoint.
+publish token and discards it. Rust requires the job's GitHub OIDC identity (`id-token: write`), requests a
+crates.io trusted publishing token, and falls back to the token secrets if that
+exchange fails. It then sends publish metadata without an archive to the
+crates.io publish endpoint with that credential.
 The specific missing-archive response proves token authentication and publish
 scopes passed; no crate can be published by this request. Actual publishing
 remains the authoritative ownership check, including team ownership. Pull request jobs do not receive release credentials.

@@ -66,8 +66,8 @@ frameworks. Copying their files byte-for-byte would mostly test that Execa,
 Bun, or zx exists. Instead, every scoped test belongs to exactly one disposition:
 
 1. A portable public process invariant is adapted into the executable suite.
-2. A public invariant needs a feature command-stream does not have and is listed
-   in the missing-feature ledger below.
+2. A public upstream contract is not fully ported and is recorded in the
+   remaining-contract ledger below, with its current implementation status.
 3. A test is inapplicable because it verifies competitor API shape, private
    internals, unrelated utilities, runtime behavior, or harness mechanics.
 
@@ -93,32 +93,33 @@ summary-level assertion.
 
 ## Executable behavior ports
 
-| Case ID                       | Public invariant                                                                                 |
-| ----------------------------- | ------------------------------------------------------------------------------------------------ |
-| `direct-exact-argv`           | Direct execution bypasses shell tokenization.                                                    |
-| `argument-edge-cases`         | Empty, whitespace, multiline, Unicode, quote, and shell-metacharacter arguments survive exactly. |
-| `safe-template-interpolation` | An untrusted interpolated value remains one literal argument.                                    |
-| `array-interpolation`         | An interpolated array expands to separate, safely quoted arguments.                              |
-| `cwd-string`                  | An explicit string working directory reaches the child.                                          |
-| `environment`                 | An explicit environment reaches the child without value corruption.                              |
-| `stdout-stderr-separation`    | Standard output and error remain separate.                                                       |
-| `newline-preservation`        | Captured output preserves final and repeated newlines.                                           |
-| `unicode-output`              | UTF-8 output is decoded without loss.                                                            |
-| `large-output`                | One MiB of output is captured without truncation or deadlock.                                    |
-| `nonzero-exit`                | Non-zero status reads through `code` and `exitCode`, on results and on errors.                   |
-| `result-text`                 | `text()` returns captured stdout.                                                                |
-| `stdin-string`                | String input is written completely and stdin is closed.                                          |
-| `stdin-buffer`                | Buffer input is written without textual coercion.                                                |
-| `lazy-execution`              | A runner starts only when consumed.                                                              |
-| `concurrent-execution`        | Concurrent children keep their results isolated.                                                 |
-| `streamed-before-exit`        | Output events arrive before a delayed child exits.                                               |
-| `events-and-await`            | Events and the awaited result observe identical bytes.                                           |
-| `bound-options`               | Options bound to a tagged command apply when the command executes.                               |
-| `sync-execution`              | Synchronous direct execution preserves exact argv.                                               |
-| `programmatic-pipeline`       | Source stdout becomes destination stdin.                                                         |
-| `spawn-error-result`          | Sync and async unavailable executables produce results instead of uncaught errors.               |
-| `abort-signal`                | An external `AbortSignal` terminates a running child.                                            |
-| `zx-compatible-api`           | Every zx unit runs one-to-one against the zx-compatible layer, `command-stream/zx`.              |
+| Case ID                        | Public invariant                                                                                 |
+| ------------------------------ | ------------------------------------------------------------------------------------------------ |
+| `direct-exact-argv`            | Direct execution bypasses shell tokenization.                                                    |
+| `argument-edge-cases`          | Empty, whitespace, multiline, Unicode, quote, and shell-metacharacter arguments survive exactly. |
+| `safe-template-interpolation`  | An untrusted interpolated value remains one literal argument.                                    |
+| `array-interpolation`          | An interpolated array expands to separate, safely quoted arguments.                              |
+| `cwd-string`                   | An explicit string working directory reaches the child.                                          |
+| `environment`                  | An explicit environment reaches the child without value corruption.                              |
+| `environment-clear-and-remove` | Sync and async execution replace inherited env and omit undefined values.                        |
+| `stdout-stderr-separation`     | Standard output and error remain separate.                                                       |
+| `newline-preservation`         | Captured output preserves final and repeated newlines.                                           |
+| `unicode-output`               | UTF-8 output is decoded without loss.                                                            |
+| `large-output`                 | One MiB of output is captured without truncation or deadlock.                                    |
+| `nonzero-exit`                 | Non-zero status reads through `code` and `exitCode`, on results and on errors.                   |
+| `result-text`                  | `text()` returns captured stdout.                                                                |
+| `stdin-string`                 | String input is written completely and stdin is closed.                                          |
+| `stdin-buffer`                 | Buffer input is written without textual coercion.                                                |
+| `lazy-execution`               | A runner starts only when consumed.                                                              |
+| `concurrent-execution`         | Concurrent children keep their results isolated.                                                 |
+| `streamed-before-exit`         | Output events arrive before a delayed child exits.                                               |
+| `events-and-await`             | Events and the awaited result observe identical bytes.                                           |
+| `bound-options`                | Options bound to a tagged command apply when the command executes.                               |
+| `sync-execution`               | Synchronous direct execution preserves exact argv.                                               |
+| `programmatic-pipeline`        | Source stdout becomes destination stdin.                                                         |
+| `spawn-error-result`           | Sync and async unavailable executables produce results instead of uncaught errors.               |
+| `abort-signal`                 | An external `AbortSignal` terminates a running child.                                            |
+| `zx-compatible-api`            | Every zx unit runs one-to-one against the zx-compatible layer, `command-stream/zx`.              |
 
 ### zx-compatible layer
 
@@ -139,44 +140,61 @@ the invariant appears upstream. Existing focused command-stream suites continue
 to exercise shell operators, virtual commands, built-ins, terminal capture,
 signals, cleanup, CommonJS, and runtime-specific paths in greater depth.
 
-## Missing-feature ledger
+## Remaining upstream contracts
 
-These are comparison inputs for later work, not promises that every competitor
-choice fits command-stream. Stability of the existing API takes priority. A
-future implementation should add a failing focused test and update the manifest
-in the same change.
+The stable `missing` disposition IDs below track upstream contracts that have
+not been ported completely into this corpus. They are not a claim that every
+named feature is absent from the current package: later core implementations
+and compatibility entries are identified explicitly. A supported option alone
+does not establish all upstream error, timing or platform semantics. The
+[current comparison](COMPARISON.md) identifies the public surface to use.
+Environment replacement/removal is now executable in both sync and async ports;
+its three Deno units have moved from missing to ported in both exact ledgers.
 
 ### timeout-option
 
 Execa, zx, Dax, and nano-spawn provide a per-command deadline option.
-command-stream accepts external abort signals but has no public timeout option.
+Core ProcessOptions and literal builders support `timeout`, `signal`,
+`killSignal` and `killGrace`; zx and Execa entries expose their own deadlines.
+This corpus has not ported every upstream deadline/error contract, including
+specialized shell/script behavior.
 
 ### ipc-and-fork
 
 Node, Bun, Deno's Node compatibility layer, and Execa expose IPC channels or
-fork helpers. command-stream currently exposes only stdin/stdout/stderr process
-communication.
+fork helpers. The core builder has three stdio channels; use the native
+cross-spawn or Execa entry for IPC. These corpus units have not been ported
+against those entries.
 
 ### custom-stdio-descriptors
 
 Node-derived APIs accept arbitrary stdio arrays, extra file descriptors, files,
-and inherited streams. command-stream has fixed stdin/stdout/stderr policies.
+and inherited streams. The core builder has fixed stdin/stdout/stderr policies;
+the native spawn and Execa entries support richer descriptors. Their complete
+upstream descriptor conformance is outside these portable core ports.
 
 ### configurable-encoding
 
 Several competitors support caller-selected encodings or raw binary output.
 command-stream results currently expose strings, with Buffer access available
-through streaming interfaces rather than a result encoding option.
+through streaming interfaces rather than a result encoding option. The Execa
+entry supports encoding/byte results under its own result contract.
 
 ### max-buffer-policy
 
 Node `exec`, Execa, and ShellJS allow a maximum captured-output policy.
-command-stream streams and captures without a configurable upper bound.
+The core builder has no configurable maximum capture size (Node synchronous
+spawn also has its native buffer limit). Use asynchronous `capture:false` with
+bounded stream queues for bounded collection, or Execa's capture policy when
+its semantics are required.
 
 ### output-transforms-and-line-iteration
 
 Execa, zx, Dax, and nano-spawn provide line iteration, transforms, generators,
-or verbose output hooks beyond command-stream's typed chunk stream.
+or verbose output hooks. Core streams now provide line framing, map/filter,
+batching/windows, statistics and bounded queues; zx and Execa have additional
+adapter-specific transforms. These units still require per-contract checks
+rather than a blanket equivalence with those interfaces.
 
 ### local-binary-resolution
 
@@ -190,7 +208,8 @@ audit.
 
 cross-spawn and nano-spawn normalize Windows shebangs, `PATHEXT`, and `cmd.exe`
 escaping. command-stream relies on the runtime and platform shell for those
-rules and does not provide a dedicated resolver.
+rules in the core runner. The cross-spawn export uses the actual cross-spawn
+resolver; selecting that export does not change core-builder resolution.
 
 ### cross-platform-inline-environment-syntax
 
@@ -199,21 +218,18 @@ variable references for Windows command processors. command-stream accepts an
 explicit environment object, but it does not provide this command-line rewrite
 layer.
 
-### environment-clear-and-remove
-
-Deno can clear inherited environment values before spawning. command-stream
-can add or replace values but has no environment clear/remove policy.
-
 ### process-credentials
 
 Node and Deno can select child user and group IDs on supported platforms.
-command-stream has no public process-credential options.
+The core builder has no credential options; native spawn/Execa entries accept
+their platform-specific process options. The corpus does not claim those
+privileged platform contracts have been ported.
 
 ### windows-process-window-options
 
 Node and Deno expose Windows-only process creation controls such as hidden
-windows and raw command-line arguments. command-stream delegates those choices
-to the JavaScript runtime.
+windows and raw command-line arguments. Use the native spawn entry for those
+Node options; the core ProcessOptions surface does not expose them.
 
 ### child-process-handle-lifecycle
 
@@ -234,19 +250,23 @@ command-stream's current virtual-command set.
 ### rich-error-and-timing-metadata
 
 Competitors expose fields such as command text, escaped command, failed stage,
-signal description, duration, and timing. command-stream's result is limited to
-status and captured streams.
+signal description, duration, and timing. Core results include status, signal,
+PID, timeout state and streams; richer error/timing fields belong to the
+compatibility entries. This corpus does not assert every upstream metadata
+field or failed-stage contract.
 
 ### graceful-termination
 
 Execa, zx, and Dax provide configurable graceful cancellation and forced-kill
-fallbacks. command-stream supports a kill signal but no public grace-period
-policy.
+fallbacks. Core async execution now supports `killSignal` and `killGrace`, with
+process-tree cleanup; sync native spawn has its own termination behavior. The
+complete upstream cancellation protocols remain distinct from this core policy.
 
 ### combined-all-output
 
 Execa and nano-spawn can preserve interleaved stdout and stderr in a combined
-result. command-stream deliberately keeps the two captured streams separate.
+result. The core builder keeps captured streams separate; Execa's `all` and
+zx's combined ProcessOutput use their respective compatibility entries.
 
 ### iterable-and-stream-input-options
 
@@ -256,9 +276,11 @@ ignore, or an interactively accessed stdin pipe.
 
 ### layered-bound-option-merging
 
-Execa can bind several option layers and merge selected nested fields while
-letting invocation-level values override defaults. command-stream supports one
-bound tagged-template option object but not layered or per-invocation merging.
+Literal builders support nested `command.with` presets, fluent/functional
+configuration, explicit env merging and per-run overrides. Execa's own binding
+contract also treats undefined/default and selected nested options according to
+its API. Use the Execa entry for that exact contract; these upstream units have
+not been reclassified merely because builder presets now exist.
 
 ### url-working-directory
 

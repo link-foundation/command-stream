@@ -9,6 +9,8 @@ import {
   unregister,
 } from '../src/$.mjs';
 import { createCommand } from '../src/command-packages.mjs';
+import { create as coreCreate } from '../src/core.mjs';
+import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -17,6 +19,15 @@ beforeEach(beforeTestCleanup);
 afterEach(afterTestCleanup);
 
 const execute = promisify(execFile);
+const require = createRequire(import.meta.url);
+const registrations = [
+  $.create,
+  create,
+  coreCreate,
+  require('../src/$.cjs').create,
+  require('../src/core.cjs').create,
+  createCommand,
+];
 const handler = () => ({ code: 0, stdout: 'hello' });
 const invalidNames = [null, undefined, 42, true, {}, ['command']];
 
@@ -24,10 +35,10 @@ test.each(invalidNames.map((name) => [name]))(
   'command creation rejects non-string name %j before registry mutation',
   (name) => {
     const original = listCommands();
-    expect(() => $.create(name, handler)).toThrow(TypeError);
-    expect(() => create(name, handler)).toThrow(TypeError);
-    expect(() => createCommand(name, handler)).toThrow(TypeError);
-    expect(listCommands()).toEqual(original);
+    for (const register of registrations) {
+      expect(() => register(name, handler)).toThrow(TypeError);
+      expect(listCommands()).toEqual(original);
+    }
   }
 );
 

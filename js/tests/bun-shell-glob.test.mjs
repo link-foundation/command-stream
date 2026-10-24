@@ -73,9 +73,14 @@ describe('globMatch', () => {
     }
   });
 
+  // The port follows the Bun v1.4.2 matcher, which nests braces up to 10
+  // levels. Bun 1.4.4 replaced that matcher and nests without a limit, so this
+  // checks the ported behaviour rather than the running Bun.
   test('deeply nested braces fail instead of recursing forever', () => {
-    const p = `${'{a,'.repeat(12)}b${'}'.repeat(12)}`;
-    expect(globMatch(p, 'b')).toBe(new Bun.Glob(p).match('b'));
+    const nested = (depth) => `${'{a,'.repeat(depth)}b${'}'.repeat(depth)}`;
+    expect(globMatch(nested(10), 'b')).toBe(true);
+    expect(globMatch(nested(12), 'b')).toBe(false);
+    expect(globMatch(nested(2000), 'b')).toBe(false);
   });
 });
 
