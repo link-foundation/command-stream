@@ -108,6 +108,20 @@
       },
       "default": "./src/shelljs/index.mjs"
     },
+    "./cross-spawn": {
+      "import": {
+        "types": "./types/cross-spawn.d.ts",
+        "default": "./src/cross-spawn.mjs"
+      },
+      "require": {
+        "types": "./types/cross-spawn.d.cts",
+        "default": "./src/cross-spawn.cjs"
+      }
+    },
+    "./fy": {
+      "types": "./types/fy.d.ts",
+      "default": "./src/fy/index.mjs"
+    },
     "./core": {
       "import": {
         "types": "./types/core.d.ts",
@@ -207,14 +221,17 @@
     "shelljs": "0.10.0",
     "subset-font": "^2.9.0",
     "typescript": "7.0.2",
-    "zx": "8.8.5"
+    "zx": "8.8.5",
+    "use-m": "8.16.4"
   },
   "dependencies": {
     "cross-spawn": "7.0.6",
     "@resvg/resvg-js": "^2.6.2",
     "@xterm/headless": "^6.0.0",
     "gifenc": "^1.0.3",
-    "execa": "10.2.1"
+    "execa": "10.2.1",
+    "meta-language": "^0.46.0",
+    "acorn": "8.19.0"
   },
   "optionalDependencies": {
     "node-pty": "^1.1.0"

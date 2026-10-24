@@ -23,3 +23,4 @@ export { default as yes } from './$.yes.mjs';
 export { default as seq } from './$.seq.mjs';
 export { default as tee } from './$.tee.mjs';
 export { default as test } from './$.test.mjs';
+export { default as fy } from './$.$fy.mjs';

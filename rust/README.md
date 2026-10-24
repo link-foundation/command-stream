@@ -17,6 +17,9 @@ The shared advanced APIs include `CommandBuilder`, `DataStream`,
 `terminal::TerminalBuffer`, and `CommandEnvironment`. See the
 [advanced workflows guide](../js/docs/ADVANCED-WORKFLOWS.md#rust-equivalents) and
 `examples/language_features.rs` for executable examples.
+[Source translation and competitor migration](../js/docs/FY.md) use the same
+options in both implementations.
+
 `command-stream fy input.sh output.mjs` generates an interpreter-backed Node module
 using `sh` and refuses to overwrite existing output.
 

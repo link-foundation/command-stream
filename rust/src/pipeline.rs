@@ -318,6 +318,7 @@ impl Pipeline {
             "seq" => (crate::commands::seq(ctx).await, None),
             "tee" => (crate::commands::tee(ctx).await, None),
             "test" => (crate::commands::test(ctx).await, None),
+            "$fy" => (crate::commands::fy(ctx).await, None),
             _ => return None,
         };
         Some(VirtualCommandResult { result, cd_context })

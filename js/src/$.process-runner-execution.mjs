@@ -856,7 +856,11 @@ async function handleShellMode(runner, deps) {
   // whether the command happened to also contain `&&`, `||`, `;`, `&` or `(`,
   // so `echo hi > f` handed `>` and `f` to the built-in `echo` as two literal
   // arguments while `echo $(echo hi) > f` did not (issue #46).
-  const requiresRealShell = needsRealShell(command) || hasShellEscapes(command);
+  // `$fy` is a literal virtual command name, not an environment expansion.
+  // Analyze its arguments normally so redirects/expansions still use a shell.
+  const analyzedCommand = command.replace(/^(\s*)\$fy(?=\s|$)/, '$1fy');
+  const requiresRealShell =
+    needsRealShell(analyzedCommand) || hasShellEscapes(command);
 
   trace(
     'ProcessRunner',

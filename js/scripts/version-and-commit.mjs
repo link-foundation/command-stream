@@ -201,6 +201,8 @@ async function main() {
         );
       }
     } else {
+      // Synchronize with main before creating any uncommitted metadata edits.
+      await runChecked($`bun scripts/merge-changesets.mjs`);
       console.log('Running changeset version...');
       // Run changeset version to bump versions and update CHANGELOG
       await runChecked($`bun run changeset:version`);

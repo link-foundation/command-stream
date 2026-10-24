@@ -77,9 +77,12 @@ test(
   async () => {
     const core = await import('command-stream/core');
     assert.equal(core.default, core.$);
-    for (const name of ['echo', 'cat', 'pwd', 'cd', 'which']) {
+    for (const name of ['echo', 'cat', 'pwd', 'cd', 'which', '$fy']) {
       assert.ok(core.listCommands().includes(name));
     }
+    const translatorHelp = await core.run('$fy --help');
+    assert.equal(translatorHelp.code, 0);
+    assert.match(translatorHelp.stdout.toString(), /Usage: \$fy/);
     const $ = core.$({ mirror: false });
     const text = 'spaces; "quotes" and $variables';
     assert.equal((await $`echo ${text}`).stdout.trim(), text);

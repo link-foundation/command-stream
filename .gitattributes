@@ -1,3 +1,6 @@
+# The `$fy` fixtures are compared byte for byte by both test suites, so they
+# must check out with LF endings on every platform, Windows included.
+fixtures/fy/* text eol=lf
 # zx port fixtures: raw HTTP responses and CRLF markdown are byte-exact.
 js/tests/zx/fixtures/*.http -text
 js/tests/zx/fixtures/*.md -text

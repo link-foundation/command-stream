@@ -430,6 +430,7 @@ import yesCommand from './commands/$.yes.mjs';
 import seqCommand from './commands/$.seq.mjs';
 import teeCommand from './commands/$.tee.mjs';
 import testCommand from './commands/$.test.mjs';
+import fyCommand from './commands/$.$fy.mjs';
 import headCommand from './commands/$.head.mjs';
 import tailCommand from './commands/$.tail.mjs';
 import sortCommand from './commands/$.sort.mjs';
@@ -464,6 +465,7 @@ function registerBuiltins() {
   register('seq', seqCommand);
   register('tee', teeCommand);
   register('test', testCommand);
+  register('$fy', fyCommand);
   register('head', headCommand);
   register('tail', tailCommand);
   register('sort', sortCommand);

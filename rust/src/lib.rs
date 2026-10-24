@@ -74,6 +74,7 @@ pub use development::{
 mod detach;
 pub mod events;
 pub mod execa;
+pub mod fy;
 pub mod local_bin;
 #[doc(hidden)]
 pub mod macros;
@@ -738,6 +739,7 @@ impl ProcessRunner {
             "seq" => Some(commands::seq(ctx).await),
             "tee" => Some(commands::tee(ctx).await),
             "test" => Some(commands::test(ctx).await),
+            "$fy" => Some(commands::fy(ctx).await),
             "head" => Some(commands::head(ctx).await),
             "tail" => Some(commands::tail(ctx).await),
             "sort" => Some(commands::sort(ctx).await),

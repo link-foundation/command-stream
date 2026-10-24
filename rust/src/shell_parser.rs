@@ -525,6 +525,13 @@ pub fn parse_shell_command(command: &str) -> Option<ParsedCommand> {
 /// the system shell is the only way to get exactly the POSIX result
 /// (issue #46).
 pub fn needs_real_shell(command: &str) -> bool {
+    // `$fy` is a registered literal command name; expansion in its arguments
+    // still requires the real shell.
+    let trimmed = command.trim_start();
+    let command = trimmed
+        .strip_prefix("$fy")
+        .filter(|rest| rest.is_empty() || rest.starts_with(char::is_whitespace))
+        .unwrap_or(command);
     // Check for features we don't handle yet
     let unsupported = [
         '`', // Command substitution

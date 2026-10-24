@@ -7,7 +7,7 @@ use crate::utils::{CommandResult, VirtualUtils};
 const VIRTUAL_COMMANDS: &[&str] = &[
     "echo", "pwd", "cd", "true", "false", "sleep", "cat", "ls", "mkdir", "rm", "touch", "cp", "mv",
     "basename", "dirname", "env", "exit", "which", "yes", "seq", "tee", "test", "head", "tail",
-    "sort", "uniq",
+    "sort", "uniq", "$fy",
 ];
 
 /// Execute the which command

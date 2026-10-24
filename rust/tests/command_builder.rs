@@ -40,7 +40,7 @@ fn fy_cli_creates_a_module_and_refuses_to_overwrite() {
         .unwrap()
         .success());
     let module = std::fs::read_to_string(&output).unwrap();
-    assert!(module.contains("import { command }"));
+    assert!(module.contains("const { command } = await use"));
     assert!(module.contains("echo hello"));
     assert!(!std::process::Command::new(binary)
         .arg("fy")

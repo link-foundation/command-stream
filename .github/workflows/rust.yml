@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'rust/**'
+      - 'fixtures/fy/**'
       - '.github/workflows/rust.yml'
       - 'README.md'
       - 'LICENSE'
@@ -13,6 +14,7 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - 'rust/**'
+      - 'fixtures/fy/**'
       - '.github/workflows/rust.yml'
       - 'README.md'
       - 'LICENSE'

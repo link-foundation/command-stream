@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'js/**'
+      - 'fixtures/fy/**'
       # ESLint runs from the repository root, so it also lints these; without
       # them here a lint error in an experiment or in claude-profiles.mjs first
       # surfaced on an unrelated pull request that happened to touch js/**.
@@ -23,6 +24,7 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - 'js/**'
+      - 'fixtures/fy/**'
       # ESLint runs from the repository root, so it also lints these; without
       # them here a lint error in an experiment or in claude-profiles.mjs first
       # surfaced on an unrelated pull request that happened to touch js/**.
@@ -579,11 +581,6 @@ jobs:
           # Read-only lookup of the js-v<version> GitHub release (issue #216).
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bun scripts/check-release-needed.mjs
-
-      - name: Merge multiple changesets
-        if: steps.check_changesets.outputs.has_changesets == 'true' && fromJSON(steps.check_changesets.outputs.changeset_count) > 1
-        working-directory: js
-        run: bun scripts/merge-changesets.mjs
 
       - name: Version package and commit to main
         if: steps.check_changesets.outputs.has_changesets == 'true'
