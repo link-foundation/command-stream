@@ -39,3 +39,6 @@ second default-debug build. This is a scheduling correction, not a source failur
   rather than changing formatting policy.
 - CI must check the pushed commit's SHA and creation time;
   old October 12 passing runs are not current evidence.
+- Post-merge version, changeset and source-language parity validation passed.
+  Raw regression and resolution logs containing meaningful whitespace are
+  compressed losslessly so their evidence does not introduce whitespace errors.
