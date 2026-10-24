@@ -582,11 +582,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bun scripts/check-release-needed.mjs
 
-      - name: Merge multiple changesets
-        if: steps.check_changesets.outputs.has_changesets == 'true' && fromJSON(steps.check_changesets.outputs.changeset_count) > 1
-        working-directory: js
-        run: bun scripts/merge-changesets.mjs
-
       - name: Version package and commit to main
         if: steps.check_changesets.outputs.has_changesets == 'true'
         id: version
