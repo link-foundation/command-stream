@@ -51,8 +51,8 @@ Identical in Node.js and Bun:
 
 ```
 # builtin-catalog — The built-in command catalog
-available built-ins: ["basename","cat","cd","cp","dirname","echo","env","exit","false","head","ls","mkdir","mv","pwd","rm","seq","sleep","sort","tail","tee","test","touch","true","uniq","which","yes"]
-number of built-ins: 26
+available built-ins: ["$fy","basename","cat","cd","cp","dirname","echo","env","exit","false","head","ls","mkdir","mv","pwd","rm","seq","sleep","sort","tail","tee","test","touch","true","uniq","which","yes"]
+number of built-ins: 27
 with built-ins: "built-in\n"
 with built-ins disabled: "real binary\n"
 built-ins enabled again: true

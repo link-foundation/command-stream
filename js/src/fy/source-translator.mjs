@@ -53,15 +53,29 @@ function render(network, root, rules) {
   return { code, diagnostics: engine.report(), network, ruleSet };
 }
 
+function shellFromShebang(source) {
+  const [line] = source.split('\n', 1);
+  if (!line.startsWith('#!')) {
+    return undefined;
+  }
+  const words = line
+    .slice(2)
+    .trim()
+    .split(/[ \t]+/);
+  const interpreter =
+    words.length === 2 && words[0] === '/usr/bin/env'
+      ? words[1]
+      : words.length === 1
+        ? words[0]
+        : undefined;
+  const shell = interpreter?.split('/').at(-1);
+  return ['sh', 'bash', 'dash', 'zsh'].includes(shell) ? shell : undefined;
+}
+
 /** Preserve the interpreter's full semantics while formalizing and substituting a program rule. */
 export function translateShellProgram(source, options = {}) {
   const { network, root: syntax } = formalizeShell(source);
-  const shell =
-    options.shell ??
-    source.match(
-      /^#!\s*(?:\/usr\/bin\/env\s+)?(?:.*\/)?(bash|dash|sh|zsh)[ \t]*(?:\r?\n|$)/
-    )?.[1] ??
-    'sh';
+  const shell = options.shell ?? shellFromShebang(source) ?? 'sh';
   const values = [
     source,
     shell,

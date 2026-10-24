@@ -12,6 +12,19 @@ const runtimes = ['node', 'bun'].filter(
 );
 
 describe('competitor source migration', () => {
+  test('infers only a supported first-line interpreter with bounded whitespace handling', () => {
+    for (const header of ['#!/bin/bash', '#!/usr/bin/env\tbash']) {
+      expect(translateSource(`${header}\nprintf ok`).code).toContain(
+        'command("bash",'
+      );
+    }
+    for (const source of [
+      'printf ok\n#!/bin/bash',
+      `#!${'\t'.repeat(16384)}unknown\nprintf ok`,
+    ]) {
+      expect(translateSource(source).code).toContain('command("sh",');
+    }
+  });
   test('preserves literal braces in custom module names', () => {
     const result = translateSource('import x from "zx";', {
       from: 'javascript',

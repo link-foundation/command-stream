@@ -18,6 +18,12 @@ our additional modes, conditional segments, variadic separators, indentation,
 and byte-preserving source spans to keep the JavaScript and Rust outputs
 identical. The old blanket claim that Rust cannot recurse no longer applies.
 
+Rust meta-language 1.0.0 also pins tree-sitter to exactly 0.27.0. A consumer
+cannot resolve the latest 0.27.1 alongside it; this was reproduced and reported
+on [the open dependency update issue](https://github.com/link-foundation/meta-language/issues/197).
+The direct parser dependency remains at 0.27.0 with that blocker recorded for
+the repository's dependency freshness check. Translation works with this version.
+
 JavaScript still uses `LinkNetwork`, `LinkQuery`, `TranslationRule`, and
 `TranslationRuleSet` from npm 0.46.0, with a local evaluator for its templates.
 Both implementations formalize source into those typed links and apply rule
