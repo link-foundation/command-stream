@@ -190,6 +190,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [1.12.0] - 2026-10-24
+
+### Added
+
+- Complete reusable command builders with environment layers and removal,
+  functional configuration and synchronous execution alongside async execution.
+  Preserve native environment key rules by applying changes in configuration order.
+
 ## [1.11.0] - 2026-10-24
 
 ### Added
