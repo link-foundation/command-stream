@@ -214,7 +214,7 @@
     "@resvg/resvg-js": "^2.6.2",
     "@xterm/headless": "^6.0.0",
     "gifenc": "^1.0.3",
-    "execa": "10.1.1"
+    "execa": "10.2.1"
   },
   "optionalDependencies": {
     "node-pty": "^1.1.0"
