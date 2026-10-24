@@ -121,6 +121,17 @@
     "./fy": {
       "types": "./types/fy.d.ts",
       "default": "./src/fy/index.mjs"
+    },
+    "./core": {
+      "import": {
+        "types": "./types/core.d.ts",
+        "default": "./src/core.mjs"
+      },
+      "require": {
+        "types": "./types/core.d.cts",
+        "default": "./src/core.cjs"
+      },
+      "default": "./src/core.mjs"
     }
   },
   "repository": {

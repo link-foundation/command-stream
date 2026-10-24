@@ -329,6 +329,7 @@ jobs:
           "
           node --test js/tests/node-terminal-artifacts.mjs
           node --test js/tests/terminal-changes.test.mjs
+          node --test js/tests/core-entry.test.mjs
           node --test js/tests/node-commonjs-entry.mjs
           node --test js/tests/node-process-regressions.mjs
           node --test js/tests/windows-tree-kill.test.mjs
