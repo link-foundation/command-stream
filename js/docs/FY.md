@@ -65,8 +65,9 @@ conservatively retained with a diagnostic; imports still migrate. Computed modul
 names need a literal reference to migrate automatically.
 
 `.cjs` or `--commonjs` wraps migrated CommonJS in an ES module with Node's
-`createRequire`, `module`, `exports`, `__filename`, and `__dirname`; its exports
-become the default export. Keep the output beside the input when relative imports
+`createRequire`, `module`, `exports`, `__filename`, and `__dirname`. Top-level `this`
+is bound to the original exports object; the final exports become the default
+export. Keep the output beside the input when relative imports
 or paths depend on that location. Compatibility entry points retain the source
 API, including its runtime and platform requirements; Bun migration targets the
 Bun shell API rather than Bun's unrelated runtime APIs.

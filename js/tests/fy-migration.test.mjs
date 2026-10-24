@@ -135,16 +135,25 @@ describe('competitor source migration', () => {
     const dir = mkdtempSync(join(root, '.fy-test-'));
     try {
       const file = join(dir, 'translated.mjs');
-      writeFileSync(
-        file,
-        translateSource(
-          'const sh = require("shelljs"); module.exports = sh.exec("printf migrated", {silent:true}).stdout; console.log(module.exports);',
-          { from: 'shelljs', commonjs: true }
-        ).code
+      const code = translateSource(
+        readFileSync(
+          new URL('../../fixtures/fy/commonjs.cjs', import.meta.url),
+          'utf8'
+        ),
+        { from: 'shelljs', commonjs: true }
+      ).code;
+      expect(code).toBe(
+        readFileSync(
+          new URL('../../fixtures/fy/commonjs.mjs', import.meta.url),
+          'utf8'
+        )
       );
-      expect(execFileSync('node', [file], { encoding: 'utf8' }).trim()).toBe(
-        'migrated'
-      );
+      writeFileSync(file, code);
+      for (const runtime of runtimes) {
+        expect(execFileSync(runtime, [file], { encoding: 'utf8' }).trim()).toBe(
+          'migrated'
+        );
+      }
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

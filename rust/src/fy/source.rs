@@ -328,7 +328,7 @@ fn commonjs_module(source: &str) -> String {
     } else {
         source
     };
-    format!("#!/usr/bin/env node\nimport {{ createRequire as __fyRequire }} from 'node:module';\nimport {{ fileURLToPath as __fyPath }} from 'node:url';\nimport {{ dirname as __fyDir }} from 'node:path';\nconst __fyModule = {{ exports: {{}} }};\n(function (require, module, exports, __filename, __dirname) {{\n{body}\n}})(__fyRequire(import.meta.url), __fyModule, __fyModule.exports, __fyPath(import.meta.url), __fyDir(__fyPath(import.meta.url)));\nexport default __fyModule.exports;\n")
+    format!("#!/usr/bin/env node\nimport {{ createRequire as __fyRequire }} from 'node:module';\nimport {{ fileURLToPath as __fyPath }} from 'node:url';\nimport {{ dirname as __fyDir }} from 'node:path';\nconst __fyModule = {{ exports: {{}} }};\n(function (require, module, exports, __filename, __dirname) {{\n{body}\n}}).call(__fyModule.exports, __fyRequire(import.meta.url), __fyModule, __fyModule.exports, __fyPath(import.meta.url), __fyDir(__fyPath(import.meta.url)));\nexport default __fyModule.exports;\n")
 }
 
 /// Select a source front end and translate through its typed links and rules.

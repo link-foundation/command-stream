@@ -38,4 +38,5 @@ js/types/SHELLJS-LICENSE
 
 # Source and expected-output translation fixtures are byte-exact.
 fixtures/fy/*.js
+fixtures/fy/*.cjs
 fixtures/fy/*.mjs

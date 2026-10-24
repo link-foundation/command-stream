@@ -5,6 +5,7 @@ import { translateSource } from '../src/fy/index.mjs';
 for (const [input, output] of [
   ['sample.sh', 'sample-program.mjs'],
   ['competitors.js', 'competitors.mjs'],
+  ['commonjs.cjs', 'commonjs.mjs'],
 ]) {
   const source = readFileSync(
     new URL(`../../fixtures/fy/${input}`, import.meta.url),

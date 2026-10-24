@@ -128,6 +128,23 @@ fn migrates_the_shared_competitor_fixture() {
 }
 
 #[test]
+fn migrates_the_shared_commonjs_fixture() {
+    let translation = translate_source(
+        include_str!("../../fixtures/fy/commonjs.cjs"),
+        &SourceOptions {
+            filename: "commonjs.cjs".into(),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        translation.code,
+        include_str!("../../fixtures/fy/commonjs.mjs")
+    );
+    assert!(translation.diagnostics.is_empty());
+}
+
+#[test]
 fn migration_does_not_rewrite_strings_comments_regexes_or_property_calls() {
     let source = "// import x from 'zx'\nconst s = \"require('zx')\";\nconst re = /require('zx')/; obj.require('zx');\nconst t = `${(await import('zx')).VERSION}`;";
     let options = SourceOptions {

@@ -271,7 +271,7 @@ function commonjsModule(source) {
   const body = source.replace(/^#![^\n]*\n?/, '');
   return `#!/usr/bin/env node\nimport { createRequire as __fyRequire } from 'node:module';\nimport { fileURLToPath as __fyPath } from 'node:url';\nimport { dirname as __fyDir } from 'node:path';\nconst __fyModule = { exports: {} };\n(function (require, module, exports, __filename, __dirname) {\n${
     body
-  }\n})(__fyRequire(import.meta.url), __fyModule, __fyModule.exports, __fyPath(import.meta.url), __fyDir(__fyPath(import.meta.url)));\nexport default __fyModule.exports;\n`;
+  }\n}).call(__fyModule.exports, __fyRequire(import.meta.url), __fyModule, __fyModule.exports, __fyPath(import.meta.url), __fyDir(__fyPath(import.meta.url)));\nexport default __fyModule.exports;\n`;
 }
 
 /** Auto chooses a shell for shell source and JavaScript for .mjs/.js/.cjs filenames. */

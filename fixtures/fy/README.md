@@ -27,3 +27,7 @@ files verbatim; formatters must leave source and expected output untouched.
 `sample-program.mjs` pins the default interpreter-backed output for `sample.sh`.
 Run `node js/experiments/generate-fy-fixtures.mjs` to regenerate this and the
 competitor output after an intentional rule change.
+
+`commonjs.cjs` and `commonjs.mjs` verify that migration preserves the identity of
+top-level `this`, `exports`, and `module.exports`. Both translators must produce
+the same module, and the JavaScript suite executes it in Node and Bun.
