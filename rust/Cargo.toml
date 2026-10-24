@@ -47,7 +47,7 @@ tokio-stream = { version = "0.1.19", features = ["time"] }
 tempfile = "3.27.0"
 assert_cmd = "2.2.2"
 # JS-compatible regexes (backreferences) for the Bun Shell conformance corpus.
-fancy-regex = "0.19.2"
+fancy-regex = "0.20.0"
 # The corpus nests some values deeper than serde_json's default limit of 128.
 serde_json = { version = "1.0.154", features = ["unbounded_depth"] }
 

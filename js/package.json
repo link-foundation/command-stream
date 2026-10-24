@@ -107,6 +107,17 @@
         "default": "./src/shelljs/index.cjs"
       },
       "default": "./src/shelljs/index.mjs"
+    },
+    "./core": {
+      "import": {
+        "types": "./types/core.d.ts",
+        "default": "./src/core.mjs"
+      },
+      "require": {
+        "types": "./types/core.d.cts",
+        "default": "./src/core.cjs"
+      },
+      "default": "./src/core.mjs"
     }
   },
   "repository": {
@@ -203,7 +214,7 @@
     "@resvg/resvg-js": "^2.6.2",
     "@xterm/headless": "^6.0.0",
     "gifenc": "^1.0.3",
-    "execa": "10.1.1"
+    "execa": "10.2.1"
   },
   "optionalDependencies": {
     "node-pty": "^1.1.0"
