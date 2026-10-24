@@ -63,6 +63,12 @@ duplication, Cargo formatting, and 473 workflow/layout/documentation tests pass.
 All 37 executable feature examples agree in Node, Bun and Rust.
 Lossless full-suite logs are archived under `evidence/`.
 
+The first repair push (`e894d74`) exposed the repository's one-changeset-per-PR
+rule: JavaScript run `40136048125`, job `120997666587`, rejected the second
+release fragment before starting downstream tests. The CDN release note is now
+combined with `virtual-command-validation.md`; no extra release fragment remains.
+The failed job is archived as `evidence/changesets-120997666587.log.gz`.
+
 The existing issue #30 acceptance matrix and external-outcome limits in the
 [previous audit](../oct24/analysis/requirements.md) still apply. This CI repair
 does not establish independently published packages, external adoption,
