@@ -77,8 +77,9 @@ configuration, then per-execution overrides. Later values win. Explicit `env`
 layers merge with each other; setting a key to `undefined` removes it. When `env`
 is supplied, it replaces the inherited process environment: include
 `...process.env` to extend the parent. An initial `env: {}` starts with an empty environment.
-Options and their env maps are copied when bound; later caller edits cannot
-change them. Buffers and AbortSignals remain shared resources.
+Options, their env and ANSI maps, and `preferLocal` directory arrays are copied
+and frozen when bound; later caller edits cannot change them. Buffers and
+AbortSignals remain shared resources.
 
 Builders default to `capture:true` and `mirror:false`. ProcessRunner's other
 settings apply, including inherited stdin. Inherit/ignore stdout or stderr is
@@ -94,7 +95,10 @@ literal builder into a shell command. For shell grammar use the tagged template
 API or explicitly execute an interpreter. Synchronous execution follows
 ProcessRunner's sync limitations, including unsupported async virtual handlers.
 AbortSignal cancellation applies to asynchronous execution; use `timeout` for
-synchronous deadlines.
+synchronous deadlines. Sync calls honor the same inherit/ignore output and
+capture policies. Sync events fire after the child exits, and native sync spawn
+buffers piped output even with `capture:false`; use asynchronous streaming for
+bounded memory. Inherited output bypasses the runner and is never mirrored twice.
 
 ```js
 const runner = command('node', ['-e', 'process.stdin.pipe(process.stdout)'])
@@ -139,7 +143,9 @@ may still interpret its own options or code arguments. In particular, calling
 `arg`, `args`, `cwd`, `env`, `envs`, `env_clear`, `env_remove`, `stdin`, `stdout`,
 `stderr`, and `.pipe(|builder| ...)` transforms. `.run().await` and `.run_sync()`
 return CommandResult; `.exit_code().await` selects status. `.shell_string()`
-renders POSIX argv. Inputs use OsString; captured results are UTF-8 strings.
+renders POSIX argv. Arguments and environment use OsString; configured stdin and
+captured results are UTF-8 strings. Native non-UTF-8 values execute losslessly;
+the shell-string renderer uses lossy text conversion for them.
 Use the Rust ProcessRunner, stream, and compatibility APIs for events,
 cancellation, pipelines and additional execution options.
 
@@ -152,5 +158,6 @@ The tests execute hostile argv and executable paths, the issue example, immutabl
 presets and env layers, overrides, stdio policies, sync/async selection, events,
 pipelines, streaming, timeouts and cancellation.
 
-See the [complete comparison](COMPARISON.md) for competitor APIs across the
-library's features and the pinned compatibility corpus for coverage and limits.
+See the [JavaScript comparison](COMPARISON.md) and [Rust comparison](../../rust/docs/COMPARISON.md)
+for competitor APIs across the library's features, and the pinned compatibility
+corpora for coverage and limits.

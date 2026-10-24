@@ -32,6 +32,17 @@ function mergeOptions(base, overrides = {}) {
   };
 }
 
+function snapshotOptions(options) {
+  return Object.freeze({
+    ...options,
+    ...(options.env && { env: Object.freeze({ ...options.env }) }),
+    ...(options.ansi && { ansi: Object.freeze({ ...options.ansi }) }),
+    ...(Array.isArray(options.preferLocal) && {
+      preferLocal: Object.freeze([...options.preferLocal]),
+    }),
+  });
+}
+
 /** An immutable, lazy exact-argv command specification. */
 export class CommandBuilder {
   constructor(file, args = [], options = {}, select = identity) {
@@ -48,11 +59,10 @@ export class CommandBuilder {
     }
     this.file = file;
     this.args = Object.freeze(args.map(argument));
-    this.options = Object.freeze({
+    this.options = snapshotOptions({
       mirror: false,
       capture: true,
       ...options,
-      ...(options.env && { env: Object.freeze({ ...options.env }) }),
     });
     this.select = select;
     Object.freeze(this);
@@ -165,10 +175,7 @@ export class CommandBuilder {
 }
 
 function factory(options = {}) {
-  const defaults = {
-    ...options,
-    ...(options.env && { env: { ...options.env } }),
-  };
+  const defaults = snapshotOptions(options);
   const make = (file, ...args) => {
     if (Array.isArray(args[0])) {
       if (args.length > 2) {

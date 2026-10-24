@@ -46,3 +46,55 @@ literal.stdout('bad');
 // @ts-expect-error Exit-code builders return a number.
 const invalid: StreamResult = fluent.sync();
 void invalid;
+
+const manyTransforms = literal.pipe(
+  command.capture(),
+  command.mirror(false),
+  command.arg('six'),
+  command.stdout('ignore'),
+  command.stderr('ignore'),
+  command.exitCode,
+  command.options({ timeout: 100 }),
+  command.capture(false)
+);
+const manyResult: number = manyTransforms.sync();
+void manyResult;
+// @ts-expect-error Incompatible result types cannot be joined in a pipeline.
+literal.pipe(command.exitCode, (builder: CommandBuilder<string>) => builder);
+literal.pipe(
+  command.capture(),
+  command.mirror(),
+  command.arg('a'),
+  command.cwd('.'),
+  // @ts-expect-error Long pipelines must also check intermediate result types.
+  command.exitCode,
+  (builder: CommandBuilder<string>) => builder
+);
+// @ts-expect-error Long pipelines preserve selection after generic transforms.
+const erasedSelection: string = manyTransforms.sync();
+void erasedSelection;
+
+const twentyTransforms = literal.pipe(
+  (builder: CommandBuilder<StreamResult>) => builder,
+  command.capture(),
+  command.capture(),
+  command.capture(),
+  command.capture(),
+  command.capture(),
+  command.capture(),
+  command.capture(),
+  command.capture(),
+  command.capture(),
+  command.capture(),
+  command.capture(),
+  command.capture(),
+  command.capture(),
+  command.capture(),
+  command.capture(),
+  command.capture(),
+  command.capture(),
+  command.capture(),
+  command.exitCode
+);
+const twentiethResult: number = twentyTransforms.sync();
+void twentiethResult;

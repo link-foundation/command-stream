@@ -40,24 +40,45 @@ for (const [format, api] of [
   );
 }
 
-test(
-  'inherit writes exactly once while ignore discards output',
-  { timeout: 10000 },
-  () => {
-    const source = `
+for (const execution of ['run', 'sync']) {
+  test(
+    `${execution}: inherit writes exactly once while ignore discards output`,
+    { timeout: 10000 },
+    () => {
+      const source = `
     const { command } = await import('./js/src/command-builder.mjs');
     const builder = command(process.execPath, '-e', "console.log('visible');console.error('hidden')")
       .stdout('inherit').stderr('ignore').mirror(true);
-    const result = await builder.run();
+    const result = await builder.${execution}();
     if (String(result.stdout) !== '' || String(result.stderr) !== '') process.exit(9);
   `;
-    const result = spawnSync(
-      process.execPath,
-      ['--input-type=module', '-e', source],
-      { encoding: 'utf8' }
-    );
-    assert.equal(result.status, 0, result.stderr);
-    assert.equal(result.stdout, 'visible\n');
-    assert.equal(result.stderr, '');
-  }
-);
+      const result = spawnSync(
+        process.execPath,
+        ['--input-type=module', '-e', source],
+        { encoding: 'utf8' }
+      );
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(result.stdout, 'visible\n');
+      assert.equal(result.stderr, '');
+    }
+  );
+}
+
+test('sync inherits piped stdin from the parent', { timeout: 10000 }, () => {
+  const source = `
+    const { command } = await import('./js/src/command-builder.mjs');
+    const builder = command(process.execPath, '-e', 'process.stdin.pipe(process.stdout)');
+    const result = builder.stdin('inherit').sync();
+    process.stdout.write(String(result.stdout));
+  `;
+  const result = spawnSync(
+    process.execPath,
+    ['--input-type=module', '-e', source],
+    {
+      input: 'inherited input',
+      encoding: 'utf8',
+    }
+  );
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, 'inherited input');
+});

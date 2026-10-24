@@ -1,6 +1,5 @@
 //! Lazy exact-argv command descriptions, parallel to JavaScript `$.command`.
 use crate::{CommandResult, Result, StdinOption};
-use std::collections::HashMap;
 use std::ffi::OsString;
 use std::path::PathBuf;
 use std::process::Stdio;
@@ -30,7 +29,9 @@ pub struct CommandBuilder {
     pub file: OsString,
     pub arguments: Vec<OsString>,
     cwd: Option<PathBuf>,
-    env: HashMap<OsString, Option<OsString>>,
+    // Replay changes in order so native Command applies platform-specific
+    // key equality (notably case-insensitive environment names on Windows).
+    env: Vec<(OsString, Option<OsString>)>,
     clear_env: bool,
     stdout: CommandStdio,
     stderr: CommandStdio,
@@ -43,7 +44,7 @@ impl CommandBuilder {
             file: file.into(),
             arguments: Vec::new(),
             cwd: None,
-            env: HashMap::new(),
+            env: Vec::new(),
             clear_env: false,
             stdout: CommandStdio::Pipe,
             stderr: CommandStdio::Pipe,
@@ -70,7 +71,7 @@ impl CommandBuilder {
         self
     }
     pub fn env(mut self, key: impl Into<OsString>, value: impl Into<OsString>) -> Self {
-        self.env.insert(key.into(), Some(value.into()));
+        self.env.push((key.into(), Some(value.into())));
         self
     }
     pub fn envs<I, K, V>(mut self, variables: I) -> Self
@@ -85,7 +86,7 @@ impl CommandBuilder {
         self
     }
     pub fn env_remove(mut self, key: impl Into<OsString>) -> Self {
-        self.env.insert(key.into(), None);
+        self.env.push((key.into(), None));
         self
     }
     pub fn env_clear(mut self) -> Self {

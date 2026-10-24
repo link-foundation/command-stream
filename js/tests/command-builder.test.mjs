@@ -188,6 +188,59 @@ describe('command builder API styles', () => {
     controller.abort();
     expect((await builder.run({ signal: controller.signal })).code).not.toBe(0);
   }, 5000);
+
+  test('sync honors ignored stdio without capture, events or mirroring', async () => {
+    const builder = node("console.log('hidden'); console.error('hidden')")
+      .stdout('ignore')
+      .stderr('ignore')
+      .mirror(true);
+    const runner = builder.runner();
+    const events = [];
+    runner.on('data', (chunk) => events.push(chunk));
+    const result = runner.sync();
+    expect(result.code).toBe(0);
+    expect(await result.text()).toBe('');
+    expect(String(result.stderr)).toBe('');
+    expect(events).toEqual([]);
+  });
+
+  test('sync capture:false keeps events but discards retained output', async () => {
+    const runner = node("console.log('visible'); console.error('error')")
+      .capture(false)
+      .runner();
+    let stdout = '';
+    let stderr = '';
+    runner.on('stdout', (chunk) => {
+      stdout += chunk;
+    });
+    runner.on('stderr', (chunk) => {
+      stderr += chunk;
+    });
+    const result = runner.sync();
+    expect(stdout).toBe('visible\n');
+    expect(stderr).toBe('error\n');
+    expect(result.stdout).toBeUndefined();
+    expect(result.stderr).toBeUndefined();
+    expect(await result.text()).toBe('');
+    expect(runner.outChunks).toBeNull();
+    expect(runner.errChunks).toBeNull();
+  });
+
+  test('presets and builders snapshot nested configuration', () => {
+    const directories = ['/initial'];
+    const ansi = { preserveAnsi: false };
+    const options = { preferLocal: directories, ansi };
+    const preset = command.with(options);
+    const builder = command('echo', [], options);
+    directories.push('/mutated');
+    ansi.preserveAnsi = true;
+    for (const configured of [preset('echo'), builder]) {
+      expect(configured.options.preferLocal).toEqual(['/initial']);
+      expect(configured.options.ansi.preserveAnsi).toBe(false);
+      expect(Object.isFrozen(configured.options.preferLocal)).toBe(true);
+      expect(Object.isFrozen(configured.options.ansi)).toBe(true);
+    }
+  });
 });
 
 describe('command builder safety and rendering', () => {

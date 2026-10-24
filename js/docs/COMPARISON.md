@@ -99,7 +99,9 @@ counterparts in Rust. The following links lead to runnable examples and output:
 | Cold import/module budget                                                 | [Core entry](CORE.md), [automated module-budget tests](../tests/core-entry.test.mjs)                                          |
 | Process latency, memory, package size, features and real workloads        | [JavaScript benchmarks](../benchmarks/README.md), [Rust benchmarks](../../rust/benchmarks/README.md)                          |
 
-Rust's [competitor audit](../../rust/docs/COMPETITOR_TEST_AUDIT.md) also covers
+The [Rust comparison](../../rust/docs/COMPARISON.md) compares construction,
+execution, output, configuration, lifecycle and tooling for all fourteen Rust
+projects. Rust's [competitor audit](../../rust/docs/COMPETITOR_TEST_AUDIT.md) covers
 Tokio, async-process, duct, subprocess, xshell, rust_cmd_lib, rust-shell,
 run_script, shellfn, bkt, assert_cmd, rexpect and expectrl. The audit records
 contracts such as binary collection, arbitrary handles, expect sessions,

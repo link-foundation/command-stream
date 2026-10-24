@@ -24,6 +24,14 @@ fn main() {
                 println!("{}", hex(env::var(&key).unwrap_or_default().as_bytes()));
             }
         }
+        "env-state" => {
+            for key in args {
+                match env::var_os(key) {
+                    Some(value) => println!("present:{}", hex(value.to_string_lossy().as_bytes())),
+                    None => println!("absent"),
+                }
+            }
+        }
         "output" => {
             let stdout = args.next().unwrap_or_default();
             let stderr = args.next().unwrap_or_default();

@@ -110,9 +110,8 @@ describe('Synchronous Execution (.sync())', () => {
       cmd.options.capture = false;
       const result = cmd.sync();
 
-      // capture option doesn't affect sync mode - always captures
-      // This is different from async mode
-      expect(result.stdout.trim()).toBe('test');
+      expect(result.stdout).toBeUndefined();
+      expect(result.stderr).toBeUndefined();
     });
 
     test('should handle stdin options', () => {

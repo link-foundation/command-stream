@@ -71,8 +71,8 @@ assumptions. Copying their files byte-for-byte would mostly test those crates.
 Instead, every scoped test belongs to one disposition:
 
 1. A portable public process invariant is adapted into the executable suite.
-2. A public invariant needs a feature command-stream does not have and is in
-   the missing-feature ledger below.
+2. A public upstream contract is not fully ported and is recorded in the
+   remaining-contract ledger below, with its current implementation status.
 3. A test verifies competitor API shape, private internals, unrelated helpers,
    upstream runtime behavior, or harness mechanics and is inapplicable.
 
@@ -95,36 +95,41 @@ inventory total, and ensure all fourteen selected projects are represented.
 
 ## Executable behavior ports
 
-| Case ID                       | Public invariant                                                                           |
-| ----------------------------- | ------------------------------------------------------------------------------------------ |
-| `direct-exact-argv`           | Direct execution bypasses shell tokenization and preserves argument boundaries.            |
-| `argument-edge-cases`         | Empty, whitespace, multiline, Unicode, quote, and metacharacter arguments survive exactly. |
-| `safe-template-interpolation` | On POSIX shells, an untrusted interpolation remains one literal argument.                  |
-| `cwd-string`                  | An explicit working directory reaches the child.                                           |
-| `environment`                 | Explicit environment values reach the child without corruption.                            |
-| `stdout-stderr-separation`    | Standard output and error remain separate.                                                 |
-| `newline-preservation`        | Captured output preserves final and repeated newlines.                                     |
-| `unicode-output`              | UTF-8 output is captured without loss.                                                     |
-| `large-output`                | One MiB is captured without truncation or deadlock.                                        |
-| `nonzero-exit`                | A non-zero child status is returned, and reads through `code` and `exit_code`.             |
-| `stdin-string`                | String input is written completely and stdin closes.                                       |
-| `lazy-execution`              | Constructing a runner does not spawn it.                                                   |
-| `concurrent-execution`        | Concurrent children keep results isolated.                                                 |
-| `streamed-before-exit`        | Output arrives before a delayed child exits.                                               |
-| `sync-execution`              | Synchronous execution returns captured output and status.                                  |
-| `programmatic-pipeline`       | One process's stdout becomes the next process's stdin.                                     |
-| `spawn-error-propagation`     | An unavailable exact executable returns an error, never a false success.                   |
-| `stream-kill`                 | Killing an active stream terminates the child and reports termination.                     |
+| Case ID                        | Public invariant                                                                            |
+| ------------------------------ | ------------------------------------------------------------------------------------------- |
+| `direct-exact-argv`            | Direct execution bypasses shell tokenization and preserves argument boundaries.             |
+| `argument-edge-cases`          | Empty, whitespace, multiline, Unicode, quote, and metacharacter arguments survive exactly.  |
+| `safe-template-interpolation`  | On POSIX shells, an untrusted interpolation remains one literal argument.                   |
+| `cwd-string`                   | An explicit working directory reaches the child.                                            |
+| `environment`                  | Explicit environment values reach the child without corruption.                             |
+| `environment-clear-and-remove` | Builder clear/removal, ordering and native platform key rules hold for sync and async runs. |
+| `stdout-stderr-separation`     | Standard output and error remain separate.                                                  |
+| `newline-preservation`         | Captured output preserves final and repeated newlines.                                      |
+| `unicode-output`               | UTF-8 output is captured without loss.                                                      |
+| `large-output`                 | One MiB is captured without truncation or deadlock.                                         |
+| `nonzero-exit`                 | A non-zero child status is returned, and reads through `code` and `exit_code`.              |
+| `stdin-string`                 | String input is written completely and stdin closes.                                        |
+| `lazy-execution`               | Constructing a runner does not spawn it.                                                    |
+| `concurrent-execution`         | Concurrent children keep results isolated.                                                  |
+| `streamed-before-exit`         | Output arrives before a delayed child exits.                                                |
+| `sync-execution`               | Synchronous execution returns captured output and status.                                   |
+| `programmatic-pipeline`        | One process's stdout becomes the next process's stdin.                                      |
+| `spawn-error-propagation`      | An unavailable exact executable returns an error, never a false success.                    |
+| `stream-kill`                  | Killing an active stream terminates the child and reports termination.                      |
 
 Existing focused Rust tests continue to cover shell parsing, virtual commands,
 signals, process groups, terminal capture, redirection, state, and built-ins in
 greater depth.
 
-## Missing-feature ledger
+## Remaining upstream contracts
 
-These are comparison inputs for later work, not promises that every competitor
-choice fits command-stream. A future implementation should start with a failing
-focused test and update the corpus in the same change.
+Stable `missing` disposition IDs below identify contracts not completely ported
+by this corpus. Current implementations in a separate runner or compatibility
+module are described where applicable; they do not automatically prove every
+upstream contract. See the [complete Rust comparison](COMPARISON.md) for API
+selection and the [JavaScript comparison](../../js/docs/COMPARISON.md) for the
+separate JavaScript surfaces. The ten environment-clear/removal units now have
+an executable builder invariant and are ported in both exact ledgers.
 
 ### array-and-splat-interpolation
 
@@ -136,20 +141,19 @@ display values only.
 
 The native, Tokio, async-process, assert_cmd, and subprocess APIs accept
 platform `OsStr` values throughout. `StreamingRunner::from_argv` accepts native
-arguments, but command-stream's environment and captured result APIs require
-UTF-8 strings, so it cannot preserve this contract end to end.
+arguments, and CommandBuilder now accepts native executable, argument and
+environment values. Core RunOptions environment and collected text results
+still require UTF-8; use the builder for native env and the Execa byte result
+API for lossless collection. The complete lower-level upstream contracts are
+not inferred from those separate surfaces.
 
 ### binary-input-and-lossless-output
 
 Several competitors accept byte input and return raw output bytes.
 command-stream streaming chunks are bytes, but collected output and configured
-stdin are strings and use lossy UTF-8 decoding.
-
-### environment-clear-and-remove
-
-Native process builders and several wrappers can clear the inherited
-environment or remove one variable. command-stream can add or replace values
-but has no clear/remove policy.
+stdin are strings and use lossy UTF-8 decoding in the core builder/runner.
+The separate Rust Execa module accepts and collects bytes; it is documented in
+the [Execa guide](../../js/docs/EXECA_MIGRATION.md#rust).
 
 ### custom-stdio-and-file-handles
 
@@ -166,7 +170,10 @@ command-stream currently captures without a configurable maximum-buffer policy.
 
 assert_cmd, xshell, run_script, rexpect, and expectrl expose deadlines in their
 assertion, script, or session layers. command-stream can be cancelled through
-its stream handle but has no per-command timeout option.
+its stream handle, and ProcessRunner's `RunOptions::timeout` supplies a
+per-command deadline with configured termination signal/grace. CommandBuilder
+does not expose that runner option, and a process deadline does not implement
+an expect session's per-read deadline. Those contracts remain separate.
 
 ### try-wait-and-shared-child-handle
 
