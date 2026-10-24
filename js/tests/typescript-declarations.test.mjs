@@ -15,6 +15,7 @@ import { PACKAGE_ROOT } from './commonjs-sandbox.mjs';
 import * as esm from '../src/$.mjs';
 import * as processRunnerModule from '../src/process-runner.mjs';
 import * as bunModule from '../src/bun.mjs';
+import * as coreModule from '../src/core.mjs';
 
 const read = (path) =>
   readFileSync(join(PACKAGE_ROOT, path), 'utf8').replace(/\r\n/g, '\n');
@@ -106,6 +107,21 @@ describe('TypeScript declarations match the runtime API', () => {
         .filter(Boolean)
     );
     expect(sorted(declared)).toEqual(sorted(Object.keys(processRunnerModule)));
+  });
+
+  test('./core exports match declarations in ESM and CommonJS', () => {
+    const declared = [
+      ...read('types/core-api.d.cts').matchAll(/^export \{([^}]*)\}/gm),
+    ].flatMap((match) =>
+      match[1]
+        .split(',')
+        .map((name) => name.trim())
+        .filter(Boolean)
+    );
+    const expected = sorted([...declared, '$', 'default']);
+    expect(expected).toEqual(sorted(Object.keys(coreModule)));
+    const require = createRequire(import.meta.url);
+    expect(expected).toEqual(sorted(Object.keys(require('../src/core.cjs'))));
   });
 
   test('./bun subpath exports are all declared (ESM and CommonJS)', () => {

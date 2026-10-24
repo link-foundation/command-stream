@@ -3,10 +3,45 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
+import { build } from 'esbuild';
 
 const require = createRequire(import.meta.url);
 const probe = fileURLToPath(
   new URL('../../experiments/issue-235/import-probe.mjs', import.meta.url)
+);
+
+test(
+  'core bundles and executes without compatibility or native terminal inputs',
+  { timeout: 10000 },
+  async () => {
+    const bundle = await build({
+      stdin: {
+        contents:
+          'const { $ } = require("command-stream/core"); console.log($({ mirror: false })`echo bundled-core`.sync().stdout.toString().trim());',
+        resolveDir: fileURLToPath(new URL('..', import.meta.url)),
+      },
+      bundle: true,
+      platform: 'node',
+      format: 'cjs',
+      write: false,
+      metafile: true,
+    });
+    assert.deepEqual(
+      Object.keys(bundle.metafile.inputs).filter((path) =>
+        /\/(?:shelljs|execa|zx|bun-shell)\/|\/terminal-|@xterm|@resvg|node-pty|gifenc/.test(
+          path
+        )
+      ),
+      []
+    );
+    const result = spawnSync('node', ['--input-type=commonjs'], {
+      input: bundle.outputFiles[0].text,
+      encoding: 'utf8',
+      timeout: 8000,
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout.trim(), 'bundled-core');
+  }
 );
 
 for (const mode of ['import', 'require']) {
@@ -42,14 +77,20 @@ test(
   async () => {
     const core = await import('command-stream/core');
     assert.equal(core.default, core.$);
+    for (const name of ['echo', 'cat', 'pwd', 'cd', 'which']) {
+      assert.ok(core.listCommands().includes(name));
+    }
     const $ = core.$({ mirror: false });
     const text = 'spaces; "quotes" and $variables';
     assert.equal((await $`echo ${text}`).stdout.trim(), text);
     assert.equal($`echo sync`.sync().stdout.trim(), 'sync');
     core.register('issue235', () => ({ code: 0, stdout: 'shared core\n' }));
     try {
-      assert.equal((await $`issue235`).stdout, 'shared core\n');
-      assert.equal((await $`issue235`.pipe($`cat`)).stdout, 'shared core\n');
+      assert.equal((await $`issue235`).stdout.toString(), 'shared core\n');
+      assert.equal(
+        (await $`issue235`.pipe($`cat`)).stdout.toString(),
+        'shared core\n'
+      );
       const runner = new core.ProcessRunner(
         {
           mode: 'exec',
@@ -58,7 +99,7 @@ test(
         },
         { mirror: false, stdin: 'ignore' }
       );
-      assert.equal((await runner).stdout, 'argv');
+      assert.equal((await runner).stdout.toString(), 'argv');
     } finally {
       core.unregister('issue235');
     }
@@ -88,7 +129,7 @@ test(
     try {
       assert.ok(full.listCommands().includes('issue235shared'));
       assert.equal(
-        (await full.$({ mirror: false })`issue235shared`).stdout,
+        (await full.$({ mirror: false })`issue235shared`).stdout.toString(),
         'registered'
       );
     } finally {

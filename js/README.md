@@ -199,6 +199,20 @@ bun add command-stream # Bun
 Core execution works without native builds or lifecycle scripts. See
 [optional PTY installation](docs/INSTALLATION.md) for terminal setup.
 
+### Lightweight shell entry point
+
+Import `$` and virtual commands without loading compatibility, terminal or
+REPL features:
+
+```javascript
+import { $ } from 'command-stream/core';
+const result = await $({ mirror: false })`echo ${'hello core'}`;
+```
+
+CommonJS: `const $ = require('command-stream/core')`. Core shares process and
+virtual-command state with the full entry. See [the core guide](docs/CORE.md)
+for available APIs, import budgets and measurement commands.
+
 ### Lightweight ProcessRunner entry point
 
 Consumers that only need direct process execution can import `ProcessRunner`
@@ -214,8 +228,8 @@ const runner = new ProcessRunner(
 const result = await runner;
 ```
 
-The main `command-stream` entry point remains the supported import for `$` and
-terminal capture features.
+The main `command-stream` entry point provides the full API, including terminal
+capture and compatibility features.
 
 ## Module Formats (ESM and CommonJS)
 
