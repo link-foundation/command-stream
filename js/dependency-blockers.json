@@ -1,3 +1,1 @@
-{
-  "execa": "https://github.com/sindresorhus/execa/issues/1265: execa 10.2.0 declarations fail to type-check with exactOptionalPropertyTypes, and command-stream re-exports them"
-}
+{}
