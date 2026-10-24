@@ -1,0 +1,1010 @@
+{
+  "source": "test/js/bun/shell/pipeline_stack.test.ts",
+  "units": [
+    {
+      "line": 15,
+      "upstream": "true | true - both builtins exit immediately",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/true-true-both-builtins-exit-immediately",
+          "template": ["true | true"],
+          "expect": {
+            "stdout": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 20,
+      "upstream": "false | false - both builtins fail immediately",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/false-false-both-builtins-fail-immediately",
+          "template": ["false | false"],
+          "expect": {
+            "stdout": "",
+            "exitCode": 1
+          }
+        }
+      ]
+    },
+    {
+      "line": 22,
+      "upstream": "true | false - mixed success/failure",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/true-false-mixed-success-failure",
+          "template": ["true | false"],
+          "expect": {
+            "stdout": "",
+            "exitCode": 1
+          }
+        }
+      ]
+    },
+    {
+      "line": 24,
+      "upstream": "false | true - failure then success",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/false-true-failure-then-success",
+          "template": ["false | true"],
+          "expect": {
+            "stdout": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 27,
+      "upstream": "chain of true builtins",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/chain-of-true-builtins",
+          "template": ["true | true | true | true"],
+          "expect": {
+            "stdout": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 29,
+      "upstream": "chain of false builtins",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/chain-of-false-builtins",
+          "template": ["false | false | false | false"],
+          "expect": {
+            "stdout": "",
+            "exitCode": 1
+          }
+        }
+      ]
+    },
+    {
+      "line": 31,
+      "upstream": "alternating true/false chain",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/alternating-true-false-chain",
+          "template": ["true | false | true | false"],
+          "expect": {
+            "stdout": "",
+            "exitCode": 1
+          }
+        }
+      ]
+    },
+    {
+      "line": 36,
+      "upstream": "echo | echo - second echo ignores stdin",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/echo-echo-second-echo-ignores-stdin",
+          "template": ["echo hello | echo world"],
+          "expect": {
+            "stdout": "world\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 38,
+      "upstream": "echo | echo | echo - chain",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/echo-echo-echo-chain",
+          "template": ["echo hello | echo world | echo final"],
+          "expect": {
+            "stdout": "final\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 40,
+      "upstream": "echo | true - output discarded",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/echo-true-output-discarded",
+          "template": ["echo test | true"],
+          "expect": {
+            "stdout": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 45,
+      "upstream": "echo | false - output discarded with failure",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/echo-false-output-discarded-with-failure",
+          "template": ["echo test | false"],
+          "expect": {
+            "stdout": "",
+            "exitCode": 1
+          }
+        }
+      ]
+    },
+    {
+      "line": 49,
+      "upstream": "echo chain with true in middle",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/echo-chain-with-true-in-middle",
+          "template": ["echo one | echo two | true | echo three"],
+          "expect": {
+            "stdout": "three\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 56,
+      "upstream": "exit 0 | echo - pipeline continues",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/exit-0-echo-pipeline-continues",
+          "template": ["exit 0 | echo after"],
+          "expect": {
+            "stdout": "after\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 61,
+      "upstream": "exit 42 | echo - exit code not propagated through pipe",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/exit-42-echo-exit-code-not-propagated-through-pipe",
+          "template": ["exit 42 | echo after"],
+          "expect": {
+            "stdout": "after\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 63,
+      "upstream": "echo | exit 0",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/echo-exit-0",
+          "template": ["echo before | exit 0"],
+          "expect": {
+            "stdout": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 68,
+      "upstream": "echo | exit 99 - last command exit code",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/echo-exit-99-last-command-exit-code",
+          "template": ["echo before | exit 99"],
+          "expect": {
+            "stdout": "",
+            "exitCode": 99
+          }
+        }
+      ]
+    },
+    {
+      "line": 73,
+      "upstream": "chain of exits - last exit code wins",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/chain-of-exits-last-exit-code-wins",
+          "template": ["exit 5 | exit 10 | exit 15"],
+          "expect": {
+            "stdout": "",
+            "exitCode": 15
+          }
+        }
+      ]
+    },
+    {
+      "line": 80,
+      "upstream": "cd | pwd - cd doesn't affect next command in pipeline",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/cd-pwd-cd-doesn-t-affect-next-command-in-pipeline",
+          "template": ["cd / | pwd"],
+          "expect": {
+            "stdout": "{{TEMP_NATIVE}}\n",
+            "exitCode": 0
+          },
+          "note": "Upstream uses a stdout callback that returns a boolean (s.includes(\"$TEMP_DIR\")) which TestBuilder ignores, so upstream effectively checks nothing; encoded real Bun 1.4.2 output: cd in a pipeline runs in its own copy of the shell state, so pwd prints the unchanged temp dir. On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes"
+        }
+      ]
+    },
+    {
+      "line": 85,
+      "upstream": "cd | cd | pwd - multiple cd's don't affect",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/cd-cd-pwd-multiple-cd-s-don-t-affect",
+          "template": ["mkdir foo; mkdir foo/bar; cd foo | cd foo/bar | pwd"],
+          "expect": {
+            "stdout": "{{TEMP_NATIVE}}\n",
+            "exitCode": 0
+          },
+          "note": "Upstream uses a stdout callback that returns a boolean (s.includes(\"$TEMP_DIR\")) which TestBuilder ignores, so upstream effectively checks nothing; encoded real Bun 1.4.2 output: cd in a pipeline runs in its own copy of the shell state, so pwd prints the unchanged temp dir. On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes"
+        }
+      ]
+    },
+    {
+      "line": 93,
+      "upstream": "pwd | cd | pwd - cd in middle doesn't affect",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/pwd-cd-pwd-cd-in-middle-doesn-t-affect",
+          "template": ["pwd | cd / | pwd"],
+          "expect": {
+            "stdout": "{{TEMP_NATIVE}}\n",
+            "exitCode": 0
+          },
+          "note": "Upstream uses a stdout callback that returns a boolean (s.includes(\"$TEMP_DIR\")) which TestBuilder ignores, so upstream effectively checks nothing; encoded real Bun 1.4.2 output: cd in a pipeline runs in its own copy of the shell state, so pwd prints the unchanged temp dir. Upstream's callback expected 2 lines, but the first pwd's output is piped into cd (which ignores stdin), so only the last pwd's line is printed. On Windows the shell cwd, as printed by `pwd` and `$PWD`, uses backslashes"
+        }
+      ]
+    },
+    {
+      "line": 99,
+      "upstream": "echo builtin | subprocess",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/echo-builtin-subprocess",
+          "template": [
+            "echo hello | ",
+            " -e 'process.stdin.pipe(process.stdout)'"
+          ],
+          "values": [
+            {
+              "string": "{{NODE}}"
+            }
+          ],
+          "expect": {
+            "stdout": "hello\n",
+            "exitCode": 0
+          },
+          "requires": ["node"]
+        }
+      ]
+    },
+    {
+      "line": 103,
+      "upstream": "subprocess | echo builtin",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/subprocess-echo-builtin",
+          "template": ["", " -e 'console.log(\"hello\")' | echo world"],
+          "values": [
+            {
+              "string": "{{NODE}}"
+            }
+          ],
+          "expect": {
+            "stdout": "world\n",
+            "exitCode": 0
+          },
+          "requires": ["node"]
+        }
+      ]
+    },
+    {
+      "line": 108,
+      "upstream": "true builtin | subprocess exit 0",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/true-builtin-subprocess-exit-0",
+          "template": ["true | ", " -e 'process.exit(0)'"],
+          "values": [
+            {
+              "string": "{{NODE}}"
+            }
+          ],
+          "expect": {
+            "stdout": "",
+            "exitCode": 0
+          },
+          "requires": ["node"]
+        }
+      ]
+    },
+    {
+      "line": 113,
+      "upstream": "false builtin | subprocess - subprocess exit code wins",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/false-builtin-subprocess-subprocess-exit-code-wins",
+          "template": ["false | ", " -e 'process.exit(0)'"],
+          "values": [
+            {
+              "string": "{{NODE}}"
+            }
+          ],
+          "expect": {
+            "stdout": "",
+            "exitCode": 0
+          },
+          "requires": ["node"]
+        }
+      ]
+    },
+    {
+      "line": 118,
+      "upstream": "mixed chain - last command determines exit",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/mixed-chain-last-command-determines-exit",
+          "template": [
+            "echo one | true | ",
+            " -e 'process.stdin.pipe(process.stdout)' | false"
+          ],
+          "values": [
+            {
+              "string": "{{NODE}}"
+            }
+          ],
+          "expect": {
+            "stdout": "",
+            "exitCode": 1
+          },
+          "requires": ["node"]
+        }
+      ]
+    },
+    {
+      "line": 125,
+      "upstream": "10 true commands",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/10-true-commands",
+          "template": [
+            "true | true | true | true | true | true | true | true | true | true"
+          ],
+          "expect": {
+            "stdout": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 129,
+      "upstream": "10 echo commands",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/10-echo-commands",
+          "template": [
+            "echo 1 | echo 2 | echo 3 | echo 4 | echo 5 | echo 6 | echo 7 | echo 8 | echo 9 | echo 10"
+          ],
+          "expect": {
+            "stdout": "10\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 134,
+      "upstream": "20 alternating true/false",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/20-alternating-true-false",
+          "template": [
+            "true | false | true | false | true | false | true | false | true | false | true | false | true | false | true | false | true | false | true | false"
+          ],
+          "expect": {
+            "stdout": "",
+            "exitCode": 1
+          }
+        }
+      ]
+    },
+    {
+      "line": 139,
+      "upstream": "subshells with internal pipelines",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/subshells-with-internal-pipelines",
+          "template": ["(true | true) | (false | false) | (true | true)"],
+          "expect": {
+            "stdout": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 143,
+      "upstream": "subshells with echo pipelines",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/subshells-with-echo-pipelines",
+          "template": [
+            "(echo a | echo b) | (echo c | echo d) | (echo e | echo f)"
+          ],
+          "expect": {
+            "stdout": "f\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 148,
+      "upstream": "pipeline followed by conditional",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/pipeline-followed-by-conditional",
+          "template": ["true | true && echo done"],
+          "expect": {
+            "stdout": "done\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 152,
+      "upstream": "failing pipeline with fallback",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/failing-pipeline-with-fallback",
+          "template": ["false | false || echo fallback"],
+          "expect": {
+            "stdout": "fallback\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 154,
+      "upstream": "pipeline followed by semicolon",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/pipeline-followed-by-semicolon",
+          "template": ["true | true; echo after"],
+          "expect": {
+            "stdout": "after\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 156,
+      "upstream": "subshell pipeline followed by command",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/subshell-pipeline-followed-by-command",
+          "template": ["(true | true); echo after"],
+          "expect": {
+            "stdout": "after\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 161,
+      "upstream": "multiple pipelines in sequence",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/multiple-pipelines-in-sequence",
+          "template": ["true | true; false | false; echo done"],
+          "expect": {
+            "stdout": "done\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 165,
+      "upstream": "pipelines connected with &&",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/pipelines-connected-with-and",
+          "template": ["echo a | echo b && echo c | echo d && echo e | echo f"],
+          "expect": {
+            "stdout": "b\nd\nf\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 169,
+      "upstream": "pipelines connected with ||",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/pipelines-connected-with-or",
+          "template": ["false | false || echo a | echo b || echo c | echo d"],
+          "expect": {
+            "stdout": "b\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 175,
+      "upstream": "pipeline in if condition",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/pipeline-in-if-condition",
+          "template": ["if true | true; then echo yes; else echo no; fi"],
+          "expect": {
+            "stdout": "yes\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 179,
+      "upstream": "failing pipeline in if condition",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/failing-pipeline-in-if-condition",
+          "template": ["if false | false; then echo yes; else echo no; fi"],
+          "expect": {
+            "stdout": "no\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 183,
+      "upstream": "echo | true in if condition",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/echo-true-in-if-condition",
+          "template": ["if echo test | true; then echo success; fi"],
+          "expect": {
+            "stdout": "success\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 185,
+      "upstream": "test command in pipeline",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/test-command-in-pipeline",
+          "template": ["[[ -n \"test\" ]] | true && echo ok"],
+          "expect": {
+            "stdout": "ok\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 187,
+      "upstream": "pipeline to test command",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/pipeline-to-test-command",
+          "template": ["true | [[ -n \"test\" ]] && echo ok"],
+          "expect": {
+            "stdout": "ok\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 194,
+      "upstream": "rapid pipeline creation",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/rapid-pipeline-creation",
+          "template": [
+            "true | true; true | true; true | true; true | true; true | true; echo done"
+          ],
+          "expect": {
+            "stdout": "done\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 198,
+      "upstream": "empty echo pipes",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/empty-echo-pipes",
+          "template": ["echo \"\" | echo \"\""],
+          "expect": {
+            "stdout": "\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 200,
+      "upstream": "whitespace echo pipes",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/whitespace-echo-pipes",
+          "template": ["echo \"   \" | echo \"   \""],
+          "expect": {
+            "stdout": "   \n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 204,
+      "upstream": "echo with no args chain",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/echo-with-no-args-chain",
+          "template": ["echo | echo | echo"],
+          "expect": {
+            "stdout": "\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 208,
+      "upstream": "cd error | echo",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/cd-error-echo",
+          "template": ["cd /nonexistent 2>/dev/null | echo after"],
+          "expect": {
+            "stdout": "after\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 212,
+      "upstream": "which (not found) | echo",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/which-not-found-echo",
+          "template": ["which nonexistent_command 2>/dev/null | echo after"],
+          "expect": {
+            "stdout": "after\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 217,
+      "upstream": "basename (no args) | echo",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/basename-no-args-echo",
+          "template": ["basename | echo after 2>/dev/null"],
+          "expect": {
+            "stdout": "after\n",
+            "stderr": "usage: basename string\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 222,
+      "upstream": "deeply nested pipeline in subshells",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/deeply-nested-pipeline-in-subshells",
+          "template": ["(true | (true | (true | true)))"],
+          "expect": {
+            "stdout": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 226,
+      "upstream": "nested subshell pipelines",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/nested-subshell-pipelines",
+          "template": ["((echo a | echo b) | (echo c | echo d)) | echo e"],
+          "expect": {
+            "stdout": "e\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 230,
+      "upstream": "command substitution with pipeline",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/command-substitution-with-pipeline",
+          "template": ["echo $(true | true | echo nested) | echo outer"],
+          "expect": {
+            "stdout": "outer\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 232,
+      "upstream": "command substitution in pipeline",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/command-substitution-in-pipeline",
+          "template": ["true | $(echo echo) result"],
+          "expect": {
+            "stdout": "result\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 237,
+      "upstream": "conditional subshell pipelines",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/conditional-subshell-pipelines",
+          "template": [
+            "(true | false) && (echo a | echo b) || (echo c | echo d)"
+          ],
+          "expect": {
+            "stdout": "d\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 241,
+      "upstream": "variable assignment with true | echo",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/variable-assignment-with-true-echo",
+          "template": ["VAR=test true | echo $VAR"],
+          "expect": {
+            "stdout": "\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 243,
+      "upstream": "export in pipeline",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/export-in-pipeline",
+          "template": ["export VAR=test | echo $VAR"],
+          "expect": {
+            "stdout": "\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 247,
+      "upstream": "seq | echo - echo ignores stdin",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/seq-echo-echo-ignores-stdin",
+          "template": ["seq 1 3 | echo done"],
+          "expect": {
+            "stdout": "done\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 249,
+      "upstream": "seq | true - output discarded",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/seq-true-output-discarded",
+          "template": ["seq 1 5 | true"],
+          "expect": {
+            "stdout": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 251,
+      "upstream": "seq | seq - second seq ignores stdin",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/seq-seq-second-seq-ignores-stdin",
+          "template": ["seq 1 2 | seq 3 4"],
+          "expect": {
+            "stdout": "3\n4\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 255,
+      "upstream": "yes | head -n 1",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/yes-head-n-1",
+          "template": ["yes | head -n 1"],
+          "expect": {
+            "stdout": "y\n",
+            "exitCode": 0
+          },
+          "requires": ["head"]
+        }
+      ]
+    },
+    {
+      "line": 257,
+      "upstream": "yes with arg | head",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/yes-with-arg-head",
+          "template": ["yes no | head -n 2"],
+          "expect": {
+            "stdout": "no\nno\n",
+            "exitCode": 0
+          },
+          "requires": ["head"]
+        }
+      ]
+    },
+    {
+      "line": 259,
+      "upstream": "yes | true - yes terminates on EPIPE",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/yes-true-yes-terminates-on-epipe",
+          "template": ["yes | true"],
+          "expect": {
+            "stdout": "",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 261,
+      "upstream": "yes | false",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "pipeline_stack/yes-false",
+          "template": ["yes | false"],
+          "expect": {
+            "stdout": "",
+            "exitCode": 1
+          }
+        }
+      ]
+    }
+  ],
+  "nonUnitSites": [
+    {
+      "line": 202,
+      "reason": "commented-out test (printf \"\" | printf \"\")"
+    }
+  ]
+}

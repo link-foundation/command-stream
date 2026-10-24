@@ -1,0 +1,145 @@
+{
+  "total_count": 1,
+  "jobs": [
+    {
+      "id": 111940293159,
+      "run_id": 37362523810,
+      "workflow_name": "Language parity check",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523810",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEClSJw",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111940293159",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523810/job/111940293159",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-05T19:18:59Z",
+      "started_at": "2026-10-05T19:19:40Z",
+      "completed_at": "2026-10-05T19:20:38Z",
+      "name": "JS/Rust implementation parity",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-05T19:19:41Z",
+          "completed_at": "2026-10-05T19:19:43Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-05T19:19:43Z",
+          "completed_at": "2026-10-05T19:19:46Z"
+        },
+        {
+          "name": "Check JavaScript/Rust implementation parity",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 3,
+          "started_at": "2026-10-05T19:19:46Z",
+          "completed_at": "2026-10-05T19:19:46Z"
+        },
+        {
+          "name": "Simulate a fresh merge with the base branch",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-05T19:19:46Z",
+          "completed_at": "2026-10-05T19:19:47Z"
+        },
+        {
+          "name": "Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-05T19:19:47Z",
+          "completed_at": "2026-10-05T19:19:51Z"
+        },
+        {
+          "name": "Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-05T19:19:51Z",
+          "completed_at": "2026-10-05T19:19:53Z"
+        },
+        {
+          "name": "Setup Rust",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-05T19:19:53Z",
+          "completed_at": "2026-10-05T19:20:04Z"
+        },
+        {
+          "name": "Install JavaScript dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-10-05T19:20:04Z",
+          "completed_at": "2026-10-05T19:20:05Z"
+        },
+        {
+          "name": "Execute every feature in JavaScript and Rust",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-10-05T19:20:05Z",
+          "completed_at": "2026-10-05T19:20:30Z"
+        },
+        {
+          "name": "Check generated feature documentation",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-10-05T19:20:30Z",
+          "completed_at": "2026-10-05T19:20:35Z"
+        },
+        {
+          "name": "Post Setup Bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 18,
+          "started_at": "2026-10-05T19:20:35Z",
+          "completed_at": "2026-10-05T19:20:35Z"
+        },
+        {
+          "name": "Post Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 19,
+          "started_at": "2026-10-05T19:20:35Z",
+          "completed_at": "2026-10-05T19:20:35Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 20,
+          "started_at": "2026-10-05T19:20:35Z",
+          "completed_at": "2026-10-05T19:20:35Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 21,
+          "started_at": "2026-10-05T19:20:35Z",
+          "completed_at": "2026-10-05T19:20:35Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111940293159",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "runner_id": 1000084096,
+      "runner_name": "GitHub Actions 1000084096",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    }
+  ]
+}

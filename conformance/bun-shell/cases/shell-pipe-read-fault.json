@@ -1,0 +1,284 @@
+{
+  "source": "test/js/bun/shell/shell-pipe-read-fault.test.ts",
+  "units": [
+    {
+      "line": 372,
+      "upstream": "shell survives a synchronous stdout pipe read error during spawn",
+      "disposition": "case",
+      "note": "Upstream injects ENOMEM into recv()/epoll_ctl via an LD_PRELOAD shim (SHELL_FAIL_* env flags) and expects exitCode 12 without a crash; fault injection is Bun-internal and not reproduced. The case asserts the fixture command's normal behaviour. (SHELL_FAIL_RECV)",
+      "cases": [
+        {
+          "id": "shell-pipe-read-fault/fail-recv-stdout-only",
+          "template": ["head -c 64 /dev/zero 2> /dev/null"],
+          "platforms": ["linux"],
+          "requires": ["head"],
+          "expect": {
+            "stdout": {
+              "repeat": "\u0000",
+              "count": 64
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 379,
+      "upstream": "shell survives synchronous stdout and stderr pipe read errors during spawn",
+      "disposition": "case",
+      "note": "Upstream injects ENOMEM into recv()/epoll_ctl via an LD_PRELOAD shim (SHELL_FAIL_* env flags) and expects exitCode 12 without a crash; fault injection is Bun-internal and not reproduced. The case asserts the fixture command's normal behaviour. (SHELL_FAIL_RECV)",
+      "cases": [
+        {
+          "id": "shell-pipe-read-fault/fail-recv-both-pipes",
+          "template": ["head -c 64 /dev/zero"],
+          "platforms": ["linux"],
+          "requires": ["head"],
+          "expect": {
+            "stdout": {
+              "repeat": "\u0000",
+              "count": 64
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 386,
+      "upstream": "shell survives a synchronous epoll_ctl failure registering the stdout pipe",
+      "disposition": "case",
+      "note": "Upstream injects ENOMEM into recv()/epoll_ctl via an LD_PRELOAD shim (SHELL_FAIL_* env flags) and expects exitCode 12 without a crash; fault injection is Bun-internal and not reproduced. The case asserts the fixture command's normal behaviour. (SHELL_FAIL_EPOLL)",
+      "cases": [
+        {
+          "id": "shell-pipe-read-fault/fail-epoll-stdout-only",
+          "template": ["head -c 64 /dev/zero 2> /dev/null"],
+          "platforms": ["linux"],
+          "requires": ["head"],
+          "expect": {
+            "stdout": {
+              "repeat": "\u0000",
+              "count": 64
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 393,
+      "upstream": "shell survives synchronous epoll_ctl failures registering both pipes",
+      "disposition": "case",
+      "note": "Upstream injects ENOMEM into recv()/epoll_ctl via an LD_PRELOAD shim (SHELL_FAIL_* env flags) and expects exitCode 12 without a crash; fault injection is Bun-internal and not reproduced. The case asserts the fixture command's normal behaviour. (SHELL_FAIL_EPOLL)",
+      "cases": [
+        {
+          "id": "shell-pipe-read-fault/fail-epoll-both-pipes",
+          "template": ["head -c 64 /dev/zero"],
+          "platforms": ["linux"],
+          "requires": ["head"],
+          "expect": {
+            "stdout": {
+              "repeat": "\u0000",
+              "count": 64
+            }
+          }
+        }
+      ]
+    },
+    {
+      "line": 405,
+      "upstream": "shell survives a poll re-registration failure after the eager read drained a chunk",
+      "disposition": "case",
+      "note": "Upstream injects ENOMEM into recv()/epoll_ctl via an LD_PRELOAD shim (SHELL_FAIL_* env flags) and expects exitCode 12 without a crash; fault injection is Bun-internal and not reproduced. The case asserts the fixture command's normal behaviour. (SHELL_FAIL_EPOLL_AFTER + SHELL_RECV_ONE_CHUNK)",
+      "cases": [
+        {
+          "id": "shell-pipe-read-fault/quiet-chunk-sleep",
+          "template": ["sleep 0.1"],
+          "platforms": ["linux"],
+          "requires": ["sleep"],
+          "quiet": true,
+          "expect": {
+            "stdout": ""
+          },
+          "note": "upstream fixture is `sleep 5`.quiet(); shortened to 0.1s"
+        }
+      ]
+    },
+    {
+      "line": 418,
+      "upstream": "shell survives a poll re-registration failure during a poll-driven read",
+      "disposition": "case",
+      "note": "Upstream injects ENOMEM into recv()/epoll_ctl via an LD_PRELOAD shim (SHELL_FAIL_* env flags) and expects exitCode 12 without a crash; fault injection is Bun-internal and not reproduced. The case asserts the fixture command's normal behaviour. (ASAN-only upstream; SHELL_RECV_EAGAIN_FIRST + SHELL_FAIL_EPOLL_FROM=3)",
+      "cases": [
+        {
+          "id": "shell-pipe-read-fault/poll-chunk-eagain-first",
+          "template": ["sh -c 'printf AAAA; exec sleep 0.1' 2> /dev/null"],
+          "platforms": ["linux"],
+          "requires": ["sh", "sleep"],
+          "expect": {
+            "stdout": "AAAA"
+          },
+          "note": "upstream sleeps 5s (child killed by the faulted shell); shortened to 0.1s"
+        }
+      ]
+    },
+    {
+      "line": 439,
+      "upstream": "shell survives a poll re-registration failure raised from on_read_chunk's mid-read flush",
+      "disposition": "case",
+      "note": "Upstream injects ENOMEM into recv()/epoll_ctl via an LD_PRELOAD shim (SHELL_FAIL_* env flags) and expects exitCode 12 without a crash; fault injection is Bun-internal and not reproduced. The case asserts the fixture command's normal behaviour. (ASAN-only upstream; + SHELL_RECV_BULK=1)",
+      "cases": [
+        {
+          "id": "shell-pipe-read-fault/poll-chunk-bulk",
+          "template": ["sh -c 'printf AAAA; exec sleep 0.1' 2> /dev/null"],
+          "platforms": ["linux"],
+          "requires": ["sh", "sleep"],
+          "expect": {
+            "stdout": "AAAA"
+          },
+          "note": "upstream sleeps 5s (child killed by the faulted shell); shortened to 0.1s"
+        }
+      ]
+    },
+    {
+      "line": 456,
+      "upstream": "shell delivers the already-read output and the reader error when the read fails while that output is still queued for stdout",
+      "disposition": "case",
+      "note": "Upstream injects ENOMEM into recv()/epoll_ctl via an LD_PRELOAD shim (SHELL_FAIL_* env flags) and expects exitCode 12 without a crash; fault injection is Bun-internal and not reproduced. The case asserts the fixture command's normal behaviour. Upstream (tee-chunk fixture, not quiet, stdout to a fifo) expects the 256 KiB fabricated 'A' chunk + 'AAAA' teed; without the shim only the child's 'AAAA' is produced.",
+      "cases": [
+        {
+          "id": "shell-pipe-read-fault/tee-chunk",
+          "template": ["sh -c 'printf AAAA; exec sleep 0.1' 2> /dev/null"],
+          "platforms": ["linux"],
+          "requires": ["sh", "sleep"],
+          "expect": {
+            "stdout": "AAAA"
+          },
+          "note": "upstream sleeps 5s (child killed by the faulted shell); shortened to 0.1s; upstream fixture is not .quiet() (output also teed to the process stdout)"
+        }
+      ]
+    },
+    {
+      "line": 539,
+      "upstream": "shell closes the un-started stdout/stderr pipes when the stdin writer fails to start",
+      "disposition": "case",
+      "note": "Upstream injects ENOMEM into recv()/epoll_ctl via an LD_PRELOAD shim (SHELL_FAIL_* env flags) and expects exitCode 12 without a crash; fault injection is Bun-internal and not reproduced. The case asserts the fixture command's normal behaviour. (SHELL_FAIL_EPOLL; upstream expects exit 1 'Cannot allocate memory' and no leaked fds after 6 runs)",
+      "cases": [
+        {
+          "id": "shell-pipe-read-fault/stdin-4mb-single-fail-epoll",
+          "template": ["cat < ", ""],
+          "values": [
+            {
+              "bytes": {
+                "repeat": "a",
+                "count": 4194304
+              }
+            }
+          ],
+          "platforms": ["linux"],
+          "expect": {
+            "stdout": {
+              "repeat": "a",
+              "count": 4194304
+            }
+          },
+          "note": "upstream stdin is a 4 MiB Blob; a Buffer is used here"
+        },
+        {
+          "id": "shell-pipe-read-fault/stdin-4mb-single-fail-epoll-blob",
+          "template": ["cat < ", ""],
+          "values": [
+            {
+              "blob": {
+                "repeat": "a",
+                "count": 4194304
+              }
+            }
+          ],
+          "platforms": ["linux"],
+          "languages": ["js"],
+          "expect": {
+            "stdout": {
+              "repeat": "a",
+              "count": 4194304
+            }
+          },
+          "note": "JS-only Blob stdin form used upstream"
+        }
+      ]
+    },
+    {
+      "line": 555,
+      "upstream": "shell finishes a command whose reader failed to register while stdin was still being written",
+      "disposition": "case",
+      "note": "Upstream injects ENOMEM into recv()/epoll_ctl via an LD_PRELOAD shim (SHELL_FAIL_* env flags) and expects exitCode 12 without a crash; fault injection is Bun-internal and not reproduced. The case asserts the fixture command's normal behaviour. (SHELL_FAIL_EPOLL_IN)",
+      "cases": [
+        {
+          "id": "shell-pipe-read-fault/stdin-4mb-single-fail-epoll-in",
+          "template": ["cat < ", ""],
+          "values": [
+            {
+              "bytes": {
+                "repeat": "a",
+                "count": 4194304
+              }
+            }
+          ],
+          "platforms": ["linux"],
+          "expect": {
+            "stdout": {
+              "repeat": "a",
+              "count": 4194304
+            }
+          },
+          "note": "upstream stdin is a 4 MiB Blob; a Buffer is used here"
+        }
+      ]
+    },
+    {
+      "line": 569,
+      "upstream": "shell finishes a pipeline whose first stage's reader failed to register while stdin was still being written",
+      "disposition": "case",
+      "note": "Upstream injects ENOMEM into recv()/epoll_ctl via an LD_PRELOAD shim (SHELL_FAIL_* env flags) and expects exitCode 12 without a crash; fault injection is Bun-internal and not reproduced. The case asserts the fixture command's normal behaviour. (SHELL_FAIL_EPOLL_IN, pipeline form)",
+      "cases": [
+        {
+          "id": "shell-pipe-read-fault/stdin-4mb-pipeline-fail-epoll-in",
+          "template": ["cat < ", " | cat"],
+          "values": [
+            {
+              "bytes": {
+                "repeat": "a",
+                "count": 4194304
+              }
+            }
+          ],
+          "platforms": ["linux"],
+          "expect": {
+            "stdout": {
+              "repeat": "a",
+              "count": 4194304
+            }
+          },
+          "note": "upstream stdin is a 4 MiB Blob; a Buffer is used here"
+        },
+        {
+          "id": "shell-pipe-read-fault/stdin-4mb-pipeline-fail-epoll-in-blob",
+          "template": ["cat < ", " | cat"],
+          "values": [
+            {
+              "blob": {
+                "repeat": "a",
+                "count": 4194304
+              }
+            }
+          ],
+          "platforms": ["linux"],
+          "languages": ["js"],
+          "expect": {
+            "stdout": {
+              "repeat": "a",
+              "count": 4194304
+            }
+          },
+          "note": "JS-only Blob stdin form used upstream"
+        }
+      ]
+    }
+  ]
+}

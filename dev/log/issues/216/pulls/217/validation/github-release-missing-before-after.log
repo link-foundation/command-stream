@@ -1,0 +1,15 @@
+### before (HEAD script)
+Expected to contain: "/repos/link-foundation/command-stream/releases/tags/js-v0.9.5"
+Received: []
+(fail) no release: no changesets + version already on npm and GitHub → should_release=false, current_unpublished=false [275.25ms]
+Expected to contain: "github_release_missing=true"
+Received: "current_unpublished=false\nshould_release=false\nskip_bump=false\n"
+(fail) #216: no changesets + version on npm but no GitHub release → release runs again without a bump [254.06ms]
+Expected to contain: "GitHub release state unknown"
+Received: ""
+(fail) #216: an unknown GitHub release state never triggers a release [249.74ms]
+ 3 pass
+ 3 fail
+### after
+ 6 pass
+ 0 fail

@@ -1,0 +1,27 @@
+bun test v1.3.14 (0d9b296a)
+
+js/tests/repository-layout.test.mjs:
+(pass) repository language layout > keeps JavaScript package files inside js/ [2.92ms]
+(pass) repository language layout > does not keep language release scripts at the repository root [0.17ms]
+(pass) repository language layout > keeps Rust package release files inside rust/ [0.07ms]
+(pass) repository language layout > uses separate JavaScript and Rust workflows and release tags [0.98ms]
+89 |
+90 |     const jsReleaseJob = getWorkflowJobBlock(jsWorkflow, 'release');
+91 |     const rustReleaseJob = getWorkflowJobBlock(rustWorkflow, 'release');
+92 |
+93 |     expect(jsReleaseJob).toContain('needs: [lint, test]');
+94 |     expect(jsReleaseJob).toContain('always() && !cancelled()');
+                              ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "always() && !cancelled()"
+Received: "  release:\n    name: Release JavaScript package\n    needs: [lint, test]\n    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.lint.result == 'success' && needs.test.result == 'success'\n    runs-on: ubuntu-latest\n    timeout-minutes: 30\n    permissions:\n      contents: write\n      pull-requests: write\n      id-token: write\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n\n      - name: Setup Node.js\n        uses: actions/setup-node@v4\n        with:\n          node-version: '20.x'\n          registry-url: 'https://registry.npmjs.org'\n\n      - name: Setup Bun\n        uses: oven-sh/setup-bun@v2\n        with:\n          bun-version: latest\n\n      - name: Install dependencies\n        working-directory: js\n        run: bun install\n\n      - name: Update npm for OIDC trusted publishing\n        working-directory: js\n        run: bun scripts/setup-npm.mjs\n\n      - name: Check for changesets\n        id: check_changesets\n        working-directory: js\n        run: |\n          CHANGESET_COUNT=$(find .changeset -name \"*.md\" ! -name \"README.md\" | wc -l)\n          echo \"Found $CHANGESET_COUNT JavaScript changeset file(s)\"\n          echo \"has_changesets=$([[ $CHANGESET_COUNT -gt 0 ]] && echo 'true' || echo 'false')\" >> $GITHUB_OUTPUT\n          echo \"changeset_count=$CHANGESET_COUNT\" >> $GITHUB_OUTPUT\n\n      - name: Merge multiple changesets\n        if: steps.check_changesets.outputs.has_changesets == 'true' && fromJSON(steps.check_changesets.outputs.changeset_count) > 1\n        working-directory: js\n        run: bun scripts/merge-changesets.mjs\n\n      - name: Version package and commit to main\n        if: steps.check_changesets.outputs.has_changesets == 'true'\n        id: version\n        working-directory: js\n        run: bun scripts/version-and-commit.mjs --mode changeset\n\n      - name: Publish to npm\n        if: steps.version.outputs.version_committed == 'true' || steps.version.outputs.already_released == 'true'\n        id: publish\n        working-directory: js\n        run: bun scripts/publish-to-npm.mjs --should-pull\n\n      - name: Create JavaScript GitHub Release\n        if: steps.publish.outputs.published == 'true'\n        working-directory: js\n        env:\n          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n        run: bun scripts/create-github-release.mjs --release-version \"${{ steps.publish.outputs.published_version }}\" --repository \"${{ github.repository }}\" --tag-prefix js-v\n\n      - name: Format JavaScript GitHub release notes\n        if: steps.publish.outputs.published == 'true'\n        working-directory: js\n        env:\n          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n        run: bun scripts/format-github-release.mjs --release-version \"${{ steps.publish.outputs.published_version }}\" --repository \"${{ github.repository }}\" --commit-sha \"${{ github.sha }}\" --tag-prefix js-v\n"
+
+      at <anonymous> (/tmp/gh-issue-solver-1780946681610/js/tests/repository-layout.test.mjs:94:26)
+(fail) repository language layout > release jobs evaluate after PR-only gate jobs are skipped on push [1.47ms]
+(pass) repository language layout > keeps root README focused on shared project information [0.10ms]
+
+ 5 pass
+ 1 fail
+ 40 expect() calls
+Ran 6 tests across 1 file. [46.00ms]

@@ -1,102 +1,159 @@
 # Deployment Setup
 
-This document explains how to set up automated deployment to NPM using GitHub Actions.
+This repository has separate release workflows for each language package:
 
-## Required Secrets
+- JavaScript npm package: `.github/workflows/js.yml`
+- Rust crates.io package: `.github/workflows/rust.yml`
 
-To enable automatic NPM publishing, you need to configure the following secrets in your GitHub repository:
+The workflows run independently on pull requests and pushes that touch their
+language folders, workflow files, or shared repository files.
 
-### 1. NPM_TOKEN
+## JavaScript Publishing
 
-1. Go to [npmjs.com](https://www.npmjs.com) and log in to your account
-2. Navigate to "Access Tokens" in your account settings
-3. Click "Generate New Token" → "Classic Token"
-4. Select "Automation" (for publishing from CI/CD)
-5. Copy the generated token
-6. In your GitHub repository, go to Settings → Secrets and variables → Actions
-7. Click "New repository secret"
-8. Name: `NPM_TOKEN`
-9. Value: paste your NPM token
+The JavaScript package lives in `js/` and is published to npm as
+`command-stream`.
 
-### 2. GITHUB_TOKEN
+npm publishing uses trusted publishing through GitHub Actions OIDC. Configure
+the trusted publisher in npm for:
 
-This is automatically provided by GitHub Actions, no setup required.
+- Repository: `link-foundation/command-stream`
+- Workflow file: `.github/workflows/js.yml`
+- Environment: none, unless the npm package is configured to require one
 
-## How the Deployment Works
+The JavaScript workflow uses `id-token: write`, runs npm release scripts from
+`js/`, and creates GitHub releases tagged as `js-v<version>`.
 
-### CI Workflow (`.github/workflows/ci.yml`)
-- Runs on every pull request and push to main
-- Tests the code with Bun
-- Checks Node.js compatibility (versions 20, 22, 24)
-- Validates package.json and required files
-- Runs coverage tests
+JavaScript PRs that change package code must add exactly one changeset in
+`js/.changeset/`.
 
-### Deploy Workflow (`.github/workflows/deploy.yml`)
-- Runs only on pushes to the `main` branch
-- Only deploys if relevant files have changed:
-  - `$.mjs` (main library file)
-  - `$.test.mjs` (test file)
-  - `package.json` (package configuration)
-  - `README.md` (documentation)
-  - `.github/workflows/deploy.yml` (deployment config)
+## Rust Publishing
 
-### Deployment Process
-1. **Change Detection**: Checks if relevant files changed
-2. **Testing**: Runs full test suite with coverage
-3. **Version Check**: Verifies if the current version already exists on NPM
-4. **Publishing**: If version doesn't exist, publishes to NPM
-5. **Release Creation**: Creates a GitHub release with changelog
+The Rust crate lives in `rust/` and is published to crates.io as
+`command-stream`.
 
-## Version Management
+crates.io publishing uses trusted publishing through GitHub Actions OIDC
+(issue #226). Configure the trusted publisher on crates.io for:
 
-To release a new version:
+- Repository: `link-foundation/command-stream`
+- Workflow file: `rust.yml`
+- Environment: none
 
-1. Update the version in `package.json`:
-   ```bash
-   # For patch releases (bug fixes)
-   npm version patch
-   
-   # For minor releases (new features)
-   npm version minor
-   
-   # For major releases (breaking changes)
-   npm version major
-   ```
+`package-registry-manager setup --repository . --registry crates-io --migrate
+--execute` registers the publisher. The `release` and `instant-release` jobs
+have `id-token: write` and run `rust-lang/crates-io-auth-action` (pinned to the
+v1.0.5 commit) right before `rust/scripts/publish-crate.rs`. The step's
+short-lived token is passed as `CARGO_REGISTRY_TOKEN`, and the action's post
+step revokes it.
 
-2. Push to main branch:
-   ```bash
-   git push origin main --tags
-   ```
+Until the trusted publisher is registered and the first OIDC release has
+succeeded, the publish step falls back to these secrets, in this order:
 
-3. The GitHub Action will automatically:
-   - Run tests
-   - Check if the version exists on NPM
-   - Publish if it's a new version
-   - Create a GitHub release
+- `CARGO_REGISTRY_TOKEN` - Cargo's native environment variable name, preferred
+- `CARGO_TOKEN` - backwards-compatible fallback used by older organization
+  workflows
 
-## Manual Publishing
+Once an OIDC release has gone through, the secrets can be deleted. The fallback
+expression then evaluates to the OIDC token alone. Rust release scripts run from
+`rust/scripts/`. Rust GitHub releases are tagged as `rust-v<version>`.
 
-If you need to publish manually:
+Rust PRs that change crate code must add a changelog fragment in
+`rust/changelog.d/`.
+
+## Feature Documentation
+
+The feature catalog in `js/examples/features/catalog.mjs` drives executable
+examples for both language packages and the generated documentation in
+`docs/`. Pull requests run every catalog entry with Node.js, Bun and Rust, then
+verify that the committed guide is current.
+
+Generate and validate the guide locally from the repository root:
 
 ```bash
-# Make sure you're logged in to NPM
-npm login
+node scripts/generate-docs.mjs
+node scripts/check-parity.mjs
+node scripts/generate-docs.mjs --check
+```
 
-# Publish the package
-npm publish --access public
+After changes reach `main`, `.github/workflows/docs.yml` publishes
+`docs/site/` to GitHub Pages. Configure the repository's Pages source as
+**GitHub Actions** before the first deployment.
+
+## Local Release Checks
+
+JavaScript:
+
+```bash
+cd js
+bun install
+bun run lint
+bun run format:check
+bun run check:duplication
+bun run test
+```
+
+Rust:
+
+```bash
+cd rust
+cargo fmt --all -- --check
+cargo clippy --all-targets --all-features
+cargo test --all-features --verbose
+cargo test --doc --all-features --verbose
+cargo package --allow-dirty
 ```
 
 ## Troubleshooting
 
-### Common Issues
+- Missing JavaScript changeset: add one `js/.changeset/*.md` file.
+- Missing Rust changelog: add one `rust/changelog.d/*.md` file.
+- npm trusted publishing failure: verify npm trusted publisher settings match
+  `.github/workflows/js.yml`.
+- crates.io authentication failure: verify that the crates.io trusted
+  publisher matches `rust.yml`. The preflight warns when the OIDC exchange
+  failed and the `CARGO_REGISTRY_TOKEN` / `CARGO_TOKEN` fallback was checked
+  instead.
+- crate version already exists: rerun the Rust workflow if a previous release
+  partially completed; the Rust scripts check crates.io and GitHub release
+  artifacts before deciding whether to bump.
 
-1. **NPM_TOKEN expired**: Generate a new token and update the secret
-2. **Permission denied**: Ensure your NPM account has publish permissions for the package
-3. **Version already exists**: Update the version in package.json
-4. **Tests failing**: Fix the tests before the deployment will proceed
+## Release Preflight and Diagnostics
 
-### Checking Deployment Status
+On `main`, the first lint job checks registry credentials before running package
+checks. JavaScript exchanges a GitHub OIDC identity for a package-specific npm
+publish token and discards it. Rust requires the job's GitHub OIDC identity (`id-token: write`), requests a
+crates.io trusted publishing token, and falls back to the token secrets if that
+exchange fails. It then sends publish metadata without an archive to the
+crates.io publish endpoint with that credential.
+The specific missing-archive response proves token authentication and publish
+scopes passed; no crate can be published by this request. Actual publishing
+remains the authoritative ownership check, including team ownership. Pull request jobs do not receive release credentials.
 
-- View workflow runs in the "Actions" tab of your GitHub repository
-- Check NPM package status at: https://www.npmjs.com/package/command-stream
-- Monitor GitHub releases in the "Releases" section of your repository
+Pages needs a repository setting before the workflow can configure it. An
+administrator can select **Settings → Pages → Source → GitHub Actions**, or run:
+
+```bash
+gh api --method POST repos/link-foundation/command-stream/pages -f build_type=workflow
+```
+
+`GITHUB_TOKEN` in a workflow cannot bootstrap this setting with its ordinary
+Pages deployment permissions. The workflow checks the setting before installing
+or building documentation.
+
+Bun test jobs preserve console output and JUnit results in the `bun-tests-<OS>`
+artifacts, including failures. Their step budget leaves time to upload logs if a
+child process prevents the suite from exiting. To investigate a recurrence, set
+repository variables `COMMAND_STREAM_TRACE=true` and `CI_SCRIPTS_DEBUG=true`,
+then rerun the affected job. Both traces are off by default. Registry tracing
+records status and cache headers without credentials or response bodies.
+
+## Dependency Review Setup
+
+Dependency review requires the repository dependency graph. Enable it under
+**Settings → Code security**. Enabling vulnerability alerts also enables the graph:
+
+```bash
+gh api --method PUT repos/link-foundation/command-stream/vulnerability-alerts
+```
+
+The pull request review fails if the API is unavailable or unauthorized. It never
+reports a skipped review as a successful review. Lockfile audits run separately.

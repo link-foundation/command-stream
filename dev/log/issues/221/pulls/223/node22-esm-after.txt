@@ -1,0 +1,1 @@
+PASS: ESM core, ShellJS commands, globbing and plugins without require(esm)

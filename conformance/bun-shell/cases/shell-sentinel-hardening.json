@@ -1,0 +1,64 @@
+{
+  "source": "test/js/bun/shell/shell-sentinel-hardening.test.ts",
+  "units": [
+    {
+      "line": 6,
+      "upstream": "shell sentinel character hardening > string matching internal obj-ref prefix round-trips through interpolation",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "shell-sentinel-hardening/obj-ref-prefix-roundtrip",
+          "template": ["echo ", ""],
+          "values": [
+            {
+              "string": "\b__bun_abc"
+            }
+          ],
+          "expect": {
+            "stdout": "\b__bun_abc\n"
+          },
+          "note": "\\x08 followed by __bun_ must be escaped on interpolation and echoed verbatim"
+        }
+      ]
+    },
+    {
+      "line": 21,
+      "upstream": "shell sentinel character hardening > string matching internal str-ref prefix round-trips through interpolation",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "shell-sentinel-hardening/str-ref-prefix-roundtrip",
+          "template": ["echo ", ""],
+          "values": [
+            {
+              "string": "\b__bunstr_abc"
+            }
+          ],
+          "expect": {
+            "stdout": "\b__bunstr_abc\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 28,
+      "upstream": "shell sentinel character hardening > raw sentinel injection with out-of-bounds index does not crash",
+      "disposition": "case",
+      "note": "upstream runs it in a bun subprocess, swallows any error and asserts the process prints OK and exits 0 (no segfault). Bun 1.4.2 rejects the script with a lex error.",
+      "cases": [
+        {
+          "id": "shell-sentinel-hardening/raw-sentinel-oob-index",
+          "template": ["echo hello > ", ""],
+          "values": [
+            {
+              "raw": "\b__bun_9999"
+            }
+          ],
+          "expect": {
+            "error": "Invalid JS object ref"
+          }
+        }
+      ]
+    }
+  ]
+}

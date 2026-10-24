@@ -1,0 +1,173 @@
+{
+  "total_count": 2,
+  "jobs": [
+    {
+      "id": 111940293469,
+      "run_id": 37362523912,
+      "workflow_name": "Workflows",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523912",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEClTXQ",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111940293469",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523912/job/111940293469",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-05T19:18:59Z",
+      "started_at": "2026-10-05T19:19:22Z",
+      "completed_at": "2026-10-05T19:19:31Z",
+      "name": "Actionlint",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-05T19:19:23Z",
+          "completed_at": "2026-10-05T19:19:23Z"
+        },
+        {
+          "name": "Pull rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-05T19:19:23Z",
+          "completed_at": "2026-10-05T19:19:26Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-05T19:19:26Z",
+          "completed_at": "2026-10-05T19:19:28Z"
+        },
+        {
+          "name": "Simulate a fresh merge with the base branch",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-05T19:19:28Z",
+          "completed_at": "2026-10-05T19:19:29Z"
+        },
+        {
+          "name": "Run rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-05T19:19:29Z",
+          "completed_at": "2026-10-05T19:19:30Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-10-05T19:19:30Z",
+          "completed_at": "2026-10-05T19:19:30Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-10-05T19:19:30Z",
+          "completed_at": "2026-10-05T19:19:30Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111940293469",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "runner_id": 1000084089,
+      "runner_name": "GitHub Actions 1000084089",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 111940293781,
+      "run_id": 37362523912,
+      "workflow_name": "Workflows",
+      "head_branch": "issue-209-4043f0c126d5",
+      "run_url": "https://api.github.com/repos/link-foundation/command-stream/actions/runs/37362523912",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOPc80Bs8AAAAaEClUlQ",
+      "head_sha": "1cbd0a7daaf72d11f30cdc063f5339d6712dc481",
+      "url": "https://api.github.com/repos/link-foundation/command-stream/actions/jobs/111940293781",
+      "html_url": "https://github.com/link-foundation/command-stream/actions/runs/37362523912/job/111940293781",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-05T19:18:59Z",
+      "started_at": "2026-10-05T19:19:25Z",
+      "completed_at": "2026-10-05T19:19:37Z",
+      "name": "Zizmor",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-05T19:19:26Z",
+          "completed_at": "2026-10-05T19:19:27Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-05T19:19:27Z",
+          "completed_at": "2026-10-05T19:19:29Z"
+        },
+        {
+          "name": "Simulate a fresh merge with the base branch",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-05T19:19:29Z",
+          "completed_at": "2026-10-05T19:19:30Z"
+        },
+        {
+          "name": "Run zizmorcore/zizmor-action@v0.6.2",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-05T19:19:30Z",
+          "completed_at": "2026-10-05T19:19:36Z"
+        },
+        {
+          "name": "Post Run zizmorcore/zizmor-action@v0.6.2",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-05T19:19:36Z",
+          "completed_at": "2026-10-05T19:19:36Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-10-05T19:19:36Z",
+          "completed_at": "2026-10-05T19:19:36Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-10-05T19:19:36Z",
+          "completed_at": "2026-10-05T19:19:36Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/link-foundation/command-stream/check-runs/111940293781",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "runner_id": 1000084090,
+      "runner_name": "GitHub Actions 1000084090",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    }
+  ]
+}

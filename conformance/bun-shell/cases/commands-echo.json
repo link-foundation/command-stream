@@ -1,0 +1,329 @@
+{
+  "source": "test/js/bun/shell/commands/echo.test.ts",
+  "units": [
+    {
+      "line": 6,
+      "upstream": "no arguments outputs newline",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-echo/no-args",
+          "template": ["echo"],
+          "expect": {
+            "stdout": "\n",
+            "exitCode": 0
+          }
+        }
+      ]
+    },
+    {
+      "line": 8,
+      "upstream": "single argument",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-echo/single-arg",
+          "template": ["echo hello"],
+          "expect": {
+            "stdout": "hello\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 10,
+      "upstream": "multiple arguments",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-echo/multiple-args",
+          "template": ["echo hello world"],
+          "expect": {
+            "stdout": "hello world\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 12,
+      "upstream": "quoted argument",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-echo/quoted-arg",
+          "template": ["echo \"hello world\""],
+          "expect": {
+            "stdout": "hello world\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 18,
+      "upstream": "multiple spaces collapsed",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-echo/multiple-spaces-collapsed",
+          "template": ["echo hello   world"],
+          "expect": {
+            "stdout": "hello world\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 20,
+      "upstream": "empty string",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-echo/empty-string",
+          "template": ["echo \"\""],
+          "expect": {
+            "stdout": "\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 26,
+      "upstream": "many arguments",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-echo/many-args",
+          "template": ["echo one two three four"],
+          "expect": {
+            "stdout": "one two three four\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 30,
+      "upstream": "no arguments with -n flag",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-echo/n-no-args",
+          "template": ["echo -n"],
+          "expect": {
+            "stdout": ""
+          }
+        }
+      ]
+    },
+    {
+      "line": 32,
+      "upstream": "single argument with -n flag",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-echo/n-single-arg",
+          "template": ["echo -n hello"],
+          "expect": {
+            "stdout": "hello"
+          }
+        }
+      ]
+    },
+    {
+      "line": 38,
+      "upstream": "multiple arguments with -n flag",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-echo/n-multiple-args",
+          "template": ["echo -n hello world"],
+          "expect": {
+            "stdout": "hello world"
+          }
+        }
+      ]
+    },
+    {
+      "line": 44,
+      "upstream": "quoted argument with -n flag",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-echo/n-quoted-arg",
+          "template": ["echo -n \"hello world\""],
+          "expect": {
+            "stdout": "hello world"
+          }
+        }
+      ]
+    },
+    {
+      "line": 46,
+      "upstream": "empty string with -n flag",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-echo/n-empty-string",
+          "template": ["echo -n \"\""],
+          "expect": {
+            "stdout": ""
+          }
+        }
+      ]
+    },
+    {
+      "line": 52,
+      "upstream": "many arguments with -n flag",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-echo/n-many-args",
+          "template": ["echo -n one two three"],
+          "expect": {
+            "stdout": "one two three"
+          }
+        }
+      ]
+    },
+    {
+      "line": 56,
+      "upstream": "invalid flag",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-echo/invalid-flag",
+          "template": ["echo -x"],
+          "expect": {
+            "stdout": "-x\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 58,
+      "upstream": "invalid multi-char flag",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-echo/invalid-multi-char-flag",
+          "template": ["echo -abc"],
+          "expect": {
+            "stdout": "-abc\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 60,
+      "upstream": "invalid long flag",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-echo/invalid-long-flag",
+          "template": ["echo --invalid"],
+          "expect": {
+            "stdout": "--invalid\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 64,
+      "upstream": "-n flag with -n as argument",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-echo/n-n-hello",
+          "template": ["echo -n -n hello"],
+          "expect": {
+            "stdout": "hello"
+          }
+        }
+      ]
+    },
+    {
+      "line": 70,
+      "upstream": "double dash treated as argument",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-echo/double-dash",
+          "template": ["echo -- -n hello"],
+          "expect": {
+            "stdout": "-- -n hello\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 72,
+      "upstream": "literal backslash n",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-echo/literal-backslash-n",
+          "template": ["echo \"\\n\""],
+          "expect": {
+            "stdout": "\\n\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 81,
+      "upstream": "pure-newline arg keeps both newlines",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-echo/pure-newline-arg",
+          "template": ["echo ", ""],
+          "values": [
+            {
+              "string": "\n\n"
+            }
+          ],
+          "expect": {
+            "stdout": "\n\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 87,
+      "upstream": "3+ trailing newlines collapse to two",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-echo/three-newlines-collapse",
+          "template": ["echo ", ""],
+          "values": [
+            {
+              "string": "\n\n\n"
+            }
+          ],
+          "expect": {
+            "stdout": "\n\n"
+          }
+        }
+      ]
+    },
+    {
+      "line": 93,
+      "upstream": "mixed trailing newlines still collapse to one",
+      "disposition": "case",
+      "cases": [
+        {
+          "id": "commands-echo/mixed-trailing-newlines",
+          "template": ["echo ", ""],
+          "values": [
+            {
+              "string": "a\n\n"
+            }
+          ],
+          "expect": {
+            "stdout": "a\n"
+          }
+        }
+      ]
+    }
+  ]
+}
