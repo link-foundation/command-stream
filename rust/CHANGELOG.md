@@ -188,6 +188,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [1.10.1] - 2026-10-24
+
+### Changed
+
+- Update the Bun Shell conformance tests to fancy-regex 0.20.0 to keep the
+  development dependency current, and refresh compatible cc/smallvec versions
+  in both Rust lockfiles.
+
 ## [1.10.0] - 2026-10-23
 
 ### Added
