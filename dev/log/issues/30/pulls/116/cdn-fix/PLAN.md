@@ -16,6 +16,12 @@
 - [x] Review complete PR diff for lost features and original acceptance coverage.
 - [ ] Commit atomic work, push only issue-30-a0052265, and await all fresh CI runs.
 - [ ] Investigate and fix any remaining failed checks using downloaded logs.
+  - [x] Combine release notes after CI rejected two JavaScript changesets.
+  - [x] Reproduce the Windows example integration's shared deadline with two
+        finite Git delays; split Git/HTTP and retain five-second operation limits.
+  - [x] Verify the Rust repair locally: 984 tests, Clippy, formatting, and the
+        bounded slow-Git regression pass.
+  - [ ] Await fresh platform CI for the Rust repair.
 - [ ] Update PR title/body with reproduction, tests, current CI evidence, positive
       Fixes #30 reference, and exact outstanding external success outcomes.
 - [ ] Mark PR #116 ready, verify clean worktree and current main ancestry; leave

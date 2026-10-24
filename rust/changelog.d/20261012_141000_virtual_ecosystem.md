@@ -17,3 +17,5 @@ bump: minor
 - Preserve cancellation and capture streamed intermediate stages in composition.
 - Preserve externally replaced or extended handlers when uninstalling a package.
 - Preserve split UTF-8 process output and interrupt paused output sends on cancellation.
+- Give each example integration operation its own bounded deadline, keeping slow
+  Git startup independent of the HTTP test and reporting the failing stage.

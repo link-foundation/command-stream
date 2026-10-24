@@ -57,7 +57,7 @@ the PR run exits zero with a specific warning, and the push run exits one with
 recovery instructions.
 
 Full local verification after the repair passes: 2,939 JavaScript tests with
-10 skipped (67,056 assertions), and 983 Rust all-features tests with seven
+10 skipped (67,056 assertions), and 984 Rust all-features tests with seven
 ignored across 64 suites, including doctests. ESLint, Prettier, TypeScript,
 duplication, Cargo formatting, and 473 workflow/layout/documentation tests pass.
 All 37 executable feature examples agree in Node, Bun and Rust.
@@ -68,6 +68,11 @@ rule: JavaScript run `40136048125`, job `120997666587`, rejected the second
 release fragment before starting downstream tests. The CDN release note is now
 combined with `virtual-command-validation.md`; no extra release fragment remains.
 The failed job is archived as `evidence/changesets-120997666587.log.gz`.
+
+A later Windows test run exposed a shared Git/HTTP deadline. The separate
+[latency investigation](windows-latency.md) records its failed job, the bounded
+before/after reproduction, and the fix retaining five-second operation limits.
+The final full Rust suite and Clippy pass; their logs are archived in `evidence/`.
 
 The existing issue #30 acceptance matrix and external-outcome limits in the
 [previous audit](../oct24/analysis/requirements.md) still apply. This CI repair
