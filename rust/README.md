@@ -17,6 +17,9 @@ The shared advanced APIs include `CommandBuilder`, `DataStream`,
 `terminal::TerminalBuffer`, and `CommandEnvironment`. See the
 [advanced workflows guide](../js/docs/ADVANCED-WORKFLOWS.md#rust-equivalents) and
 `examples/language_features.rs` for executable examples.
+The [virtual command ecosystem guide](docs/VIRTUAL-COMMAND-ECOSYSTEM.md) covers
+typed and npm/manifest packages, registry discovery, streaming middleware,
+composition, hot reload, and the Rust ecosystem/enterprise examples.
 [Compare the complete Rust APIs](docs/COMPARISON.md) with all fourteen projects
 in the pinned competitor audit, including their specialized capabilities.
 [Source translation and competitor migration](../js/docs/FY.md) use the same

@@ -225,7 +225,7 @@ function $tagged(strings, ...values) {
 }
 
 function create(defaultOptions = {}, handler, metadata) {
-  if (typeof defaultOptions === 'string') {
+  if (typeof defaultOptions === 'string' || arguments.length > 1) {
     return createCommand(defaultOptions, handler, metadata);
   }
   trace(

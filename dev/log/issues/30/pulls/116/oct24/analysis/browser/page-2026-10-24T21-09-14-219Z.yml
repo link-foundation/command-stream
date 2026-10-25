@@ -1,0 +1,143 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - heading "command-stream — feature comparison" [level=1] [ref=e3]
+    - paragraph [ref=e4]: Every feature in JavaScript and Rust, plus equivalent code in other shell libraries.
+  - main [ref=e5]:
+    - navigation [ref=e6]:
+      - searchbox "Filter features" [ref=e7]
+      - link "Overview" [ref=e8] [cursor=pointer]:
+        - /url: "#overview"
+      - generic [ref=e9]:
+        - heading "Running commands" [level=2] [ref=e10]
+        - link "Await a command" [ref=e11] [cursor=pointer]:
+          - /url: "#await-result"
+        - link "Synchronous execution" [ref=e12] [cursor=pointer]:
+          - /url: "#sync-execution"
+        - link "Exit codes and errors" [ref=e13] [cursor=pointer]:
+          - /url: "#exit-codes"
+        - 'link "Options: capture, cwd, env, stdin" [ref=e14] [cursor=pointer]':
+          - /url: "#options"
+        - link "Time out a command" [ref=e15] [cursor=pointer]:
+          - /url: "#timeouts"
+        - link "Remove environment variables" [ref=e16] [cursor=pointer]:
+          - /url: "#env-removal"
+        - link "Fire-and-forget background commands" [ref=e17] [cursor=pointer]:
+          - /url: "#detached"
+        - link "Function and builder APIs" [ref=e18] [cursor=pointer]:
+          - /url: "#function-api"
+        - link "Killing and cancelling commands" [ref=e19] [cursor=pointer]:
+          - /url: "#cancellation"
+        - link "zx compatibility mode" [ref=e20] [cursor=pointer]:
+          - /url: "#zx-compat"
+        - link "Execa compatibility mode" [ref=e21] [cursor=pointer]:
+          - /url: "#execa-compat"
+        - link "ShellJS compatibility mode" [ref=e22] [cursor=pointer]:
+          - /url: "#shelljs-compat"
+        - link "Build commands with literal arguments" [ref=e23] [cursor=pointer]:
+          - /url: "#command-builder"
+        - heading "Reading output" [level=2] [ref=e24]
+        - link "Read the output with text()" [ref=e25] [cursor=pointer]:
+          - /url: "#result-text"
+        - link "Buffer and string interfaces" [ref=e26] [cursor=pointer]:
+          - /url: "#buffers-strings"
+        - link "Mirroring and capturing output" [ref=e27] [cursor=pointer]:
+          - /url: "#mirror-capture"
+        - heading "Streaming" [level=2] [ref=e28]
+        - link "Async iteration over output" [ref=e29] [cursor=pointer]:
+          - /url: "#async-iteration"
+        - link "Event-driven output" [ref=e30] [cursor=pointer]:
+          - /url: "#events"
+        - link "Writing to stdin while a command runs" [ref=e31] [cursor=pointer]:
+          - /url: "#stdin-streaming"
+        - link "Process streams incrementally" [ref=e32] [cursor=pointer]:
+          - /url: "#stream-processing"
+        - link "Track virtual terminal frames" [ref=e33] [cursor=pointer]:
+          - /url: "#terminal-buffer"
+        - heading "Built-in commands" [level=2] [ref=e34]
+        - link "The built-in command catalog" [ref=e35] [cursor=pointer]:
+          - /url: "#builtin-catalog"
+        - link "File system built-ins" [ref=e36] [cursor=pointer]:
+          - /url: "#builtin-filesystem"
+        - link "Text and value built-ins" [ref=e37] [cursor=pointer]:
+          - /url: "#builtin-text"
+        - link "Environment built-ins" [ref=e38] [cursor=pointer]:
+          - /url: "#builtin-environment"
+        - link "Native head, tail, sort and uniq" [ref=e39] [cursor=pointer]:
+          - /url: "#native-text"
+        - heading "Your own commands" [level=2] [ref=e40]
+        - link "Registering your own commands" [ref=e41] [cursor=pointer]:
+          - /url: "#virtual-commands"
+        - link "The handler context" [ref=e42] [cursor=pointer]:
+          - /url: "#virtual-context"
+        - link "Streaming commands" [ref=e43] [cursor=pointer]:
+          - /url: "#virtual-streaming"
+        - link "Compose and extend virtual commands" [ref=e44] [cursor=pointer]:
+          - /url: "#command-packages"
+        - heading "Shell syntax" [level=2] [ref=e45]
+        - link "Pipelines" [ref=e46] [cursor=pointer]:
+          - /url: "#pipelines"
+        - link "Redirecting output and input" [ref=e47] [cursor=pointer]:
+          - /url: "#redirection"
+        - link "Command sequences" [ref=e48] [cursor=pointer]:
+          - /url: "#sequences"
+        - link "Safe interpolation" [ref=e49] [cursor=pointer]:
+          - /url: "#interpolation"
+        - link "Shell settings" [ref=e50] [cursor=pointer]:
+          - /url: "#shell-settings"
+        - heading "Utilities" [level=2] [ref=e51]
+        - link "ANSI and control character helpers" [ref=e52] [cursor=pointer]:
+          - /url: "#ansi-utils"
+        - link "Translate shell programs into modules" [ref=e53] [cursor=pointer]:
+          - /url: "#fy"
+    - generic [ref=e54]:
+      - heading "Compose and extend virtual commands" [level=2] [ref=e55]
+      - paragraph [ref=e56]: Typed command packages support registration, composition, middleware, inheritance and atomic reload.
+      - paragraph [ref=e57]:
+        - generic [ref=e58]: Your own commands
+      - heading "JavaScript" [level=3] [ref=e59]
+      - paragraph [ref=e60]:
+        - code [ref=e62]: create
+        - code [ref=e64]: install
+        - code [ref=e66]: compose
+        - code [ref=e68]: extend
+        - code [ref=e70]: inherit
+      - heading "Example" [level=4] [ref=e71]
+      - code [ref=e73]: "import $, { compose } from '../../src/$.mjs'; import { example, makeTempDir } from './_harness.mjs'; import { writeFile } from 'node:fs/promises'; import { join } from 'node:path'; await example( { id: 'command-packages', title: 'Compose and extend virtual commands' }, async ({ record }) => { $.create('package-hello', ({ args }) => ({ code: 0, stdout: args.join(' '), })); try { $.inherit('package-greet', 'package-hello', { args: ['hello'] }); $.extend('package-greet', async (context, next) => { const result = await next(context); return { ...result, stdout: `${result.stdout}!` }; }); record( 'inherited middleware', await (await $({ mirror: false })`package-greet world`).text() ); let rejected = 0; for (const name of [ '', 'two words', '7command', 'command;echo', 'écho', 'line\\n', ]) { try { $.create(name, () => ({ code: 0 })); } catch { rejected++; } } record('invalid names rejected', rejected); $.create( 'package-pipeline', compose( async function* () { yield 'one\\n'; yield 'two\\n'; }, ({ stdin }) => ({ code: 7, stdout: stdin.toUpperCase(), stderr: 'stop', }), () => { throw new Error('continued after failure'); } ) ); const result = await $({ mirror: false, errexit: false, })`package-pipeline`; record('streamed composition', [ result.code, await result.text(), result.stderr.toString(), ]); const file = join(makeTempDir('command-package'), 'commands.mjs'); const definition = (version, commands) => `export default {name:'parity-package',version:'${version}',commands:{${commands}}};`; await writeFile( file, definition('1', \"'package-installed':()=>({code:0,stdout:'one'})\") ); const installed = await $.install(file, { install: false }); try { const idempotent = (await $.install(file, { install: false })) === installed; await writeFile(file, definition('bad', \"'bad name':()=>({code:0})\")); try { await installed.reload(); } catch { /* working package remains */ } const retained = installed.version === '1' && (await (await $({ mirror: false })`package-installed`).text()) === 'one'; await writeFile( file, definition('2', \"'package-reloaded':()=>({code:0,stdout:'two'})\") ); await installed.reload(); record('atomic package reload', [ idempotent, retained, installed.version, !$.listCommands().includes('package-installed'), ]); } finally { installed.uninstall(); } record( 'registry discovery', await $.marketplace.search('git & deploy', { fetch: async (url) => { const request = new URL(url); if ( request.searchParams.get('text') !== 'keywords:command-stream-command git & deploy' ) { throw new Error('query changed'); } return { ok: true, json: async () => ({ objects: [ { package: { name: 'tools', version: '1', description: 'Git helpers', }, }, ], }), }; }, }) ); } finally { $.unregister('package-hello'); $.unregister('package-greet'); $.unregister('package-pipeline'); } } );"
+      - heading "Output" [level=4] [ref=e74]
+      - paragraph [ref=e75]: "Identical in Node.js and Bun:"
+      - code [ref=e77]: "# command-packages — Compose and extend virtual commands inherited middleware: \"hello world!\" invalid names rejected: 6 streamed composition: [7,\"ONE\\nTWO\\n\",\"stop\"] atomic package reload: [true,true,\"2\",true] registry discovery: [{\"name\":\"tools\",\"version\":\"1\",\"description\":\"Git helpers\"}]"
+      - heading "Rust" [level=3] [ref=e78]
+      - paragraph [ref=e79]:
+        - code [ref=e81]: CommandEnvironment
+        - code [ref=e83]: CommandPackage
+      - heading "Example" [level=4] [ref=e84]
+      - code [ref=e86]: "async fn command_packages() -> ExampleResult { let mut environment = CommandEnvironment::new(); environment.create(\"package-hello\", |context| async move { CommandResult::success(context.args.join(\" \")) })?; environment.inherit(\"package-greet\", \"package-hello\", vec![\"hello\".into()])?; environment.extend(\"package-greet\", |context, next| { Box::pin(async move { let result = next(context).await; CommandResult::success(format!(\"{}!\", result.stdout)) }) })?; let inherited = observation( \"inherited middleware\", environment .run(\"package-greet\", CommandContext::new(vec![\"world\".into()])) .await .stdout, ); let mut rejected = 0; for name in [ \"\", \"two words\", \"7command\", \"command;echo\", \"écho\", \"line\\n\", ] { if environment .create(name, |_| async { CommandResult::success_empty() }) .is_err() { rejected += 1; } } environment.create(\"package-generator\", |context| async move { let tx = context.output_tx.unwrap(); for chunk in [\"one\\n\", \"two\\n\"] { tx.send(command_stream::commands::StreamChunk::Stdout(chunk.into())) .await .unwrap(); } CommandResult::success_empty() })?; environment.create(\"package-fail\", |context| async move { CommandResult::new(context.stdin.unwrap().to_uppercase(), \"stop\", 7) })?; environment.create(\"package-unreachable\", |_| async { panic!(\"continued after failure\") })?; environment.compose( \"package-pipeline\", &[\"package-generator\", \"package-fail\", \"package-unreachable\"], )?; let result = environment .run(\"package-pipeline\", CommandContext::new(vec![])) .await; let directory = tempfile::tempdir()?; let file = directory.path().join(\"commands.json\"); let definition = |version: &str, commands: Value| { json!({\"name\":\"parity-package\",\"version\":version,\"commands\":commands}).to_string() }; tokio::fs::write( &file, definition( \"1\", json!({\"package-installed\":{\"file\":\"echo\",\"args\":[\"one\"]}}), ), ) .await?; environment.install_file(&file).await?; let idempotent = environment.install_file(&file).await? == \"parity-package\"; tokio::fs::write( &file, definition(\"bad\", json!({\"bad name\":{\"file\":\"echo\"}})), ) .await?; assert!(environment.reload_file(&file).await.is_err()); let retained = environment.installed(\"parity-package\").unwrap().version == \"1\" && environment.get(\"package-installed\").is_some(); tokio::fs::write( &file, definition(\"2\", json!({\"package-reloaded\":{\"file\":\"echo\"}})), ) .await?; environment.reload_file(&file).await?; let reload = json!([ idempotent, retained, environment.installed(\"parity-package\").unwrap().version, !environment.list().contains(&\"package-installed\".into()) ]); environment.uninstall(\"parity-package\"); use command_stream::command_packages::{Marketplace, SearchOptions}; let discovered = Marketplace::search_with(\"git & deploy\", SearchOptions::default(), |url| async move { assert!(url.contains(\"text=keywords%3Acommand-stream-command%20git%20%26%20deploy\")); Ok(json!({\"objects\":[{\"package\":{\"name\":\"tools\",\"version\":\"1\",\"description\":\"Git helpers\"}}]})) }).await?; Ok(vec![ inherited, observation(\"invalid names rejected\", rejected), observation( \"streamed composition\", json!([ result.code, result.stdout.to_string(), result.stderr.to_string() ]), ), observation(\"atomic package reload\", reload), observation(\"registry discovery\", discovered), ]) }"
+      - heading "Output" [level=4] [ref=e87]
+      - code [ref=e89]: "# command-packages — Rust inherited middleware: \"hello world!\" invalid names rejected: 6 streamed composition: [7,\"ONE\\nTWO\\n\",\"stop\"] atomic package reload: [true,true,\"2\",true] registry discovery: [{\"description\":\"Git helpers\",\"name\":\"tools\",\"version\":\"1\"}]"
+      - heading "The same thing in other libraries" [level=3] [ref=e90]
+      - heading [level=4] [ref=e91]:
+        - link "Bun.$" [ref=e92] [cursor=pointer]:
+          - /url: https://bun.com/docs/runtime/shell
+      - paragraph [ref=e93]: Not supported — Shell interop and built-ins are available; integrated package discovery, ownership restoration and atomic reload require application code.
+      - heading [level=4] [ref=e94]:
+        - link "zx" [ref=e95] [cursor=pointer]:
+          - /url: https://github.com/google/zx
+      - paragraph [ref=e96]: Not supported — Helpers, spawn hooks and streams are available; integrated package discovery, ownership restoration and atomic reload require application code.
+      - heading [level=4] [ref=e97]:
+        - link "execa" [ref=e98] [cursor=pointer]:
+          - /url: https://github.com/sindresorhus/execa
+      - paragraph [ref=e99]: Not supported — Generator transforms and process streams are available; integrated package discovery, ownership restoration and atomic reload require application code.
+      - heading [level=4] [ref=e100]:
+        - link "ShellJS" [ref=e101] [cursor=pointer]:
+          - /url: https://github.com/shelljs/shelljs
+      - paragraph [ref=e102]: Not supported — npm plugins register pipeable shell methods; integrated package discovery, ownership restoration and atomic reload require application code.
+      - heading [level=4] [ref=e103]:
+        - link "node:child_process" [ref=e104] [cursor=pointer]:
+          - /url: https://nodejs.org/api/child_process.html
+      - paragraph [ref=e105]: Not supported — User functions and process streams can be composed; no integrated command-package registry or lifecycle API.
+  - contentinfo [ref=e106]:
+    - text: Generated from executable examples in
+    - code [ref=e107]: js/examples/features/
+    - text: and
+    - code [ref=e108]: rust/examples/language_features.rs
+    - text: .

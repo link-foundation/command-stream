@@ -454,6 +454,9 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Test current checkout with CDN resolution
+        # Checkout HTTP execution is mandatory. Only a separately confirmed
+        # esm.sh GitHub-builder disk outage is tolerated on pull requests;
+        # main/dispatch fail with recovery instructions until it is repaired.
         shell: bash
         env:
           COMMAND_STREAM_CDN_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name || github.repository }}

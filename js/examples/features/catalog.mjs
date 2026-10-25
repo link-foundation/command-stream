@@ -765,23 +765,23 @@ export const features = [
     alternatives: {
       'bun-shell': {
         unsupported:
-          'No validated command package, inheritance, middleware, or registry search API',
+          'Shell interop and built-ins are available; integrated package discovery, ownership restoration and atomic reload require application code',
       },
       zx: {
         unsupported:
-          'No validated command package, inheritance, middleware, or registry search API',
+          'Helpers, spawn hooks and streams are available; integrated package discovery, ownership restoration and atomic reload require application code',
       },
       execa: {
         unsupported:
-          'No validated command package, inheritance, middleware, or registry search API',
+          'Generator transforms and process streams are available; integrated package discovery, ownership restoration and atomic reload require application code',
       },
       shelljs: {
         unsupported:
-          'No validated command package, inheritance, middleware, or registry search API',
+          'npm plugins register pipeable shell methods; integrated package discovery, ownership restoration and atomic reload require application code',
       },
       child_process: {
         unsupported:
-          'No validated command package, inheritance, middleware, or registry search API',
+          'User functions and process streams can be composed; no integrated command-package registry or lifecycle API',
       },
     },
   },

@@ -29,7 +29,7 @@ fluent and functional configuration, presets, run/await/sync and streams.
 - 🔧 **Built-in Commands**: 26 essential commands work identically across platforms
 - 🆔 **Process Identity**: Read the process id with `command.pid`, before, during and after the run
 - 🔄 **Migration**: [Cross-spawn guide for JavaScript and Rust](docs/CROSS_SPAWN_MIGRATION.md); zx scripts run unchanged via `$.zx`, `command-stream/zx` or `#!/usr/bin/env command-stream`, with all 291 zx test units ported ([zx guide](docs/ZX_MIGRATION.md)); Execa 10.1.0 runs via `command-stream/execa`, `$.execa` and `$.execaCompat()` ([guide and runtime limits](docs/EXECA_MIGRATION.md))
-- 🧰 [Advanced workflows](docs/ADVANCED-WORKFLOWS.md) cover builders, `$fy`, stream analytics, terminal buffers, packages, REPL, debugging, and tests. **TypeScript**: Bundled strict declarations for ESM and CommonJS, with typed events, streams, pipelines and virtual commands ([guide and Rust mapping](docs/TYPESCRIPT.md))
+- 🧰 [Advanced workflows](docs/ADVANCED-WORKFLOWS.md) cover builders, `$fy`, stream analytics, terminal buffers, packages, REPL, debugging, and tests. The [virtual command ecosystem guide](docs/VIRTUAL-COMMAND-ECOSYSTEM.md) documents installation, middleware, inheritance, streaming, marketplace discovery, and reload. **TypeScript**: Bundled strict declarations for ESM and CommonJS, with typed events, streams, pipelines and virtual commands ([guide and Rust mapping](docs/TYPESCRIPT.md))
 
 ## Comparison with Other Libraries
 
