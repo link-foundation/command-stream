@@ -425,13 +425,11 @@ const renderRecordingSvg = ({ frames, options, font }) => {
 const renderGif = async ({ frames, options, font }) => {
   const { Resvg } = await importTerminalDependency(
     '@resvg/resvg-js',
-    'GIF terminal artifacts',
-    () => import('@resvg/resvg-js')
+    'GIF terminal artifacts'
   );
   const gifencModule = await importTerminalDependency(
     'gifenc',
-    'GIF terminal artifacts',
-    () => import('gifenc')
+    'GIF terminal artifacts'
   );
   const gifenc = gifencModule.GIFEncoder ? gifencModule : gifencModule.default;
   const { GIFEncoder, applyPalette, quantize } = gifenc;

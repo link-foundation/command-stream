@@ -5,7 +5,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const { $, shelljs } = await import(specifier);
+const { $, shelljs, TerminalBuffer } = await import(specifier);
 if (typeof $ !== 'function') {
   throw new Error('The package did not export a callable $');
 }
@@ -56,4 +56,17 @@ try {
   console.log('ShellJS normal globs and depth protection passed');
 } finally {
   rmSync(directory, { recursive: true, force: true });
+}
+
+if (Deno.args.includes('--with-terminal-peer')) {
+  const terminal = new TerminalBuffer();
+  try {
+    await terminal.write('peer loaded');
+    if (!terminal.text().includes('peer loaded')) {
+      throw new Error('The installed terminal peer did not render input');
+    }
+    console.log('TerminalBuffer works with an explicitly installed peer');
+  } finally {
+    terminal.dispose();
+  }
 }

@@ -119,9 +119,14 @@ async function runProbeOnce(url) {
   const probe = fileURLToPath(
     new URL('../../experiments/issue-219/cdn-import.mjs', import.meta.url)
   );
-  const child = spawn('deno', ['run', '-A', '--no-lock', probe, url], {
-    stdio: ['inherit', 'inherit', 'pipe'],
-  });
+  const child = spawn(
+    'deno',
+    ['run', '-A', '--no-lock', probe, url, '--with-terminal-peer'],
+    {
+      cwd: packageDirectory,
+      stdio: ['inherit', 'inherit', 'pipe'],
+    }
+  );
   let stderr = '';
   child.stderr.on('data', (chunk) => {
     process.stderr.write(chunk);

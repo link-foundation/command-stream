@@ -391,8 +391,7 @@ const createInteractionCoordinator = ({
 const startTerminal = async ({ file, args, cwd, env, cols, rows }) => {
   const xterm = await importTerminalDependency(
     '@xterm/headless',
-    'Terminal capture',
-    () => import('@xterm/headless')
+    'Terminal capture'
   );
   const { Terminal } = xterm.default ?? xterm;
   const environment = captureEnvironment({
