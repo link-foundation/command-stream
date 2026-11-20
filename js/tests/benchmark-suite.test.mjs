@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { connect } from 'node:net';
 import { join } from 'node:path';
@@ -13,7 +13,7 @@ import {
   loadCompetitorAdapters,
 } from '../benchmarks/lib/competitor-adapters.mjs';
 import { escapeHtml, writeReports } from '../benchmarks/lib/report.mjs';
-import { parseArguments } from '../benchmarks/cli.mjs';
+import { main, parseArguments } from '../benchmarks/cli.mjs';
 import { parseNpmPackOutput } from '../benchmarks/suites/bundle-size.mjs';
 import { startLocalServer } from '../benchmarks/suites/real-world.mjs';
 import {
@@ -125,6 +125,28 @@ describe('competitor adapters', () => {
 });
 
 describe('benchmark reports', () => {
+  test('writes a UTC generation timestamp with millisecond precision', async () => {
+    const outputDirectory = mkdtempSync(join(tmpdir(), 'benchmark-date-'));
+    try {
+      const report = await main([
+        '--suite',
+        'features',
+        '--output',
+        outputDirectory,
+      ]);
+      expect(report.generatedAt).toMatch(/\.\d{3}Z$/);
+      expect(new Date(report.generatedAt).toISOString()).toBe(
+        report.generatedAt
+      );
+      const written = JSON.parse(
+        readFileSync(join(outputDirectory, 'benchmark-results.json'), 'utf8')
+      );
+      expect(written.generatedAt).toBe(report.generatedAt);
+    } finally {
+      rmSync(outputDirectory, { force: true, recursive: true });
+    }
+  });
+
   test('escapes measured labels before writing HTML', () => {
     expect(escapeHtml('<script>"x" & y</script>')).toBe(
       '&lt;script&gt;&quot;x&quot; &amp; y&lt;/script&gt;'
