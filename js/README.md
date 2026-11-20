@@ -841,7 +841,9 @@ function isGitAvailable() {
 
 `captureTerminal()` runs a command in a real pseudoterminal and uses xterm's
 terminal model to capture settled screen states. It can send text and control
-keys, resize the terminal, and stop after an output marker:
+keys, resize the terminal, and stop after an output marker. Install the
+emulator with `npm install @xterm/headless` and see the
+[installation guide](docs/INSTALLATION.md) for native PTY support.
 
 ```javascript
 import { captureTerminal } from 'command-stream';
@@ -966,7 +968,8 @@ timestamps; pauses longer than `idleTimeLimit` are trimmed.
 
 GIF is provided for consumers that cannot play CSS-animated SVG. The format is
 limited to 256 colors per frame, so truecolor recordings can show color
-banding. Prefer `recording.svg` when full color fidelity is important.
+banding. Install its renderer with `npm install @resvg/resvg-js gifenc`.
+Prefer `recording.svg` when full color fidelity is important.
 
 Pass `artifacts` to choose which of these files are written; it defaults to all
 of them. The names are `transcript` (`transcript.txt`), `frames`

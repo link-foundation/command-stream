@@ -4,6 +4,8 @@
 connects that emulator to a real PTY, so the application has terminal input,
 terminal output, terminal dimensions and resize notifications at the same time.
 Ordinary `$` pipe execution remains available for programs that expect pipes.
+Install the emulator with `npm install @xterm/headless`. See the
+[installation guide](INSTALLATION.md) for native PTY and GIF support.
 
 ```js
 import { TerminalBuffer } from 'command-stream';

@@ -204,36 +204,52 @@
     "examples/"
   ],
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "@xterm/headless": "^6.0.0",
+    "gifenc": "^1.0.3",
     "@changesets/cli": "^3.0.3",
     "@eslint/js": "^10.0.1",
-    "@types/node": "26.6.5",
+    "@types/node": "26.6.6",
     "@types/shelljs": "0.10.0",
     "chalk": "^6.0.1",
     "dejavu-fonts-ttf": "^2.37.3",
     "esbuild": "0.28.2",
-    "eslint": "^10.13.0",
+    "eslint": "^10.15.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.7",
     "husky": "^9.1.7",
-    "jscpd": "^5.4.2",
-    "lint-staged": "^17.6.0",
-    "prettier": "^3.9.10",
+    "jscpd": "^5.4.3",
+    "lint-staged": "^17.6.1",
+    "prettier": "^3.10.1",
     "shelljs": "0.10.0",
     "subset-font": "^2.9.0",
     "typescript": "7.0.2",
     "zx": "8.8.5",
-    "use-m": "8.16.4"
+    "use-m": "8.17.2"
   },
   "dependencies": {
     "cross-spawn": "7.0.6",
-    "@resvg/resvg-js": "^2.6.2",
-    "@xterm/headless": "^6.0.0",
-    "gifenc": "^1.0.3",
     "execa": "10.2.1",
     "meta-language": "^0.46.0",
     "acorn": "8.19.0"
   },
   "optionalDependencies": {
     "node-pty": "^1.1.0"
+  },
+  "peerDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "@xterm/headless": "^6.0.0",
+    "gifenc": "^1.0.3"
+  },
+  "peerDependenciesMeta": {
+    "@resvg/resvg-js": {
+      "optional": true
+    },
+    "@xterm/headless": {
+      "optional": true
+    },
+    "gifenc": {
+      "optional": true
+    }
   }
 }

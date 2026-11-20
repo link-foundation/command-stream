@@ -6,7 +6,10 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const { $, openTerminal } = await import('command-stream');
+const { $, openTerminal, TerminalBuffer } = await import('command-stream');
+const { writeTerminalArtifacts } = await import(
+  new URL('./terminal-artifacts.mjs', import.meta.resolve('command-stream'))
+);
 const require = createRequire(import.meta.url);
 const commonjs = require('command-stream');
 const { ProcessRunner } = await import('command-stream/process-runner');
@@ -68,6 +71,7 @@ try {
 }
 
 const options = { mirror: false, capture: true, stdin: 'ignore' };
+assert.equal((await $(options)`echo ok`).stdout.toString().trim(), 'ok');
 assert.equal(
   (await $(options)`printf core-install-ok`).stdout.toString(),
   'core-install-ok'
@@ -76,6 +80,56 @@ assert.equal(
   commonjs(options)`printf cjs-install-ok`.sync().stdout.toString(),
   'cjs-install-ok'
 );
+
+const terminalPeers = ['@xterm/headless', '@resvg/resvg-js', 'gifenc'];
+for (const name of terminalPeers) {
+  assert.equal(manifest.peerDependenciesMeta?.[name]?.optional, true);
+}
+const packageRequire = createRequire(require.resolve('command-stream'));
+for (const name of terminalPeers) {
+  assert.throws(() => packageRequire.resolve(name), {
+    code: 'MODULE_NOT_FOUND',
+  });
+}
+if (process.argv[2] === 'local') {
+  const lock = JSON.parse(readFileSync('package-lock.json', 'utf8'));
+  for (const path of Object.keys(lock.packages)) {
+    assert.doesNotMatch(
+      path,
+      /(?:^|\/)node_modules\/(?:@xterm\/headless|@resvg\/resvg-js[^/]*|gifenc)$/
+    );
+  }
+}
+assert.throws(
+  () => new TerminalBuffer(),
+  /TerminalBuffer.*npm install @xterm\/headless/
+);
+await assert.rejects(
+  openTerminal({ file: process.execPath, args: ['-e', ''] }),
+  /Terminal capture.*npm install @xterm\/headless/
+);
+const artifactDirectory = mkdtempSync(
+  join(tmpdir(), 'command-stream-installed-artifacts-')
+);
+try {
+  const artifacts = {
+    directory: artifactDirectory,
+    frames: [],
+    transcript: 'terminal output',
+    asciicast: { header: { width: 2, height: 2 }, events: [] },
+  };
+  await writeTerminalArtifacts({ ...artifacts, artifacts: ['snapshot'] });
+  assert.match(
+    readFileSync(join(artifactDirectory, 'snapshot.svg'), 'utf8'),
+    /<svg /
+  );
+  await assert.rejects(
+    writeTerminalArtifacts({ ...artifacts, artifacts: ['gif'] }),
+    /GIF terminal artifacts.*npm install @resvg\/resvg-js/
+  );
+} finally {
+  rmSync(artifactDirectory, { recursive: true, force: true });
+}
 
 const args = ['path with spaces', 'literal;$(echo unwanted)'];
 const result = await new ProcessRunner(
@@ -95,9 +149,4 @@ assert.deepEqual(JSON.parse(result.stdout.toString()), args);
 assert.equal(
   require('command-stream/process-runner').ProcessRunner,
   ProcessRunner
-);
-
-await assert.rejects(
-  openTerminal({ file: process.execPath, args: ['-e', ''] }),
-  /command-stream: PTY support is unavailable/
 );

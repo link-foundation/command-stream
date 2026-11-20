@@ -1,3 +1,5 @@
+import { importTerminalDependency } from './terminal-dependencies.mjs';
+
 const EVENT_TYPES = {
   i: 'input',
   o: 'output',
@@ -421,10 +423,16 @@ const renderRecordingSvg = ({ frames, options, font }) => {
 };
 
 const renderGif = async ({ frames, options, font }) => {
-  const [{ Resvg }, gifencModule] = await Promise.all([
-    import('@resvg/resvg-js'),
-    import('gifenc'),
-  ]);
+  const { Resvg } = await importTerminalDependency(
+    '@resvg/resvg-js',
+    'GIF terminal artifacts',
+    () => import('@resvg/resvg-js')
+  );
+  const gifencModule = await importTerminalDependency(
+    'gifenc',
+    'GIF terminal artifacts',
+    () => import('gifenc')
+  );
   const gifenc = gifencModule.GIFEncoder ? gifencModule : gifencModule.default;
   const { GIFEncoder, applyPalette, quantize } = gifenc;
   const { width, height } = dimensions(frames, options);

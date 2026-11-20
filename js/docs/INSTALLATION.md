@@ -1,4 +1,4 @@
-# Installation and optional PTY support
+# Installation and optional terminal support
 
 The core `$` API and `command-stream/process-runner` work without a native
 build toolchain, including production installs with `--ignore-scripts` or
@@ -9,6 +9,19 @@ npm install --omit=dev command-stream
 npm install --omit=dev --ignore-scripts command-stream
 npm install --omit=dev --omit=optional command-stream
 ```
+
+The terminal emulator and GIF renderer are optional peer dependencies. Install
+the packages for the terminal features you use:
+
+| Feature                                                     | Install                              |
+| ----------------------------------------------------------- | ------------------------------------ |
+| `TerminalBuffer`, `openTerminal()`, and `captureTerminal()` | `npm install @xterm/headless`        |
+| `recording.gif`                                             | `npm install @resvg/resvg-js gifenc` |
+
+When you request an artifact directory, the default selection includes GIF.
+Set `artifacts: ['transcript', 'frames', 'cast', 'snapshot', 'recording']` to
+write the other formats without the GIF dependencies. Missing peers are
+reported when the corresponding feature is used.
 
 `node-pty` is an optional dependency, loaded only when `captureTerminal()` or
 `openTerminal()` opens a pseudoterminal. If its installation fails or optional
@@ -30,4 +43,5 @@ CI installs the packed package locally and globally in Node 22, 24, and 26
 slim containers without Python, make, or C/C++ compilers. Each runtime covers
 enabled (explicitly allowlisted on npm 12), disabled, and omitted-optional
 installs, with ESM `$`, CommonJS synchronous execution, the lightweight
-ProcessRunner entry point, exact argv with spaces, and the public PTY error.
+ProcessRunner entry point, exact argv with spaces, the optional peer diagnostics,
+SVG output, and the public PTY error after installing the emulator.
