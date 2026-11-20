@@ -1,5 +1,21 @@
 # Changelog
 
+## 3.0.0
+
+### Major Changes
+
+- Install `@xterm/headless` explicitly to use terminal buffers and PTY capture.
+  GIF artifacts also need `@resvg/resvg-js` and `gifenc`. Ordinary shell execution
+  and other artifact rendering can run without these optional peers.
+
+  Reject non-string virtual command names when a handler is supplied, preserving
+  configured shell tags. Document the complete virtual command ecosystem and
+  verify offline package and enterprise examples in Node and Bun.
+
+  Keep Deno HTTP compatibility checks running during a confirmed esm.sh GitHub
+  builder storage outage on pull requests. Retain strict release gating and print
+  recovery instructions on main; other CDN and execution failures remain fatal.
+
 ## 2.6.0
 
 ### Minor Changes
