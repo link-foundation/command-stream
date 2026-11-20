@@ -18,7 +18,8 @@ export async function importTerminalDependency(name, feature) {
     // A loader can also fail because a dependency of the peer is missing.
     if (
       error?.code === 'ERR_MODULE_NOT_FOUND' &&
-      error.message.startsWith(`Cannot find package '${name}'`)
+      (error.message.startsWith(`Cannot find package '${name}'`) ||
+        error.message.startsWith(`Could not find package '${name}'`))
     ) {
       throw missingDependency(name, feature, error);
     }
