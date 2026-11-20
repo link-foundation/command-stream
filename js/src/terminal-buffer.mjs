@@ -1,7 +1,7 @@
 import { performance } from 'node:perf_hooks';
-import xterm from '@xterm/headless';
 import { EventEmitter } from 'node:events';
 import { terminalFrame, sameFrame } from './terminal-capture.mjs';
+import { requireHeadlessTerminal } from './terminal-dependencies.mjs';
 import {
   terminalChange,
   terminalDimensions,
@@ -29,7 +29,8 @@ export class TerminalBuffer extends EventEmitter {
     ) {
       throw new RangeError('Invalid scrollback or frame interval');
     }
-    this.terminal = new xterm.Terminal({
+    const Terminal = requireHeadlessTerminal();
+    this.terminal = new Terminal({
       cols,
       rows,
       scrollback,

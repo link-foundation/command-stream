@@ -17,6 +17,9 @@ jobs:
     name: Check every direct dependency against latest releases
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: read
     concurrency:
       group: check-${{ github.workflow }}-${{ github.ref }}-freshness
       cancel-in-progress: true
@@ -52,6 +55,8 @@ jobs:
         run: bun test js/tests/dependency-freshness.test.mjs --timeout 10000
 
       - name: Check package, benchmark and release-script declarations
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: bun scripts/check-dependencies.mjs
 
       - name: Install locked JavaScript dependencies

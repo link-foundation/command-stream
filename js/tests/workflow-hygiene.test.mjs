@@ -403,7 +403,10 @@ describe('every shipped ecosystem is audited', () => {
   });
 
   test('the Rust lockfile is audited', () => {
-    expect(runs).toContain('cargo audit --file Cargo.lock');
+    expect(runs).toContain('cargo audit --deny warnings --file Cargo.lock');
+    expect(runs).toContain(
+      'cargo audit --deny warnings --file benchmarks/Cargo.lock'
+    );
   });
 
   test('dependency review uses only the documented unpatched advisory exceptions', () => {

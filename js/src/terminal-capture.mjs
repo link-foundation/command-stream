@@ -5,6 +5,7 @@ import {
   writeTerminalArtifacts,
 } from './terminal-artifacts.mjs';
 import { spawnTerminalPty } from './terminal-pty.mjs';
+import { importTerminalDependency } from './terminal-dependencies.mjs';
 import { EventEmitter } from 'node:events';
 import {
   terminalChange,
@@ -217,13 +218,6 @@ export const sameFrame = (left, right) =>
   left.lines.every((line, index) => line === right.lines[index]) &&
   JSON.stringify(left.cells) === JSON.stringify(right.cells);
 
-const runtimeDependencies = async () => {
-  const xtermModule = await import('@xterm/headless');
-  return {
-    Terminal: (xtermModule.default ?? xtermModule).Terminal,
-  };
-};
-
 const captureEnvironment = (environment) =>
   Object.fromEntries(
     Object.entries(environment)
@@ -395,7 +389,11 @@ const createInteractionCoordinator = ({
 };
 
 const startTerminal = async ({ file, args, cwd, env, cols, rows }) => {
-  const { Terminal } = await runtimeDependencies();
+  const xterm = await importTerminalDependency(
+    '@xterm/headless',
+    'Terminal capture'
+  );
+  const { Terminal } = xterm.default ?? xterm;
   const environment = captureEnvironment({
     ...env,
     TERM: env.TERM ?? 'xterm-256color',

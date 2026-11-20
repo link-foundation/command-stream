@@ -47,7 +47,21 @@ for scope in local global; do
     # Audit the actual resolved consumer graph without repository exceptions.
     npm audit --omit=dev --audit-level=high
   fi
-  node check.mjs
+  node check.mjs "$scope"
+  # With the emulator explicitly installed, verify the existing native PTY
+  # diagnostic in the same toolchain-free consumer.
+  terminal_peer="$(node -p 'require("command-stream/package.json").peerDependencies["@xterm/headless"]')"
+  if [ "$scope" = global ]; then
+    npm install --global --prefix "$consumer/prefix" --ignore-scripts --no-audit --no-fund "@xterm/headless@$terminal_peer"
+  else
+    npm install --ignore-scripts --no-audit --no-fund "@xterm/headless@$terminal_peer"
+  fi
+  node --input-type=module -e '
+    import assert from "node:assert/strict";
+    import { openTerminal } from "command-stream";
+    await assert.rejects(openTerminal({ file: process.execPath, args: ["-e", ""] }),
+      /command-stream: PTY support is unavailable/);
+  '
   echo "PASS: Node $(node --version), $scope production install, $mode, no build toolchain"
 done
 

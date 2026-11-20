@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, spyOn, test } from 'bun:test';
 import {
   mkdtempSync,
   mkdirSync,
@@ -183,6 +183,37 @@ describe('dependency freshness', () => {
     expect(closed.failures).toHaveLength(1);
   });
 
+  test('sends the workflow token only to the blocker issue API', async () => {
+    const originalToken = process.env.GITHUB_TOKEN;
+    process.env.GITHUB_TOKEN = 'test-token';
+    const fetch = spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        Response.json({ crate: { max_stable_version: '0.31.3' } })
+      )
+      .mockResolvedValueOnce(Response.json({ state: 'open' }));
+    try {
+      const report = await checkDependencies([
+        dependency('0.29', {
+          blocker:
+            'https://github.com/link-foundation/meta-language/issues/197',
+        }),
+      ]);
+      expect(report.failures).toEqual([]);
+      expect(report.exemptions).toHaveLength(1);
+      expect(fetch.mock.calls[0][1].headers.Authorization).toBeUndefined();
+      expect(fetch.mock.calls[1][1].headers.Authorization).toBe(
+        'Bearer test-token'
+      );
+    } finally {
+      fetch.mockRestore();
+      if (originalToken === undefined) {
+        delete process.env.GITHUB_TOKEN;
+      } else {
+        process.env.GITHUB_TOKEN = originalToken;
+      }
+    }
+  });
+
   test('fails closed on registry and blocker lookup errors', async () => {
     const report = await checkDependencies([dependency('0.31.3')], {
       fetchJson: async () => {
@@ -237,7 +268,7 @@ describe('dependency freshness', () => {
     expect(deps.some((dep) => dep.name === 'npm' && dep.majorOnly)).toBe(true);
   });
 
-  test('discovers runtime, development, benchmark and embedded script dependencies', () => {
+  test('discovers runtime, development, peer, benchmark and embedded script dependencies', () => {
     const root = mkdtempSync(join(tmpdir(), 'dependency-freshness-'));
     try {
       for (const dir of ['js', 'rust/benchmarks', 'rust/scripts']) {
@@ -248,6 +279,7 @@ describe('dependency freshness', () => {
         JSON.stringify({
           dependencies: { execa: '9.6.1' },
           devDependencies: { eslint: '^9.39.5' },
+          peerDependencies: { '@xterm/headless': '^6.0.0' },
         })
       );
       writeFileSync(
@@ -256,7 +288,7 @@ describe('dependency freshness', () => {
       );
       writeFileSync(
         join(root, 'rust/benchmarks/Cargo.toml'),
-        '[dependencies]\ncommand-stream = { path = ".." }\nchrono = "=0.4.42"\n'
+        '[dependencies]\ncommand-stream = { path = ".." }\njiff = "=1.0.1"\n'
       );
       writeFileSync(
         join(root, 'rust/scripts/release.rs'),
@@ -264,9 +296,10 @@ describe('dependency freshness', () => {
       );
       const deps = collectDependencies(root);
       expect(deps.map((dep) => dep.name).sort()).toEqual([
-        'chrono',
+        '@xterm/headless',
         'eslint',
         'execa',
+        'jiff',
         'nix',
         'tempfile',
         'ureq',

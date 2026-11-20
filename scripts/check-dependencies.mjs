@@ -70,6 +70,7 @@ export function collectDependencies(root = repoRoot) {
     'dependencies',
     'devDependencies',
     'optionalDependencies',
+    'peerDependencies',
   ]) {
     for (const [name, version] of Object.entries(npm[section] ?? {})) {
       deps.push({
@@ -153,8 +154,15 @@ export function collectToolDependencies(root = repoRoot) {
 }
 
 async function fetchJson(url) {
+  const headers = { 'User-Agent': 'command-stream-dependency-freshness' };
+  if (
+    new URL(url).origin === 'https://api.github.com' &&
+    process.env.GITHUB_TOKEN
+  ) {
+    headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+  }
   const response = await fetch(url, {
-    headers: { 'User-Agent': 'command-stream-dependency-freshness' },
+    headers,
     signal: AbortSignal.timeout(30_000),
   });
   if (!response.ok) {

@@ -165,10 +165,7 @@ pub fn all() -> Vec<CommandPackage> {
             vec![(
                 "timestamp",
                 handler(|_| async {
-                    CommandResult::success(format!(
-                        "{}\n",
-                        chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
-                    ))
+                    CommandResult::success(format!("{:.3}\n", jiff::Timestamp::now()))
                 }),
             )],
         ),

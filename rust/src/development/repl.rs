@@ -97,6 +97,10 @@ pub fn start_repl(options: ReplOptions) -> io::Result<RustRepl> {
         .stdin(Stdio::inherit())
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit());
+    // Evcxr copies compiled cells before loading them. With Cargo 1.100's
+    // new layout, their relative RUNPATH no longer reaches the dylib facade.
+    #[cfg(target_os = "linux")]
+    command.env("__CARGO_TEMPORARY_BUILD_DIR_NEW_LAYOUT_OPT_OUT", "1");
     if options.disable_readline {
         command.arg("--disable-readline");
     }

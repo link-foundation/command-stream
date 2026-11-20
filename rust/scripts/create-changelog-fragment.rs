@@ -8,14 +8,14 @@
 //!
 //! ```cargo
 //! [dependencies]
-//! chrono = "0.4.45"
+//! jiff = { version = "1.0.1", default-features = false, features = ["std"] }
 //! ```
 
 use std::env;
 use std::fs;
 use std::path::Path;
 use std::process::exit;
-use chrono::Utc;
+use jiff::Timestamp;
 
 fn get_arg(name: &str) -> Option<String> {
     let args: Vec<String> = env::args().collect();
@@ -69,7 +69,7 @@ fn get_category(bump_type: &str) -> &'static str {
 }
 
 fn generate_timestamp() -> String {
-    Utc::now().format("%Y%m%d%H%M%S").to_string()
+    Timestamp::now().strftime("%Y%m%d%H%M%S").to_string()
 }
 
 fn main() {
