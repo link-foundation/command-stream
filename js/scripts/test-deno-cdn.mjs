@@ -3,8 +3,10 @@
 import { build } from 'esbuild';
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, symlinkSync } from 'node:fs';
 import { builtinModules } from 'node:module';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CdnProbeError, retryCdnProbe } from './deno-cdn-retry.mjs';
 import { probeHostedCdn } from './deno-cdn-hosted.mjs';
@@ -119,25 +121,33 @@ async function runProbeOnce(url) {
   const probe = fileURLToPath(
     new URL('../../experiments/issue-219/cdn-import.mjs', import.meta.url)
   );
-  const child = spawn(
-    'deno',
-    ['run', '-A', '--no-lock', probe, url, '--with-terminal-peer'],
-    {
-      cwd: packageDirectory,
-      stdio: ['inherit', 'inherit', 'pipe'],
+  const consumer = mkdtempSync(join(tmpdir(), 'command-stream-cdn-consumer-'));
+  try {
+    // Use installed peers without letting Deno manage the checkout's lockfile.
+    symlinkSync(
+      fileURLToPath(new URL('node_modules', packageDirectory)),
+      join(consumer, 'node_modules'),
+      'junction'
+    );
+    const child = spawn(
+      'deno',
+      ['run', '-A', '--no-lock', probe, url, '--with-terminal-peer'],
+      { cwd: consumer, stdio: ['inherit', 'inherit', 'pipe'] }
+    );
+    let stderr = '';
+    child.stderr.on('data', (chunk) => {
+      process.stderr.write(chunk);
+      // Keep a bounded diagnostic tail while preserving the full CI log.
+      stderr = (stderr + chunk.toString()).slice(-65536);
+    });
+    const code = await new Promise((resolve, reject) => {
+      child.on('error', reject);
+      child.on('close', resolve);
+    });
+    if (code !== 0) {
+      throw new CdnProbeError(code, stderr);
     }
-  );
-  let stderr = '';
-  child.stderr.on('data', (chunk) => {
-    process.stderr.write(chunk);
-    // Keep a bounded diagnostic tail while preserving the full CI log.
-    stderr = (stderr + chunk.toString()).slice(-65536);
-  });
-  const code = await new Promise((resolve, reject) => {
-    child.on('error', reject);
-    child.on('close', resolve);
-  });
-  if (code !== 0) {
-    throw new CdnProbeError(code, stderr);
+  } finally {
+    rmSync(consumer, { recursive: true, force: true });
   }
 }
