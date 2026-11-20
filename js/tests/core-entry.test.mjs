@@ -4,11 +4,19 @@ import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
+import { isVirtualCommandsEnabled } from '../src/$.state.mjs';
 
 const require = createRequire(import.meta.url);
 const probe = fileURLToPath(
   new URL('../../experiments/issue-235/import-probe.mjs', import.meta.url)
 );
+
+function enableVirtualCommandsForTest(core, context) {
+  if (!isVirtualCommandsEnabled()) {
+    core.enableVirtualCommands();
+    context.after(() => core.disableVirtualCommands());
+  }
+}
 
 test(
   'core bundles and executes without compatibility or native terminal inputs',
@@ -74,8 +82,9 @@ for (const mode of ['import', 'require']) {
 test(
   'core runs tagged commands, sync execution and virtual pipelines',
   { timeout: 10000 },
-  async () => {
+  async (context) => {
     const core = await import('command-stream/core');
+    enableVirtualCommandsForTest(core, context);
     assert.equal(core.default, core.$);
     for (const name of ['echo', 'cat', 'pwd', 'cd', 'which', '$fy']) {
       assert.ok(core.listCommands().includes(name));
@@ -112,8 +121,9 @@ test(
 test(
   'core ESM, CommonJS, full entry and process-runner share state',
   { timeout: 10000 },
-  async () => {
+  async (context) => {
     const core = await import('command-stream/core');
+    enableVirtualCommandsForTest(core, context);
     const cjs = require('command-stream/core');
     assert.equal(typeof cjs, 'function');
     assert.equal(cjs.$, cjs);
