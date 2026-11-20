@@ -8,6 +8,7 @@ use super::types::{
     TerminalCaptureOptions, TerminalCursor, TerminalFrame, TerminalInteraction, TerminalResize,
     TerminalTrace, TerminalTraceEvent,
 };
+use jiff::Timestamp;
 use portable_pty::{native_pty_system, Child, CommandBuilder, ExitStatus, MasterPty, PtySize};
 use regex::Regex;
 use std::collections::HashMap;
@@ -186,6 +187,19 @@ fn resize_terminal(
     Ok(())
 }
 
+fn unix_seconds(timestamp: Timestamp) -> i64 {
+    // Jiff truncates toward zero. Asciicast timestamps floor negative fractions.
+    timestamp.as_second() - i64::from(timestamp.subsec_nanosecond() < 0)
+}
+
+#[cfg(test)]
+#[test]
+fn asciicast_timestamp_floors_fractional_seconds() {
+    assert_eq!(unix_seconds(Timestamp::new(0, -1).unwrap()), -1);
+    assert_eq!(unix_seconds(Timestamp::UNIX_EPOCH), 0);
+    assert_eq!(unix_seconds(Timestamp::new(0, 999_999_999).unwrap()), 0);
+}
+
 fn asciicast(options: &TerminalCaptureOptions) -> Asciicast {
     let mut env = HashMap::new();
     env.insert("SHELL".into(), options.file.clone());
@@ -202,7 +216,7 @@ fn asciicast(options: &TerminalCaptureOptions) -> Asciicast {
             version: 2,
             width: options.cols,
             height: options.rows,
-            timestamp: chrono::Utc::now().timestamp(),
+            timestamp: unix_seconds(Timestamp::now()),
             env,
         },
         events: Vec::new(),

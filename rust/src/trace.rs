@@ -3,6 +3,8 @@
 //! This module provides verbose logging functionality that can be controlled
 //! via environment variables for debugging and development purposes.
 
+use crate::rfc3339::utc_rfc3339;
+use jiff::Timestamp;
 use std::env;
 
 /// Check if tracing is enabled via environment variables
@@ -40,7 +42,7 @@ pub fn trace(category: &str, message: &str) {
         return;
     }
 
-    let timestamp = chrono::Utc::now().to_rfc3339();
+    let timestamp = utc_rfc3339(Timestamp::now());
     eprintln!("[TRACE {}] [{}] {}", timestamp, category, message);
 }
 

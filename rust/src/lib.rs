@@ -83,6 +83,7 @@ mod process_argv;
 mod process_stop;
 pub mod quote;
 pub mod result_streams;
+mod rfc3339;
 mod run_options;
 pub mod signal;
 pub mod state;

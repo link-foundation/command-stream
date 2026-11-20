@@ -16,9 +16,9 @@
 //!
 //! ```cargo
 //! [dependencies]
-//! regex = "1.13.1"
-//! chrono = "0.4.45"
-//! ureq = "3.5.0"
+//! regex = "1.13.2"
+//! jiff = { version = "1.0.1", default-features = false, features = ["std"] }
+//! ureq = "3.5.2"
 //! serde = { version = "1.0.229", features = ["derive"] }
 //! serde_json = "1.0.154"
 //! ```
@@ -31,7 +31,7 @@
 #![cfg_attr(test, allow(dead_code))]
 
 #[cfg(not(test))]
-use chrono::Utc;
+use jiff::Timestamp;
 use regex::Regex;
 #[cfg(not(test))]
 use serde::Deserialize;
@@ -470,7 +470,7 @@ fn collect_changelog(changelog_dir: &str, changelog_file: &str, version: &str) {
         return;
     }
 
-    let date_str = Utc::now().format("%Y-%m-%d").to_string();
+    let date_str = Timestamp::now().strftime("%Y-%m-%d").to_string();
     let new_entry = format!(
         "\n## [{}] - {}\n\n{}\n",
         version,

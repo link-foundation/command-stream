@@ -19,8 +19,8 @@
 //!
 //! ```cargo
 //! [dependencies]
-//! regex = "1.13.1"
-//! ureq = "3.5.0"
+//! regex = "1.13.2"
+//! ureq = "3.5.2"
 //! ```
 
 use std::env;

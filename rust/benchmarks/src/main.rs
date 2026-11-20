@@ -1,4 +1,6 @@
-use chrono::Utc;
+#[path = "../../src/rfc3339.rs"]
+mod rfc3339;
+
 use command_stream_benchmarks::adapters::{select_adapters, EXPECTED_ADAPTERS};
 use command_stream_benchmarks::cli::{parse_arguments, usage, SUITE_NAMES};
 use command_stream_benchmarks::fixture::run_fixture;
@@ -7,6 +9,7 @@ use command_stream_benchmarks::report::write_reports;
 use command_stream_benchmarks::runner::BenchmarkRunner;
 use command_stream_benchmarks::suites::{crate_size, features, performance, real_world};
 use command_stream_benchmarks::BenchmarkResult;
+use jiff::Timestamp;
 use serde_json::Value;
 use std::path::Path;
 use std::process::Command;
@@ -69,7 +72,7 @@ async fn run() -> BenchmarkResult<()> {
 
     let report = Report {
         schema_version: 1,
-        generated_at: Utc::now().to_rfc3339(),
+        generated_at: rfc3339::utc_rfc3339(Timestamp::now()),
         environment: Environment {
             arch: std::env::consts::ARCH.to_string(),
             cpus: std::thread::available_parallelism().ok().map(usize::from),

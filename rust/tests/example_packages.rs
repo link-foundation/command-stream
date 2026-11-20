@@ -36,11 +36,13 @@ async fn all_ten_packages_are_installable_and_cover_the_example_catalog() {
             .stdout,
         "Validate release-1\nBuild artifact for production\nDeploy after approval\n"
     );
-    assert!(environment
+    let timestamp = environment
         .run("timestamp", CommandContext::new(vec![]))
         .await
-        .stdout
-        .contains('T'));
+        .stdout;
+    let timestamp = timestamp.strip_suffix('\n').unwrap();
+    let instant: jiff::Timestamp = timestamp.parse().unwrap();
+    assert_eq!(timestamp, format!("{instant:.3}"));
     assert!(environment
         .run(
             "json-pretty",

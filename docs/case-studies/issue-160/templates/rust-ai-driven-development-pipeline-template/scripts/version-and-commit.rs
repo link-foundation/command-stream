@@ -17,14 +17,14 @@
 //! ```cargo
 //! [dependencies]
 //! regex = "1"
-//! chrono = "0.4"
+//! jiff = { version = "1.0.1", default-features = false, features = ["std"] }
 //! ureq = "2"
 //! serde = { version = "1", features = ["derive"] }
 //! serde_json = "1"
 //! ```
 
 #[cfg(not(test))]
-use chrono::Utc;
+use jiff::Timestamp;
 use regex::Regex;
 #[cfg(not(test))]
 use serde::Deserialize;
@@ -383,7 +383,7 @@ fn collect_changelog(changelog_dir: &str, changelog_file: &str, version: &str) {
         return;
     }
 
-    let date_str = Utc::now().format("%Y-%m-%d").to_string();
+    let date_str = Timestamp::now().strftime("%Y-%m-%d").to_string();
     let new_entry = format!(
         "\n## [{}] - {}\n\n{}\n",
         version,

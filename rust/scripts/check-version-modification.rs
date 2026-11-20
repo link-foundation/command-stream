@@ -3,7 +3,7 @@
 //! release-named branches. Missing Git refs or malformed manifests fail closed.
 //! ```cargo
 //! [dependencies]
-//! toml = "1.1.8"
+//! toml = "1.2.1"
 //! ```
 use std::env;
 use std::path::Path;

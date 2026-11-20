@@ -13,14 +13,14 @@
 //! ```cargo
 //! [dependencies]
 //! regex = "1"
-//! chrono = "0.4"
+//! jiff = { version = "1.0.1", default-features = false, features = ["std"] }
 //! ```
 
 use std::env;
 use std::fs;
 use std::path::Path;
 use std::process::exit;
-use chrono::Utc;
+use jiff::Timestamp;
 use regex::Regex;
 
 const INSERT_MARKER: &str = "<!-- changelog-insert-here -->";
@@ -137,7 +137,7 @@ fn collect_fragments(changelog_dir: &str) -> String {
 }
 
 fn update_changelog(changelog_file: &str, version: &str, fragments: &str) {
-    let date_str = Utc::now().format("%Y-%m-%d").to_string();
+    let date_str = Timestamp::now().strftime("%Y-%m-%d").to_string();
     let new_entry = format!("\n## [{}] - {}\n\n{}\n", version, date_str, fragments);
 
     if Path::new(changelog_file).exists() {
